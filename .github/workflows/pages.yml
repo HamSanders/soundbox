@@ -43,7 +43,7 @@ jobs:
         env:
           SITE_BASE: /soundbox/
           SITE_ORIGIN: https://hamsanders.github.io
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist

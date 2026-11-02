@@ -6,6 +6,8 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-11-02
+
 ### Fixed
 - Security: updated dependencies with open advisories: the system information library, the HTTP server adapter, and the desktop updater's zip support (Dependabot alerts).
 
@@ -284,7 +286,8 @@ Initial public release, MIT-licensed. Everything below is new.
   `SOUNDBOX_ALLOWED_HOSTS`), and requires JSON or an `X-Soundbox` header on
   mutating API requests.
 
-[Unreleased]: https://github.com/HamSanders/soundbox/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/HamSanders/soundbox/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/HamSanders/soundbox/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/HamSanders/soundbox/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/HamSanders/soundbox/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/HamSanders/soundbox/compare/v0.2.0...v0.3.0

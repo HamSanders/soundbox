@@ -16,6 +16,7 @@ import { randomUUID } from "node:crypto";
 import BetterSqlite3 from "better-sqlite3";
 import type { Database as Sqlite, Statement } from "better-sqlite3";
 
+import type { DeviceSpec } from "./devices.js";
 import { catalogById } from "./models/audiocpp.js";
 import { HistoryStore } from "./history.js";
 
@@ -222,6 +223,7 @@ CREATE TABLE IF NOT EXISTS story_tracks (
     muted       INTEGER NOT NULL DEFAULT 0,
     soloed      INTEGER NOT NULL DEFAULT 0,
     gain_db     REAL NOT NULL DEFAULT 0,
+    devices     TEXT,
     PRIMARY KEY (story_id, track_index)
 );
 
@@ -365,6 +367,7 @@ interface TrackRow {
   muted: number;
   soloed: number;
   gain_db: number;
+  devices: string | null;
 }
 
 interface VoiceRow {
@@ -549,6 +552,11 @@ export class Database {
       // sorted by `storyStudios`'s guess instead, which is exactly what they
       // were being sorted by all along.
       "ALTER TABLE stories ADD COLUMN builder TEXT",
+      // The track's insert chain, as JSON (see ../devices.ts). Null and "[]"
+      // both mean no devices. On the track row so it moves with the lane when
+      // lanes are renumbered, which is what keeps a reverb on the part it was
+      // put on.
+      "ALTER TABLE story_tracks ADD COLUMN devices TEXT",
     ]) {
       try {
         this.conn.exec(ddl);
@@ -1359,6 +1367,10 @@ export class Database {
         fields.push("gain_db=?");
         params.push(patch.gain_db);
       }
+      if (patch.devices !== undefined) {
+        fields.push("devices=?");
+        params.push(patch.devices.length ? JSON.stringify(patch.devices) : null);
+      }
       if (fields.length) {
         params.push(storyId, trackIndex);
         this.prep(
@@ -2064,7 +2076,21 @@ function rowToTrack(row: TrackRow): StoryTrack {
     muted: row.muted !== 0,
     soloed: row.soloed !== 0,
     gain_db: row.gain_db,
+    devices: parseDevices(row.devices),
   };
+}
+
+/** A stored chain, or none. The server only ever writes normalised chains,
+ *  so this is a parse, not a validation — a row that will not parse (edited
+ *  by hand, say) reads as an empty rack rather than taking the story down. */
+function parseDevices(raw: string | null): DeviceSpec[] {
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as DeviceSpec[]) : [];
+  } catch {
+    return [];
+  }
 }
 
 interface VoiceSampleRow {

@@ -153,7 +153,7 @@ function Param({
 export function SoundEditor({ sound }: { sound: Sound }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WaveSurfer | null>(null);
-  const regionsRef = useRef<RegionsPlugin | null>(null);
+  const regionsRef = useRef<ReturnType<typeof RegionsPlugin.create> | null>(null);
   const activeRegionRef = useRef<Region | null>(null);
   const loopRef = useRef(false);
 

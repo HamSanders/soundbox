@@ -507,6 +507,7 @@ export interface EnhanceResponse {
 /** Re-exported rather than redeclared: the assistant and the studio planner
  *  are handed the very same snapshot. */
 export type { StudioContext } from "./studio-command";
+import type { DeviceSpec } from "./devices";
 import type { StudioContext } from "./studio-command";
 
 /** One turn of the studio assistant's thread. The thread lives in the page
@@ -946,6 +947,10 @@ export interface StoryTrack {
   /** With any track soloed, only soloed tracks are heard. */
   soloed: boolean;
   gain_db: number;
+  /** The insert chain, in order — the device rack. Stored with the track so
+   *  an agent's change over MCP reaches the studio; heard on the timeline,
+   *  not in the export mixdown. */
+  devices: DeviceSpec[];
 }
 
 export interface TrackPatch {
@@ -953,6 +958,8 @@ export interface TrackPatch {
   muted?: boolean;
   soloed?: boolean;
   gain_db?: number;
+  /** Replaces the whole chain; [] empties it. */
+  devices?: DeviceSpec[];
 }
 
 export interface SegmentCreate {

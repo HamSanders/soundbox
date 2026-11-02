@@ -29,6 +29,7 @@ import {
   type ProfileInfo,
 } from "./profiles.js";
 import { Database, type ListSoundsOptions, type UpdateSoundPatch } from "./db.js";
+import { normalizeChain } from "./devices.js";
 import {
   CATALOG_EXTRA,
   MODELS,
@@ -892,6 +893,9 @@ export class SoundboxService {
 
   updateTrack(storyId: string, trackIndex: number, patch: TrackPatch): StoryTrack | null {
     if (this.db.getStory(storyId) === null) return null;
+    // Every chain is normalised on the way in, whoever sent it, so what reads
+    // back is always a chain the studio's rack can build.
+    if (patch.devices !== undefined) patch = { ...patch, devices: normalizeChain(patch.devices) };
     const track = this.db.updateTrack(storyId, trackIndex, patch);
     this.stories.changed(storyId);
     return track;

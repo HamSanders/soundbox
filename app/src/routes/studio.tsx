@@ -175,6 +175,11 @@ import {
   type RepaintOptions,
 } from "@/components/repaint-controls";
 
+/** The mixer half of a track patch — what the strip on a lane edits and its
+ *  undo history records. The device chain has its own path through
+ *  `useTrackDevices`, which paces a dial sweep into a few writes. */
+type MixPatch = Omit<TrackPatch, "devices">;
+
 /* --------------------------------------------------------------------- page */
 
 export function StudioPage({ builder }: { builder: StoryBuilder }) {
@@ -494,14 +499,14 @@ export function StudioEditor({
   const exportStory = useExportStory(storyId);
 
   /** The device rack under the timeline: which lanes it can offer, which one
-   *  it is showing, and the chains themselves. Local to this browser — see
-   *  `use-track-devices` for why they are not part of the story document. */
-  const { devices, setLane, removeLane } = useTrackDevices(storyId);
+   *  it is showing, and the chains themselves. Stored on the server with each
+   *  track, so an agent's change shows up here — see `use-track-devices`. The
+   *  chains move with their lanes when one is removed; the server renumbers
+   *  the track rows itself. */
+  const { devices, setLane, getLane } = useTrackDevices(storyId);
   const removeTrack = (trackIndex: number): void => {
-    deleteTrack.mutateAsync(trackIndex).then(
-      () => removeLane(trackIndex),
-      () => undefined, // the mutation's own toast says what went wrong
-    );
+    // The mutation's own toast says what went wrong.
+    deleteTrack.mutateAsync(trackIndex).catch(() => undefined);
   };
   const lanes = useMemo(
     () => lanesFor(segments.data ?? [], tracks.data ?? []),
@@ -1289,8 +1294,10 @@ export function StudioEditor({
         case "remove_device": {
           // Straight onto the same per-lane rack the cards write to, so an
           // effect added by asking is indistinguishable from one added by
-          // clicking — including where it sits in the chain.
-          const rack = devices[action.track_index] ?? [];
+          // clicking — including where it sits in the chain. `getLane`, not
+          // the render's `devices`: a plan that adds an EQ and then sets it
+          // has to see the EQ it added a line ago.
+          const rack = getLane(action.track_index);
           setLane(
             action.track_index,
             action.type === "add_device"
@@ -1304,7 +1311,7 @@ export function StudioEditor({
           // knob's range and is what builds the rack, so a value the model
           // over-reached on lands at the end of the real slider instead of
           // being dropped.
-          const rack = devices[action.track_index] ?? [];
+          const rack = getLane(action.track_index);
           setLane(
             action.track_index,
             rack.map((d) =>
@@ -1600,17 +1607,17 @@ export function StudioEditor({
    * rather than rows the server hands out, so nothing here needs resolving.
    * A volume drag is one step however many writes it took — see `merge`.
    */
-  const editTrack = (trackIndex: number, patch: TrackPatch): void => {
+  const editTrack = (trackIndex: number, patch: MixPatch): void => {
     const row = tracks.data?.find((t) => t.track_index === trackIndex);
     // A lane with no row is at its defaults.
-    const was: Required<TrackPatch> = {
+    const was: Required<MixPatch> = {
       name: row?.name ?? null,
       muted: row?.muted ?? false,
       soloed: row?.soloed ?? false,
       gain_db: row?.gain_db ?? 0,
     };
-    const fields = Object.keys(patch) as (keyof TrackPatch)[];
-    const previous = Object.fromEntries(fields.map((field) => [field, was[field]])) as TrackPatch;
+    const fields = Object.keys(patch) as (keyof MixPatch)[];
+    const previous = Object.fromEntries(fields.map((field) => [field, was[field]])) as MixPatch;
     const label =
       patch.name !== undefined
         ? "rename track"
@@ -1626,7 +1633,7 @@ export function StudioEditor({
     updateTrack.mutateAsync({ trackIndex, patch }).then(
       () => {
         if (fields.every((field) => previous[field] === patch[field])) return;
-        const write = (to: TrackPatch) => () => updateTrack.mutate({ trackIndex, patch: to });
+        const write = (to: MixPatch) => () => updateTrack.mutate({ trackIndex, patch: to });
         history.push({
           label,
           undo: write(previous),

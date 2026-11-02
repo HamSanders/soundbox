@@ -13,7 +13,7 @@ Code, Cursor or any MCP agent do it. No account, no credits, works offline. MIT.
 [![Latest release](https://img.shields.io/github/v/release/HamSanders/soundbox?label=release)](https://github.com/HamSanders/soundbox/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/HamSanders/soundbox/total?label=downloads)](https://github.com/HamSanders/soundbox/releases)
 [![MIT licence](https://img.shields.io/badge/licence-MIT-2ea44f)](LICENSE)
-[![MCP server](https://img.shields.io/badge/MCP-21%20tools-6b4fbb)](docs/MCP.md)
+[![MCP server](https://img.shields.io/badge/MCP-24%20tools-6b4fbb)](docs/MCP.md)
 
 <img src="site/public/product/same-prompt-three-models.gif" alt="The same prompt and seed rendered by Stable Audio 3.0 Small Music, MiniMax Music 3 and ACE-Step 1.5 Turbo, with measured render times on an RTX 5080" width="880">
 
@@ -25,7 +25,7 @@ Code, Cursor or any MCP agent do it. No account, no credits, works offline. MIT.
 
 | Make | Arrange | Connect |
 |---|---|---|
-| Sound effects and ambience from a description | A multi-track timeline with effects, MIDI and mixdown | An MCP server with 21 tools for Claude Code and Cursor |
+| Sound effects and ambience from a description | A multi-track timeline with effects, MIDI and mixdown | An MCP server with 24 tools for Claude Code and Cursor |
 | Instrumentals, or songs from a lyric sheet | Cast saved voices onto the lines of a script | A local HTTP API on port 17494 |
 | Speech, voice cloning and voice conversion | Extend, cover, repaint, split into stems | Three agent skills, including a full sound pass |
 
@@ -110,7 +110,7 @@ claude mcp add --transport http soundbox http://127.0.0.1:17494/mcp
 Cursor and other MCP clients take `{ "type": "http", "url": "http://127.0.0.1:17494/mcp" }`.
 Then ask: "add a door slam and a coin pickup to this game", "voice these three
 lines as two characters", "write a 20-second loading-screen loop". The agent
-gets 21 tools for sounds, speech and multi-track stories, and three skills:
+gets 24 tools for sounds, speech and multi-track stories, and three skills:
 `soundbox-sfx`, `soundbox-sound-pass` and `soundbox-voice-story`. Every tool,
 the stdio bridge and the skills are in [docs/MCP.md](docs/MCP.md).
 

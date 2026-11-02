@@ -263,6 +263,34 @@ track soloed, only soloed tracks are heard. `remove_track` takes
 lanes above slide down. Call `get_story` first if you are not certain what is
 on it.
 
+#### `soundbox.add_device` / `soundbox.set_device` / `soundbox.remove_device`
+
+The studio's device rack, one lane at a time. `add_device` takes `story_id`,
+`track_index`, `kind` (`compressor`, `eq`, `reverb`, `delay`, `distortion`,
+`gate`, `limiter`, `autotune`) and optionally `params`, `bypassed` and
+`position` (where in the chain, from 0; omit to add it last). The device starts
+at its defaults, so `params` only needs the knobs you mean to change.
+
+`set_device` takes `story_id`, `track_index`, `device` and either `params`,
+`bypassed` or both. `device` is the id that `add_device` returned, or the kind
+when the lane has only one device of that kind; with two EQs on a lane, the
+error lists their ids. `bypassed: true` takes a device out of the signal path
+and keeps its settings. `remove_device` takes the same `device` reference.
+
+Knob values are in the units the device stores: seconds for times (an attack of
+6 ms is `0.006`), dB for levels and thresholds, `0`–`1` for mixes. The ranges
+and defaults are in the `params` description of the tool's input schema, from
+the same table the rack is built from. A value past the end of a knob's range
+lands at the end, and the result lists it under `clamped`. A knob the device
+does not have is an error rather than being ignored.
+
+Every call returns the lane's whole chain, so the next call can use an id from
+it. `soundbox.get_story` returns the chains too, under `tracks`. The studio
+shows each change as it lands.
+
+> Devices are heard in the studio's timeline playback. `export_story` mixes
+> dry, without them.
+
 ### Delivery
 
 Set how a line is performed with `delivery`, not in the text. Writing

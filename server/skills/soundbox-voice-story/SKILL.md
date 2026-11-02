@@ -42,6 +42,7 @@ re-running `soundbox.speak` on a changed script re-reads all of it.
 | `soundbox.open_in_studio` | Put an existing library sound on a timeline, split into stems |
 | `soundbox.delete_line` / `soundbox.split_line` | Remove a line, or cut a voiced one in two |
 | `soundbox.mix_track` | Name, mute, solo or set the level of a whole lane |
+| `soundbox.add_device` / `set_device` / `remove_device` | A lane's effects: EQ, compressor, reverb and the rest |
 | `soundbox.remove_track` | Delete a lane and the clips on it |
 
 ## The workflow
@@ -95,6 +96,15 @@ sound onto the timeline — a music bed under narration, or an effect from
 belong to the lane, not the clips on it, so muting a track does not forget
 which individual clips you had silenced. Solo beats mute — the moment anything
 is soloed, only soloed lanes are heard.
+
+Each lane also has an insert chain, the studio's device rack.
+`soundbox.add_device` puts an EQ, compressor, reverb, delay, distortion, gate,
+limiter or autotune on it; `soundbox.set_device` turns knobs or bypasses one;
+`soundbox.remove_device` takes it off. Values are in stored units: seconds,
+not milliseconds. "Warmer" on a voice is usually a little low lift and a high
+cut on the EQ; "tame the sibilance" is a high cut and gentle compression. The
+user hears devices in the studio, but `soundbox.export_story` mixes dry, so say
+so before an export that depends on them.
 
 Name your lanes when a story has more than one. "Track 1" tells the user
 nothing; "Narration" and "Music bed" tell them what they are looking at.

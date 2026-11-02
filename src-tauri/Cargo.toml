@@ -1,6 +1,6 @@
 [package]
 name = "soundbox-desktop"
-version = "0.4.0"
+version = "0.4.1"
 description = "Local sound effects, music and speech from open-weight models"
 authors = ["Soundbox contributors"]
 license = "MIT"

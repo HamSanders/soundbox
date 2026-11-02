@@ -12,6 +12,7 @@
 
 import { z } from "zod";
 
+import { DEVICE_KINDS, MAX_DEVICES_PER_TRACK, type DeviceSpec } from "./devices.js";
 import type { ModelParam } from "./models/params.js";
 
 export type { ModelParam, ParamGroup, ParamType } from "./models/params.js";
@@ -986,13 +987,29 @@ export interface StoryTrack {
   /** With any track soloed, only soloed tracks are heard. */
   soloed: boolean;
   gain_db: number;
+  /** The track's insert chain, in order. Heard in the studio's timeline
+   *  playback; the export mixdown is still dry. See ./devices.ts. */
+  devices: DeviceSpec[];
 }
+
+/** One device as a client may send it. Loose on purpose — ids and knobs may
+ *  be left out — because `normalizeChain` fills and clamps every chain before
+ *  it is stored; rejecting a 1.2 mix outright would be stricter than the
+ *  rack's own dials, which land at the end. */
+export const deviceInputSchema = z.object({
+  id: z.string().max(64).optional(),
+  kind: z.enum(DEVICE_KINDS),
+  bypassed: z.boolean().optional(),
+  params: z.record(z.string(), z.number()).optional(),
+});
 
 export const trackPatchSchema = z.object({
   name: z.string().max(80).nullish(),
   muted: z.boolean().optional(),
   soloed: z.boolean().optional(),
   gain_db: z.number().min(-40).max(24).optional(),
+  /** Replaces the whole chain; [] empties it. */
+  devices: z.array(deviceInputSchema).max(MAX_DEVICES_PER_TRACK).optional(),
 });
 
 export type TrackPatch = z.infer<typeof trackPatchSchema>;

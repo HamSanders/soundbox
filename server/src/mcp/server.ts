@@ -32,6 +32,15 @@ import { allowedHostEntries, isListedHost, isTrustedOrigin } from "../origins.js
 import type { Job, ModelInfo, McpToolInfo, Origin, Sound, StorySegment } from "../schemas.js";
 import type { SoundboxService } from "../service.js";
 import type { CallRecord, TrackOptions } from "../telemetry.js";
+import {
+  DEVICE_KINDS,
+  DEVICE_TABLE,
+  clampParams,
+  defaultParams,
+  describeDevices,
+  newDeviceId,
+  type DeviceSpec,
+} from "../devices.js";
 import { ProgressReporter } from "./progress.js";
 
 export const MCP_INSTRUCTIONS = `Soundbox makes audio locally from open-weight models: sound effects, music, and speech.
@@ -87,6 +96,13 @@ on soundbox.update_line for one exception. The names are per model family and
 soundbox.list_models returns them as \`delivery\`; an unknown name is ignored
 silently rather than rejected, so take them from there. A model with no
 \`delivery\` list has none: its words and its voice are the only controls.
+
+Each lane of a story has an insert chain, the studio's device rack:
+soundbox.add_device puts a compressor, eq, reverb, delay, distortion, gate,
+limiter or autotune on a track, soundbox.set_device turns its knobs or
+bypasses it, and soundbox.remove_device takes it off. The studio shows each
+change as it lands. Devices are heard in the studio's playback only;
+soundbox.export_story mixes dry, so say so if the user is about to export.
 
 Speaking is slow: one subprocess per line. soundbox.speak_story blocks until
 every silent line has been read, so expect minutes on a long script.
@@ -385,7 +401,8 @@ export const MCP_TOOLS: McpToolInfo[] = [
     title: "Read a story",
     description:
       "Fetch a story with every line: text, voice, timing, and whether it has " +
-      "been voiced yet. This is how you inspect what you have built.",
+      "been voiced yet, plus each touched track's mix and device chain. This " +
+      "is how you inspect what you have built.",
     calls: 0,
   },
   {
@@ -431,6 +448,36 @@ export const MCP_TOOLS: McpToolInfo[] = [
     description:
       "Control one lane of a story: name it, mute it, solo it, or set its " +
       "volume. These belong to the lane, not to the clips on it.",
+    calls: 0,
+  },
+  {
+    name: "soundbox.add_device",
+    title: "Add an effect to a track",
+    description:
+      "Put a device (compressor, eq, reverb, delay, distortion, gate, limiter, " +
+      "autotune) on one lane of a story, at the end of its chain or at " +
+      "`position`. It starts at its defaults; pass `params` to set knobs as it " +
+      "goes on. The studio's device rack shows it straight away. Heard in the " +
+      "studio's timeline playback; soundbox.export_story still mixes dry.",
+    calls: 0,
+  },
+  {
+    name: "soundbox.set_device",
+    title: "Turn a device's knobs",
+    description:
+      "Change the knobs on a device already on a track, or bypass it (it stays " +
+      "in the chain with its settings, out of the signal path). Name the device " +
+      "by its id, or by kind when the track has only one of that kind. Values " +
+      "past a knob's range land at its end, and the result says which did.",
+    calls: 0,
+  },
+  {
+    name: "soundbox.remove_device",
+    title: "Take an effect off a track",
+    description:
+      "Remove one device from a track's chain, by id, or by kind when the " +
+      "track has only one of that kind. Use `bypassed` on soundbox.set_device " +
+      "instead to switch it off and keep its settings.",
     calls: 0,
   },
   {
@@ -1277,6 +1324,9 @@ export function buildMcp(
           ...story,
           open_in_studio: studioUrl(svc, story_id),
           lines: svc.listSegments(story_id).map(lineView),
+          // Only lanes that have been touched have a row; the rest are at
+          // defaults with an empty rack.
+          tracks: svc.listTracks(story_id),
         });
       }),
   );
@@ -1583,6 +1633,203 @@ export function buildMcp(
         const removed = svc.deleteTrack(story_id, track_index);
         if (removed === null) throw new Error("No story with id " + story_id);
         return json({ removed_clips: removed, ...storySummary(svc, story_id) });
+      }),
+  );
+
+  /* ------------------------------------------------------------ devices */
+
+  /** A lane's chain as stored. A track with no row has no devices. */
+  function chainOf(svc: SoundboxService, storyId: string, trackIndex: number): DeviceSpec[] {
+    return svc.listTracks(storyId).find((t) => t.track_index === trackIndex)?.devices ?? [];
+  }
+
+  /**
+   * The device an agent means: an id, or a kind when there is only one.
+   *
+   * Two EQs on a track is a real chain (a cut early, a lift late), and "the
+   * eq" is then ambiguous. Guessing would turn the wrong one, so the error
+   * lists the ids instead.
+   */
+  function findDevice(chain: DeviceSpec[], ref: string, trackIndex: number): number {
+    const byId = chain.findIndex((d) => d.id === ref);
+    if (byId >= 0) return byId;
+    const kind = ref.trim().toLowerCase();
+    const matches = chain.flatMap((d, i) => (d.kind === kind ? [i] : []));
+    if (matches.length === 1) return matches[0];
+    const listing = chain.length
+      ? chain.map((d) => `${d.id} (${d.kind})`).join(", ")
+      : "nothing";
+    if (matches.length > 1) {
+      throw new Error(
+        `Track ${trackIndex} has ${matches.length} ${kind} devices; pass one id: ${listing}.`,
+      );
+    }
+    throw new Error(`Track ${trackIndex} has no device "${ref}". On it: ${listing}.`);
+  }
+
+  /** What every device tool answers with: the whole chain, because the next
+   *  call usually needs an id from it, plus anything that did not land as
+   *  asked. */
+  function chainResult(
+    svc: SoundboxService,
+    storyId: string,
+    trackIndex: number,
+    extra: Record<string, unknown>,
+  ) {
+    return json({
+      story_id: storyId,
+      track_index: trackIndex,
+      ...extra,
+      devices: chainOf(svc, storyId, trackIndex),
+      note: "Heard in the studio's timeline playback; soundbox.export_story mixes dry.",
+      open_in_studio: studioUrl(svc, storyId),
+    });
+  }
+
+  function saveChain(
+    svc: SoundboxService,
+    storyId: string,
+    trackIndex: number,
+    chain: DeviceSpec[],
+  ): void {
+    if (svc.updateTrack(storyId, trackIndex, { devices: chain }) === null) {
+      throw new Error("No story with id " + storyId);
+    }
+  }
+
+  /** Knob values as the agent sent them, checked against the device. Unknown
+   *  keys are an error rather than dropped: a misspelt knob that silently does
+   *  nothing is the one failure an agent cannot see. */
+  function knobs(kind: DeviceSpec["kind"], params: Record<string, number> | undefined) {
+    const result = clampParams(kind, params ?? {});
+    if (result.unknown.length) {
+      const keys = DEVICE_TABLE[kind].params.map((p) => p.key).join(", ");
+      throw new Error(
+        `${kind} has no knob ${result.unknown.map((k) => `"${k}"`).join(", ")}. ` +
+          `Its knobs: ${keys}.`,
+      );
+    }
+    return result;
+  }
+
+  const DEVICE_PARAMS = z
+    .record(z.string(), z.number())
+    .describe(
+      "Knob values in the device's stored units (seconds, not ms; mixes 0-1). " +
+        "Ranges and defaults:\n" +
+        describeDevices(),
+    );
+
+  mcp.registerTool(
+    "soundbox.add_device",
+    {
+      title: meta["soundbox.add_device"].title ?? undefined,
+      description: meta["soundbox.add_device"].description,
+      inputSchema: {
+        story_id: z.string(),
+        track_index: z.number().int().min(-16).max(16).describe("Which lane."),
+        kind: z.enum(DEVICE_KINDS),
+        params: DEVICE_PARAMS.optional(),
+        bypassed: z.boolean().optional(),
+        position: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe("Where in the chain, from 0. Omit to add it last."),
+      },
+    },
+    async ({ story_id, track_index, kind, params, bypassed, position }, extra) =>
+      await track(
+        extra,
+        "soundbox.add_device",
+        { story_id, track_index, kind, params, bypassed, position },
+        () => {
+          const svc = getService();
+          if (svc.getStory(story_id) === null) throw new Error("No story with id " + story_id);
+          const set = knobs(kind, params);
+          const device: DeviceSpec = {
+            id: newDeviceId(kind),
+            kind,
+            bypassed: bypassed ?? false,
+            params: { ...defaultParams(kind), ...set.params },
+          };
+          const chain = [...chainOf(svc, story_id, track_index)];
+          chain.splice(Math.min(position ?? chain.length, chain.length), 0, device);
+          saveChain(svc, story_id, track_index, chain);
+          return chainResult(svc, story_id, track_index, {
+            device: device.id,
+            ...(set.clamped.length ? { clamped: set.clamped } : {}),
+          });
+        },
+      ),
+  );
+
+  mcp.registerTool(
+    "soundbox.set_device",
+    {
+      title: meta["soundbox.set_device"].title ?? undefined,
+      description: meta["soundbox.set_device"].description,
+      inputSchema: {
+        story_id: z.string(),
+        track_index: z.number().int().min(-16).max(16),
+        device: z.string().describe("The device's id, or its kind when the track has one."),
+        params: DEVICE_PARAMS.optional(),
+        bypassed: z
+          .boolean()
+          .optional()
+          .describe("true takes it out of the signal path and keeps its settings."),
+      },
+    },
+    async ({ story_id, track_index, device, params, bypassed }, extra) =>
+      await track(
+        extra,
+        "soundbox.set_device",
+        { story_id, track_index, device, params, bypassed },
+        () => {
+          const svc = getService();
+          if (svc.getStory(story_id) === null) throw new Error("No story with id " + story_id);
+          if (params === undefined && bypassed === undefined) {
+            throw new Error("Nothing to change: pass params, bypassed, or both.");
+          }
+          const chain = [...chainOf(svc, story_id, track_index)];
+          const at = findDevice(chain, device, track_index);
+          const current = chain[at];
+          const set = knobs(current.kind, params);
+          chain[at] = {
+            ...current,
+            bypassed: bypassed ?? current.bypassed,
+            params: { ...current.params, ...set.params },
+          };
+          saveChain(svc, story_id, track_index, chain);
+          return chainResult(svc, story_id, track_index, {
+            device: current.id,
+            ...(set.clamped.length ? { clamped: set.clamped } : {}),
+          });
+        },
+      ),
+  );
+
+  mcp.registerTool(
+    "soundbox.remove_device",
+    {
+      title: meta["soundbox.remove_device"].title ?? undefined,
+      description: meta["soundbox.remove_device"].description,
+      inputSchema: {
+        story_id: z.string(),
+        track_index: z.number().int().min(-16).max(16),
+        device: z.string().describe("The device's id, or its kind when the track has one."),
+      },
+    },
+    async ({ story_id, track_index, device }, extra) =>
+      await track(extra, "soundbox.remove_device", { story_id, track_index, device }, () => {
+        const svc = getService();
+        if (svc.getStory(story_id) === null) throw new Error("No story with id " + story_id);
+        const chain = [...chainOf(svc, story_id, track_index)];
+        const at = findDevice(chain, device, track_index);
+        const [gone] = chain.splice(at, 1);
+        saveChain(svc, story_id, track_index, chain);
+        return chainResult(svc, story_id, track_index, { removed: gone.id });
       }),
   );
 

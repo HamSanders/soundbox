@@ -191,11 +191,19 @@ notarized:
 - `APPLE_PASSWORD` (an app-specific password)
 - `APPLE_TEAM_ID`
 
-A Developer ID signature enables the hardened runtime. Under it, Node's JIT
-and its loading of `better-sqlite3` need the
-`com.apple.security.cs.allow-jit` and
-`com.apple.security.cs.disable-library-validation` entitlements. Check that
-the first signed build starts its server before publishing it.
+A Developer ID build adds `src-tauri/tauri.signed.conf.json`, which turns on
+the hardened runtime that notarization requires. Under it, Node's JIT and its
+loading of `better-sqlite3` need the entitlements in
+`src-tauri/Entitlements.plist` (`allow-jit`,
+`allow-unsigned-executable-memory`, `disable-library-validation`), which every
+build embeds. Check that the first signed build starts its server before
+publishing it.
+
+The ad-hoc build keeps the hardened runtime off. With it on, an ad-hoc
+signature stops the bundled Node at its first JIT allocation (a `trace trap`,
+and the app reports that the server did not start in time). To check a build,
+`codesign -dv Soundbox.app/Contents/MacOS/node` should show
+`flags=0x2(adhoc)` for an ad-hoc build, without `runtime`.
 
 **Windows:** an unsigned installer works, behind the SmartScreen prompt. A
 code-signing certificate removes the prompt (Azure Trusted Signing is the

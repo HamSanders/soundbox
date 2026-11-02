@@ -1814,7 +1814,7 @@ export function StoryTimeline({
   };
 
   /**
-   * The wheel zooms, about the pointer.
+   * The wheel zooms, about the pointer — but only for an actual zoom gesture.
    *
    * Zooming about the *centre* is what a plain multiply does, and it is wrong
    * every time: you point at the bar you care about, zoom, and it has moved
@@ -1826,15 +1826,21 @@ export function StoryTimeline({
    * — without which the page (or the lane list) scrolls at the same time as
    * the zoom.
    *
-   * Shift is left alone: that is the browser's own horizontal scroll, which is
-   * exactly what a wide timeline wants it to be.
+   * A Mac trackpad's pinch gesture is reported to the browser as a wheel
+   * event with `ctrlKey` set, regardless of whether Control is actually
+   * held — that is the only reliable signal that the user means to zoom.
+   * A plain two-finger scroll (no ctrlKey) is left alone entirely, so it
+   * pans the timeline horizontally or vertically exactly like any other
+   * scrollable element: deltaX pans left/right, deltaY scrolls the lanes
+   * up/down. Shift+wheel is also left alone, for a mouse wheel's
+   * shift-to-scroll-horizontally convention.
    */
   useEffect(() => {
     const el = scrollRef.current;
     if (el === null) return;
 
     const onWheel = (event: WheelEvent): void => {
-      if (event.shiftKey) return;
+      if (!event.ctrlKey || event.shiftKey) return;
       event.preventDefault();
 
       // Where the pointer is, in seconds, before the zoom.

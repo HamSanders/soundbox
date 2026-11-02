@@ -24,22 +24,15 @@
 
 import type { ChatMessage } from "./client.js";
 
-/** What the studio looks like right now, as the model needs to see it. */
-/** The effects a track can be given. Kept in step with `app/src/lib/devices.ts`
- *  — the model may only name one of these, so a kind that does not exist here
- *  is dropped rather than sent to a rack that cannot build it. */
-export const DEVICE_KINDS = [
-  "compressor",
-  "eq",
-  "reverb",
-  "delay",
-  "distortion",
-  "gate",
-  "limiter",
-  "autotune",
-] as const;
-export type DeviceKind = (typeof DEVICE_KINDS)[number];
+/** The effects a track can be given — the server's device table, which is
+ *  itself checked against `app/src/lib/devices.ts` by test/devices.test.ts.
+ *  The model may only name one of these, so a kind that does not exist is
+ *  dropped rather than sent to a rack that cannot build it. */
+import { DEVICE_KINDS, type DeviceKind } from "../devices.js";
 
+export { DEVICE_KINDS, type DeviceKind };
+
+/** What the studio looks like right now, as the model needs to see it. */
 export interface StudioContext {
   tracks: {
     track_index: number;
@@ -177,11 +170,10 @@ export type StudioAction =
    * Turn the knobs on an effect that is already on a track.
    *
    * The values are passed through as a plain map rather than validated
-   * against each device's ranges here. `app/src/lib/devices.ts` owns those
-   * ranges — min, max, step and unit per parameter — and it is the thing that
-   * builds the rack, so it clamps on the way in. Mirroring the whole table
-   * server-side would be a second copy to drift; mirroring `DEVICE_KINDS`
-   * alone is cheap because a bad kind cannot be clamped into a good one.
+   * against each device's ranges here. The studio applies the plan to its
+   * rack through `clampDeviceParams`, and the chain it saves is clamped again
+   * by the server (`normalizeChain` in ../devices.ts), so a value the model
+   * over-reached on lands at the end of the real dial either way.
    */
   | { type: "set_device"; track_index: number; kind: DeviceKind; params: Record<string, number> }
   /**

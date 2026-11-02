@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+
 import { defineConfig } from "vitest/config";
 
 // CI sets SOUNDBOX_TEST_REPORT to get report files next to the console output:
@@ -8,6 +10,11 @@ import { defineConfig } from "vitest/config";
 const report = !!process.env.SOUNDBOX_TEST_REPORT;
 
 export default defineConfig({
+  // test/devices.test.ts loads the app's device table to check the server's
+  // copy against it; the app's modules import each other through "@/".
+  resolve: {
+    alias: { "@": fileURLToPath(new URL("../app/src", import.meta.url)) },
+  },
   test: {
     reporters: report ? ["default", "github-actions", "junit", "json", "html"] : ["default"],
     outputFile: {

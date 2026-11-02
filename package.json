@@ -1,6 +1,6 @@
 {
   "name": "soundbox-monorepo",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "description": "Open-source AI sound effects, music and text-to-speech that run on your own machine, with an MCP server for coding agents",
   "license": "MIT",

@@ -386,6 +386,46 @@ export const MCP_TOOLS: McpToolDoc[] = [
     ],
   },
   {
+    name: "soundbox.add_device",
+    title: "Add an effect to a track",
+    blurb:
+      "Puts a compressor, EQ, reverb, delay, distortion, gate, limiter or autotune on one lane's rack. The studio shows it as it lands; the export still mixes dry.",
+    group: "arrangement",
+    args: [
+      { name: "story_id", type: "string", required: true },
+      { name: "track_index", type: "integer", required: true, note: "Which lane, −16 to 16." },
+      { name: "kind", type: "string", required: true, note: "compressor, eq, reverb, delay, distortion, gate, limiter or autotune." },
+      { name: "params", type: "object", note: "Knobs to set as it goes on, in stored units (seconds, dB, 0–1 mixes). The rest take defaults." },
+      { name: "bypassed", type: "boolean" },
+      { name: "position", type: "integer", note: "Where in the chain, from 0. Omit to add it last." },
+    ],
+  },
+  {
+    name: "soundbox.set_device",
+    title: "Turn a device's knobs",
+    blurb:
+      "Changes a device already on a lane, or bypasses it and keeps its settings. Values past a knob's range land at its end, and the result says which did.",
+    group: "arrangement",
+    args: [
+      { name: "story_id", type: "string", required: true },
+      { name: "track_index", type: "integer", required: true },
+      { name: "device", type: "string", required: true, note: "Its id, or its kind when the lane has one." },
+      { name: "params", type: "object" },
+      { name: "bypassed", type: "boolean" },
+    ],
+  },
+  {
+    name: "soundbox.remove_device",
+    title: "Take an effect off a track",
+    blurb: "Removes one device from a lane's chain. Bypass it with soundbox.set_device to keep its settings instead.",
+    group: "arrangement",
+    args: [
+      { name: "story_id", type: "string", required: true },
+      { name: "track_index", type: "integer", required: true },
+      { name: "device", type: "string", required: true, note: "Its id, or its kind when the lane has one." },
+    ],
+  },
+  {
     name: "soundbox.remove_track",
     title: "Remove a track",
     blurb:

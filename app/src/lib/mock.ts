@@ -62,6 +62,7 @@ import type {
   TagCount,
   Unsubscribe,
 } from "./api";
+import { clampDeviceParams, createDevice } from "./devices";
 import { followPlacement } from "./reading-order";
 
 /* ------------------------------------------------------------- utilities */
@@ -2940,11 +2941,17 @@ export const mockApi: SoundboxApi = {
     if (!track) {
       track = {
         story_id: storyId, track_index: trackIndex,
-        name: null, muted: false, soloed: false, gain_db: 0,
+        name: null, muted: false, soloed: false, gain_db: 0, devices: [],
       };
       tracks.push(track);
     }
-    Object.assign(track, patch);
+    // Clamped like the server's `normalizeChain`, so the mock never holds a
+    // chain the real backend would have refused to store.
+    const devices = patch.devices?.map((d) => ({
+      ...d,
+      params: { ...createDevice(d.kind).params, ...clampDeviceParams(d.kind, d.params) },
+    }));
+    Object.assign(track, patch, devices ? { devices } : {});
     return { ...track };
   },
 

@@ -7,6 +7,7 @@ import { DocPageRoute } from "./routes/doc";
 import { BlogIndexPage } from "./routes/blog-index";
 import { BlogPostPage } from "./routes/blog-post";
 import { McpPage } from "./routes/mcp";
+import { PressPage } from "./routes/press";
 import { DownloadPage } from "./routes/download";
 import { DOC_PAGES } from "./docs/pages";
 import { BLOG_POSTS } from "./blog/posts";
@@ -128,6 +129,13 @@ export const routes: RouteRecord[] = [
         path: "mcp",
         Component: McpPage,
         entry: "src/routes/mcp.tsx",
+      },
+      {
+        // The press kit: quotable copy, a fact sheet and direct downloads for
+        // the films, screenshots and mark. Static, one page.
+        path: "press",
+        Component: PressPage,
+        entry: "src/routes/press.tsx",
       },
       {
         path: "download",

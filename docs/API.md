@@ -135,7 +135,7 @@ rather than failing the import.
 | POST | `/api/stories/from-sound` | Lay a sound out on a new timeline. Body `{ sound_id, separate?, model?, stems? }` |
 | GET | `/api/stories/{id}/events` | SSE stream of changes to the story |
 | GET | `/api/stories/{id}/tracks` | Track settings |
-| PATCH | `/api/stories/{id}/tracks/{track_index}` | Body `{ name?, muted?, soloed?, gain_db? }` |
+| PATCH | `/api/stories/{id}/tracks/{track_index}` | Body `{ name?, muted?, soloed?, gain_db?, devices? }`. `devices` replaces the lane's chain (`[{ kind, id?, bypassed?, params? }]`); unknown knobs are dropped, values are clamped to range and missing knobs take defaults |
 | DELETE | `/api/stories/{id}/tracks/{track_index}` | Delete the lane and everything on it |
 | GET | `/api/stories/{id}/segments` | Lines and clips |
 | POST | `/api/stories/{id}/segments` | Add one. Body `{ text?, kind?: "line" \| "pause", speaker?, voice_id?, track_index?, start_s?, position?, sound_id?, duration_s?, trim_start_s?, fade_in_s?, fade_out_s?, gain_db?, muted? }` |
@@ -554,5 +554,6 @@ Stories (a script that persists, with lines placed in time):
 Arrangement:
 - `soundbox.open_in_studio(sound_id, separate?, stems?, rest?)`
 - `soundbox.mix_track(story_id, track_index, name?, muted?, soloed?, gain_db?)`, `soundbox.remove_track(story_id, track_index)`
+- `soundbox.add_device(story_id, track_index, kind, params?, bypassed?, position?)`, `soundbox.set_device(story_id, track_index, device, params?, bypassed?)`, `soundbox.remove_device(story_id, track_index, device)`
 
 Stdio bridge for clients that can't do HTTP: `node <checkout>/server/dist/mcp/stdio.js`, which proxies to the running server. The file exists only after `npm run build`, and the bridge covers the sound tools (`generate`, `enhance_prompt`, `list_models`, `list_sounds`, `get_sound`, `delete_sound`). Use HTTP for `separate`, speech and stories. The Agents page prints the line with the path resolved.

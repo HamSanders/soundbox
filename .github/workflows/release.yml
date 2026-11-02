@@ -88,6 +88,12 @@ jobs:
               { echo "$name<<__SECRET__"; echo "${!name}"; echo "__SECRET__"; } >> "$GITHUB_ENV"
             fi
           done
+          # A Developer ID build turns the hardened runtime back on, which
+          # notarization requires. The ad-hoc build leaves it off: an ad-hoc
+          # signature under it kills the bundled Node with SIGTRAP (#71).
+          if [ -n "$APPLE_SIGNING_IDENTITY" ]; then
+            echo "SIGNED_ARGS=--config src-tauri/tauri.signed.conf.json" >> "$GITHUB_ENV"
+          fi
 
       # The release notes are the tag's section of CHANGELOG.md. A tag made by
       # hand with no section of its own (an -rc, say) falls back to a link.
@@ -129,7 +135,7 @@ jobs:
             **Installers are not yet signed.** Windows shows a SmartScreen prompt (More info → Run anyway); macOS asks you to allow the app in System Settings → Privacy & Security. [docs/DESKTOP.md](https://github.com/${{ github.repository }}/blob/main/docs/DESKTOP.md) has the details.
           releaseDraft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
-          args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} --config src-tauri/tauri.bundle.conf.json ${{ env.UPDATER_ARGS }}
+          args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} --config src-tauri/tauri.bundle.conf.json ${{ env.SIGNED_ARGS }} ${{ env.UPDATER_ARGS }}
 
       - name: Keep the installer as an artifact
         uses: actions/upload-artifact@v7

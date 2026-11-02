@@ -1124,7 +1124,7 @@ export function useUpdateTrack(storyId: string) {
           ...rows,
           {
             story_id: storyId, track_index: trackIndex,
-            name: null, muted: false, soloed: false, gain_db: 0,
+            name: null, muted: false, soloed: false, gain_db: 0, devices: [],
             ...patch,
           },
         ];

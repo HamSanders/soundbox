@@ -511,9 +511,13 @@ arrow by ten, `Home` and `End` jump to the ends. Wet/dry is a horizontal slider.
 > eight devices in the server's DSP. The rack shows this warning where you add a
 > device.
 >
-> For the same reason, **racks are stored in your browser**, per story, and not
-> in the story document. They do not travel to another machine, and clearing
-> site data clears them.
+Racks are stored with the story, on each track next to its name, mute, solo
+and volume, so they reach every window and every machine that opens the story,
+and an agent can change them over MCP (`soundbox.add_device`,
+`soundbox.set_device`, `soundbox.remove_device`). An open studio shows an
+agent's change as it lands. When a lane is removed, the racks above it move
+down with their lanes. A rack saved in the browser by 0.4 is moved to the
+story the first time the story is opened.
 
 ### The devices
 
@@ -759,6 +763,9 @@ The studio-relevant tools:
 | `soundbox.speak_story`    | Read every line that has no audio yet. This is the slow one        |
 | `soundbox.open_in_studio` | Put a library sound on a timeline, split into stems where possible |
 | `soundbox.mix_track`      | Name, mute, solo or set the level of one lane                      |
+| `soundbox.add_device`     | Put a device on a lane's rack, optionally with its knobs set        |
+| `soundbox.set_device`     | Turn a device's knobs, or bypass it                                |
+| `soundbox.remove_device`  | Take a device off a lane's rack                                    |
 | `soundbox.remove_track`   | Delete a lane and the clips on it. Lanes above slide down          |
 | `soundbox.export_story`   | Mix the arrangement down to one sound                              |
 

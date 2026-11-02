@@ -6,7 +6,20 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Security: updated dependencies with open advisories: the system information library, the HTTP server adapter, and the desktop updater's zip support (Dependabot alerts).
+
+## [0.4.1] - 2026-10-29
+
 ### Added
+
+- **Device tools for agents.** `soundbox.add_device`, `soundbox.set_device`
+  and `soundbox.remove_device` put a device on a story track, turn its knobs or
+  bypass it, and take it off, with the same eight kinds, knobs and ranges as the
+  studio's rack. Over-range values land at the end of the knob and are reported;
+  unknown knobs are an error. An open studio shows the change as it lands.
+  `soundbox.get_story` now returns each track's chain. Devices are still heard
+  on the timeline only; `export_story` mixes dry.
 
 - **Docker images publish with each release.** When a release is tagged,
   `ghcr.io/hamsanders/soundbox:<version>` and `:<version>-cuda` are built and
@@ -28,6 +41,20 @@ to follow [Semantic Versioning](https://semver.org/).
   artwork and custom endpoints (URL, status, timing; never keys or prompts).
   Before this there were no debug lines at all, so `--log-level debug` showed
   nothing extra. (#22)
+- **Press kit on the website.** `/press/` collects quotable descriptions, a
+  fact sheet, the launch films with direct MP4 downloads, screenshots, GIFs
+  and the mark for anyone writing or filming about Soundbox, and the landing
+  page footer links to it.
+
+### Changed
+
+- **Device racks are stored with the story.** Each track's chain is saved on
+  the server next to its name, mute, solo and volume
+  (`PATCH /api/stories/:id/tracks/:n` takes `devices`), instead of in the
+  browser's localStorage, so it reaches other windows and machines and follows
+  its lane when a lane below it is removed. A rack saved by 0.4 is moved up the
+  first time its story is opened. A dial sweep is saved once the dial settles,
+  not on every step.
 
 ### Security
 
@@ -44,6 +71,15 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Trackpad gestures work on the story timeline. Only a pinch (or Ctrl+wheel)
+  zooms now; a two-finger swipe pans left and right and a two-finger scroll
+  moves the lanes up and down, where before every scroll was read as a zoom.
+- **macOS: the server starts again.** The ad-hoc signed app gave its bundled
+  Node the hardened runtime without the JIT entitlements, so Node died with a
+  trace trap before writing a log and the app said the server did not start in
+  time (0.3.0 and 0.4.0). Ad-hoc builds now leave the hardened runtime off, and
+  every build embeds Node's entitlements for when a Developer ID build turns it
+  on. (#71)
 - Soundbox starts again on libraries from the voice-profiles era. Their old
   `voice_samples` table stopped the server with "no such column: voice_id"
   before it could write a log. The table is now renamed to
@@ -54,6 +90,10 @@ to follow [Semantic Versioning](https://semver.org/).
   path is now joined without doubling, so a root, `…/v1`, `…/sdapi/v1` or the
   full endpoint all work. Errors name the full URL tried, and a 404 explains
   what to check. (#22)
+
+- **Studio assistant: add a device, then set it.** A plan that added a device
+  and then turned its knobs applied the second step to the rack as it was
+  before the plan, which wrote the new device back out again.
 
 ## [0.4.0] - 2026-10-25
 
@@ -247,7 +287,8 @@ Initial public release, MIT-licensed. Everything below is new.
   `SOUNDBOX_ALLOWED_HOSTS`), and requires JSON or an `X-Soundbox` header on
   mutating API requests.
 
-[Unreleased]: https://github.com/HamSanders/soundbox/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/HamSanders/soundbox/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/HamSanders/soundbox/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/HamSanders/soundbox/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/HamSanders/soundbox/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/HamSanders/soundbox/compare/v0.1.0...v0.2.0

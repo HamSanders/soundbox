@@ -71,6 +71,9 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Trackpad gestures work on the story timeline. Only a pinch (or Ctrl+wheel)
+  zooms now; a two-finger swipe pans left and right and a two-finger scroll
+  moves the lanes up and down, where before every scroll was read as a zoom.
 - **macOS: the server starts again.** The ad-hoc signed app gave its bundled
   Node the hardened runtime without the JIT entitlements, so Node died with a
   trace trap before writing a log and the app said the server did not start in

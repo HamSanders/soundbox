@@ -18,7 +18,7 @@ export interface Patch {
 }
 
 export const PATCH_SLOTS = 8;
-const KEY = "soundbox.console.patches.v1";
+const KEY = "konchi.console.patches.v1";
 
 type Slots = (Patch | null)[];
 

@@ -1,15 +1,15 @@
-# Installing Soundbox with a coding agent
+# Installing Konchi with a coding agent
 
 This page is written for an agent such as Claude Code, Cursor or Codex that
-has been asked to install Soundbox on the machine it is running on. Paste
+has been asked to install Konchi on the machine it is running on. Paste
 this into the agent to start:
 
 ```text
-Install Soundbox on this machine and confirm it works, following
+Install Konchi on this machine and confirm it works, following
 https://github.com/HamSanders/soundbox/blob/main/docs/INSTALL-AGENT.md
 ```
 
-Soundbox runs entirely on the user's machine. The server listens on
+Konchi runs entirely on the user's machine. The server listens on
 `http://127.0.0.1:17494` and every step below can be checked against its
 HTTP API, which is documented in full in [API.md](API.md).
 
@@ -27,7 +27,7 @@ HTTP API, which is documented in full in [API.md](API.md).
   `device` (`cuda`, `metal` or `cpu`), `gpu_name`, `vram_total_mb` and
   `vram_free_mb`. Pick models that fit, and say so if the machine is CPU-only:
   generation works there, but takes minutes rather than seconds.
-- **Reuse what exists.** Weights live under `~/.soundbox/models` and are shared
+- **Reuse what exists.** Weights live under `~/.konchi/models` and are shared
   by every profile. If `GET /api/models` shows a model as `installed`, do not
   download it again.
 - **Name what you could not do.** The first launch of an unsigned installer
@@ -46,7 +46,7 @@ HTTP API, which is documented in full in [API.md](API.md).
 2. **Install.**
    - **Windows or macOS:** download the installer for this machine from
      [the latest release](https://github.com/HamSanders/soundbox/releases/latest)
-     (`Soundbox_<version>_x64-setup.exe`, or the `.dmg` for Apple silicon or
+     (`Konchi_<version>_x64-setup.exe`, or the `.dmg` for Apple silicon or
      Intel) and run it. The app carries its own Node and server. The builds are
      not signed yet, so the first launch asks the user to confirm; the exact
      clicks are in [DESKTOP.md](DESKTOP.md#installing). Ask the user to do
@@ -55,14 +55,14 @@ HTTP API, which is documented in full in [API.md](API.md).
 
      ```bash
      git clone https://github.com/HamSanders/soundbox
-     cd soundbox
+     cd konchi
      npm install
      npm run build
-     npx soundbox model install audiocpp
-     npx soundbox
+     npx konchi model install audiocpp
+     npx konchi
      ```
 
-     `npx soundbox` starts the server on port 17494 and serves the web app at
+     `npx konchi` starts the server on port 17494 and serves the web app at
      the same address. [INSTALL.md](INSTALL.md) covers the CLI and environment
      variables.
 
@@ -74,7 +74,7 @@ HTTP API, which is documented in full in [API.md](API.md).
 
    Report `version`, `device`, `gpu_name` and `vram_total_mb` to the user. If
    `device` is `cpu` on a machine with an NVIDIA GPU, the audio.cpp runtime was
-   not matched to the driver; `npx soundbox model status audiocpp` says which
+   not matched to the driver; `npx konchi model status audiocpp` says which
    binary and backend resolved, and
    [AUDIOCPP.md](AUDIOCPP.md#choosing-a-backend) explains how to force one.
 
@@ -88,7 +88,7 @@ HTTP API, which is documented in full in [API.md](API.md).
 5. **Download it.** `POST /api/models/{id}/download` returns a job. Poll
    `GET /api/jobs/{id}` until `status` is `done` (or follow
    `GET /api/jobs/{id}/events`, a server-sent event stream). Mutating requests
-   need the header `X-Soundbox: 1` when they carry no JSON body; see the
+   need the header `X-Konchi: 1` when they carry no JSON body; see the
    request rules in [API.md](API.md#request-rules).
 
 6. **Generate one sound.**
@@ -107,12 +107,12 @@ HTTP API, which is documented in full in [API.md](API.md).
    `http://127.0.0.1:17494/mcp`. For Claude Code:
 
    ```bash
-   claude mcp add --transport http soundbox http://127.0.0.1:17494/mcp
+   claude mcp add --transport http konchi http://127.0.0.1:17494/mcp
    ```
 
    Other clients and the three bundled skills are in [MCP.md](MCP.md).
 
-8. **Report.** Tell the user: where Soundbox is installed, what `GET
+8. **Report.** Tell the user: where Konchi is installed, what `GET
    /api/health` said about the GPU, which model was downloaded and under which
    licence, the path of the test WAV, and anything from the rules above that
    needed their hand.
@@ -122,7 +122,7 @@ HTTP API, which is documented in full in [API.md](API.md).
 - `GET /api/health` does not answer: on the desktop the app starts the server
   itself; wait a few seconds after launch. From source, check that nothing
   else owns port 17494.
-- A model shows `needs_runtime`: run `npx soundbox model install audiocpp`,
+- A model shows `needs_runtime`: run `npx konchi model install audiocpp`,
   or on the desktop open the Models page, which offers the install.
 - A download fails with 401 or 403: the model is gated on Hugging Face. The
   user has to accept its terms on the model's page and add a token in

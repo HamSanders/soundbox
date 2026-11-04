@@ -1,6 +1,6 @@
-# How Soundbox is put together
+# How Konchi is put together
 
-Soundbox is a local audio workstation: a web app, an HTTP API and an MCP server,
+Konchi is a local audio workstation: a web app, an HTTP API and an MCP server,
 all served by one process on one port, generating audio with open-weight models
 that run on your own machine. Nothing leaves the box unless you export it.
 
@@ -29,7 +29,7 @@ The default port is **17494**.
 Three npm workspaces plus a Rust shell:
 
 ```
-soundbox/
+konchi/
 ├── app/        the web app: React 19, Vite, Tailwind v4, shadcn/ui
 ├── server/     the server: Fastify, better-sqlite3, the model adapters
 ├── site/       the public static site, built from app/ components
@@ -46,11 +46,11 @@ the app, and as a crawlable page with no backend. See
 
 ## Where your data lives
 
-Everything is under one directory: `~/.soundbox` by default, or wherever
-`SOUNDBOX_DATA_DIR` points.
+Everything is under one directory: `~/.konchi` by default, or wherever
+`KONCHI_DATA_DIR` points.
 
 ```
-~/.soundbox/
+~/.konchi/
 ├── soundbox.db      SQLite: every row of metadata
 ├── sounds/          one .wav per generated sound
 ├── models/          downloaded weights (GGUF and friends)
@@ -60,7 +60,7 @@ Everything is under one directory: `~/.soundbox` by default, or wherever
 
 A sound is a file plus a row. The row carries the prompt, the model, the seed
 and the peaks; the file is a plain WAV any audio tool can open. To back up,
-copy the directory. Soundbox keeps no state anywhere else.
+copy the directory. Konchi keeps no state anywhere else.
 
 ### The database
 

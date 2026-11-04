@@ -29,7 +29,7 @@ export const LOG_POLL_MS = 2000;
  *  column, but the lines it wants are the same ones. */
 export const LOG_TAIL_LINES = 500;
 
-/** `14:52:08 INFO    soundbox.jobs: job <uuid> 57% phase=generating Step 34/100` */
+/** `14:52:08 INFO    konchi.jobs: job <uuid> 57% phase=generating Step 34/100` */
 const LINE = /^(\d{2}:\d{2}:\d{2})\s+(\w+)\s+([\w.]+):\s*(.*)$/;
 const JOB_ID = /\bjob ([0-9a-f]{8}-[0-9a-f-]{27})/i;
 
@@ -46,7 +46,7 @@ export function parseLog(lines: string[]): LogEntry[] {
       key: i,
       time: time!,
       level: level as Level,
-      source: source!.replace(/^soundbox\./, ""),
+      source: source!.replace(/^konchi\./, ""),
       message: message!,
       jobId: JOB_ID.exec(message!)?.[1] ?? null,
       raw,

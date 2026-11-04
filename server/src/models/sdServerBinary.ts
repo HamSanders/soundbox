@@ -53,6 +53,7 @@ import {
   type Release,
   type ReleaseAsset,
 } from "./releaseInstall.js";
+import { envVar } from "../env.js";
 
 export const GITHUB_REPO = "leejet/stable-diffusion.cpp";
 export const BINARY_NAME = process.platform === "win32" ? "sd-server.exe" : "sd-server";
@@ -62,8 +63,8 @@ export const DEFAULT_VERSION = "latest";
 
 const HTTP_TIMEOUT_MS = 30_000;
 
-export const BIN_ENV = "SOUNDBOX_SD_SERVER_BIN";
-export const BACKEND_ENV = "SOUNDBOX_SD_SERVER_BACKEND";
+export const BIN_ENV = "KONCHI_SD_SERVER_BIN";
+export const BACKEND_ENV = "KONCHI_SD_SERVER_BACKEND";
 
 export class InstallError extends Error {
   constructor(message: string) {
@@ -151,7 +152,7 @@ export async function status(): Promise<InstallStatus> {
     version: managed ? basename(join(binary, "..")) : null,
     path: binary,
     backend: backend(),
-    source: managed ? "managed" : (process.env[BIN_ENV] ?? "").trim() ? "env" : "path",
+    source: managed ? "managed" : (envVar(BIN_ENV) ?? "").trim() ? "env" : "path",
   };
 }
 
@@ -161,7 +162,7 @@ function isManagedPath(path: string): boolean {
 }
 
 export async function findBinary(): Promise<string | null> {
-  const override = (process.env[BIN_ENV] ?? "").trim();
+  const override = (envVar(BIN_ENV) ?? "").trim();
   if (override) return (await isFile(override)) ? override : null;
 
   const managed = await findManagedBinary();
@@ -240,7 +241,7 @@ export function detectBackend(): string {
 }
 
 export function backend(): string {
-  const override = (process.env[BACKEND_ENV] ?? "").trim();
+  const override = (envVar(BACKEND_ENV) ?? "").trim();
   if (override) return override;
   return detectBackend();
 }
@@ -331,7 +332,7 @@ async function getRelease(version: string): Promise<Release> {
   try {
     const resp = await fetchWithTimeout(url, {
       Accept: "application/vnd.github+json",
-      "User-Agent": "soundbox",
+      "User-Agent": "konchi",
     });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     release = (await resp.json()) as Release;
@@ -374,7 +375,7 @@ function pickAsset(release: Release, backendOverride: string | null): ReleaseAss
  * check available — and a better one than a manifest file, since it arrives in
  * the API response rather than as another asset an attacker would be editing
  * alongside the binary. No digest means nothing to verify against, which is
- * a refusal unless `SOUNDBOX_ALLOW_UNVERIFIED_BINARIES` says otherwise.
+ * a refusal unless `KONCHI_ALLOW_UNVERIFIED_BINARIES` says otherwise.
  */
 export function verifyDigest(assetName: string, bytes: Buffer, digest: string | null): void {
   const actual = createHash("sha256").update(bytes).digest("hex");
@@ -391,7 +392,7 @@ export function verifyDigest(assetName: string, bytes: Buffer, digest: string | 
 async function download(url: string, dest: string, progress?: InstallProgressFn): Promise<string> {
   try {
     const { sha256 } = await downloadToFile(url, dest, {
-      headers: { "User-Agent": "soundbox" },
+      headers: { "User-Agent": "konchi" },
       onProgress: (done, total) => {
         if (progress && total) {
           progress(Math.min(0.9, done / total), `Downloading sd-server — ${Math.floor(done / 1024)} KB`);
@@ -511,7 +512,7 @@ export async function install(
       ]
     : [{ asset, from: 0.0, to: 0.9 }];
 
-  const tmp = await mkdtemp(join(tmpdir(), "soundbox-sd-install-"));
+  const tmp = await mkdtemp(join(tmpdir(), "konchi-sd-install-"));
   try {
     for (const part of parts) {
       const archive = join(tmp, part.asset.name);

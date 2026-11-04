@@ -1,13 +1,13 @@
 /**
  * Lifecycle of the managed `audiocpp_server` child process.
  *
- * Soundbox has always shipped this binary — it comes down in the same release
- * archive as `audiocpp_cli` — and never run it. That left Soundbox
+ * Konchi has always shipped this binary — it comes down in the same release
+ * archive as `audiocpp_cli` — and never run it. That left Konchi
  * reimplementing, in TypeScript, work the runtime already does natively:
  * resolving which Hugging Face files a package needs, fetching them, and
  * deciding whether a package on disk counts as installed. Two implementations
  * of one job, and they disagreed — weights installed by a standalone audio.cpp
- * were invisible to Soundbox and vice versa, because each looked for its own
+ * were invisible to Konchi and vice versa, because each looked for its own
  * bookkeeping.
  *
  * It now runs inference too. A one-shot `audiocpp_cli` reloaded the model on
@@ -26,7 +26,7 @@
  * llama-server. The differences are all in what makes this one *optional*:
  * the management endpoints are an opt-in build flag upstream
  * (`-DAUDIOCPP_BUILD_NATIVE_MODEL_MANAGER=ON`), and a user pointing
- * SOUNDBOX_AUDIOCPP_BIN at their own build may well have a binary without
+ * KONCHI_AUDIOCPP_BIN at their own build may well have a binary without
  * them — or no `audiocpp_server` beside it at all. Every entry point here can
  * answer "not available", and the caller falls back to the legacy downloader.
  */
@@ -340,7 +340,7 @@ export class AudioCppRuntime {
       if (health.ui_management !== true) {
         throw new ModelError(
           "this audiocpp_server was built without the native model manager " +
-            "(--ui-management is inert), so downloads fall back to Soundbox's own.",
+            "(--ui-management is inert), so downloads fall back to Konchi's own.",
         );
       }
       await this.setModelsRoot(baseUrl, modelsRoot);
@@ -447,7 +447,7 @@ export class AudioCppRuntime {
    * Install one package through audio.cpp's own package manager.
    *
    * Returns false when this install has no management support, which is the
-   * caller's cue to fall back to Soundbox's downloader rather than fail. Any
+   * caller's cue to fall back to Konchi's downloader rather than fail. Any
    * other problem — a package the runtime rejects, a download that dies — is
    * thrown, because at that point delegation *was* the path taken and a silent
    * fallback would just download the same broken thing twice.
@@ -555,7 +555,7 @@ export class AudioCppRuntime {
   /**
    * Make a model resident.
    *
-   * `id` is ours to choose and `path` is the weights we resolved, so Soundbox
+   * `id` is ours to choose and `path` is the weights we resolved, so Konchi
    * keeps owning model identity — the runtime is being told what to hold, not
    * asked what it has.
    */

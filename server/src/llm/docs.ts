@@ -1,7 +1,7 @@
 /**
  * The manual, cut into pieces the assistant can be handed.
  *
- * Soundbox ships 150KB of documentation across a README and eleven files in
+ * Konchi ships 150KB of documentation across a README and eleven files in
  * `docs/`. A small local model has perhaps 38k tokens of context, most of
  * which is already spent on the model catalogue and the open timeline, so
  * "put the docs in the prompt" is not on the table. It has to be asked a
@@ -136,7 +136,7 @@ const STOPWORDS = new Set([
   "how", "what", "where", "when", "why", "do", "does", "can", "i", "you",
   "my", "me", "we", "us", "be", "been", "not", "no", "yes", "if", "then",
   "there", "here", "about", "into", "out", "up", "down", "so", "than",
-  "sound", "sounds", "audio", "model", "models", "soundbox",
+  "sound", "sounds", "audio", "model", "models", "konchi",
 ]);
 
 export function terms(text: string): string[] {

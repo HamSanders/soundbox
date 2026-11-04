@@ -6,10 +6,10 @@ import type { FastifyInstance } from "fastify";
 
 import type { SettingsData } from "../config.js";
 import { settingsPatchSchema } from "../schemas.js";
-import type { SoundboxService } from "../service.js";
+import type { KonchiService } from "../service.js";
 import { intQuery } from "./helpers.js";
 
-export function registerSettings(app: FastifyInstance, svc: SoundboxService): void {
+export function registerSettings(app: FastifyInstance, svc: KonchiService): void {
   app.get("/api/settings", async () => svc.getSettings());
 
   app.patch("/api/settings", async (request) => {

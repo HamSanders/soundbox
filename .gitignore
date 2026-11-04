@@ -8,15 +8,15 @@ server/web/
 # Build caches: Turborepo, and the SSG's staging copy of public/
 .turbo/
 site/.vite-react-ssg-temp/
-# Test reports CI writes with SOUNDBOX_TEST_REPORT set
+# Test reports CI writes with KONCHI_TEST_REPORT set
 test-results/
 
 # Python venvs for standalone scripts outside server/ (e.g. scripts/gen_sd35.py)
 .venv/
 .venv-*/
 
-# Soundbox runtime data (never commit generated audio or the HF token)
-.soundbox/
+# Konchi runtime data (never commit generated audio or the HF token)
+.konchi/
 server/.run-data/
 server/.scratch-data/
 

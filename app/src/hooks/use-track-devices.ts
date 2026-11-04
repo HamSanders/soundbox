@@ -33,7 +33,7 @@ import type { DeviceSpec, TrackDevices } from "@/lib/devices";
 import { qk, useTracks } from "@/lib/queries";
 
 /** The 0.4 storage key. Read for the one-time move up, never written. */
-const LEGACY_KEY = "soundbox.story.devices.v1";
+const LEGACY_KEY = "konchi.story.devices.v1";
 
 /** How long a lane has to be still before its chain is sent. Short enough
  *  that a click has landed before you could look for it anywhere else, long

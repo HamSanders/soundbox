@@ -30,7 +30,7 @@ export function StepIntent({
   return (
     <div className="space-y-4">
       <p className="text-muted-foreground text-sm leading-relaxed">
-        Soundbox runs 46 open-weight models on your own machine, and none of them
+        Konchi runs 46 open-weight models on your own machine, and none of them
         are on your disk yet. Pick what you are here to make and we will install
         one model for each — you can add the rest later.
       </p>

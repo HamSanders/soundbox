@@ -38,7 +38,7 @@ export interface EndpointTestResult {
 const TEST_PROMPT: Record<AudioEndpoint["task"], string> = {
   sfx: "a single wooden knock",
   music: "short calm piano phrase, 90 BPM, C major",
-  speech: "This is a test of the Soundbox endpoint.",
+  speech: "This is a test of the Konchi endpoint.",
 };
 
 export class EndpointService {

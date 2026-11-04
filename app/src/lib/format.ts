@@ -62,9 +62,9 @@ export function soundDownloadName(name: string, format: "wav" | "mp3" | undefine
  *
  * A plain `<a href>` can't be used for this: the browser's own navigation
  * can't read response headers, so there would be no way to tell a real mp3
- * from the server's silent wav fallback (Soundbox doesn't bundle ffmpeg, so
+ * from the server's silent wav fallback (Konchi doesn't bundle ffmpeg, so
  * that fallback is common). Fetching manually lets us check
- * X-Soundbox-Format-Fallback and say so, instead of handing over a .mp3
+ * X-Konchi-Format-Fallback and say so, instead of handing over a .mp3
  * filename that's actually a wav with no explanation.
  *
  * Returns "mp3" | "wav" — the format actually delivered — so the caller can
@@ -77,7 +77,7 @@ export async function downloadSound(
 ): Promise<"wav" | "mp3"> {
   const res = await fetch(soundFileUrl(file, format));
   if (!res.ok) throw new Error(`Download failed (${res.status})`);
-  const fellBack = res.headers.get("X-Soundbox-Format-Fallback") === "wav";
+  const fellBack = res.headers.get("X-Konchi-Format-Fallback") === "wav";
   const delivered: "wav" | "mp3" = format === "mp3" && !fellBack ? "mp3" : "wav";
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { concatAudio, frameCount, trimRange, type Audio } from "../src/audio/dsp.js";
 
 /**
- * The windowing arithmetic behind `SoundboxService.extendWindowed`.
+ * The windowing arithmetic behind `KonchiService.extendWindowed`.
  *
  * The service method itself needs a loaded model and a child process, so what
  * is pinned here is the part that decides how many passes to run and where the

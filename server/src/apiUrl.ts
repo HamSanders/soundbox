@@ -24,7 +24,7 @@
  *  server that doesn't offer this API at all. */
 export const NOT_FOUND_HINT =
   "The server answered, but has nothing at that path. Check that the base URL is the " +
-  "server's root or its /v1 address (Soundbox adds the rest of the path itself), and " +
+  "server's root or its /v1 address (Konchi adds the rest of the path itself), and " +
   "that this server offers this API.";
 
 export function apiUrl(baseUrl: string, path: string): string {

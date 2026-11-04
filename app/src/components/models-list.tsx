@@ -27,7 +27,7 @@ export const CATEGORY_LABEL: Record<ModelCategory, string> = {
 };
 
 export const CATEGORY_BLURB: Record<ModelCategory, string> = {
-  sfx: "Text-to-audio for foley, impacts, ambience — the thing Soundbox was built for.",
+  sfx: "Text-to-audio for foley, impacts, ambience — the thing Konchi was built for.",
   music: "Text-to-music, some of it lyrics-conditioned, some able to extend or re-render a clip you already have.",
   voice: "Text-to-speech and voice conversion. The licences here are the most restrictive in the catalog, and the consent questions are the sharpest.",
   utility: "Not generators. These take audio you already have and pull it apart into stems.",
@@ -84,7 +84,7 @@ function StatusTags({ model }: { model: ModelContent }) {
       {model.verified ? (
         <span
           className="text-muted-foreground bg-muted/60 rounded-full px-2 py-0.5 text-[11px] font-medium"
-          title="Someone here has run this model end-to-end through Soundbox. Not a quality or licence claim."
+          title="Someone here has run this model end-to-end through Konchi. Not a quality or licence claim."
         >
           Run here
         </span>

@@ -37,7 +37,7 @@ import { ChevronDownIcon } from "lucide-react";
 const SOUND_RESULT = `{
   "id": "987a0eae-6c0e-45e8-b777-81cfe4d15af3",
   "name": "Door slam 01",
-  "path": "C:\\\\Users\\\\you\\\\.soundbox\\\\sounds\\\\987a0eae-….wav",
+  "path": "C:\\\\Users\\\\you\\\\.konchi\\\\sounds\\\\987a0eae-….wav",
   "url": "/files/987a0eae-6c0e-45e8-b777-81cfe4d15af3.wav",
   "model": "stable-audio-open-small",
   "prompt": "heavy wooden door slam, dry room",
@@ -52,11 +52,11 @@ const SOUND_RESULT = `{
 
 export function McpConnect({ origin }: { origin: string }) {
   const httpConfig = JSON.stringify(
-    { mcpServers: { soundbox: { type: "http", url: `${origin}/mcp` } } },
+    { mcpServers: { konchi: { type: "http", url: `${origin}/mcp` } } },
     null,
     2,
   );
-  // Spawned by absolute path rather than by name. `npx soundbox-mcp` cannot
+  // Spawned by absolute path rather than by name. `npx konchi-mcp` cannot
   // resolve — the package is private — and npm links the bin only into the
   // checkout's own node_modules/.bin, which is not on the PATH an MCP client
   // spawns with. The Agents page shows this line with the path already filled
@@ -64,10 +64,10 @@ export function McpConnect({ origin }: { origin: string }) {
   const stdioConfig = JSON.stringify(
     {
       mcpServers: {
-        soundbox: {
+        konchi: {
           command: "node",
           args: ["/absolute/path/to/soundbox/server/dist/mcp/stdio.js"],
-          env: { SOUNDBOX_URL: origin },
+          env: { KONCHI_URL: origin },
         },
       },
     },
@@ -81,7 +81,7 @@ export function McpConnect({ origin }: { origin: string }) {
       title="Connect an MCP client"
       intro={
         <>
-          The MCP server runs inside the main Soundbox process at <C>{origin}/mcp</C>. There is no
+          The MCP server runs inside the main Konchi process at <C>{origin}/mcp</C>. There is no
           second daemon to start, but this app must be running for any of it to work.
         </>
       }
@@ -89,7 +89,7 @@ export function McpConnect({ origin }: { origin: string }) {
       <Note>
         Before connecting a client, install at least one model on the{" "}
         <strong className="text-foreground">Models</strong> page. An agent calling{" "}
-        <C>soundbox.generate</C> with nothing installed gets an error telling the user to go there.
+        <C>konchi.generate</C> with nothing installed gets an error telling the user to go there.
       </Note>
 
       <Tabs defaultValue="claude-code">
@@ -109,38 +109,38 @@ export function McpConnect({ origin }: { origin: string }) {
         <TabsContent value="claude-code" className="mt-3 min-w-0 space-y-3">
           <ol className="ml-4 list-decimal space-y-3 text-sm marker:text-muted-foreground">
             <li>
-              Leave Soundbox running. The MCP endpoint is served by this process, so a client can
+              Leave Konchi running. The MCP endpoint is served by this process, so a client can
               only reach it while the app is up.
             </li>
             <li>
               In a terminal, in any directory, run:
               <CopyBlock
                 className="mt-2"
-                code={`claude mcp add --transport http soundbox ${origin}/mcp`}
+                code={`claude mcp add --transport http konchi ${origin}/mcp`}
                 label="Copy the claude mcp add command"
               />
               Add <C>--scope user</C> to make it available in every project instead of only this
               one.
             </li>
             <li>
-              Start or restart <C>claude</C>, then type <C>/mcp</C>. Soundbox should be listed as{" "}
+              Start or restart <C>claude</C>, then type <C>/mcp</C>. Konchi should be listed as{" "}
               <C>connected</C>, with its {MCP_TOOLS.length} tools.
             </li>
             <li>
               Ask for a sound in plain language, e.g. “make me a heavy wooden door slam for my game”.
-              Claude Code will ask to run <C>soundbox.generate</C>; approve it, and the reply comes
+              Claude Code will ask to run <C>konchi.generate</C>; approve it, and the reply comes
               back with a file path.
             </li>
           </ol>
           <Note>
             <C>claude mcp list</C> shows what is registered and whether it connects.{" "}
-            <C>claude mcp remove soundbox</C> undoes step 2.
+            <C>claude mcp remove konchi</C> undoes step 2.
           </Note>
         </TabsContent>
 
         <TabsContent value="claude-desktop" className="mt-3 min-w-0 space-y-3">
           <ol className="ml-4 list-decimal space-y-3 text-sm marker:text-muted-foreground">
-            <li>Leave Soundbox running.</li>
+            <li>Leave Konchi running.</li>
             <li>
               In Claude Desktop, open <strong>Settings → Developer → Edit Config</strong>. That
               opens <C>claude_desktop_config.json</C>: on Windows in{" "}
@@ -149,7 +149,7 @@ export function McpConnect({ origin }: { origin: string }) {
             </li>
             <li>
               Merge this into the file. If <C>mcpServers</C> already exists, add the{" "}
-              <C>soundbox</C> key to it; do not replace the object.
+              <C>konchi</C> key to it; do not replace the object.
               <CopyBlock
                 className="mt-2"
                 code={httpConfig}
@@ -163,11 +163,11 @@ export function McpConnect({ origin }: { origin: string }) {
             </li>
             <li>
               Open a new chat and check the tools indicator in the composer: all{" "}
-              {MCP_TOOLS.length} Soundbox tools should be listed there.
+              {MCP_TOOLS.length} Konchi tools should be listed there.
             </li>
           </ol>
           <Note>
-            If Soundbox does not appear, check the config file first. A trailing comma or a
+            If Konchi does not appear, check the config file first. A trailing comma or a
             duplicated <C>mcpServers</C> key makes the whole file unparseable, and every server
             in it disappears.
           </Note>
@@ -182,7 +182,7 @@ export function McpConnect({ origin }: { origin: string }) {
           <CopyBlock code={httpConfig} language="json" label="Copy the HTTP MCP config" />
           <Note>
             There is <strong className="text-foreground">no trailing slash</strong> on the URL.
-            Soundbox rewrites <C>/mcp</C> to the mounted path internally so that clients which do
+            Konchi rewrites <C>/mcp</C> to the mounted path internally so that clients which do
             not follow 307 redirects on POST still work.
           </Note>
         </TabsContent>
@@ -194,7 +194,7 @@ export function McpConnect({ origin }: { origin: string }) {
           </p>
           <CopyBlock code={stdioConfig} language="json" label="Copy the stdio bridge config" />
           <Note>
-            <C>SOUNDBOX_URL</C> tells the bridge where the server is; it defaults to{" "}
+            <C>KONCHI_URL</C> tells the bridge where the server is; it defaults to{" "}
             <C>http://127.0.0.1:17494</C> and only needs setting if you moved the port. The path in{" "}
             <C>args</C> must be absolute, and must be the built{" "}
             <C>server/dist/mcp/stdio.js</C>. The Agents page prints it with the path already
@@ -283,12 +283,12 @@ export function McpTools() {
         Every sound-shaped result carries <C>path</C>: an{" "}
         <strong className="text-foreground">absolute filesystem path</strong> to the WAV on this
         machine. The agent can hand it straight to ffmpeg, copy it into a game project's assets
-        folder, or attach it, without knowing anything about the Soundbox server or its HTTP port.
+        folder, or attach it, without knowing anything about the Konchi server or its HTTP port.
       </Note>
 
       <Note>
         Generation is serialised (one GPU, one job at a time), so five parallel{" "}
-        <C>soundbox.generate</C> calls queue and run one after another. Use <C>variations</C> for
+        <C>konchi.generate</C> calls queue and run one after another. Use <C>variations</C> for
         several takes of one idea. If no model is installed, <C>generate</C> returns an
         actionable error naming the Models screen: surface it, do not retry.
       </Note>
@@ -341,7 +341,7 @@ export function McpWorkedExample() {
           <CopyBlock
             language="json"
             label="Copy the example tool call"
-            code={`soundbox.generate({
+            code={`konchi.generate({
   "prompt": "heavy wooden door slamming shut in a stone corridor, hard impact, long tail",
   "duration_s": 3,
   "variations": 2,
@@ -359,14 +359,14 @@ export function McpWorkedExample() {
     {
       "id": "987a0eae-6c0e-45e8-b777-81cfe4d15af3",
       "name": "Door slam 01",
-      "path": "C:\\\\Users\\\\you\\\\.soundbox\\\\sounds\\\\987a0eae-….wav",
+      "path": "C:\\\\Users\\\\you\\\\.konchi\\\\sounds\\\\987a0eae-….wav",
       "url": "/files/987a0eae-6c0e-45e8-b777-81cfe4d15af3.wav",
       "duration_s": 3.0,
       "sample_rate": 44100,
       "channels": 2,
       "seed": 752071476
     },
-    { "id": "b1f4…", "name": "Door slam 02", "path": "C:\\\\Users\\\\you\\\\.soundbox\\\\sounds\\\\b1f4….wav" }
+    { "id": "b1f4…", "name": "Door slam 02", "path": "C:\\\\Users\\\\you\\\\.konchi\\\\sounds\\\\b1f4….wav" }
   ],
   "model": "stable-audio-open-small",
   "elapsed_s": 4.71
@@ -377,13 +377,13 @@ export function McpWorkedExample() {
         <Turn role="Agent">
           <p className="text-muted-foreground">
             The <C>path</C> is absolute, so the next step is ordinary file work, with no HTTP and no
-            knowledge of the Soundbox port. It converts to the format the project wants and drops it
+            knowledge of the Konchi port. It converts to the format the project wants and drops it
             in:
           </p>
           <CopyBlock
             className="mt-2"
             label="Copy the ffmpeg conversion"
-            code={`ffmpeg -i "C:/Users/you/.soundbox/sounds/987a0eae-….wav" \\
+            code={`ffmpeg -i "C:/Users/you/.konchi/sounds/987a0eae-….wav" \\
   -ac 1 -ar 48000 assets/audio/door_slam.wav`}
           />
           <p className="text-muted-foreground mt-2">
@@ -395,8 +395,8 @@ export function McpWorkedExample() {
       </div>
 
       <Note>
-        The agent needed no Soundbox-specific code: it called a tool, got JSON with a path, and
-        used its normal file tools. A URL relative to the Soundbox server would have made this turn
+        The agent needed no Konchi-specific code: it called a tool, got JSON with a path, and
+        used its normal file tools. A URL relative to the Konchi server would have made this turn
         three steps longer.
       </Note>
     </DocSection>
@@ -415,7 +415,7 @@ export function McpDebugging({ origin }: { origin: string }) {
       <ol className="ml-4 min-w-0 list-decimal space-y-4 text-sm marker:text-muted-foreground">
         <li>
           <strong className="text-foreground">Check the server is up.</strong> The MCP endpoint lives
-          inside this app's process, so if Soundbox is closed there is nothing to connect to.
+          inside this app's process, so if Konchi is closed there is nothing to connect to.
           <CopyBlock
             className="mt-2"
             code={`curl ${origin}/api/health`}
@@ -446,7 +446,7 @@ export function McpDebugging({ origin }: { origin: string }) {
           <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
             In the Inspector, pick transport <C>Streamable HTTP</C> and URL <C>{origin}/mcp</C>,
             then Connect → List Tools. You should see all {MCP_TOOLS.length} tools; run{" "}
-            <C>soundbox.list_models</C> as the cheapest end-to-end check, since it needs no GPU.
+            <C>konchi.list_models</C> as the cheapest end-to-end check, since it needs no GPU.
           </p>
         </li>
         <li>
@@ -454,7 +454,7 @@ export function McpDebugging({ origin }: { origin: string }) {
           arms DNS-rebinding protection with a localhost-only host allowlist. That is right for a
           local app, but it rejects requests arriving under any other hostname. That
           happens if you bound the server to <C>0.0.0.0</C> and connect by LAN address or container
-          name. Set <C>SOUNDBOX_ALLOWED_HOSTS</C> to a comma-separated list of the hosts you use.
+          name. Set <C>KONCHI_ALLOWED_HOSTS</C> to a comma-separated list of the hosts you use.
         </li>
         <li>
           <strong className="text-foreground">Check the URL has no trailing slash</strong> and that
@@ -464,7 +464,7 @@ export function McpDebugging({ origin }: { origin: string }) {
         <li>
           <strong className="text-foreground">stdio bridge.</strong> The bridge proxies to a
           running server, so both must be up. If the server is not on the
-          default port, set <C>SOUNDBOX_URL</C> in the client's <C>env</C> block{" "}
+          default port, set <C>KONCHI_URL</C> in the client's <C>env</C> block{" "}
           (<C>{origin}</C> for this instance).
         </li>
         <li>

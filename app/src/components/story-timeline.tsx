@@ -383,7 +383,7 @@ export interface StoryTimelineProps {
    * A file from the user's own machine, already converted to WAV.
    *
    * Converted here rather than on the server because the server decodes WAV
-   * and nothing else, and Soundbox does not ship ffmpeg — but the browser
+   * and nothing else, and Konchi does not ship ffmpeg — but the browser
    * already has a decoder for every format it can play. `lib/audio-file`
    * exists for exactly this and the voice uploader uses it too, so an mp3 or
    * an m4a drops onto a lane without anything new being installed.
@@ -3349,7 +3349,7 @@ function GeneratingOutline() {
         height="calc(100% - 2px)"
         rx="5"
         fill="none"
-        className="stroke-primary soundbox-crawl"
+        className="stroke-primary konchi-crawl"
         strokeWidth="1.5"
         strokeDasharray="8 4"
         filter={`url(#${id})`}

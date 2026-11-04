@@ -27,7 +27,7 @@ import type { AudioCppCatalogEntry, HealthStatus, Model } from "@/lib/api";
  *  values as `Model.category`'s generative flavours, so the answer is a
  *  filter rather than a lookup table that has to be maintained alongside the
  *  catalog. "utility" (stem separation) is not an intent: nobody installs
- *  Soundbox to split a file they don't have yet. */
+ *  Konchi to split a file they don't have yet. */
 export type Intent = "sfx" | "music" | "voice";
 
 export const INTENTS: readonly Intent[] = ["sfx", "music", "voice"];

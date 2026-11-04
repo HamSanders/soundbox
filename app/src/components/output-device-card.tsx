@@ -68,7 +68,7 @@ export function OutputDeviceCard() {
       <CardHeader>
         <CardTitle className="text-base">Playback device</CardTitle>
         <CardDescription>
-          Where Soundbox plays audio. This affects previews only — generated files are
+          Where Konchi plays audio. This affects previews only — generated files are
           unchanged.
         </CardDescription>
       </CardHeader>

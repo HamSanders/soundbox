@@ -44,13 +44,13 @@ import { assetUrl } from "@/lib/asset-url";
  * The origin a copy-pasted command should hit.
  *
  * `window.location.origin` is correct when the app is served *by* the
- * Soundbox server itself (a production build, or a future Tauri build) — the
+ * Konchi server itself (a production build, or a future Tauri build) — the
  * browser's address bar origin is exactly where /api and /mcp live. It is
  * wrong in local dev: Vite serves the app on :5174 and proxies /api and /mcp
  * to :17494 for the *browser's own* requests, but a `curl` or MCP client
  * config the user copies out of this page runs from a terminal, not through
  * that proxy, so it needs the real backend port. Ports in the 517x/5173-5179
- * range are Vite's, not Soundbox's — assume dev in that case and show the
+ * range are Vite's, not Konchi's — assume dev in that case and show the
  * documented default instead.
  */
 function apiOrigin(): string {
@@ -221,7 +221,7 @@ export function ApiMcpReference({ health }: { health?: HealthStatus }) {
           API &amp; MCP
         </h1>
         <p className="text-muted-foreground mt-1 max-w-2xl text-sm leading-relaxed">
-          Soundbox is a local server with a browser front end. Everything the app does goes through
+          Konchi is a local server with a browser front end. Everything the app does goes through
           the HTTP API documented below, and an agent can drive the same pipeline over MCP. Every example here points at this instance, so a copied
           command works as-is.
         </p>
@@ -310,7 +310,7 @@ curl "${origin}/api/sounds/$SOUND_ID"`}
               </a>{" "}
               for every route with its method, purpose and key fields. It is kept in the repository as{" "}
               <C>docs/API.md</C> beside the code it describes. Mutating requests need a JSON body
-              or an <C>X-Soundbox</C> header; see the reference for why.
+              or an <C>X-Konchi</C> header; see the reference for why.
             </p>
           </DocSection>
         </div>

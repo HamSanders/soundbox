@@ -446,7 +446,7 @@ export async function downloadWeights(
 export async function deleteWeights(modelsDir: string, spec: ImageModelSpec): Promise<void> {
   if (spec.files.every((f) => isAbsolute(f.path))) {
     throw new ModelError(
-      `${spec.name} uses files already on your disk — Soundbox didn't download them and ` +
+      `${spec.name} uses files already on your disk — Konchi didn't download them and ` +
         `won't delete them.`,
     );
   }

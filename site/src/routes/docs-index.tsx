@@ -18,8 +18,8 @@ export function DocsIndexPage() {
   return (
     <div className="bg-background text-foreground min-h-svh">
       <SeoHead
-        title="Documentation: install, studio, HTTP API and MCP | Soundbox"
-        description="How Soundbox works: installing it, generating sound, arranging in the studio, the local HTTP API, and the MCP tools an agent gets."
+        title="Documentation: install, studio, HTTP API and MCP | Konchi"
+        description="How Konchi works: installing it, generating sound, arranging in the studio, the local HTTP API, and the MCP tools an agent gets."
         path="/docs"
       />
       <DocsShell current="index">
@@ -28,10 +28,10 @@ export function DocsIndexPage() {
             Documentation
           </p>
           <h1 className="font-heading mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-            Soundbox documentation
+            Konchi documentation
           </h1>
           <p className="text-muted-foreground mt-4 max-w-2xl leading-relaxed text-pretty sm:text-lg">
-            Soundbox generates audio with open-weight models on your own machine,
+            Konchi generates audio with open-weight models on your own machine,
             arranges it on a timeline, and serves it over an HTTP API and to agents
             over MCP.
           </p>

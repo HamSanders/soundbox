@@ -1,5 +1,5 @@
 /**
- * `/models` — every model Soundbox can run, in one list.
+ * `/models` — every model Konchi can run, in one list.
  *
  * This page used to advertise "five open-weight sound effect models" from a
  * Python backend that no longer exists. The real catalog is 46 models across
@@ -39,7 +39,7 @@ export function ModelsHubPage() {
   return (
     <div className="bg-background text-foreground min-h-svh">
       <SeoHead
-        title="Open-weight audio models: specs and licences | Soundbox"
+        title="Open-weight audio models: specs and licences | Konchi"
         description={`${MODEL_STATS.total} open-weight audio models for sound effects, music, speech and stem separation, run locally through audio.cpp with no Python. Licence findings for each, with sources.`}
         path="/models"
       />
@@ -47,10 +47,10 @@ export function ModelsHubPage() {
       <div className="mx-auto w-full max-w-3xl px-4">
         <header className="py-12">
           <h1 className="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-            Every model Soundbox can run
+            Every model Konchi can run
           </h1>
           <p className="text-muted-foreground mt-4 max-w-2xl leading-relaxed">
-            Soundbox does not train models. It runs {MODEL_STATS.total} open-weight models made
+            Konchi does not train models. It runs {MODEL_STATS.total} open-weight models made
             by other people (sound effects, music, speech and stem separation) on your own
             machine through audio.cpp. This page records what a reading of each one's licence
             found, with a link to every source consulted.
@@ -65,10 +65,10 @@ export function ModelsHubPage() {
 
           <div className="mt-6 flex flex-wrap gap-2">
             <Button asChild>
-              <MarketingLink href={GENERATOR_HREF}>Install Soundbox</MarketingLink>
+              <MarketingLink href={GENERATOR_HREF}>Install Konchi</MarketingLink>
             </Button>
             <Button variant="outline" asChild>
-              <MarketingLink href={WELCOME_HREF}>What Soundbox is</MarketingLink>
+              <MarketingLink href={WELCOME_HREF}>What Konchi is</MarketingLink>
             </Button>
           </div>
         </header>

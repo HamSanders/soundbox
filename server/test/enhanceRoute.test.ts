@@ -15,7 +15,7 @@ let stub: Server;
 let stubUrl: string;
 
 beforeAll(async () => {
-  dataDir = await mkdtemp(join(tmpdir(), "soundbox-enhance-test-"));
+  dataDir = await mkdtemp(join(tmpdir(), "konchi-enhance-test-"));
   const config = new Config(dataDir);
   app = buildApp(config, { serveUi: false });
   await app.ready();

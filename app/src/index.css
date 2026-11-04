@@ -417,20 +417,20 @@
    working on is obvious without reading any text. Paired with an SVG
    turbulence filter that makes the stroke hand-drawn rather than straight —
    the wobble says "in progress" the way a tidy dashed border does not. */
-@keyframes soundbox-crawl {
+@keyframes konchi-crawl {
   to {
     stroke-dashoffset: -24;
   }
 }
 
-.soundbox-crawl {
-  animation: soundbox-crawl 0.9s linear infinite;
+.konchi-crawl {
+  animation: konchi-crawl 0.9s linear infinite;
 }
 
 /* Motion is the whole point here, so when it is unwelcome the outline stays —
    it just stops moving. Removing it entirely would take the status with it. */
 @media (prefers-reduced-motion: reduce) {
-  .soundbox-crawl {
+  .konchi-crawl {
     animation: none;
   }
 }
@@ -445,14 +445,14 @@
    hundreds of little <rect>s inside are rasterised once and then only
    composited. A repaint per frame of that many nodes, on a page that is
    already doing scroll maths, is the difference between free and janky. */
-@keyframes soundbox-wave-drift {
+@keyframes konchi-wave-drift {
   to {
     transform: translate3d(-50%, 0, 0);
   }
 }
 
-.soundbox-wave-drift {
-  animation: soundbox-wave-drift var(--wave-duration, 90s) linear infinite;
+.konchi-wave-drift {
+  animation: konchi-wave-drift var(--wave-duration, 90s) linear infinite;
   will-change: transform;
 }
 
@@ -466,7 +466,7 @@
    Under `alternate` this runs low → full → low, so one visible period is twice
    `--eq-duration`. The floor is a variable because a column's resting level is
    seeded per column (see `eqColumns`). */
-@keyframes soundbox-eq-pulse {
+@keyframes konchi-eq-pulse {
   from {
     transform: scaleY(var(--eq-low, 0.35));
   }
@@ -475,15 +475,15 @@
   }
 }
 
-.soundbox-eq-pulse {
-  animation: soundbox-eq-pulse var(--eq-duration, 7s) ease-in-out infinite alternate;
+.konchi-eq-pulse {
+  animation: konchi-eq-pulse var(--eq-duration, 7s) ease-in-out infinite alternate;
   will-change: transform;
 }
 
 /* A slow ring opening out of the middle of a section. Scale and fade together
    so it dissolves rather than reaching an edge and vanishing; there is no
    tiling to preserve because the loop is the fade itself. */
-@keyframes soundbox-ring-pulse {
+@keyframes konchi-ring-pulse {
   from {
     transform: scale(0.25);
     opacity: 0;
@@ -497,8 +497,8 @@
   }
 }
 
-.soundbox-ring-pulse {
-  animation: soundbox-ring-pulse var(--ring-duration, 18s) ease-out infinite;
+.konchi-ring-pulse {
+  animation: konchi-ring-pulse var(--ring-duration, 18s) ease-out infinite;
   will-change: transform, opacity;
 }
 
@@ -508,13 +508,13 @@
    fully transparent, so a bare `animation: none` would leave nothing at all
    on screen, which is the one outcome this convention exists to avoid. */
 @media (prefers-reduced-motion: reduce) {
-  .soundbox-wave-drift,
-  .soundbox-eq-pulse,
-  .soundbox-ring-pulse {
+  .konchi-wave-drift,
+  .konchi-eq-pulse,
+  .konchi-ring-pulse {
     animation: none;
   }
 
-  .soundbox-ring-pulse {
+  .konchi-ring-pulse {
     opacity: 1;
     transform: scale(0.72);
   }
@@ -532,7 +532,7 @@
    this is the "something moved" signal, and the text is the "read this now"
    signal. If they used the same easing the two would blur into one movement
    instead of reading as call and response. */
-@keyframes soundbox-panel-settle {
+@keyframes konchi-panel-settle {
   from {
     opacity: 0;
     transform: translateY(10px) scale(0.985);
@@ -543,15 +543,15 @@
   }
 }
 
-.soundbox-panel-settle {
-  animation: soundbox-panel-settle 450ms cubic-bezier(0.16, 1, 0.3, 1) both;
+.konchi-panel-settle {
+  animation: konchi-panel-settle 450ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Pure decoration on top of content that is already there — reduced motion
    drops the entrance and shows the settled state immediately, same bargain as
    the textures above. */
 @media (prefers-reduced-motion: reduce) {
-  .soundbox-panel-settle {
+  .konchi-panel-settle {
     animation: none;
   }
 }

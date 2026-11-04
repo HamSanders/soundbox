@@ -49,7 +49,7 @@ export const SITE_URL = REPO_URL;
  */
 export const GENERATOR_HREF = "/download";
 
-/** "What Soundbox is" — the landing page, which is now the site's front door. */
+/** "What Konchi is" — the landing page, which is now the site's front door. */
 export const WELCOME_HREF = "/";
 
 /**

@@ -29,12 +29,12 @@ const RATE = 44100;
 const SECONDS = 4;
 
 beforeAll(async () => {
-  dataDir = await mkdtemp(join(tmpdir(), "soundbox-repaint-test-"));
+  dataDir = await mkdtemp(join(tmpdir(), "konchi-repaint-test-"));
   const config = new Config(dataDir);
   app = buildApp(config, { serveUi: false });
   await app.ready();
 
-  const tmp = await mkdtemp(join(tmpdir(), "soundbox-repaint-wav-"));
+  const tmp = await mkdtemp(join(tmpdir(), "konchi-repaint-wav-"));
   const path = join(tmp, "clip.wav");
   const audio = [
     Float32Array.from({ length: RATE * SECONDS }, (_, i) => Math.sin((i / RATE) * 440 * 2 * Math.PI) * 0.2),

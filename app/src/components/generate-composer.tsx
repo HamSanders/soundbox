@@ -1000,7 +1000,7 @@ export function GenerateComposer({
                 >
                   {model.name} is a distilled model tuned for CFG{" "}
                   {model.defaults.cfg ?? 1}. Above {model.max_cfg} the output
-                  degrades into noise, so Soundbox won&rsquo;t render past it.
+                  degrades into noise, so Konchi won&rsquo;t render past it.
                 </p>
               )}
             </PopoverContent>

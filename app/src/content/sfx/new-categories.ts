@@ -31,7 +31,7 @@ function s(slug: string, title: string, prompt: string, durationS: number): SfxS
  * The four questions every one of these pages gets asked.
  *
  * These answers are genuinely the same whatever the category is — licensing,
- * offline behaviour, hardware and agent access are properties of Soundbox, not
+ * offline behaviour, hardware and agent access are properties of Konchi, not
  * of glass or of trains. Writing four slightly different paraphrases per page
  * would not make them more useful, it would just make the claims harder to keep
  * true when the facts change. The one category-specific question goes first,
@@ -43,12 +43,12 @@ function faqs(specific: SfxFaq): SfxFaq[] {
     {
       question: "Can I use these sounds in a commercial video or game?",
       answer:
-        "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The clips on this page were rendered with Stable Audio 3.0 Small SFX, which uses the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The clips on this page were rendered with Stable Audio 3.0 Small SFX, which uses the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
     },
     {
       question: "Does this work offline?",
       answer:
-        "Yes, once the weights are on disk. Generation, the library and the HTTP API all run locally against one SQLite file and one folder of WAVs under ~/.soundbox. There is no account and no API key, and nothing is uploaded. The only step that uses the network is the initial model download.",
+        "Yes, once the weights are on disk. Generation, the library and the HTTP API all run locally against one SQLite file and one folder of WAVs under ~/.konchi. There is no account and no API key, and nothing is uploaded. The only step that uses the network is the initial model download.",
     },
     {
       question: "What hardware does it need?",
@@ -58,7 +58,7 @@ function faqs(specific: SfxFaq): SfxFaq[] {
     {
       question: "Can an agent generate these for me?",
       answer:
-        "Yes. While the app is open, Soundbox runs an MCP server at http://127.0.0.1:17494/mcp with tools for generating, listing and mixing sounds. Every generated file comes back as an absolute path, so a coding agent can render the sound a scene needs and put it straight into the project. The several hundred clips across these pages were made this way.",
+        "Yes. While the app is open, Konchi runs an MCP server at http://127.0.0.1:17494/mcp with tools for generating, listing and mixing sounds. Every generated file comes back as an absolute path, so a coding agent can render the sound a scene needs and put it straight into the project. The several hundred clips across these pages were made this way.",
     },
   ];
 }
@@ -73,7 +73,7 @@ const GLASS: SfxCategory = {
     "Editors and game developers who need a specific glass event — a bottle smashing, a window " +
     "failing, a wine glass ringing — and keep finding library clips that are the wrong size of " +
     "glass in the wrong room.",
-  metaTitle: "Glass sound effects: break, clink, shatter | Soundbox",
+  metaTitle: "Glass sound effects: break, clink, shatter | Konchi",
   metaDescription:
     "Generate glass breaking, shattering, clinking and cracking locally. Prompts for each thickness of glass and each room it breaks in.",
   h1: "Glass sound effects you generate yourself",
@@ -81,7 +81,7 @@ const GLASS: SfxCategory = {
     "Sound designers use glass constantly and often get it wrong, because \"glass breaking\" covers " +
     "at least six different sounds: a thin wine glass ringing itself apart, a bottle bursting on " +
     "concrete, a car window collapsing into pebbles, a pane failing all at once. Thickness matters " +
-    "most, then what the glass lands on. Soundbox runs the models on your own GPU, so you can render " +
+    "most, then what the glass lands on. Konchi runs the models on your own GPU, so you can render " +
     "all six, compare them against the picture, and regenerate the one that nearly worked.",
   content: {
     samples: [
@@ -148,7 +148,7 @@ const METAL: SfxCategory = {
   intent:
     "Sound designers who need metallic hits, scrapes, groans and resonance for industrial, " +
     "horror or sci-fi work, and who care about the difference between a thin sheet and a thick beam.",
-  metaTitle: "Metal sound effects: clang, scrape, groan | Soundbox",
+  metaTitle: "Metal sound effects: clang, scrape, groan | Konchi",
   metaDescription:
     "Generate metal impacts, scrapes, creaks and resonant clangs locally. Prompts that separate thin sheet from heavy steel, and dry hits from ringing rooms.",
   h1: "Metal sound effects you generate yourself",
@@ -222,7 +222,7 @@ const WOOD: SfxCategory = {
   intent:
     "Editors needing wooden creaks, snaps, knocks and splintering for period drama, horror " +
     "interiors, or any game world built out of planks and furniture.",
-  metaTitle: "Wood sound effects: creak, snap, splinter | Soundbox",
+  metaTitle: "Wood sound effects: creak, snap, splinter | Konchi",
   metaDescription:
     "Generate wood creaking, breaking, knocking and splintering locally. Prompts for dry timber, wet wood, old floorboards and furniture.",
   h1: "Wood sound effects you generate yourself",
@@ -297,7 +297,7 @@ const PAPER: SfxCategory = {
   intent:
     "Editors and UI designers who need page turns, tears, crumples and rustles — small, close, " +
     "detailed foley that almost never exists at the right length in a library.",
-  metaTitle: "Paper sound effects: page turn, tear, crumple | Soundbox",
+  metaTitle: "Paper sound effects: page turn, tear, crumple | Konchi",
   metaDescription:
     "Generate paper rustles, page turns, tears and crumples locally. Close-mic foley prompts for books, documents, cardboard and newsprint.",
   h1: "Paper sound effects you generate yourself",
@@ -371,7 +371,7 @@ const CLOTH: SfxCategory = {
   intent:
     "Game and film editors covering character movement — clothing rustle, leather, zips, capes " +
     "and armour straps — the layer that makes a body feel present rather than sliding.",
-  metaTitle: "Cloth sound effects: rustle, zip, leather | Soundbox",
+  metaTitle: "Cloth sound effects: rustle, zip, leather | Konchi",
   metaDescription:
     "Generate fabric rustles, clothing movement, zips and leather creaks locally. Close foley prompts for character movement layers.",
   h1: "Cloth and fabric sound effects you generate yourself",
@@ -446,7 +446,7 @@ const KEYBOARD: SfxCategory = {
     "Video editors, app demo makers and game developers who need typing, mouse clicks and desk " +
     "foley — one of the highest-volume searches on every free library and almost always needed " +
     "at a specific length.",
-  metaTitle: "Keyboard typing sound effects | Soundbox",
+  metaTitle: "Keyboard typing sound effects | Konchi",
   metaDescription:
     "Generate keyboard typing, mouse clicks, mechanical key presses and office desk foley locally. Prompts for laptop, mechanical and vintage typewriters.",
   h1: "Keyboard and office sound effects you generate yourself",
@@ -521,7 +521,7 @@ const CLOCK: SfxCategory = {
   intent:
     "Editors building tension or marking time — ticking beds, alarm clocks, countdown timers and " +
     "chiming grandfather clocks, usually needed as a seamless loop.",
-  metaTitle: "Clock ticking sound effects | Soundbox",
+  metaTitle: "Clock ticking sound effects | Konchi",
   metaDescription:
     "Generate clock ticking, alarm clocks, countdown timers and chimes locally. Loopable tension beds and one-shot alarms, with the prompts that made them.",
   h1: "Clock and timer sound effects you generate yourself",
@@ -595,7 +595,7 @@ const BELL: SfxCategory = {
   intent:
     "Editors needing bells of a specific size and purpose — church bells, service bells, bicycle " +
     "bells, wind chimes, boxing bells — where the size of the bell is the whole character.",
-  metaTitle: "Bell sound effects: church, chime, ding | Soundbox",
+  metaTitle: "Bell sound effects: church, chime, ding | Konchi",
   metaDescription:
     "Generate church bells, service bells, wind chimes, bicycle bells and boxing bells locally. Prompts that control size, metal and decay.",
   h1: "Bell and chime sound effects you generate yourself",
@@ -671,7 +671,7 @@ const CAR: SfxCategory = {
   intent:
     "Editors and game developers covering road vehicles — doors, starts, skids, horns, passes — " +
     "where the specific event matters more than the make of car.",
-  metaTitle: "Car sound effects: engine, door, skid, horn | Soundbox",
+  metaTitle: "Car sound effects: engine, door, skid, horn | Konchi",
   metaDescription:
     "Generate car engine starts, door slams, tyre skids, horns and pass-bys locally. Prompts for interior and exterior perspectives.",
   h1: "Car sound effects you generate yourself",
@@ -745,7 +745,7 @@ const ENGINE: SfxCategory = {
   intent:
     "Designers who need the motor itself rather than the vehicle around it — idles, revs, diesel " +
     "clatter, electric whine, outboards, generators — usually as a loopable bed.",
-  metaTitle: "Engine sound effects: idle, rev, diesel, electric | Soundbox",
+  metaTitle: "Engine sound effects: idle, rev, diesel, electric | Konchi",
   metaDescription:
     "Generate engine idles, revs, diesel clatter and electric motor whine locally. Loopable beds and one-shot starts with prompts that control the character.",
   h1: "Engine and motor sound effects you generate yourself",
@@ -819,7 +819,7 @@ const TRAIN: SfxCategory = {
   intent:
     "Editors covering rail — steam locomotives, modern trains, subway platforms, level crossings — " +
     "where period and perspective decide everything.",
-  metaTitle: "Train sound effects: steam, subway, crossing | Soundbox",
+  metaTitle: "Train sound effects: steam, subway, crossing | Konchi",
   metaDescription:
     "Generate steam locomotives, modern trains, subway ambience and level crossings locally. Prompts for interior, platform and trackside perspectives.",
   h1: "Train sound effects you generate yourself",
@@ -893,7 +893,7 @@ const AIRCRAFT: SfxCategory = {
   intent:
     "Editors needing aviation — jets, propellers, helicopters, cabin interiors and flyovers — " +
     "usually at a specific distance, which is the hardest thing to find in a library.",
-  metaTitle: "Airplane sound effects: jet, prop, helicopter | Soundbox",
+  metaTitle: "Airplane sound effects: jet, prop, helicopter | Konchi",
   metaDescription:
     "Generate jet engines, propeller aircraft, helicopters, cabin interiors and flyovers locally. Prompts that control distance and doppler.",
   h1: "Aircraft sound effects you generate yourself",

@@ -106,9 +106,9 @@ function renderFeed(items: FeedItem[], root: string): string {
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">',
     "  <channel>",
-    "    <title>Soundbox</title>",
+    "    <title>Konchi</title>",
     `    <link>${escapeXml(`${root}/`)}</link>`,
-    "    <description>How Soundbox is built, how the models behave, and how to get better sound out of them.</description>",
+    "    <description>How Konchi is built, how the models behave, and how to get better sound out of them.</description>",
     "    <language>en-gb</language>",
     `    <lastBuildDate>${built}</lastBuildDate>`,
     `    <atom:link href="${escapeXml(self)}" rel="self" type="application/rss+xml" />`,
@@ -130,7 +130,7 @@ export function blogFeed(): Plugin {
   const root = () => `${origin}${base.replace(/\/$/, "")}`;
 
   return {
-    name: "soundbox:blog-feed",
+    name: "konchi:blog-feed",
 
     configResolved(config) {
       isSsrBuild = Boolean(config.build.ssr);

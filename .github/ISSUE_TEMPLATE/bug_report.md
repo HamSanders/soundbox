@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Something in Soundbox doesn't work
+about: Something in Konchi doesn't work
 title: ""
 labels: bug
 ---
@@ -23,8 +23,8 @@ loaded / error). If it shows an error, paste the message.
 
 **Server log**
 The server's console output around the failure (the terminal running
-`npm run dev` or `npx soundbox`), or the same lines from its log file:
-`~/.soundbox/soundbox-<port>.log`, e.g. `soundbox-17494.log` (the server prints
+`npm run dev` or `npx konchi`), or the same lines from its log file:
+`~/.konchi/konchi-<port>.log`, e.g. `konchi-17494.log` (the server prints
 the exact path at startup). Redact your HF token if
 it appears anywhere. It should not appear in the log; if it does, report that
 as a bug too.

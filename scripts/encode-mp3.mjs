@@ -1,5 +1,5 @@
 // Shared by the gen-*-tracks.mjs / gen-sfx-samples.ts renderers: the site
-// ships MP3, not the WAV Soundbox writes, so each render is encoded before it
+// ships MP3, not the WAV Konchi writes, so each render is encoded before it
 // lands in site/public. VBR quality 2 (~190 kb/s), sample rate and channel
 // count left as rendered. Needs `ffmpeg` with libmp3lame on PATH.
 

@@ -2,7 +2,7 @@
  * The door into a new piece of work — and the one place that asks which tool
  * it belongs in.
  *
- * Soundbox has two builders now, not one studio that guesses. They share the
+ * Konchi has two builders now, not one studio that guesses. They share the
  * timeline, the library and the chat; what differs is what you start from. In
  * the Script Builder you start from words: a script beside the timeline, a
  * cast, lines you voice and re-voice. In the Music Builder you start from a

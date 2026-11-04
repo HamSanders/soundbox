@@ -13,7 +13,7 @@ export type EnhanceCategory = "sfx" | "music";
 /**
  * What we actually know about the target model, read off its own `ModelSpec`
  * (`family`, `defaults`, `max_cfg`) rather than guessed — see
- * `SoundboxService.enhancePrompt`, which resolves this from `ModelManager`
+ * `KonchiService.enhancePrompt`, which resolves this from `ModelManager`
  * before calling down here. `family` is audio.cpp's loader family (the real
  * model architecture — `stable_audio`, `ace_step`, …), not the audio.cpp
  * runtime itself, which is just what executes any of them.
@@ -39,7 +39,7 @@ export interface EnhanceInput {
  * itself must stay a natural phrase, never a bare comma-separated list. Small
  * local models default to tag-dump output when the source material (ACE-
  * Step's own docs, genre keywords) is tag-shaped — that instinct is genuinely
- * useful, just not for this field. Soundbox has a separate Tags field for
+ * useful, just not for this field. Konchi has a separate Tags field for
  * exactly that output; see the `tags` half of `EnhanceResult` below.
  */
 /**
@@ -111,7 +111,7 @@ const LYRICS_GUIDANCE =
  *
  * ACE-Step's own tutorial (github.com/ace-step/ACE-Step-1.5,
  * docs/en/Tutorial.md) does say its caption accepts a comma-tag format —
- * that's real. But Soundbox already has a dedicated Tags field for exactly
+ * that's real. But Konchi already has a dedicated Tags field for exactly
  * that shape of output, so the caption stays a phrase here and the tag-list
  * instinct gets redirected to `tags` instead of overwriting the description.
  * Stability's guide (github.com/Stability-AI/stable-audio-3,
@@ -202,7 +202,7 @@ export function buildEnhanceMessages(input: EnhanceInput): ChatMessage[] {
         `${guidance} Produce ${input.n} distinct variations, not paraphrases of each ` +
         `other — vary the specific material/action/space (or genre/instrumentation) each time. `
       : `You help sound designers write prompts for local audio-generation models. ${guidance} `) +
-    `Also suggest up to 6 short library tags for Soundbox's own tag field — this one, unlike ` +
+    `Also suggest up to 6 short library tags for Konchi's own tag field — this one, unlike ` +
     `the prompt, is meant to be a plain keyword list. Each tag must be a concrete word drawn ` +
     `from the sound itself (e.g. "wood", "slam", "reverb", "orchestral", "melancholy"), never ` +
     `the name of a category — do not return words like "mood", "genre", "instrument", ` +
@@ -376,7 +376,7 @@ export function buildDraftMessages(input: EnhanceInput, brief: MusicBrief): Chat
     `and Stability's own worked examples close on the song's arc ("building ` +
     `to powerful chorus"), because a full song is what changes over its ` +
     `length rather than a loop of its ingredients. ` +
-    `Also suggest up to 6 short library tags for Soundbox's own tag field — this ` +
+    `Also suggest up to 6 short library tags for Konchi's own tag field — this ` +
     `one, unlike the prompt, is meant to be a plain keyword list. Each tag must be ` +
     `a concrete word drawn from the music itself (e.g. "rhodes", "shuffle", ` +
     `"tape", "melancholy"), never the name of a category — do not return words ` +
@@ -503,7 +503,7 @@ export function buildRepairMessages(
 
 export interface EnhanceResult {
   variations: string[];
-  /** Short suggested keywords for Soundbox's own Tags field, not the prompt
+  /** Short suggested keywords for Konchi's own Tags field, not the prompt
    *  itself — see `NOT_A_TAG_LIST` above for why the two are kept separate. */
   tags: string[];
 }

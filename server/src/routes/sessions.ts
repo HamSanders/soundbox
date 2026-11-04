@@ -14,7 +14,7 @@
 import type { FastifyInstance } from "fastify";
 
 import { projectPatchSchema, sessionPatchSchema, type Session } from "../schemas.js";
-import type { SoundboxService } from "../service.js";
+import type { KonchiService } from "../service.js";
 import { HttpError, intQuery } from "./helpers.js";
 
 type SessionParams = { Params: { session_id: string } };
@@ -24,7 +24,7 @@ function hasKey(body: unknown, key: string): boolean {
   return typeof body === "object" && body !== null && key in body;
 }
 
-export function registerSessions(app: FastifyInstance, svc: SoundboxService): void {
+export function registerSessions(app: FastifyInstance, svc: KonchiService): void {
   app.get("/api/sessions", async (request) => {
     const query = request.query as Record<string, string | string[] | undefined>;
     return svc.listSessions(intQuery(query.limit, "limit", 50, 1, 200));

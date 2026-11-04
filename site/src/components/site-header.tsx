@@ -34,7 +34,7 @@ export function SiteHeader() {
           <div className="bg-primary text-primary-foreground flex size-7 items-center justify-center rounded-lg">
             <AudioLinesIcon className="size-4" aria-hidden="true" />
           </div>
-          <span className="font-heading text-sm font-semibold tracking-tight">Soundbox</span>
+          <span className="font-heading text-sm font-semibold tracking-tight">Konchi</span>
         </Link>
 
         <nav aria-label="Primary" className="flex items-center gap-4 text-sm">

@@ -8,7 +8,7 @@ image: /blog/one-model-at-a-time.jpg
 draft: false
 ---
 
-The Soundbox catalogue runs to forty-six models and the app holds exactly one of
+The Konchi catalogue runs to forty-six models and the app holds exactly one of
 them in VRAM. Loading a new one unloads the old — the Models page says so in its
 own subtitle — and every other decision follows from it: why the first call to a
 model is slow and the second is not, why the stdio bridge refuses to load
@@ -73,7 +73,7 @@ spinner.
 ## Why the bridge will not load a model
 
 The stdio MCP bridge, for clients that cannot speak streamable HTTP, is a thin
-proxy onto a running Soundbox server and nothing more. Its header says why in
+proxy onto a running Konchi server and nothing more. Its header says why in
 seven words: one GPU, one process holding the weights. If the server is not
 running the tools return an actionable error rather than quietly starting a
 second copy — because a second copy is a second process convinced it owns the
@@ -82,7 +82,7 @@ to ask second.
 
 One slot means one owner, so the bridge is a client of the thing that owns it.
 Connecting an agent is covered in
-[point your agent at Soundbox](/blog/point-your-agent-at-soundbox) and in
+[point your agent at Konchi](/blog/point-your-agent-at-soundbox) and in
 [docs/MCP.md](./MCP.md).
 
 ## The alternative, and why not
@@ -101,7 +101,7 @@ resident at all. A model running on fal never takes the slot and never evicts
 whatever has it — but the prompt leaves your machine, which is why
 `enabled_fal_models` defaults to empty and every hosted model is opt-in per id.
 Everything else here runs on your own hardware, works offline once the weights
-are down, and uploads nothing. Soundbox itself is MIT.
+are down, and uploads nothing. Konchi itself is MIT.
 
 One slot is not a limitation the product apologises for. It is the shape of the
 hardware, written down where you can read it.

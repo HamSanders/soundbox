@@ -1,7 +1,7 @@
 /**
  * The studio floor — shared by both builders, and by neither exclusively.
  *
- * Soundbox has two tools that make sounds, and this file is the half they
+ * Konchi has two tools that make sounds, and this file is the half they
  * have in common: a timeline, a library, a chat, a device rack, and the
  * plumbing that keeps a story's clips and its script in step. What the two
  * builders disagree about is small enough to be a prop.
@@ -571,7 +571,7 @@ export function StudioEditor({
   const popOut = (id: string, at: PopOutAt): void => {
     const win = openPopoutWindow(id, at);
     if (win === null) {
-      toast.error("The browser blocked the new window. Allow pop-ups for Soundbox and try again.");
+      toast.error("The browser blocked the new window. Allow pop-ups for Konchi and try again.");
       return;
     }
     win.focus();
@@ -2973,7 +2973,7 @@ export function StudioEditor({
           <PopoutWindow
             key={id}
             win={win}
-            title={`${artifact.label} · ${story.data.title} · Soundbox`}
+            title={`${artifact.label} · ${story.data.title} · Konchi`}
             onClosed={() => dock(id)}
           >
             <PopoutPanelFrame

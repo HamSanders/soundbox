@@ -47,7 +47,7 @@ const readHalf = (id: string): dsp.Audio =>
   dsp.readWav(join(config.paths.sounds, `${id}.wav`)).audio;
 
 beforeAll(async () => {
-  dataDir = await mkdtemp(join(tmpdir(), "soundbox-split-test-"));
+  dataDir = await mkdtemp(join(tmpdir(), "konchi-split-test-"));
   config = new Config(dataDir);
   expect(config.settings.normalize_lufs).not.toBeNull();
   app = buildApp(config, { serveUi: false });
@@ -55,7 +55,7 @@ beforeAll(async () => {
 
   const ramp = new Float32Array(RATE * SECONDS);
   for (let i = 0; i < ramp.length; i++) ramp[i] = (i / RATE) * SLOPE;
-  const tmp = await mkdtemp(join(tmpdir(), "soundbox-split-wav-"));
+  const tmp = await mkdtemp(join(tmpdir(), "konchi-split-wav-"));
   const path = join(tmp, "ramp.wav");
   dsp.writeWav(path, [ramp], RATE);
   const upload = await app.inject({

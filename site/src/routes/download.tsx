@@ -1,7 +1,7 @@
 /**
  * `/download` — the installers, the launch film and the repo's numbers, on the site.
  *
- * The installer filenames carry the version (`Soundbox_0.4.1_x64-setup.exe`),
+ * The installer filenames carry the version (`Konchi_0.4.1_x64-setup.exe`),
  * so a link to one file would go stale on every release. The page therefore
  * renders with links to `releases/latest` (which GitHub redirects to the newest
  * release) and, once mounted, asks the GitHub API for that release and for the
@@ -11,7 +11,7 @@
  *
  * It is dressed in the console's hardware kit (`components/console`): panels
  * with screws, LEDs, seven-segment readouts, a VU meter. The app's own
- * instrument is the most recognisable thing Soundbox has, so the page that
+ * instrument is the most recognisable thing Konchi has, so the page that
  * hands it over looks like it. The visitor's OS is guessed after mount, so the
  * prerendered HTML is the same for everyone.
  */
@@ -220,8 +220,8 @@ export function DownloadPage() {
   return (
     <div className="console bg-background text-foreground min-h-svh overflow-x-clip">
       <SeoHead
-        title="Download Soundbox for Windows and macOS | Soundbox"
-        description="Download the Soundbox desktop app for Windows 10/11 or macOS. Free, open source, no account. Models download from inside the app."
+        title="Download Konchi for Windows and macOS | Konchi"
+        description="Download the Konchi desktop app for Windows 10/11 or macOS. Free, open source, no account. Models download from inside the app."
         path="/download"
       />
       <style>{KEYFRAMES}</style>
@@ -306,7 +306,7 @@ export function DownloadPage() {
             <SiteVideo
               src="/media/soundbox-vibe.mp4"
               poster="/media/posters/vibe.jpg"
-              label="Soundbox in thirty seconds: type a prompt, hear sound effects, music and voices, switch models"
+              label="Konchi in thirty seconds: type a prompt, hear sound effects, music and voices, switch models"
             />
           </Panel>
 

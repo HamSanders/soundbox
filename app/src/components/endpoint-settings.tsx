@@ -2,7 +2,7 @@
  * The Endpoints panel on Settings — custom audio endpoints.
  *
  * For people who already run their models somewhere (LocalAI, a gateway, a
- * homelab box) and want Soundbox to send requests there instead of
+ * homelab box) and want Konchi to send requests there instead of
  * downloading a second copy of the weights. Each saved endpoint becomes one
  * model in the pickers, so everything after "pick a model" works unchanged.
  *
@@ -121,7 +121,7 @@ function inputFrom(d: Draft): AudioEndpointInput {
 /**
  * Whether a URL points at this machine or the local network — the same rule as
  * the server's `isLocalUrl` (server/src/endpoints/types.ts). Anything else gets
- * a notice that prompts leave the network: Soundbox says it is local-first, and
+ * a notice that prompts leave the network: Konchi says it is local-first, and
  * an endpoint is the one place a prompt can quietly stop being local.
  */
 function isLocalUrl(url: string): boolean {
@@ -314,7 +314,7 @@ function EndpointDialog({
         <DialogHeader>
           <DialogTitle>{isNew ? "Add an endpoint" : `Edit ${initial.name}`}</DialogTitle>
           <DialogDescription>
-            Soundbox POSTs the body below to the URL and expects audio back. WAV is read directly;
+            Konchi POSTs the body below to the URL and expects audio back. WAV is read directly;
             MP3, FLAC and other formats need ffmpeg on this machine.
           </DialogDescription>
         </DialogHeader>

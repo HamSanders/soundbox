@@ -156,7 +156,7 @@ export interface NewEntry {
 /**
  * The history store.
  *
- * A class over the shared connection rather than more methods on `SoundboxDb`,
+ * A class over the shared connection rather than more methods on `KonchiDb`,
  * because history is self-contained — two tables nothing else joins against —
  * and `db.ts` is already two thousand lines of everything.
  */

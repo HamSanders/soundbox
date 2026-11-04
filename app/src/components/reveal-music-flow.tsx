@@ -29,7 +29,7 @@
  * Claims and their sources, so a later edit can check them:
  *   - two models, split by lyrics support — `content/music/tracks.ts` docstring
  *   - prompt sets genre and production, lyrics are what is sung — `docs/AUDIOCPP.md`, "Lyrics"
- *   - some models refuse to run without lyrics (MiniMax Music 3), so Soundbox
+ *   - some models refuse to run without lyrics (MiniMax Music 3), so Konchi
  *     sends an explicit `[instrumental]` marker — same section
  *   - htdemucs emits vocals / drums / bass / other, is its own task mode, and
  *     needs exactly 44.1 kHz so the source is resampled first — `docs/AUDIOCPP.md`,
@@ -144,7 +144,7 @@ const STEPS: StageStep[] = [
   {
     title: "Lyrics are a separate input",
     detail:
-      "On a lyrics-conditioned model the prompt sets genre and production, and the lyrics are what gets sung. Some models, MiniMax Music 3 among them, refuse to run without lyrics. When you give none, Soundbox sends an explicit [instrumental] marker so the job runs instead of failing.",
+      "On a lyrics-conditioned model the prompt sets genre and production, and the lyrics are what gets sung. Some models, MiniMax Music 3 among them, refuse to run without lyrics. When you give none, Konchi sends an explicit [instrumental] marker so the job runs instead of failing.",
   },
   {
     title: "The render",

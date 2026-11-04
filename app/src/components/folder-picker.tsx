@@ -4,7 +4,7 @@
  * Walks the *server's* filesystem, not the browser's. That is not a
  * compromise: the path being chosen is one the server will write to, a browser
  * file input hands back a sandboxed name with no real location, and on a
- * Soundbox reached from another machine the local disk is the wrong disk
+ * Konchi reached from another machine the local disk is the wrong disk
  * outright. See `GET /api/fs/dirs`.
  *
  * The path field stays editable throughout, and a folder that does not exist
@@ -260,7 +260,7 @@ function NewSubfolder({
         <Input
           id="folder-picker-new"
           value={name}
-          placeholder="soundbox-sounds"
+          placeholder="konchi-sounds"
           className="font-mono text-xs"
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {

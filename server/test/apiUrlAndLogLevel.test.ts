@@ -140,7 +140,7 @@ describe("resolveLogLevel", () => {
     expect(resolveLogLevel(undefined, "  ")).toEqual({ level: "info", source: "default", invalid: null });
   });
 
-  it("reads SOUNDBOX_LOG_LEVEL when no flag is given", () => {
+  it("reads KONCHI_LOG_LEVEL when no flag is given", () => {
     expect(resolveLogLevel(undefined, "debug")).toEqual({ level: "debug", source: "env", invalid: null });
     expect(resolveLogLevel(undefined, " DEBUG ")).toMatchObject({ level: "debug" });
   });

@@ -118,14 +118,14 @@ const EIGHT_BIT: SfxCategory = {
     "Solo/indie game devs building a retro-styled game who need coins, jumps, " +
     "lasers and death jingles, and would rather generate a set that matches " +
     "than dig through a pack where every clip came from a different game.",
-  metaTitle: "8-Bit Sound Effects, Generated Locally | Soundbox",
+  metaTitle: "8-Bit Sound Effects, Generated Locally | Konchi",
   metaDescription:
     "Make 8-bit and chiptune sound effects on your own machine: coins, jumps, lasers, power-ups. Real prompts, open-weight models, no cloud and no per-sound billing.",
   h1: "8-bit sound effects you generate yourself",
   intro:
     "Retro game audio uses a small vocabulary: a coin blip, an ascending jump, a descending " +
     "death jingle. Finding one clip is easy. Finding twenty that sound like the same machine " +
-    "is harder. Soundbox runs open-weight audio models on your own GPU, so you can generate " +
+    "is harder. Konchi runs open-weight audio models on your own GPU, so you can generate " +
     "a whole set from one prompt family in one sitting, and regenerate any clip with a " +
     "different seed when it comes out wrong.",
   content: {
@@ -206,19 +206,19 @@ const EIGHT_BIT: SfxCategory = {
       },
       {
         heading: "Use seeds to get a matching set",
-        body: "Soundbox records the prompt, seed, steps and CFG for every sound it makes and lets you regenerate from any of them. To build a coherent set, find a seed whose character you like, then vary only the pitch and length words in the prompt across the family. If one clip comes out wrong, re-roll that clip and keep the rest.",
+        body: "Konchi records the prompt, seed, steps and CFG for every sound it makes and lets you regenerate from any of them. To build a coherent set, find a seed whose character you like, then vary only the pitch and length words in the prompt across the family. If one clip comes out wrong, re-roll that clip and keep the rest.",
       },
     ],
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
         answer:
-          "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+          "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
         answer:
-          "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+          "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -228,7 +228,7 @@ const EIGHT_BIT: SfxCategory = {
       {
         question: "Can my coding agent generate these for me?",
         answer:
-          "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent building your level can make the door sound in the same pass and gets back an absolute file path to use in your project.",
+          "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent building your level can make the door sound in the same pass and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -248,7 +248,7 @@ const CHIPTUNE_MUSIC: SfxCategory = {
     "Game devs and musicians who want authentic chip-music — SID, FM synth, tracker — " +
     "named by the actual hardware it imitates, not a vague \"retro\" preset, and who need " +
     "a full loop rather than a one-shot blip.",
-  metaTitle: "Chiptune Music Generator: SID, FM Synth & Tracker Loops | Soundbox",
+  metaTitle: "Chiptune Music Generator: SID, FM Synth & Tracker Loops | Konchi",
   metaDescription:
     "Generate chiptune music locally: SID chip, Sega Genesis FM synth, NES 2A03, OPL2 AdLib and Amiga tracker loops. Real prompts, open-weight models, no cloud.",
   h1: "Chiptune music, named by the chip it imitates",
@@ -379,7 +379,7 @@ const CHIPTUNE_MUSIC: SfxCategory = {
       {
         question: "Can I use AI-generated chiptune music commercially?",
         answer:
-          "It depends on the model that made it. Soundbox shows each model's licence before you download its weights. Most samples on this page were made with Stable Audio 3 Small SFX, under the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. The vocal track was made with ACE-Step 1.5, which is MIT. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+          "It depends on the model that made it. Konchi shows each model's licence before you download its weights. Most samples on this page were made with Stable Audio 3 Small SFX, under the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. The vocal track was made with ACE-Step 1.5, which is MIT. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Can these loops have vocals?",
@@ -394,12 +394,12 @@ const CHIPTUNE_MUSIC: SfxCategory = {
       {
         question: "Does this run offline?",
         answer:
-          "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+          "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "Can my coding agent generate a chiptune soundtrack for my game?",
         answer:
-          "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent building your game's audio can generate a set of chip-specific loops in one pass and gets back absolute file paths to use in your project.",
+          "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent building your game's audio can generate a set of chip-specific loops in one pass and gets back absolute file paths to use in your project.",
       },
     ],
     related: ["8bit-music", "8bit", "retro-game", "cinematic"],
@@ -414,7 +414,7 @@ const EIGHT_BIT_MUSIC: SfxCategory = {
     "Indie devs who need drop-in background music for a retro-styled game — a title screen, " +
     "an overworld, a shop, a final boss — built from the specific NES/Game Boy voices " +
     "(square, pulse, triangle, noise-channel) rather than a generic chiptune preset.",
-  metaTitle: "8-Bit Music Generator for Game Loops | Soundbox",
+  metaTitle: "8-Bit Music Generator for Game Loops | Konchi",
   metaDescription:
     "Generate 8-bit background music locally: Game Boy and NES-style title, overworld, shop and boss loops. The prompts name each synth voice. No cloud, no per-track fees.",
   h1: "8-bit background music for your game",
@@ -520,7 +520,7 @@ const EIGHT_BIT_MUSIC: SfxCategory = {
       {
         question: "Can I use this as background music in a commercial game?",
         answer:
-          "It depends on the model that made it. Soundbox shows each model's licence before you download its weights. Most samples on this page were made with Stable Audio 3 Small SFX, under the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. The victory loop was made with ACE-Step 1.5, which is MIT. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+          "It depends on the model that made it. Konchi shows each model's licence before you download its weights. Most samples on this page were made with Stable Audio 3 Small SFX, under the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. The victory loop was made with ACE-Step 1.5, which is MIT. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "How long a loop can I generate?",
@@ -535,12 +535,12 @@ const EIGHT_BIT_MUSIC: SfxCategory = {
       {
         question: "Can my coding agent generate a full soundtrack for my game?",
         answer:
-          "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent building your game can generate the title, overworld, shop and boss themes in one pass and gets back absolute file paths to use in your project.",
+          "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent building your game can generate the title, overworld, shop and boss themes in one pass and gets back absolute file paths to use in your project.",
       },
       {
         question: "Does this run offline?",
         answer:
-          "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+          "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
     ],
     related: ["chiptune-music", "8bit", "retro-game", "video-game"],
@@ -556,13 +556,13 @@ const WHOOSH: SfxCategory = {
     "Video editors and motion designers who need a swipe, swing or transition sound that " +
     "matches the exact speed and size of the object moving on screen, rather than a whoosh " +
     "that was clearly recorded for someone else's cut.",
-  metaTitle: "Whoosh Sound Effects, Generated Locally | Soundbox",
+  metaTitle: "Whoosh Sound Effects, Generated Locally | Konchi",
   metaDescription:
     "Make whoosh, swipe and transition sounds on your own machine: fast or slow, small or huge, dry or roomy. Real prompts, open-weight models, no cloud.",
   h1: "Whoosh sound effects you generate yourself",
   intro:
     "A whoosh is an object moving through air, so the prompt is mostly physics: how fast it " +
-    "moved and how heavy it was. Soundbox runs open-weight audio models on your own GPU. You " +
+    "moved and how heavy it was. Konchi runs open-weight audio models on your own GPU. You " +
     "generate a whoosh at the length and weight your cut needs, and regenerate it when the " +
     "edit changes, without searching a library for a clip that happens to fit.",
   content: {
@@ -618,12 +618,12 @@ const WHOOSH: SfxCategory = {
       {
         question: "Can I use these sounds in a commercial video or game?",
         answer:
-          "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+          "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
         answer:
-          "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+          "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -633,7 +633,7 @@ const WHOOSH: SfxCategory = {
       {
         question: "Can my coding agent generate these for me?",
         answer:
-          "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent wiring up your UI transitions can generate the swipe sound in the same pass and gets back an absolute file path to use in your project.",
+          "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent wiring up your UI transitions can generate the swipe sound in the same pass and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -654,13 +654,13 @@ const FOOTSTEPS: SfxCategory = {
     "Game devs and sound designers who need a set of footstep variations per surface — " +
     "gravel, wood, concrete, snow — that all sound like the same pair of boots, rather than " +
     "eight clips pulled from eight different recording sessions.",
-  metaTitle: "Footstep Sound Effects, Generated Locally | Soundbox",
+  metaTitle: "Footstep Sound Effects, Generated Locally | Konchi",
   metaDescription:
     "Make footstep sound effects on your own machine: gravel, wood, concrete, snow, water, grass. Real prompts, open-weight models, no cloud, no billing.",
   h1: "Footstep sound effects you generate yourself",
   intro:
     "A footstep is a foot's weight meeting a surface for a few dozen milliseconds. Games need " +
-    "many of them, matched per surface and per pace. Soundbox runs open-weight audio models " +
+    "many of them, matched per surface and per pace. Konchi runs open-weight audio models " +
     "on your own GPU, so you can generate a whole surface set from one prompt family and " +
     "regenerate any single step that comes out wrong.",
   content: {
@@ -716,12 +716,12 @@ const FOOTSTEPS: SfxCategory = {
       {
         question: "Can I use these sounds in a commercial video or game?",
         answer:
-          "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+          "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
         answer:
-          "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+          "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -731,7 +731,7 @@ const FOOTSTEPS: SfxCategory = {
       {
         question: "Can my coding agent generate these for me?",
         answer:
-          "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent wiring up a character's surface detection can generate a matching step set in the same pass and gets back absolute file paths to use in your project.",
+          "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent wiring up a character's surface detection can generate a matching step set in the same pass and gets back absolute file paths to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -754,9 +754,9 @@ const RETRO_GAME: SfxCategory = {
   targetQuery: "retro game sound effects",
   intent:
     "Broader than 8-bit: 16-bit, arcade and early-CD-era game audio.",
-  metaTitle: "Retro Game Sound Effects, Generated Locally | Soundbox",
+  metaTitle: "Retro Game Sound Effects, Generated Locally | Konchi",
   metaDescription:
-    "Generate retro and arcade game sound effects on your own machine. Soundbox saves the prompt, seed and settings for every sound.",
+    "Generate retro and arcade game sound effects on your own machine. Konchi saves the prompt, seed and settings for every sound.",
   h1: "Retro game sound effects, made on your machine",
   intro:
     "Arcade and early-console audio has a specific grain. This page shows how to describe it to a model.",
@@ -807,11 +807,11 @@ const RETRO_GAME: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -819,7 +819,7 @@ const RETRO_GAME: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -836,12 +836,12 @@ const VIDEO_GAME: SfxCategory = {
   targetQuery: "video game sound effects",
   intent:
     "Highest-volume head term; searcher wants a starting point and a tool.",
-  metaTitle: "Video Game Sound Effects Generator | Soundbox",
+  metaTitle: "Video Game Sound Effects Generator | Konchi",
   metaDescription:
     "Generate video game sound effects locally from a text prompt. Open-weight models, your GPU, no per-sound billing.",
   h1: "Video game sound effects from a text prompt",
   intro:
-    "A game needs a hundred small sounds. Soundbox generates them locally from text prompts and saves the settings, so you can make any of them again.",
+    "A game needs a hundred small sounds. Konchi generates them locally from text prompts and saves the settings, so you can make any of them again.",
   content: {
     samples: [
     ],
@@ -889,11 +889,11 @@ const VIDEO_GAME: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -901,7 +901,7 @@ const VIDEO_GAME: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -918,9 +918,9 @@ const COIN_PICKUP: SfxCategory = {
   targetQuery: "coin pickup sound effect",
   intent:
     "Very specific single-asset search; wants one good clip immediately.",
-  metaTitle: "Coin Pickup Sound Effect Generator | Soundbox",
+  metaTitle: "Coin Pickup Sound Effect Generator | Konchi",
   metaDescription:
-    "Make a coin pickup sound that matches your game's key and length. Soundbox saves the prompt and seed so you can regenerate it, all locally.",
+    "Make a coin pickup sound that matches your game's key and length. Konchi saves the prompt and seed so you can regenerate it, all locally.",
   h1: "Coin pickup sound effects",
   intro:
     "A coin sound is two notes and a rising interval. The work is getting it to sit with your menu music.",
@@ -971,11 +971,11 @@ const COIN_PICKUP: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -983,7 +983,7 @@ const COIN_PICKUP: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -1000,7 +1000,7 @@ const POWER_UP: SfxCategory = {
   targetQuery: "power up sound effect",
   intent:
     "Single-asset search, usually alongside coin and jump.",
-  metaTitle: "Power-Up Sound Effect Generator | Soundbox",
+  metaTitle: "Power-Up Sound Effect Generator | Konchi",
   metaDescription:
     "Generate power-up jingles locally: ascending arpeggios, sweeps and risers, with the prompt and seed saved for each one.",
   h1: "Power-up sound effects",
@@ -1067,11 +1067,11 @@ const POWER_UP: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -1079,7 +1079,7 @@ const POWER_UP: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -1096,7 +1096,7 @@ const GAME_OVER: SfxCategory = {
   targetQuery: "game over sound effect",
   intent:
     "Single-asset search; often needs a matching win jingle too.",
-  metaTitle: "Game Over Sound Effect Generator | Soundbox",
+  metaTitle: "Game Over Sound Effect Generator | Konchi",
   metaDescription:
     "Generate game over jingles and failure stingers locally, and regenerate any of them from the saved prompt and seed.",
   h1: "Game over sound effects",
@@ -1171,15 +1171,15 @@ const GAME_OVER: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Why does one sample have a sung vocal instead of a jingle?",
-        answer: "That one comes from ACE-Step, Soundbox's lyrics-conditioned vocal music model. The other samples on this page come from a sound-effect model. ACE-Step takes a genre and instrumentation prompt plus a separate lyrics block, and sings the words. Use it for a story-beat death or a permadeath, and keep short jingles for sounds the player hears fifty times a session.",
+        answer: "That one comes from ACE-Step, Konchi's lyrics-conditioned vocal music model. The other samples on this page come from a sound-effect model. ACE-Step takes a genre and instrumentation prompt plus a separate lyrics block, and sings the words. Use it for a story-beat death or a permadeath, and keep short jingles for sounds the player hears fifty times a session.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -1187,7 +1187,7 @@ const GAME_OVER: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -1204,7 +1204,7 @@ const LASER: SfxCategory = {
   targetQuery: "laser sound effect",
   intent:
     "Spans retro arcade zaps and modern sci-fi weapon fire; two sub-intents.",
-  metaTitle: "Laser Sound Effects Generator | Soundbox",
+  metaTitle: "Laser Sound Effects Generator | Konchi",
   metaDescription:
     "Generate laser zaps and beam weapons locally, from thin arcade shots to wide cinematic beams.",
   h1: "Laser sound effects",
@@ -1257,11 +1257,11 @@ const LASER: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -1269,7 +1269,7 @@ const LASER: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -1286,7 +1286,7 @@ const MAGIC: SfxCategory = {
   targetQuery: "magic sound effect",
   intent:
     "RPG and fantasy game devs; spells, casts, shimmer.",
-  metaTitle: "Magic Sound Effects Generator | Soundbox",
+  metaTitle: "Magic Sound Effects Generator | Konchi",
   metaDescription:
     "Generate spell casts, shimmers and magical impacts locally from text prompts, with every setting saved.",
   h1: "Magic sound effects",
@@ -1352,11 +1352,11 @@ const MAGIC: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -1364,7 +1364,7 @@ const MAGIC: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -1381,7 +1381,7 @@ const WEAPON: SfxCategory = {
   targetQuery: "weapon sound effects",
   intent:
     "Game audio; melee and ranged, needs impact plus tail.",
-  metaTitle: "Weapon Sound Effects Generator | Soundbox",
+  metaTitle: "Weapon Sound Effects Generator | Konchi",
   metaDescription:
     "Generate melee and ranged weapon sounds locally: swings, impacts, reloads. Edit the prompt and regenerate until it fits.",
   h1: "Weapon sound effects",
@@ -1434,11 +1434,11 @@ const WEAPON: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -1446,7 +1446,7 @@ const WEAPON: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -1463,7 +1463,7 @@ const EXPLOSION: SfxCategory = {
   targetQuery: "explosion sound effect",
   intent:
     "Film, trailer and game use; wants weight and a long tail.",
-  metaTitle: "Explosion Sound Effects Generator | Soundbox",
+  metaTitle: "Explosion Sound Effects Generator | Konchi",
   metaDescription:
     "Generate explosions locally, from small pops to long cinematic booms. Prompts and seeds are saved in a searchable library.",
   h1: "Explosion sound effects",
@@ -1516,11 +1516,11 @@ const EXPLOSION: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -1528,7 +1528,7 @@ const EXPLOSION: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -1545,7 +1545,7 @@ const IMPACT: SfxCategory = {
   targetQuery: "impact sound effect",
   intent:
     "Editors and game devs; the generic hit/thud family.",
-  metaTitle: "Impact Sound Effects Generator | Soundbox",
+  metaTitle: "Impact Sound Effects Generator | Konchi",
   metaDescription:
     "Generate impacts, thuds and hits locally by naming the material, the action and the room.",
   h1: "Impact sound effects",
@@ -1598,11 +1598,11 @@ const IMPACT: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -1610,7 +1610,7 @@ const IMPACT: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -1627,7 +1627,7 @@ const HORROR: SfxCategory = {
   targetQuery: "horror sound effects",
   intent:
     "Film, game and short-form video; wants dread, not jump scares alone.",
-  metaTitle: "Horror Sound Effects Generator | Soundbox",
+  metaTitle: "Horror Sound Effects Generator | Konchi",
   metaDescription:
     "Generate horror atmospheres, stingers and drones locally, and revise the prompt until the scene works.",
   h1: "Horror sound effects",
@@ -1694,11 +1694,11 @@ const HORROR: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -1706,7 +1706,7 @@ const HORROR: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -1723,7 +1723,7 @@ const SCI_FI: SfxCategory = {
   targetQuery: "sci fi sound effects",
   intent:
     "Film and game; UI bleeps, engines, energy.",
-  metaTitle: "Sci-Fi Sound Effects Generator | Soundbox",
+  metaTitle: "Sci-Fi Sound Effects Generator | Konchi",
   metaDescription:
     "Generate sci-fi interface, engine and energy sounds locally from text, with every prompt and seed saved.",
   h1: "Sci-fi sound effects",
@@ -1798,11 +1798,11 @@ const SCI_FI: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -1810,7 +1810,7 @@ const SCI_FI: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -1827,7 +1827,7 @@ const CINEMATIC: SfxCategory = {
   targetQuery: "cinematic sound effects",
   intent:
     "Trailer editors; risers, braams, whooshes, hits.",
-  metaTitle: "Cinematic Sound Effects Generator | Soundbox",
+  metaTitle: "Cinematic Sound Effects Generator | Konchi",
   metaDescription:
     "Generate risers, hits and trailer transitions locally, with saved settings and no per-render cost.",
   h1: "Cinematic sound effects",
@@ -1902,11 +1902,11 @@ const CINEMATIC: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -1914,7 +1914,7 @@ const CINEMATIC: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -1931,7 +1931,7 @@ const GLITCH: SfxCategory = {
   targetQuery: "glitch sound effect",
   intent:
     "Motion designers and editors; digital artefacts and stutters.",
-  metaTitle: "Glitch Sound Effects Generator | Soundbox",
+  metaTitle: "Glitch Sound Effects Generator | Konchi",
   metaDescription:
     "Generate digital glitches, stutters and data artefacts locally from prompts you can edit and rerun.",
   h1: "Glitch sound effects",
@@ -1984,11 +1984,11 @@ const GLITCH: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -1996,7 +1996,7 @@ const GLITCH: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -2013,7 +2013,7 @@ const CROWD: SfxCategory = {
   targetQuery: "crowd sound effects",
   intent:
     "Film and game ambience; reaction beds and walla.",
-  metaTitle: "Crowd Sound Effects Generator | Soundbox",
+  metaTitle: "Crowd Sound Effects Generator | Konchi",
   metaDescription:
     "Generate crowd beds, applause and reaction walla locally, with the room and the size of the crowd under your control.",
   h1: "Crowd sound effects",
@@ -2066,11 +2066,11 @@ const CROWD: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -2078,7 +2078,7 @@ const CROWD: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -2095,7 +2095,7 @@ const RAIN: SfxCategory = {
   targetQuery: "rain sound effect",
   intent:
     "Ambience for film, games and video; also sleep/focus audio.",
-  metaTitle: "Rain Sound Effects Generator | Soundbox",
+  metaTitle: "Rain Sound Effects Generator | Konchi",
   metaDescription:
     "Generate rain on glass, tin or leaves locally, at the length and intensity you need.",
   h1: "Rain sound effects",
@@ -2148,11 +2148,11 @@ const RAIN: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -2160,7 +2160,7 @@ const RAIN: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -2177,7 +2177,7 @@ const THUNDER: SfxCategory = {
   targetQuery: "thunder sound effect",
   intent:
     "Storm ambience and single-strike stingers; two intents.",
-  metaTitle: "Thunder Sound Effects Generator | Soundbox",
+  metaTitle: "Thunder Sound Effects Generator | Konchi",
   metaDescription:
     "Generate thunder cracks and distant rolls locally, and control the distance with the prompt.",
   h1: "Thunder sound effects",
@@ -2230,11 +2230,11 @@ const THUNDER: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -2242,7 +2242,7 @@ const THUNDER: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -2259,7 +2259,7 @@ const WIND: SfxCategory = {
   targetQuery: "wind sound effect",
   intent:
     "Ambience; also motion/whoosh adjacency.",
-  metaTitle: "Wind Sound Effects Generator | Soundbox",
+  metaTitle: "Wind Sound Effects Generator | Konchi",
   metaDescription:
     "Generate wind beds and gusts locally: through trees, around structures, across open ground.",
   h1: "Wind sound effects",
@@ -2312,11 +2312,11 @@ const WIND: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -2324,7 +2324,7 @@ const WIND: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -2341,7 +2341,7 @@ const WATER: SfxCategory = {
   targetQuery: "water sound effects",
   intent:
     "Broad ambience and foley; streams, splashes, pours.",
-  metaTitle: "Water Sound Effects Generator | Soundbox",
+  metaTitle: "Water Sound Effects Generator | Konchi",
   metaDescription:
     "Generate splashes, streams, drips and pours locally from prompts that name the vessel and the volume.",
   h1: "Water sound effects",
@@ -2394,11 +2394,11 @@ const WATER: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -2406,7 +2406,7 @@ const WATER: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -2423,7 +2423,7 @@ const FIRE: SfxCategory = {
   targetQuery: "fire sound effect",
   intent:
     "Ambience and game loops; campfires through infernos.",
-  metaTitle: "Fire Sound Effects Generator | Soundbox",
+  metaTitle: "Fire Sound Effects Generator | Konchi",
   metaDescription:
     "Generate crackle, roar and ignition locally, from a campfire bed to a full blaze.",
   h1: "Fire sound effects",
@@ -2476,11 +2476,11 @@ const FIRE: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -2488,7 +2488,7 @@ const FIRE: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -2505,7 +2505,7 @@ const ANIMAL: SfxCategory = {
   targetQuery: "animal sound effects",
   intent:
     "Games and video; specific creatures and generic beasts.",
-  metaTitle: "Animal Sound Effects Generator | Soundbox",
+  metaTitle: "Animal Sound Effects Generator | Konchi",
   metaDescription:
     "Generate animal calls and creature sounds locally, including things that do not exist.",
   h1: "Animal sound effects",
@@ -2558,11 +2558,11 @@ const ANIMAL: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -2570,7 +2570,7 @@ const ANIMAL: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -2587,7 +2587,7 @@ const AMBIENCE: SfxCategory = {
   targetQuery: "ambience sound effects",
   intent:
     "Long background beds for games and film; the loop question dominates.",
-  metaTitle: "Ambience Sound Effects Generator | Soundbox",
+  metaTitle: "Ambience Sound Effects Generator | Konchi",
   metaDescription:
     "Generate room tone and background beds locally, at the length your game engine or edit loops.",
   h1: "Ambience and background sound effects",
@@ -2655,11 +2655,11 @@ const AMBIENCE: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -2667,7 +2667,7 @@ const AMBIENCE: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -2684,7 +2684,7 @@ const DOOR: SfxCategory = {
   targetQuery: "door sound effect",
   intent:
     "Foley staple; open, close, slam, creak, in a named space.",
-  metaTitle: "Door Sound Effects Generator | Soundbox",
+  metaTitle: "Door Sound Effects Generator | Konchi",
   metaDescription:
     "Generate door opens, closes, slams and creaks locally by naming the material, the action and the room.",
   h1: "Door sound effects",
@@ -2737,11 +2737,11 @@ const DOOR: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -2749,7 +2749,7 @@ const DOOR: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -2766,7 +2766,7 @@ const UI: SfxCategory = {
   targetQuery: "ui sound effects",
   intent:
     "App and game UI designers; clicks, toggles, confirms.",
-  metaTitle: "UI Sound Effects Generator | Soundbox",
+  metaTitle: "UI Sound Effects Generator | Konchi",
   metaDescription:
     "Generate clicks, toggles and confirmations locally: dry, short and consistent across a whole interface.",
   h1: "UI sound effects",
@@ -2819,11 +2819,11 @@ const UI: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -2831,7 +2831,7 @@ const UI: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -2848,7 +2848,7 @@ const NOTIFICATION: SfxCategory = {
   targetQuery: "notification sound effect",
   intent:
     "Product and app designers; a short branded alert.",
-  metaTitle: "Notification Sound Effects Generator | Soundbox",
+  metaTitle: "Notification Sound Effects Generator | Konchi",
   metaDescription:
     "Generate notification tones and alerts locally, and regenerate until one fits your product.",
   h1: "Notification sound effects",
@@ -2901,11 +2901,11 @@ const NOTIFICATION: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -2913,7 +2913,7 @@ const NOTIFICATION: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -2930,7 +2930,7 @@ const TRANSITION: SfxCategory = {
   targetQuery: "transition sound effects",
   intent:
     "Video editors; short-form content and cuts.",
-  metaTitle: "Transition Sound Effects Generator | Soundbox",
+  metaTitle: "Transition Sound Effects Generator | Konchi",
   metaDescription:
     "Generate transitions, swells and cut accents locally, at the length of your edit.",
   h1: "Transition sound effects",
@@ -2983,11 +2983,11 @@ const TRANSITION: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -2995,7 +2995,7 @@ const TRANSITION: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",
@@ -3012,7 +3012,7 @@ const MACHINERY: SfxCategory = {
   targetQuery: "machinery sound effects",
   intent:
     "Industrial ambience and mechanical foley for games and film.",
-  metaTitle: "Machinery Sound Effects Generator | Soundbox",
+  metaTitle: "Machinery Sound Effects Generator | Konchi",
   metaDescription:
     "Generate motors, servos, lifts and industrial beds locally by describing load, metal and space.",
   h1: "Machinery sound effects",
@@ -3073,11 +3073,11 @@ const MACHINERY: SfxCategory = {
     faqs: [
       {
         question: "Can I use these sounds in a commercial video or game?",
-        answer: "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        answer: "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The Stable Audio 3 models use the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. ACE-Step 1.5 is MIT. MiniMax's models allow commercial use under a revenue cap and require an attribution notice. Some voice and stem-separation models are non-commercial only. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Does this run offline?",
-        answer: "Yes, once the weights are downloaded. Soundbox runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.soundbox. There is no account, API key or upload step. Only the initial model download needs the network.",
+        answer: "Yes, once the weights are downloaded. Konchi runs the models locally and stores everything in one SQLite file and one folder of WAVs under ~/.konchi. There is no account, API key or upload step. Only the initial model download needs the network.",
       },
       {
         question: "What hardware do I need?",
@@ -3085,7 +3085,7 @@ const MACHINERY: SfxCategory = {
       },
       {
         question: "Can my coding agent generate these for me?",
-        answer: "Yes. While Soundbox is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
+        answer: "Yes. While Konchi is running it serves MCP at http://127.0.0.1:17494/mcp, with tools for generating and listing sounds. An agent can generate a sound as part of the task it is already doing and gets back an absolute file path to use in your project.",
       },
       {
         question: "How is this different from downloading a sample pack?",

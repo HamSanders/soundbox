@@ -11,7 +11,7 @@ import { apiUrl, NOT_FOUND_HINT } from "../apiUrl.js";
 import { ModelError } from "../errors.js";
 import { getLogger } from "../logging.js";
 
-const log = getLogger("soundbox.llm");
+const log = getLogger("konchi.llm");
 
 const REQUEST_TIMEOUT_MS = 60_000;
 

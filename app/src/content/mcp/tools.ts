@@ -9,7 +9,7 @@
  *
  * That is not hypothetical. This documentation described five tools long after
  * the server had grown to twenty, and cited `backend/src/soundbox/mcp_server.py`
- * — a Python module that no longer exists. Anyone reading it concluded Soundbox
+ * — a Python module that no longer exists. Anyone reading it concluded Konchi
  * could generate sounds and nothing else: no speech, no stories, no timeline.
  * The whole voice and arrangement half of the product was invisible. Hence the
  * split into a content module: the reference page and the marketing page now
@@ -32,7 +32,7 @@ export interface McpToolArg {
 }
 
 export interface McpToolDoc {
-  /** Wire name, e.g. "soundbox.generate". */
+  /** Wire name, e.g. "konchi.generate". */
   name: string;
   /** Title from the server's MCP_TOOLS table. */
   title: string;
@@ -57,7 +57,7 @@ export const MCP_TOOL_GROUPS: { id: McpToolGroup; title: string; intro: string }
     id: "voices",
     title: "Voices",
     intro:
-      "Spoken words take a separate path: soundbox.generate will not say them. speak is the one-off read. Put anything you want to keep and rework in a story.",
+      "Spoken words take a separate path: konchi.generate will not say them. speak is the one-off read. Put anything you want to keep and rework in a story.",
   },
   {
     id: "stories",
@@ -76,7 +76,7 @@ export const MCP_TOOL_GROUPS: { id: McpToolGroup; title: string; intro: string }
 export const MCP_TOOLS: McpToolDoc[] = [
   /* ------------------------------------------------------------- sounds */
   {
-    name: "soundbox.generate",
+    name: "konchi.generate",
     title: "Generate a sound effect",
     blurb:
       "Renders one or more sounds from a text description and saves them to the library. Blocks until the audio is on disk.",
@@ -113,7 +113,7 @@ export const MCP_TOOLS: McpToolDoc[] = [
     ],
   },
   {
-    name: "soundbox.enhance_prompt",
+    name: "konchi.enhance_prompt",
     title: "Rewrite a prompt for a sound model",
     blurb:
       "Turns a vague prompt (“scary sound”) into a concrete one, optionally several. Requires the local prompt assistant to be enabled; if it is off, the tool says so.",
@@ -135,7 +135,7 @@ export const MCP_TOOLS: McpToolDoc[] = [
     ],
   },
   {
-    name: "soundbox.list_models",
+    name: "konchi.list_models",
     title: "List sound models",
     blurb:
       "Available models with status and licence. Also lists each speech model's delivery options. A misspelled option is ignored silently, with no error.",
@@ -143,7 +143,7 @@ export const MCP_TOOLS: McpToolDoc[] = [
     args: [],
   },
   {
-    name: "soundbox.list_sounds",
+    name: "konchi.list_sounds",
     title: "Search the sound library",
     blurb: "Search what has already been made. Call it before generating; the sound may already exist.",
     group: "sounds",
@@ -154,14 +154,14 @@ export const MCP_TOOLS: McpToolDoc[] = [
     ],
   },
   {
-    name: "soundbox.get_sound",
+    name: "konchi.get_sound",
     title: "Get one sound",
     blurb: "Fetch a single sound by id, including its absolute file path.",
     group: "sounds",
     args: [{ name: "sound_id", type: "string", required: true }],
   },
   {
-    name: "soundbox.separate",
+    name: "konchi.separate",
     title: "Split a sound into stems",
     blurb:
       "Splits a sound into vocals, drums, bass and other, each saved as its own sound with its own path. You can keep some and merge the rest back into one sound: the original minus the stems you kept.",
@@ -179,7 +179,7 @@ export const MCP_TOOLS: McpToolDoc[] = [
     ],
   },
   {
-    name: "soundbox.delete_sound",
+    name: "konchi.delete_sound",
     title: "Delete a sound",
     blurb: "Permanently deletes a sound and its audio file.",
     group: "sounds",
@@ -189,7 +189,7 @@ export const MCP_TOOLS: McpToolDoc[] = [
 
   /* ------------------------------------------------------------- voices */
   {
-    name: "soundbox.list_voices",
+    name: "konchi.list_voices",
     title: "List saved voices",
     blurb:
       "The voices a script can be read in. Call it before writing one, so lines can be cast to real voice ids.",
@@ -197,7 +197,7 @@ export const MCP_TOOLS: McpToolDoc[] = [
     args: [],
   },
   {
-    name: "soundbox.speak",
+    name: "konchi.speak",
     title: "Speak a line or a dialogue",
     blurb:
       "Reads text aloud in a saved voice and saves it to the library. Pass one line, or several with different voices. Blocks until the audio is on disk.",
@@ -227,7 +227,7 @@ export const MCP_TOOLS: McpToolDoc[] = [
 
   /* ------------------------------------------------------------ stories */
   {
-    name: "soundbox.create_story",
+    name: "konchi.create_story",
     title: "Start a story",
     blurb: "Creates the empty script everything else in this group operates on.",
     group: "stories",
@@ -241,14 +241,14 @@ export const MCP_TOOLS: McpToolDoc[] = [
     ],
   },
   {
-    name: "soundbox.list_stories",
+    name: "konchi.list_stories",
     title: "List stories",
     blurb: "Existing stories, most recently worked on first.",
     group: "stories",
     args: [{ name: "limit", type: "integer", note: "1–200, default 20." }],
   },
   {
-    name: "soundbox.get_story",
+    name: "konchi.get_story",
     title: "Read a story",
     blurb:
       "Returns the whole script line by line: text, voice, timing, and whether each line has been voiced yet. Use it to inspect what the agent built.",
@@ -256,7 +256,7 @@ export const MCP_TOOLS: McpToolDoc[] = [
     args: [{ name: "story_id", type: "string", required: true }],
   },
   {
-    name: "soundbox.add_lines",
+    name: "konchi.add_lines",
     title: "Add lines to a story",
     blurb:
       "Appends spoken lines, pauses, or existing library sounds to the script. Add many at once; give a line its own delivery if it should be read differently.",
@@ -272,7 +272,7 @@ export const MCP_TOOLS: McpToolDoc[] = [
     ],
   },
   {
-    name: "soundbox.update_line",
+    name: "konchi.update_line",
     title: "Edit or arrange a line",
     blurb:
       "Changes a line's words, voice, delivery, or where it sits in time. Changing words or delivery means the line has to be re-read before it is heard.",
@@ -300,7 +300,7 @@ export const MCP_TOOLS: McpToolDoc[] = [
     ],
   },
   {
-    name: "soundbox.speak_story",
+    name: "konchi.speak_story",
     title: "Voice a story",
     blurb:
       "Reads every line that has no audio yet, in its assigned voice and on that voice's model, one at a time. This is the slowest tool.",
@@ -321,7 +321,7 @@ export const MCP_TOOLS: McpToolDoc[] = [
     ],
   },
   {
-    name: "soundbox.delete_line",
+    name: "konchi.delete_line",
     title: "Delete a line",
     blurb: "Removes one line from a story. Its audio stays in the library.",
     group: "stories",
@@ -329,10 +329,10 @@ export const MCP_TOOLS: McpToolDoc[] = [
     args: [{ name: "line_id", type: "string", required: true }],
   },
   {
-    name: "soundbox.split_line",
+    name: "konchi.split_line",
     title: "Split a line in two",
     blurb:
-      "Cuts a voiced line at a point in its own audio, giving two clips. The words stay with the first half, because Soundbox cannot tell which words fell on either side of the cut.",
+      "Cuts a voiced line at a point in its own audio, giving two clips. The words stay with the first half, because Konchi cannot tell which words fell on either side of the cut.",
     group: "stories",
     args: [
       { name: "line_id", type: "string", required: true },
@@ -340,7 +340,7 @@ export const MCP_TOOLS: McpToolDoc[] = [
     ],
   },
   {
-    name: "soundbox.export_story",
+    name: "konchi.export_story",
     title: "Mix a story down",
     blurb:
       "Mixes the whole arrangement to one sound, honouring where each clip sits, its trim, its gain, and whether it is muted.",
@@ -351,7 +351,7 @@ export const MCP_TOOLS: McpToolDoc[] = [
 
   /* -------------------------------------------------------- arrangement */
   {
-    name: "soundbox.open_in_studio",
+    name: "konchi.open_in_studio",
     title: "Open a sound in the studio",
     blurb:
       "Lays a library sound out on a timeline, split into stems on separate tracks where that is possible. If the sound already has stems, it reuses them.",
@@ -372,7 +372,7 @@ export const MCP_TOOLS: McpToolDoc[] = [
     ],
   },
   {
-    name: "soundbox.mix_track",
+    name: "konchi.mix_track",
     title: "Mute, solo or set a track's level",
     blurb: "Controls one lane of a story. These settings belong to the lane; the clips on it keep their own.",
     group: "arrangement",
@@ -386,7 +386,7 @@ export const MCP_TOOLS: McpToolDoc[] = [
     ],
   },
   {
-    name: "soundbox.add_device",
+    name: "konchi.add_device",
     title: "Add an effect to a track",
     blurb:
       "Puts a compressor, EQ, reverb, delay, distortion, gate, limiter or autotune on one lane's rack. The studio shows it as it lands; the export still mixes dry.",
@@ -401,7 +401,7 @@ export const MCP_TOOLS: McpToolDoc[] = [
     ],
   },
   {
-    name: "soundbox.set_device",
+    name: "konchi.set_device",
     title: "Turn a device's knobs",
     blurb:
       "Changes a device already on a lane, or bypasses it and keeps its settings. Values past a knob's range land at its end, and the result says which did.",
@@ -415,9 +415,9 @@ export const MCP_TOOLS: McpToolDoc[] = [
     ],
   },
   {
-    name: "soundbox.remove_device",
+    name: "konchi.remove_device",
     title: "Take an effect off a track",
-    blurb: "Removes one device from a lane's chain. Bypass it with soundbox.set_device to keep its settings instead.",
+    blurb: "Removes one device from a lane's chain. Bypass it with konchi.set_device to keep its settings instead.",
     group: "arrangement",
     args: [
       { name: "story_id", type: "string", required: true },
@@ -426,10 +426,10 @@ export const MCP_TOOLS: McpToolDoc[] = [
     ],
   },
   {
-    name: "soundbox.remove_track",
+    name: "konchi.remove_track",
     title: "Remove a track",
     blurb:
-      "Deletes a lane and the clips on it; lanes above slide down. Call soundbox.get_story first if you are not certain what is on it.",
+      "Deletes a lane and the clips on it; lanes above slide down. Call konchi.get_story first if you are not certain what is on it.",
     group: "arrangement",
     destructive: true,
     args: [

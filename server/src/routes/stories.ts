@@ -27,7 +27,7 @@ import {
   trackPatchSchema,
   type Story,
 } from "../schemas.js";
-import type { SoundboxService } from "../service.js";
+import type { KonchiService } from "../service.js";
 import type { StoryEvent } from "../story-hub.js";
 import { HttpError, intQuery, streamSse } from "./helpers.js";
 
@@ -39,7 +39,7 @@ function hasKey(body: unknown, key: string): boolean {
   return typeof body === "object" && body !== null && key in body;
 }
 
-export function registerStories(app: FastifyInstance, svc: SoundboxService): void {
+export function registerStories(app: FastifyInstance, svc: KonchiService): void {
   app.get("/api/stories", async (request) => {
     const query = request.query as Record<string, string | string[] | undefined>;
     // With timelines: this list is the studio's shelf, and every card on it

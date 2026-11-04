@@ -202,7 +202,7 @@ export const useAssistantStore = create<AssistantState>()(
         set((s) => ({ threads: { ...s.threads, [key]: { ...EMPTY, at: Date.now() } } })),
     }),
     {
-      name: "soundbox.assistant-threads",
+      name: "konchi.assistant-threads",
       partialize: (state) => ({
         threads: Object.fromEntries(
           Object.entries(state.threads)

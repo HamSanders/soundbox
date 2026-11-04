@@ -1,9 +1,9 @@
 /**
- * A custom audio endpoint: somebody else's server that Soundbox sends a
+ * A custom audio endpoint: somebody else's server that Konchi sends a
  * request to instead of running a model itself.
  *
  * The case this exists for is a machine that already runs LocalAI, a gateway
- * or another model manager, where Soundbox downloading its own copy of the
+ * or another model manager, where Konchi downloading its own copy of the
  * same weights wastes disk and bandwidth (or is not possible at all, on an
  * isolated network). Each endpoint shows up in the model pickers as one model,
  * `endpoint:<id>`, for one task.

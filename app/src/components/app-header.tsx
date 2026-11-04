@@ -30,7 +30,7 @@ const TITLES: Record<string, string> = {
 };
 
 /** `/sounds/:id` isn't a top-level page — it drills into the Library — so
- *  its crumb extends "Soundbox / Library" instead of replacing it. */
+ *  its crumb extends "Konchi / Library" instead of replacing it. */
 function SoundCrumb({ id }: { id: string }) {
   const { data: sound } = useSound(id);
   return (
@@ -64,7 +64,7 @@ export function AppHeader() {
       <SidebarTrigger className="-ml-1" />
       <Separator orientation="vertical" className="mr-1 !h-4" />
       <nav aria-label="Breadcrumb" className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-sm">
-        <span>Soundbox</span>
+        <span>Konchi</span>
         {soundId ? (
           <SoundCrumb id={soundId} />
         ) : builder !== null ? (
@@ -78,7 +78,7 @@ export function AppHeader() {
         ) : (
           <>
             <span aria-hidden="true">/</span>
-            <span className="text-foreground font-medium">{TITLES[pathname] ?? "Soundbox"}</span>
+            <span className="text-foreground font-medium">{TITLES[pathname] ?? "Konchi"}</span>
           </>
         )}
       </nav>

@@ -1,14 +1,14 @@
 /**
- * Agent skills that ship with Soundbox.
+ * Agent skills that ship with Konchi.
  *
  * A skill is a directory with a `SKILL.md` (YAML front matter: `name`,
  * `description`; then instructions) that agent harnesses such as Claude Code
- * load on demand. Soundbox bundles a few so an agent connected over MCP already
+ * load on demand. Konchi bundles a few so an agent connected over MCP already
  * knows *how* to use the tools well — check licences, search before generating,
  * prompt by material/action/space, hand back file paths — instead of
  * rediscovering that in every session.
  *
- * Installing is a plain copy; re-installing overwrites, so upgrading Soundbox
+ * Installing is a plain copy; re-installing overwrites, so upgrading Konchi
  * and re-running keeps them current.
  */
 

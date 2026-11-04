@@ -15,12 +15,12 @@
 import type { FastifyInstance } from "fastify";
 
 import { conversationAppendSchema, conversationCreateSchema, conversationPatchSchema } from "../schemas.js";
-import type { SoundboxService } from "../service.js";
+import type { KonchiService } from "../service.js";
 import { HttpError, intQuery } from "./helpers.js";
 
 type ConversationParams = { Params: { conversation_id: string } };
 
-export function registerHistory(app: FastifyInstance, svc: SoundboxService): void {
+export function registerHistory(app: FastifyInstance, svc: KonchiService): void {
   app.get("/api/conversations", async (request) => {
     const query = request.query as Record<string, string | string[] | undefined>;
     // `story_id` asks the other question: not "what have I talked about" but

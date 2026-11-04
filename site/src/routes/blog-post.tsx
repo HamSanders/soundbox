@@ -49,7 +49,7 @@ export function BlogPostPage() {
   return (
     <>
       <SeoHead
-        title={`${post.title} | Soundbox`}
+        title={`${post.title} | Konchi`}
         description={post.description}
         path={`/blog/${post.slug}`}
         type="article"
@@ -109,7 +109,7 @@ export function BlogPostPage() {
                 <a href={assetUrl(post.audio)}>Download the recording</a> instead.
               </audio>
               <figcaption className="text-muted-foreground mt-2.5 text-xs leading-relaxed">
-                Read aloud by Soundbox with a synthetic voice, on the machine that
+                Read aloud by Konchi with a synthetic voice, on the machine that
                 wrote it.
               </figcaption>
             </figure>
@@ -128,7 +128,7 @@ export function BlogPostPage() {
             />
           )}
 
-          <div className="soundbox-doc" dangerouslySetInnerHTML={{ __html: post.html }} />
+          <div className="konchi-doc" dangerouslySetInnerHTML={{ __html: post.html }} />
 
           <footer className="border-border/70 mt-16 border-t pt-6">
             <div className="flex flex-wrap justify-between gap-4 text-sm">

@@ -11,7 +11,7 @@ import { z } from "zod";
 
 import type { McpCall, McpToolInfo } from "../schemas.js";
 import { skillInstallRequestSchema } from "../schemas.js";
-import type { SoundboxService } from "../service.js";
+import type { KonchiService } from "../service.js";
 import * as skillsMod from "../skills.js";
 import { HttpError, intQuery, strQuery, streamSse } from "./helpers.js";
 
@@ -41,7 +41,7 @@ const mcpCallSchema = z.object({
 
 export function registerMcp(
   app: FastifyInstance,
-  svc: SoundboxService,
+  svc: KonchiService,
   tools: McpToolsProvider,
 ): void {
   /** Connection details, connected agents, totals, telemetry and skills — one
@@ -64,7 +64,7 @@ export function registerMcp(
     });
   });
 
-  /** Used by the stdio bridge (`soundbox-mcp`) to report a call it is proxying,
+  /** Used by the stdio bridge (`konchi-mcp`) to report a call it is proxying,
    *  so it appears alongside HTTP calls on the Agents page. */
   app.post("/api/mcp/calls", async (request, reply) => {
     const call = mcpCallSchema.parse(request.body) as McpCall;

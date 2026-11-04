@@ -44,11 +44,11 @@ export function openPopoutWindow(id: string, at: PopOutAt): Window | null {
   ].join(",");
   // A name per panel, so a second "pop out" of the same panel reuses the
   // window it already has rather than stacking another one on top of it.
-  return window.open("", `soundbox-panel-${id}`, features);
+  return window.open("", `konchi-panel-${id}`, features);
 }
 
 /** Must match `POPOUT_CLOSE_TITLE` in src-tauri/src/lib.rs. */
-export const POPOUT_CLOSE_TITLE = "soundbox:close-popout";
+export const POPOUT_CLOSE_TITLE = "konchi:close-popout";
 
 /**
  * Close a panel's window: when its panel is docked or closed, or when the

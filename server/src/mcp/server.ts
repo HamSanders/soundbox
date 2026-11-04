@@ -10,7 +10,7 @@
  *    clients that don't follow redirects on POST would break;
  *  - DNS-rebinding protection is armed with a localhost allowlist, which
  *    silently breaks `--host 0.0.0.0`, so the allowlist follows how the server
- *    is actually bound via SOUNDBOX_ALLOWED_HOSTS (comma-separated).
+ *    is actually bound via KONCHI_ALLOWED_HOSTS (comma-separated).
  */
 
 import { randomUUID } from "node:crypto";
@@ -30,7 +30,7 @@ import { z } from "zod";
 import { DEFAULT_HOST, DEFAULT_PORT, VERSION } from "../config.js";
 import { allowedHostEntries, isListedHost, isTrustedOrigin } from "../origins.js";
 import type { Job, ModelInfo, McpToolInfo, Origin, Sound, StorySegment } from "../schemas.js";
-import type { SoundboxService } from "../service.js";
+import type { KonchiService } from "../service.js";
 import type { CallRecord, TrackOptions } from "../telemetry.js";
 import {
   DEVICE_KINDS,
@@ -43,28 +43,28 @@ import {
 } from "../devices.js";
 import { ProgressReporter } from "./progress.js";
 
-export const MCP_INSTRUCTIONS = `Soundbox makes audio locally from open-weight models: sound effects, music, and speech.
+export const MCP_INSTRUCTIONS = `Konchi makes audio locally from open-weight models: sound effects, music, and speech.
 
-Call soundbox.generate with a descriptive prompt — the models respond to
+Call konchi.generate with a descriptive prompt — the models respond to
 material, action and space ("heavy wooden door slamming in a stone corridor"),
 not to abstract labels ("scary sound"). Generation takes seconds to a minute
 depending on the model and blocks until the audio is written to disk. If your
 prompt is abstract and you'd rather not write the descriptive version
-yourself, call soundbox.enhance_prompt first and pass its result to generate —
+yourself, call konchi.enhance_prompt first and pass its result to generate —
 pass the \`model\` id you intend to generate with so the rewrite follows that
 model's own prompting conventions (Stable Audio's tempo/instrumentation
 emphasis, ACE-Step's comma-tag style, etc.) rather than generic advice. It
 only works when the user has enabled the local prompt assistant, and says so
 if not.
 
-Each result carries an absolute \`path\` to a WAV file. Check soundbox.list_models
+Each result carries an absolute \`path\` to a WAV file. Check konchi.list_models
 first if you care about licensing: models differ, and some are non-commercial.
 
 For lyrics-conditioned vocal music (ACE-Step), pass \`lyrics\` — a block like
 "[verse]\\nGame over\\nYou have fallen" — and \`prompt\` switches roles to set
 genre/instrumentation instead of a sound description. Omit \`lyrics\` for an
 instrumental render on the same model. Check \`supports.lyrics\` in
-soundbox.list_models before relying on it; other models ignore the field.
+konchi.list_models before relying on it; other models ignore the field.
 
 To build on a sound that already exists, pass \`source_sound_id\` with
 \`edit\`: "extend" makes it longer (set \`duration_s\` to the new total; the
@@ -72,15 +72,15 @@ original stays intact at the start), "cover" re-renders it in the style of
 \`prompt\` at the same length. Only models with \`supports.extend\` /
 \`supports.cover\` can — ACE-Step yes, MiniMax Music 3 no.
 
-Spoken words are a different path: soundbox.generate will not say them. For one
-read, call soundbox.speak. For anything you want to keep, arrange or hand back
-in pieces, build a story — soundbox.create_story, soundbox.add_lines,
-soundbox.speak_story, soundbox.export_story — because a story persists, each
+Spoken words are a different path: konchi.generate will not say them. For one
+read, call konchi.speak. For anything you want to keep, arrange or hand back
+in pieces, build a story — konchi.create_story, konchi.add_lines,
+konchi.speak_story, konchi.export_story — because a story persists, each
 line can be re-read on its own, and the lines carry a place in time. Cast lines
-to real voices with soundbox.list_voices first; a line with no voice_id falls
+to real voices with konchi.list_voices first; a line with no voice_id falls
 back to the model's default, and some families have none.
 
-Leave \`model\` off soundbox.speak and soundbox.speak_story unless you mean to
+Leave \`model\` off konchi.speak and konchi.speak_story unless you mean to
 override the cast: each line is then read on its own voice's \`model_id\` (a
 voice is made on a model, and a clone read on another family does not sound
 like it), lines with voices on different models are each read on their own, and
@@ -91,35 +91,35 @@ installed and the line was read on something else; pass that on to the user.
 How a line is *performed* is a separate lever from what it says, and it lives
 in flags rather than in the text: writing "(whispering)" into a line makes the
 model say the word "whispering". Pass \`delivery\` instead — on
-soundbox.create_story for the whole script, on a line in soundbox.add_lines, or
-on soundbox.update_line for one exception. The names are per model family and
-soundbox.list_models returns them as \`delivery\`; an unknown name is ignored
+konchi.create_story for the whole script, on a line in konchi.add_lines, or
+on konchi.update_line for one exception. The names are per model family and
+konchi.list_models returns them as \`delivery\`; an unknown name is ignored
 silently rather than rejected, so take them from there. A model with no
 \`delivery\` list has none: its words and its voice are the only controls.
 
 Each lane of a story has an insert chain, the studio's device rack:
-soundbox.add_device puts a compressor, eq, reverb, delay, distortion, gate,
-limiter or autotune on a track, soundbox.set_device turns its knobs or
-bypasses it, and soundbox.remove_device takes it off. The studio shows each
+konchi.add_device puts a compressor, eq, reverb, delay, distortion, gate,
+limiter or autotune on a track, konchi.set_device turns its knobs or
+bypasses it, and konchi.remove_device takes it off. The studio shows each
 change as it lands. Devices are heard in the studio's playback only;
-soundbox.export_story mixes dry, so say so if the user is about to export.
+konchi.export_story mixes dry, so say so if the user is about to export.
 
-Speaking is slow: one subprocess per line. soundbox.speak_story blocks until
+Speaking is slow: one subprocess per line. konchi.speak_story blocks until
 every silent line has been read, so expect minutes on a long script.
 
-A mixed track can be pulled apart: soundbox.separate splits a library sound
+A mixed track can be pulled apart: konchi.separate splits a library sound
 into vocals, drums, bass and other, each saved as its own sound with its own
 path. Pass \`stems\` to keep only some — \`rest: "merge"\` sums the ones you
 did not name back into a single "rest" sound, so "take the vocal off this" is
 one call and both halves still play as the take you started from. It needs a
-model with \`task: "sep"\` installed. soundbox.open_in_studio does the same
+model with \`task: "sep"\` installed. konchi.open_in_studio does the same
 split but lays the result out on a timeline instead of handing back files, and
 reuses stems the sound already has rather than making more.
 
 The story tools answer with a short summary and an \`open_in_studio\` link, not
 with every line. Give the user that link — a timeline is a thing to look at,
 and reciting its clips back at them is not the same as showing it. Call
-soundbox.get_story when you need the lines themselves.
+konchi.get_story when you need the lines themselves.
 `;
 
 /** A generated sound, with an absolute path the caller can actually open. */
@@ -128,7 +128,7 @@ export interface SoundResult {
   name: string;
   /** Absolute path to the WAV file on this machine. */
   path: string;
-  /** HTTP URL, relative to the Soundbox server. */
+  /** HTTP URL, relative to the Konchi server. */
   url: string;
   model: string;
   prompt: string;
@@ -156,11 +156,11 @@ export interface ModelSummary {
   id: string;
   name: string;
   /**
-   * Which surface the model belongs to: "gen" for soundbox.generate, "tts"
-   * for the speech tools, "sep" for soundbox.separate.
+   * Which surface the model belongs to: "gen" for konchi.generate, "tts"
+   * for the speech tools, "sep" for konchi.separate.
    *
    * Carried because it is one list: a separator sitting next to a music model
-   * with nothing to tell them apart reads as something soundbox.generate
+   * with nothing to tell them apart reads as something konchi.generate
    * could be called with, and it isn't.
    */
   task: string;
@@ -175,10 +175,10 @@ export interface ModelSummary {
   gated: boolean;
   /**
    * For a text-to-speech model, the knobs it will actually listen to — pass
-   * them as `delivery` to soundbox.speak, add_lines or update_line.
+   * them as `delivery` to konchi.speak, add_lines or update_line.
    *
    * Only for `tts` models, and only where the family lists any, because those
-   * are the only ones Soundbox forwards. An absent list is a real answer: the
+   * are the only ones Konchi forwards. An absent list is a real answer: the
    * words and the voice are that model's only controls. Read off audio.cpp's
    * own parameter table, not guessed — see models/params.ts.
    */
@@ -207,7 +207,7 @@ export interface DeliveryOption {
  * told apart from an edit by *which model made it*, not by its name — both
  * end in a parenthesised suffix.
  */
-async function separatorIds(svc: SoundboxService): Promise<Set<string>> {
+async function separatorIds(svc: KonchiService): Promise<Set<string>> {
   return new Set((await svc.listModels()).filter((m) => m.task === "sep").map((m) => m.id));
 }
 
@@ -215,18 +215,18 @@ async function separatorIds(svc: SoundboxService): Promise<Set<string>> {
  * The separation model to use when the caller named none.
  *
  * The service picks one too, but only where it separates on its way to
- * somewhere else; an agent calling soundbox.separate directly needs the same
+ * somewhere else; an agent calling konchi.separate directly needs the same
  * choice made, and needs "none installed" to say so in words rather than come
  * back as a failed job.
  */
-async function defaultSeparator(svc: SoundboxService): Promise<string> {
+async function defaultSeparator(svc: KonchiService): Promise<string> {
   const ready = (await svc.listModels()).filter(
     (m) => m.task === "sep" && (m.status === "loaded" || m.status === "installed"),
   );
   if (!ready.length) {
     throw new Error(
-      "No stem-separation model is installed. Open the Soundbox app and download " +
-        "one from the Models tab, or call soundbox.list_models to see the options.",
+      "No stem-separation model is installed. Open the Konchi app and download " +
+        "one from the Models tab, or call konchi.list_models to see the options.",
     );
   }
   return (ready.find((m) => m.status === "loaded") ?? ready[0]).id;
@@ -238,7 +238,7 @@ function stemNameOf(sound: Sound): string | undefined {
 }
 
 function toResult(
-  svc: SoundboxService,
+  svc: KonchiService,
   sound: Sound,
   separators?: Set<string>,
 ): SoundResult {
@@ -293,13 +293,13 @@ function summarise(info: ModelInfo): ModelSummary {
  */
 export const MCP_TOOLS: McpToolInfo[] = [
   {
-    name: "soundbox.enhance_prompt",
+    name: "konchi.enhance_prompt",
     title: "Rewrite a prompt for a sound model",
     description:
       "Rewrite a short or abstract prompt into a concrete, descriptive one a " +
       "text-to-audio model responds to, optionally returning several " +
       "variations, plus a few suggested library tags (a separate field from " +
-      "the prompt — pass these to soundbox.generate's `tags`, not into the " +
+      "the prompt — pass these to konchi.generate's `tags`, not into the " +
       "prompt itself). Prefer writing a descriptive prompt yourself when you " +
       "already know the material/action/space; use this when the prompt is " +
       "vague ('scary sound') or you want options. Only useful when the local " +
@@ -307,15 +307,15 @@ export const MCP_TOOLS: McpToolInfo[] = [
     calls: 0,
   },
   {
-    name: "soundbox.generate",
+    name: "konchi.generate",
     title: "Generate a sound effect",
     description:
       "Generate one or more sound effects from a text description and save " +
-      "them to the Soundbox library. Blocks until the audio is on disk.",
+      "them to the Konchi library. Blocks until the audio is on disk.",
     calls: 0,
   },
   {
-    name: "soundbox.separate",
+    name: "konchi.separate",
     title: "Split a sound into stems",
     description:
       "Split a library sound into its stems — vocals, drums, bass, other — " +
@@ -323,17 +323,17 @@ export const MCP_TOOLS: McpToolInfo[] = [
       "keep only some of them; `rest: \"merge\"` sums the ones you didn't " +
       "name into a single \"rest\" sound, which is the original minus what " +
       "you took out. Blocks until the audio is on disk. Needs a separation " +
-      "model installed (`task: \"sep\"` in soundbox.list_models).",
+      "model installed (`task: \"sep\"` in konchi.list_models).",
     calls: 0,
   },
   {
-    name: "soundbox.list_models",
+    name: "konchi.list_models",
     title: "List sound models",
     description:
       "List every model, generation and otherwise, with its status and " +
       "licence. `task` says which surface a model belongs to — \"gen\" for " +
-      "soundbox.generate, \"tts\" for the speech tools, \"sep\" for " +
-      "soundbox.separate — and calling one on the wrong surface is refused. " +
+      "konchi.generate, \"tts\" for the speech tools, \"sep\" for " +
+      "konchi.separate — and calling one on the wrong surface is refused. " +
       "Check `commercial_use` before using output commercially. For a " +
       "text-to-speech model this is also where the `delivery` knobs it accepts " +
       "come from — the authority on those names, since a wrong one is ignored " +
@@ -341,7 +341,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     calls: 0,
   },
   {
-    name: "soundbox.list_sounds",
+    name: "konchi.list_sounds",
     title: "Search the sound library",
     description:
       "Search previously generated sounds. Use this before generating — " +
@@ -350,19 +350,19 @@ export const MCP_TOOLS: McpToolInfo[] = [
     calls: 0,
   },
   {
-    name: "soundbox.get_sound",
+    name: "konchi.get_sound",
     title: "Get one sound",
     description: "Fetch a single sound by id, including its absolute file path.",
     calls: 0,
   },
   {
-    name: "soundbox.delete_sound",
+    name: "konchi.delete_sound",
     title: "Delete a sound",
     description: "Permanently delete a sound and its audio file.",
     calls: 0,
   },
   {
-    name: "soundbox.list_voices",
+    name: "konchi.list_voices",
     title: "List saved voices",
     description:
       "List the saved voices a script can be read in. Call this before " +
@@ -370,7 +370,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     calls: 0,
   },
   {
-    name: "soundbox.speak",
+    name: "konchi.speak",
     title: "Speak a line or a dialogue",
     description:
       "Read text aloud in a saved voice and save it to the library. One line " +
@@ -382,7 +382,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     calls: 0,
   },
   {
-    name: "soundbox.create_story",
+    name: "konchi.create_story",
     title: "Start a story",
     description:
       "Create a story — a script that persists, whose lines carry a place in " +
@@ -391,13 +391,13 @@ export const MCP_TOOLS: McpToolInfo[] = [
     calls: 0,
   },
   {
-    name: "soundbox.list_stories",
+    name: "konchi.list_stories",
     title: "List stories",
     description: "List existing stories, most recently worked on first.",
     calls: 0,
   },
   {
-    name: "soundbox.get_story",
+    name: "konchi.get_story",
     title: "Read a story",
     description:
       "Fetch a story with every line: text, voice, timing, and whether it has " +
@@ -406,7 +406,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     calls: 0,
   },
   {
-    name: "soundbox.add_lines",
+    name: "konchi.add_lines",
     title: "Add lines to a story",
     description:
       "Append lines to a story's script — spoken lines, pauses, or existing " +
@@ -415,7 +415,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     calls: 0,
   },
   {
-    name: "soundbox.update_line",
+    name: "konchi.update_line",
     title: "Edit or arrange a line",
     description:
       "Change a line's words, voice, delivery, or where it sits in time — " +
@@ -425,7 +425,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     calls: 0,
   },
   {
-    name: "soundbox.speak_story",
+    name: "konchi.speak_story",
     title: "Voice a story",
     description:
       "Read every line of a story that has no audio yet, in its assigned " +
@@ -434,7 +434,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     calls: 0,
   },
   {
-    name: "soundbox.open_in_studio",
+    name: "konchi.open_in_studio",
     title: "Open a sound in the studio",
     description:
       "Open a library sound on a timeline, split into its stems on separate " +
@@ -443,7 +443,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     calls: 0,
   },
   {
-    name: "soundbox.mix_track",
+    name: "konchi.mix_track",
     title: "Mute, solo or set a track's level",
     description:
       "Control one lane of a story: name it, mute it, solo it, or set its " +
@@ -451,18 +451,18 @@ export const MCP_TOOLS: McpToolInfo[] = [
     calls: 0,
   },
   {
-    name: "soundbox.add_device",
+    name: "konchi.add_device",
     title: "Add an effect to a track",
     description:
       "Put a device (compressor, eq, reverb, delay, distortion, gate, limiter, " +
       "autotune) on one lane of a story, at the end of its chain or at " +
       "`position`. It starts at its defaults; pass `params` to set knobs as it " +
       "goes on. The studio's device rack shows it straight away. Heard in the " +
-      "studio's timeline playback; soundbox.export_story still mixes dry.",
+      "studio's timeline playback; konchi.export_story still mixes dry.",
     calls: 0,
   },
   {
-    name: "soundbox.set_device",
+    name: "konchi.set_device",
     title: "Turn a device's knobs",
     description:
       "Change the knobs on a device already on a track, or bypass it (it stays " +
@@ -472,30 +472,30 @@ export const MCP_TOOLS: McpToolInfo[] = [
     calls: 0,
   },
   {
-    name: "soundbox.remove_device",
+    name: "konchi.remove_device",
     title: "Take an effect off a track",
     description:
       "Remove one device from a track's chain, by id, or by kind when the " +
-      "track has only one of that kind. Use `bypassed` on soundbox.set_device " +
+      "track has only one of that kind. Use `bypassed` on konchi.set_device " +
       "instead to switch it off and keep its settings.",
     calls: 0,
   },
   {
-    name: "soundbox.remove_track",
+    name: "konchi.remove_track",
     title: "Remove a track",
     description:
       "Delete a lane and the clips on it. Lanes above slide down. Use " +
-      "soundbox.get_story first if you are not certain what is on it.",
+      "konchi.get_story first if you are not certain what is on it.",
     calls: 0,
   },
   {
-    name: "soundbox.delete_line",
+    name: "konchi.delete_line",
     title: "Delete a line",
     description: "Remove one line from a story. Its audio stays in the library.",
     calls: 0,
   },
   {
-    name: "soundbox.split_line",
+    name: "konchi.split_line",
     title: "Split a line in two",
     description:
       "Cut a voiced line at a point in it, as it plays on the timeline, giving " +
@@ -505,7 +505,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     calls: 0,
   },
   {
-    name: "soundbox.export_story",
+    name: "konchi.export_story",
     title: "Mix a story down",
     description:
       "Mix the whole arrangement to one sound, honouring where each clip sits, " +
@@ -536,7 +536,7 @@ const GENERATE_INPUT = {
     .default(5.0)
     .describe(
       "Clip length in seconds. Clamped to the model's own max_duration_s — " +
-        "check soundbox.list_models for per-model limits.",
+        "check konchi.list_models for per-model limits.",
     ),
   model: z
     .string()
@@ -562,7 +562,7 @@ const GENERATE_INPUT = {
     .describe(
       "Words for a lyrics-conditioned vocal music model (ACE-Step) to sing, " +
         "e.g. '[verse]\\nGame over\\nYou have fallen'. Ignored by models that " +
-        "don't support lyrics — check `supports.lyrics` via soundbox.list_models. " +
+        "don't support lyrics — check `supports.lyrics` via konchi.list_models. " +
         "Omit for an instrumental render.",
     ),
   track_name: z
@@ -576,7 +576,7 @@ const GENERATE_INPUT = {
     .describe(
       "Edit an existing library sound instead of rendering from scratch. " +
         "Pair with `edit`. The model must declare `supports.<edit>` in " +
-        "soundbox.list_models (ACE-Step does; MiniMax Music 3 does not). " +
+        "konchi.list_models (ACE-Step does; MiniMax Music 3 does not). " +
         "The result is a new sound whose `parent_id` is this one.",
     ),
   edit: z
@@ -621,9 +621,9 @@ const ENHANCE_INPUT = {
     .string()
     .optional()
     .describe(
-      "The model id you intend to pass to soundbox.generate. Grounds the " +
+      "The model id you intend to pass to konchi.generate. Grounds the " +
         "rewrite in that model's own documented prompting conventions — " +
-        "check soundbox.list_models for ids. Omit for generic guidance.",
+        "check konchi.list_models for ids. Omit for generic guidance.",
     ),
 };
 
@@ -634,7 +634,7 @@ const LIST_SOUNDS_INPUT = {
     .string()
     .optional()
     .describe(
-      "Only sounds read in this saved voice (an id from soundbox.list_voices). " +
+      "Only sounds read in this saved voice (an id from konchi.list_voices). " +
         "Multi-voice dialogues are not filed under any one speaker.",
     ),
   limit: z.number().int().min(1).max(100).default(20),
@@ -680,7 +680,7 @@ function clientOf(
  *  keeps this independent of the SSE plumbing. `onTick` sees every poll — it
  *  is how a caller's ProgressReporter hears about the job. */
 async function awaitJob(
-  svc: SoundboxService,
+  svc: KonchiService,
   jobId: string,
   onTick?: (job: Job) => void,
   timeoutS = 900.0,
@@ -711,7 +711,7 @@ async function awaitJob(
  * the studio disabled with nothing working on it.
  */
 async function claiming<T>(
-  svc: SoundboxService,
+  svc: KonchiService,
   storyId: string,
   label: string,
   work: () => Promise<T> | T,
@@ -732,7 +732,7 @@ async function claiming<T>(
  * Which of the two builders opens it is the story's own answer — a script
  * dropped into the Music Builder would arrive with its script panel missing.
  */
-function studioUrl(svc: SoundboxService, story_id: string): string {
+function studioUrl(svc: KonchiService, story_id: string): string {
   const builder = svc.getStory(story_id)?.builder ?? "script";
   return `http://${DEFAULT_HOST}:${DEFAULT_PORT}/#/studio/${builder}/${story_id}`;
 }
@@ -744,10 +744,10 @@ function studioUrl(svc: SoundboxService, story_id: string): string {
  * Returning every line means a chat full of JSON that nobody reads and that
  * pushes the actual result off the screen. The counts are what a person checks
  * — did it get all my lines, is anything still silent — and the link is how
- * they see the rest. `soundbox.get_story` still returns the lines, because
+ * they see the rest. `konchi.get_story` still returns the lines, because
  * that call is explicitly asking for them.
  */
-function storySummary(svc: SoundboxService, storyId: string) {
+function storySummary(svc: KonchiService, storyId: string) {
   const story = svc.getStory(storyId);
   if (story === null) throw new Error("No story with id " + storyId);
   const lines = svc.listSegments(storyId);
@@ -778,7 +778,7 @@ function storySummary(svc: SoundboxService, storyId: string) {
  *
  * Deliberately free-form rather than an enum: the names differ per family
  * (Chatterbox's `exaggeration`, IndexTTS2's `emotion_text`) and the authority
- * on them is the `delivery` list soundbox.list_models returns for that model.
+ * on them is the `delivery` list konchi.list_models returns for that model.
  * Values are strings because that is what audio.cpp takes.
  *
  * The trap worth knowing: audio.cpp accepts an unknown key silently. A
@@ -789,7 +789,7 @@ const DELIVERY_INPUT = z
   .record(z.string().max(60), z.string().max(2000))
   .describe(
     "How to read it, using this model's own option names — see the `delivery` " +
-      "list from soundbox.list_models (e.g. {\"exaggeration\": \"1.4\"}). " +
+      "list from konchi.list_models (e.g. {\"exaggeration\": \"1.4\"}). " +
       "Unknown names are ignored silently, so take them from there.",
   );
 
@@ -801,7 +801,7 @@ const SPEAK_INPUT = {
         voice_id: z
           .string()
           .nullish()
-          .describe("A saved voice id from soundbox.list_voices. Omit for the model default."),
+          .describe("A saved voice id from konchi.list_voices. Omit for the model default."),
         speaker: z.string().max(80).nullish().describe("Display name, e.g. 'Narrator'."),
       }),
     )
@@ -828,7 +828,7 @@ const ADD_LINES_INPUT = {
       z.object({
         text: z.string().max(20000).optional().describe("What is said. Empty for a pause."),
         speaker: z.string().max(80).nullish(),
-        voice_id: z.string().nullish().describe("A saved voice id from soundbox.list_voices."),
+        voice_id: z.string().nullish().describe("A saved voice id from konchi.list_voices."),
         kind: z
           .enum(["line", "pause"])
           .optional()
@@ -926,7 +926,7 @@ interface TtsChoice {
  * Resolve which model reads each line of a script.
  *
  * Speaking needs a "tts" model specifically, and the resident one is usually a
- * sound-effects model — so unlike soundbox.generate this cannot just fall back
+ * sound-effects model — so unlike konchi.generate this cannot just fall back
  * to whatever is loaded. The order, per line:
  *
  *   1. an explicit `model` — the caller asked, every line uses it;
@@ -941,7 +941,7 @@ interface TtsChoice {
  * its absence only reported) when a line actually needs it.
  */
 async function ttsResolver(
-  svc: SoundboxService,
+  svc: KonchiService,
   requested?: string,
 ): Promise<(voiceId: string | null | undefined) => TtsChoice> {
   const models = await svc.listModels();
@@ -960,7 +960,7 @@ async function ttsResolver(
   const fallback = (): string => {
     if (!ready.length) {
       throw new Error(
-        "No text-to-speech model is installed. Open the Soundbox app and download " +
+        "No text-to-speech model is installed. Open the Konchi app and download " +
           "one from the Models tab.",
       );
     }
@@ -998,11 +998,11 @@ function modelsUsed(choices: TtsChoice[]): {
  * resolve the service at call time, after startup has built it.
  */
 export function buildMcp(
-  getService: () => SoundboxService,
+  getService: () => KonchiService,
   transport: "http" | "stdio" = "http",
 ): McpServer {
   const mcp = new McpServer(
-    { name: "soundbox", version: VERSION },
+    { name: "konchi", version: VERSION },
     { instructions: MCP_INSTRUCTIONS },
   );
 
@@ -1031,10 +1031,10 @@ export function buildMcp(
   const meta = Object.fromEntries(MCP_TOOLS.map((t) => [t.name, t]));
 
   mcp.registerTool(
-    "soundbox.generate",
+    "konchi.generate",
     {
-      title: meta["soundbox.generate"].title ?? undefined,
-      description: meta["soundbox.generate"].description,
+      title: meta["konchi.generate"].title ?? undefined,
+      description: meta["konchi.generate"].description,
       inputSchema: GENERATE_INPUT,
     },
     async (args, extra) => {
@@ -1044,7 +1044,7 @@ export function buildMcp(
       } = args;
       return await track(
         extra,
-        "soundbox.generate",
+        "konchi.generate",
         {
           prompt, duration_s, model, negative_prompt, seed, variations, tags, lyrics, track_name,
           source_sound_id, edit, edit_options,
@@ -1059,8 +1059,8 @@ export function buildMcp(
             );
             if (!ready.length) {
               throw new Error(
-                "No local model is installed yet. Open the Soundbox app and download " +
-                  "one from the Models tab, or call soundbox.list_models to see options.",
+                "No local model is installed yet. Open the Konchi app and download " +
+                  "one from the Models tab, or call konchi.list_models to see options.",
               );
             }
             modelId = ready[0].id;
@@ -1104,14 +1104,14 @@ export function buildMcp(
   );
 
   mcp.registerTool(
-    "soundbox.enhance_prompt",
+    "konchi.enhance_prompt",
     {
-      title: meta["soundbox.enhance_prompt"].title ?? undefined,
-      description: meta["soundbox.enhance_prompt"].description,
+      title: meta["konchi.enhance_prompt"].title ?? undefined,
+      description: meta["konchi.enhance_prompt"].description,
       inputSchema: ENHANCE_INPUT,
     },
     async ({ prompt, n, category, lyrics, model }, extra) =>
-      await track(extra, "soundbox.enhance_prompt", { prompt, n, category, model }, async () => {
+      await track(extra, "konchi.enhance_prompt", { prompt, n, category, model }, async () => {
         try {
           const result = await getService().enhancePrompt({ prompt, n, category, lyrics, model });
           return json(result);
@@ -1124,26 +1124,26 @@ export function buildMcp(
   );
 
   mcp.registerTool(
-    "soundbox.list_models",
+    "konchi.list_models",
     {
-      title: meta["soundbox.list_models"].title ?? undefined,
-      description: meta["soundbox.list_models"].description,
+      title: meta["konchi.list_models"].title ?? undefined,
+      description: meta["konchi.list_models"].description,
     },
     async (extra) =>
-      await track(extra, "soundbox.list_models", {}, async () =>
+      await track(extra, "konchi.list_models", {}, async () =>
         json((await getService().listModels()).map(summarise)),
       ),
   );
 
   mcp.registerTool(
-    "soundbox.list_sounds",
+    "konchi.list_sounds",
     {
-      title: meta["soundbox.list_sounds"].title ?? undefined,
-      description: meta["soundbox.list_sounds"].description,
+      title: meta["konchi.list_sounds"].title ?? undefined,
+      description: meta["konchi.list_sounds"].description,
       inputSchema: LIST_SOUNDS_INPUT,
     },
     async ({ q, tag, voice_id, limit }, extra) =>
-      await track(extra, "soundbox.list_sounds", { q, tag, voice_id, limit }, async (rec) => {
+      await track(extra, "konchi.list_sounds", { q, tag, voice_id, limit }, async (rec) => {
         const svc = getService();
         const page = svc.listSounds({
           limit,
@@ -1158,14 +1158,14 @@ export function buildMcp(
   );
 
   mcp.registerTool(
-    "soundbox.get_sound",
+    "konchi.get_sound",
     {
-      title: meta["soundbox.get_sound"].title ?? undefined,
-      description: meta["soundbox.get_sound"].description,
+      title: meta["konchi.get_sound"].title ?? undefined,
+      description: meta["konchi.get_sound"].description,
       inputSchema: { sound_id: z.string() },
     },
     async ({ sound_id }, extra) =>
-      await track(extra, "soundbox.get_sound", { sound_id }, async (rec) => {
+      await track(extra, "konchi.get_sound", { sound_id }, async (rec) => {
         const svc = getService();
         const sound = svc.getSound(sound_id);
         if (sound === null) throw new Error(`No sound with id ${sound_id}`);
@@ -1175,14 +1175,14 @@ export function buildMcp(
   );
 
   mcp.registerTool(
-    "soundbox.delete_sound",
+    "konchi.delete_sound",
     {
-      title: meta["soundbox.delete_sound"].title ?? undefined,
-      description: meta["soundbox.delete_sound"].description,
+      title: meta["konchi.delete_sound"].title ?? undefined,
+      description: meta["konchi.delete_sound"].description,
       inputSchema: { sound_id: z.string() },
     },
     async ({ sound_id }, extra) =>
-      await track(extra, "soundbox.delete_sound", { sound_id }, async (rec) => {
+      await track(extra, "konchi.delete_sound", { sound_id }, async (rec) => {
         if (!(await getService().deleteSound(sound_id))) {
           throw new Error(`No sound with id ${sound_id}`);
         }
@@ -1194,13 +1194,13 @@ export function buildMcp(
   /* ------------------------------------------------------------- voice */
 
   mcp.registerTool(
-    "soundbox.list_voices",
+    "konchi.list_voices",
     {
-      title: meta["soundbox.list_voices"].title ?? undefined,
-      description: meta["soundbox.list_voices"].description,
+      title: meta["konchi.list_voices"].title ?? undefined,
+      description: meta["konchi.list_voices"].description,
     },
     async (extra) =>
-      await track(extra, "soundbox.list_voices", {}, () =>
+      await track(extra, "konchi.list_voices", {}, () =>
         json(
           getService()
             .listVoices()
@@ -1218,14 +1218,14 @@ export function buildMcp(
   );
 
   mcp.registerTool(
-    "soundbox.speak",
+    "konchi.speak",
     {
-      title: meta["soundbox.speak"].title ?? undefined,
-      description: meta["soundbox.speak"].description,
+      title: meta["konchi.speak"].title ?? undefined,
+      description: meta["konchi.speak"].description,
       inputSchema: SPEAK_INPUT,
     },
     async ({ lines, model, gap_s, name, delivery }, extra) =>
-      await track(extra, "soundbox.speak", { lines, model, gap_s, name, delivery }, async (rec) => {
+      await track(extra, "konchi.speak", { lines, model, gap_s, name, delivery }, async (rec) => {
         const svc = getService();
         const resolve = await ttsResolver(svc, model);
         const choices = lines.map((l) => resolve(l.voice_id));
@@ -1271,10 +1271,10 @@ export function buildMcp(
   /* ----------------------------------------------------------- stories */
 
   mcp.registerTool(
-    "soundbox.create_story",
+    "konchi.create_story",
     {
-      title: meta["soundbox.create_story"].title ?? undefined,
-      description: meta["soundbox.create_story"].description,
+      title: meta["konchi.create_story"].title ?? undefined,
+      description: meta["konchi.create_story"].description,
       inputSchema: {
         title: z.string().max(200).optional().describe("What this story is."),
         delivery: DELIVERY_INPUT.optional().describe(
@@ -1285,7 +1285,7 @@ export function buildMcp(
       },
     },
     async ({ title, delivery }, extra) =>
-      await track(extra, "soundbox.create_story", { title, delivery }, () => {
+      await track(extra, "konchi.create_story", { title, delivery }, () => {
         const svc = getService();
         const story = svc.createStory(title ?? null);
         if (delivery && Object.keys(delivery).length > 0) {
@@ -1296,27 +1296,27 @@ export function buildMcp(
   );
 
   mcp.registerTool(
-    "soundbox.list_stories",
+    "konchi.list_stories",
     {
-      title: meta["soundbox.list_stories"].title ?? undefined,
-      description: meta["soundbox.list_stories"].description,
+      title: meta["konchi.list_stories"].title ?? undefined,
+      description: meta["konchi.list_stories"].description,
       inputSchema: { limit: z.number().int().min(1).max(200).default(20) },
     },
     async ({ limit }, extra) =>
-      await track(extra, "soundbox.list_stories", { limit }, () =>
+      await track(extra, "konchi.list_stories", { limit }, () =>
         json(getService().listStories(limit)),
       ),
   );
 
   mcp.registerTool(
-    "soundbox.get_story",
+    "konchi.get_story",
     {
-      title: meta["soundbox.get_story"].title ?? undefined,
-      description: meta["soundbox.get_story"].description,
+      title: meta["konchi.get_story"].title ?? undefined,
+      description: meta["konchi.get_story"].description,
       inputSchema: { story_id: z.string() },
     },
     async ({ story_id }, extra) =>
-      await track(extra, "soundbox.get_story", { story_id }, () => {
+      await track(extra, "konchi.get_story", { story_id }, () => {
         const svc = getService();
         const story = svc.getStory(story_id);
         if (story === null) throw new Error("No story with id " + story_id);
@@ -1332,14 +1332,14 @@ export function buildMcp(
   );
 
   mcp.registerTool(
-    "soundbox.add_lines",
+    "konchi.add_lines",
     {
-      title: meta["soundbox.add_lines"].title ?? undefined,
-      description: meta["soundbox.add_lines"].description,
+      title: meta["konchi.add_lines"].title ?? undefined,
+      description: meta["konchi.add_lines"].description,
       inputSchema: ADD_LINES_INPUT,
     },
     async ({ story_id, lines }, extra) =>
-      await track(extra, "soundbox.add_lines", { story_id, lines }, () => {
+      await track(extra, "konchi.add_lines", { story_id, lines }, () => {
         const svc = getService();
         if (svc.getStory(story_id) === null) throw new Error("No story with id " + story_id);
         return claiming(svc, story_id, "writing lines", () => {
@@ -1365,14 +1365,14 @@ export function buildMcp(
   );
 
   mcp.registerTool(
-    "soundbox.update_line",
+    "konchi.update_line",
     {
-      title: meta["soundbox.update_line"].title ?? undefined,
-      description: meta["soundbox.update_line"].description,
+      title: meta["konchi.update_line"].title ?? undefined,
+      description: meta["konchi.update_line"].description,
       inputSchema: UPDATE_LINE_INPUT,
     },
     async (args, extra) =>
-      await track(extra, "soundbox.update_line", { ...args }, () => {
+      await track(extra, "konchi.update_line", { ...args }, () => {
         const { line_id, delivery, ...rest } = args;
         // `delivery` is this surface's name for the stored request options —
         // the same rename `line_id` makes for a segment id. Sent-at-all rather
@@ -1385,10 +1385,10 @@ export function buildMcp(
   );
 
   mcp.registerTool(
-    "soundbox.speak_story",
+    "konchi.speak_story",
     {
-      title: meta["soundbox.speak_story"].title ?? undefined,
-      description: meta["soundbox.speak_story"].description,
+      title: meta["konchi.speak_story"].title ?? undefined,
+      description: meta["konchi.speak_story"].description,
       inputSchema: {
         story_id: z.string(),
         model: z
@@ -1406,7 +1406,7 @@ export function buildMcp(
       },
     },
     async ({ story_id, model, regenerate }, extra) =>
-      await track(extra, "soundbox.speak_story", { story_id, model, regenerate }, async (rec) => {
+      await track(extra, "konchi.speak_story", { story_id, model, regenerate }, async (rec) => {
         const svc = getService();
         if (svc.getStory(story_id) === null) throw new Error("No story with id " + story_id);
         const resolve = await ttsResolver(svc, model);
@@ -1442,14 +1442,14 @@ export function buildMcp(
   );
 
   mcp.registerTool(
-    "soundbox.export_story",
+    "konchi.export_story",
     {
-      title: meta["soundbox.export_story"].title ?? undefined,
-      description: meta["soundbox.export_story"].description,
+      title: meta["konchi.export_story"].title ?? undefined,
+      description: meta["konchi.export_story"].description,
       inputSchema: { story_id: z.string() },
     },
     async ({ story_id }, extra) =>
-      await track(extra, "soundbox.export_story", { story_id }, async (rec) => {
+      await track(extra, "konchi.export_story", { story_id }, async (rec) => {
         const svc = getService();
         return claiming(svc, story_id, "mixing it down", async () => {
         const progress = new ProgressReporter(extra);
@@ -1465,10 +1465,10 @@ export function buildMcp(
   );
 
   mcp.registerTool(
-    "soundbox.separate",
+    "konchi.separate",
     {
-      title: meta["soundbox.separate"].title ?? undefined,
-      description: meta["soundbox.separate"].description,
+      title: meta["konchi.separate"].title ?? undefined,
+      description: meta["konchi.separate"].description,
       inputSchema: {
         sound_id: z.string().describe("Library sound to split."),
         model: z
@@ -1497,7 +1497,7 @@ export function buildMcp(
       },
     },
     async ({ sound_id, model, stems, rest }, extra) =>
-      await track(extra, "soundbox.separate", { sound_id, model, stems, rest }, async (rec) => {
+      await track(extra, "konchi.separate", { sound_id, model, stems, rest }, async (rec) => {
         const svc = getService();
         // Blocking like generate and speak: separation is a queued job, but a
         // job id is not an answer to "give me the vocal" — the stems are.
@@ -1534,10 +1534,10 @@ export function buildMcp(
   );
 
   mcp.registerTool(
-    "soundbox.open_in_studio",
+    "konchi.open_in_studio",
     {
-      title: meta["soundbox.open_in_studio"].title ?? undefined,
-      description: meta["soundbox.open_in_studio"].description,
+      title: meta["konchi.open_in_studio"].title ?? undefined,
+      description: meta["konchi.open_in_studio"].description,
       inputSchema: {
         sound_id: z.string(),
         separate: z
@@ -1565,7 +1565,7 @@ export function buildMcp(
       },
     },
     async ({ sound_id, separate, stems, rest }, extra) =>
-      await track(extra, "soundbox.open_in_studio", { sound_id, separate, stems, rest }, async (rec) => {
+      await track(extra, "konchi.open_in_studio", { sound_id, separate, stems, rest }, async (rec) => {
         const svc = getService();
         // Separation can take a while, and the story only exists once it is
         // done — there is nothing useful to hand back before then.
@@ -1587,10 +1587,10 @@ export function buildMcp(
   );
 
   mcp.registerTool(
-    "soundbox.mix_track",
+    "konchi.mix_track",
     {
-      title: meta["soundbox.mix_track"].title ?? undefined,
-      description: meta["soundbox.mix_track"].description,
+      title: meta["konchi.mix_track"].title ?? undefined,
+      description: meta["konchi.mix_track"].description,
       inputSchema: {
         story_id: z.string(),
         track_index: z.number().int().min(-16).max(16).describe("Which lane."),
@@ -1606,7 +1606,7 @@ export function buildMcp(
     async ({ story_id, track_index, ...patch }, extra) =>
       await track(
         extra,
-        "soundbox.mix_track",
+        "konchi.mix_track",
         { story_id, track_index, ...patch },
         () => {
           const svc = getService();
@@ -1618,17 +1618,17 @@ export function buildMcp(
   );
 
   mcp.registerTool(
-    "soundbox.remove_track",
+    "konchi.remove_track",
     {
-      title: meta["soundbox.remove_track"].title ?? undefined,
-      description: meta["soundbox.remove_track"].description,
+      title: meta["konchi.remove_track"].title ?? undefined,
+      description: meta["konchi.remove_track"].description,
       inputSchema: {
         story_id: z.string(),
         track_index: z.number().int().min(-16).max(16),
       },
     },
     async ({ story_id, track_index }, extra) =>
-      await track(extra, "soundbox.remove_track", { story_id, track_index }, () => {
+      await track(extra, "konchi.remove_track", { story_id, track_index }, () => {
         const svc = getService();
         const removed = svc.deleteTrack(story_id, track_index);
         if (removed === null) throw new Error("No story with id " + story_id);
@@ -1639,7 +1639,7 @@ export function buildMcp(
   /* ------------------------------------------------------------ devices */
 
   /** A lane's chain as stored. A track with no row has no devices. */
-  function chainOf(svc: SoundboxService, storyId: string, trackIndex: number): DeviceSpec[] {
+  function chainOf(svc: KonchiService, storyId: string, trackIndex: number): DeviceSpec[] {
     return svc.listTracks(storyId).find((t) => t.track_index === trackIndex)?.devices ?? [];
   }
 
@@ -1671,7 +1671,7 @@ export function buildMcp(
    *  call usually needs an id from it, plus anything that did not land as
    *  asked. */
   function chainResult(
-    svc: SoundboxService,
+    svc: KonchiService,
     storyId: string,
     trackIndex: number,
     extra: Record<string, unknown>,
@@ -1681,13 +1681,13 @@ export function buildMcp(
       track_index: trackIndex,
       ...extra,
       devices: chainOf(svc, storyId, trackIndex),
-      note: "Heard in the studio's timeline playback; soundbox.export_story mixes dry.",
+      note: "Heard in the studio's timeline playback; konchi.export_story mixes dry.",
       open_in_studio: studioUrl(svc, storyId),
     });
   }
 
   function saveChain(
-    svc: SoundboxService,
+    svc: KonchiService,
     storyId: string,
     trackIndex: number,
     chain: DeviceSpec[],
@@ -1721,10 +1721,10 @@ export function buildMcp(
     );
 
   mcp.registerTool(
-    "soundbox.add_device",
+    "konchi.add_device",
     {
-      title: meta["soundbox.add_device"].title ?? undefined,
-      description: meta["soundbox.add_device"].description,
+      title: meta["konchi.add_device"].title ?? undefined,
+      description: meta["konchi.add_device"].description,
       inputSchema: {
         story_id: z.string(),
         track_index: z.number().int().min(-16).max(16).describe("Which lane."),
@@ -1742,7 +1742,7 @@ export function buildMcp(
     async ({ story_id, track_index, kind, params, bypassed, position }, extra) =>
       await track(
         extra,
-        "soundbox.add_device",
+        "konchi.add_device",
         { story_id, track_index, kind, params, bypassed, position },
         () => {
           const svc = getService();
@@ -1766,10 +1766,10 @@ export function buildMcp(
   );
 
   mcp.registerTool(
-    "soundbox.set_device",
+    "konchi.set_device",
     {
-      title: meta["soundbox.set_device"].title ?? undefined,
-      description: meta["soundbox.set_device"].description,
+      title: meta["konchi.set_device"].title ?? undefined,
+      description: meta["konchi.set_device"].description,
       inputSchema: {
         story_id: z.string(),
         track_index: z.number().int().min(-16).max(16),
@@ -1784,7 +1784,7 @@ export function buildMcp(
     async ({ story_id, track_index, device, params, bypassed }, extra) =>
       await track(
         extra,
-        "soundbox.set_device",
+        "konchi.set_device",
         { story_id, track_index, device, params, bypassed },
         () => {
           const svc = getService();
@@ -1811,10 +1811,10 @@ export function buildMcp(
   );
 
   mcp.registerTool(
-    "soundbox.remove_device",
+    "konchi.remove_device",
     {
-      title: meta["soundbox.remove_device"].title ?? undefined,
-      description: meta["soundbox.remove_device"].description,
+      title: meta["konchi.remove_device"].title ?? undefined,
+      description: meta["konchi.remove_device"].description,
       inputSchema: {
         story_id: z.string(),
         track_index: z.number().int().min(-16).max(16),
@@ -1822,7 +1822,7 @@ export function buildMcp(
       },
     },
     async ({ story_id, track_index, device }, extra) =>
-      await track(extra, "soundbox.remove_device", { story_id, track_index, device }, () => {
+      await track(extra, "konchi.remove_device", { story_id, track_index, device }, () => {
         const svc = getService();
         if (svc.getStory(story_id) === null) throw new Error("No story with id " + story_id);
         const chain = [...chainOf(svc, story_id, track_index)];
@@ -1834,14 +1834,14 @@ export function buildMcp(
   );
 
   mcp.registerTool(
-    "soundbox.delete_line",
+    "konchi.delete_line",
     {
-      title: meta["soundbox.delete_line"].title ?? undefined,
-      description: meta["soundbox.delete_line"].description,
+      title: meta["konchi.delete_line"].title ?? undefined,
+      description: meta["konchi.delete_line"].description,
       inputSchema: { line_id: z.string() },
     },
     async ({ line_id }, extra) =>
-      await track(extra, "soundbox.delete_line", { line_id }, () => {
+      await track(extra, "konchi.delete_line", { line_id }, () => {
         const svc = getService();
         // Read the parent before the row goes, so the summary still has a
         // story to describe.
@@ -1852,10 +1852,10 @@ export function buildMcp(
   );
 
   mcp.registerTool(
-    "soundbox.split_line",
+    "konchi.split_line",
     {
-      title: meta["soundbox.split_line"].title ?? undefined,
-      description: meta["soundbox.split_line"].description,
+      title: meta["konchi.split_line"].title ?? undefined,
+      description: meta["konchi.split_line"].description,
       inputSchema: {
         line_id: z.string(),
         at_s: z
@@ -1865,7 +1865,7 @@ export function buildMcp(
       },
     },
     async ({ line_id, at_s }, extra) =>
-      await track(extra, "soundbox.split_line", { line_id, at_s }, () => {
+      await track(extra, "konchi.split_line", { line_id, at_s }, () => {
         const svc = getService();
         const halves = svc.splitSegment(line_id, at_s);
         if (halves === null) throw new Error("No line with id " + line_id);
@@ -1880,14 +1880,14 @@ export function buildMcp(
 }
 
 /** Kept for callers/tests that want the configured exception list on its own:
- *  SOUNDBOX_ALLOWED_HOSTS, parsed the same way as everywhere else (origins.ts). */
+ *  KONCHI_ALLOWED_HOSTS, parsed the same way as everywhere else (origins.ts). */
 export function allowedHosts(): string[] {
   return allowedHostEntries();
 }
 
 /**
  * Is this `Host` header a loopback address (any port), or listed in
- * SOUNDBOX_ALLOWED_HOSTS (a bare `host` on any port, `host:port` on that port)?
+ * KONCHI_ALLOWED_HOSTS (a bare `host` on any port, `host:port` on that port)?
  *
  * The SDK's own `allowedHosts` option only does exact-string `.includes()`
  * matching — there is no wildcard port support — so "127.0.0.1:*" silently
@@ -1964,11 +1964,11 @@ interface McpSession {
  */
 export class McpEndpoint {
   private readonly sessions = new Map<string, McpSession>();
-  private readonly getService: () => SoundboxService;
+  private readonly getService: () => KonchiService;
   private readonly idleMs: number;
   private readonly sweeper: NodeJS.Timeout;
 
-  constructor(getService: () => SoundboxService, idleMs: number = MCP_SESSION_IDLE_MS) {
+  constructor(getService: () => KonchiService, idleMs: number = MCP_SESSION_IDLE_MS) {
     this.getService = getService;
     this.idleMs = idleMs;
     this.sweeper = setInterval(
@@ -2086,7 +2086,7 @@ export function mountMcp(
       handler: (req: FastifyLikeRequest, reply: FastifyLikeReply) => Promise<void>;
     }): unknown;
   },
-  getService: () => SoundboxService,
+  getService: () => KonchiService,
 ): McpEndpoint {
   const endpoint = new McpEndpoint(getService);
   for (const url of ["/mcp", "/mcp/"]) {

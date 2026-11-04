@@ -154,7 +154,7 @@ export function ConsolePage() {
           <div className="flex min-w-0 items-center gap-4">
             <div className="flex flex-col leading-none">
               <span className="font-heading text-lg font-semibold tracking-[0.18em] text-[var(--cx-nameplate)] uppercase">
-                Soundbox
+                Konchi
               </span>
               <span className="cx-title mt-1">Console · Mk I · text-to-sfx rack</span>
             </div>

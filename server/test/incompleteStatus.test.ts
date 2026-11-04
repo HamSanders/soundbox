@@ -15,7 +15,7 @@ import { AudioCppModel, catalogById } from "../src/models/audiocpp.js";
 let root: string;
 
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), "soundbox-incomplete-"));
+  root = await mkdtemp(join(tmpdir(), "konchi-incomplete-"));
 });
 
 afterEach(async () => {

@@ -1,4 +1,4 @@
-# Soundbox HTTP API
+# Konchi HTTP API
 
 Base URL: `http://127.0.0.1:17494`. All JSON. The Vite dev server proxies
 `/api`, `/mcp`, `/files` and `/artwork` to this port, so the frontend uses
@@ -11,18 +11,18 @@ drive the server:
 
 - **Host header.** Requests are served only when the `Host` header names
   `localhost`, `127.0.0.1` or `[::1]` (any port), or the specific host passed
-  to `soundbox --host`. Anything else gets `403`, which blocks DNS-rebinding
+  to `konchi --host`. Anything else gets `403`, which blocks DNS-rebinding
   attacks. Binding a wildcard (`--host 0.0.0.0`) turns the check off.
 - **Mutating requests.** `POST`, `PUT`, `PATCH` and `DELETE` under `/api/`
   must send either a non-"simple" `Content-Type` (`application/json`, or the
   raw audio type `audio/wav` or `application/octet-stream` on the upload
-  routes) or an `X-Soundbox` header (any value). A request with no body,
+  routes) or an `X-Konchi` header (any value). A request with no body,
   `text/plain`, `application/x-www-form-urlencoded` or `multipart/form-data`
-  and no `X-Soundbox` header gets `403`. Body-less calls such as
+  and no `X-Konchi` header gets `403`. Body-less calls such as
   `POST /api/sessions` therefore need the header:
 
   ```sh
-  curl -X POST -H 'X-Soundbox: 1' http://127.0.0.1:17494/api/sessions
+  curl -X POST -H 'X-Konchi: 1' http://127.0.0.1:17494/api/sessions
   ```
 
 ## Endpoint index
@@ -102,7 +102,7 @@ route answers `202 { "job_id": "..." }` and the work is followed through
 | DELETE | `/api/voices/{id}` | Delete the voice and every clip file |
 | POST | `/api/voices/{id}/samples` | Add a clip to a clone. Body is a WAV (`?tidy`), or JSON `{ source_sound_id, tidy? }` |
 | DELETE | `/api/voices/{id}/samples/{sample_id}` | Remove a clip. Refused for a voice's last one |
-| GET | `/api/voices/{id}/export` | The voice as a `.soundbox-voice.json` download |
+| GET | `/api/voices/{id}/export` | The voice as a `.konchi-voice.json` download |
 | POST | `/api/voices/import` | Body is an exported file. Makes a copy under a new id |
 
 A clone voice holds one to five clips of the same speaker. audio.cpp takes a
@@ -118,11 +118,11 @@ offset, cuts near-silence off both ends with a little padding left on, and pulls
 a peak above full scale back under it. It never makes a clip louder or changes
 its tone, because that is the voice.
 
-An export is JSON: `{ format: "soundbox-voice", version: 1, voice: { name, kind,
+An export is JSON: `{ format: "konchi-voice", version: 1, voice: { name, kind,
 voice_id, model_id, notes }, samples: [{ wav_base64, duration_s }] }`. The clips
 travel and the joined file does not; import rebuilds it. The avatar is not
 included and can be redrawn from the notes. On import, a name already in the
-library gets " (2)", and a `model_id` this Soundbox does not know is dropped
+library gets " (2)", and a `model_id` this Konchi does not know is dropped
 rather than failing the import.
 
 **Stories: scripts and studio timelines** (`routes/stories.ts`)
@@ -237,7 +237,7 @@ first GPU in `CUDA_VISIBLE_DEVICES` or GPU 0 when that is unset. Without
 ```
 `status` says whether the model can be used now, so it covers both the weights
 and the runtime. `needs_runtime` means the weights are downloaded but the
-audio.cpp runtime is not installed. Fix it with `soundbox model install audiocpp`
+audio.cpp runtime is not installed. Fix it with `konchi model install audiocpp`
 (or `POST /api/models/audiocpp/engine/install`); there is nothing to download
 again. `installed_deps` reports the runtime half on its own.
 `provider` says where the model runs. It is always `local`: weights on this
@@ -289,7 +289,7 @@ audio.cpp adapter knows, enabled or not.
 once their id is in `enabled_audiocpp_models` (`PATCH /api/settings`), which
 takes effect without a restart. `source: "custom"` marks an entry from your own
 `<data dir>/models/custom.json`; these are always on and never `verified`. Use
-that file to add a model Soundbox doesn't ship, including one whose weights are
+that file to add a model Konchi doesn't ship, including one whose weights are
 already on your disk; see [AUDIOCPP.md](AUDIOCPP.md#bring-your-own-model).
 
 ## Generation
@@ -360,7 +360,7 @@ history yet for that model, or the job isn't queued.
 ## Logs
 
 `GET /api/logs?lines=200` → `{ "lines": ["...", ...] }`. The tail of the persistent log file
-(`<data_dir>/soundbox-<port>.log`; see [INSTALL.md](./INSTALL.md#troubleshooting)), oldest first. The app and
+(`<data_dir>/konchi-<port>.log`; see [INSTALL.md](./INSTALL.md#troubleshooting)), oldest first. The app and
 MCP clients use it to show recent server activity. For a full trail, `grep` the log file itself.
 
 ## Library
@@ -413,9 +413,9 @@ To read one session's thread, filter the library: `GET /api/sounds?session_id={i
 
 `GET /api/settings` / `PATCH /api/settings`
 ```json
-{ "data_dir": "C:\\Users\\x\\.soundbox", "hf_token_set": true, "output_format": "wav" | "mp3",
+{ "data_dir": "C:\\Users\\x\\.konchi", "hf_token_set": true, "output_format": "wav" | "mp3",
   "normalize_lufs": -16.0 | null, "trim_silence": true, "auto_unload_minutes": 10,
-  "sounds_dir": "C:\\Users\\x\\.soundbox\\sounds",
+  "sounds_dir": "C:\\Users\\x\\.konchi\\sounds",
   "llm_mode": "off" | "managed" | "external", "llm_model": "qwen3-1.7b",
   "llm_external_base_url": "", "llm_external_model": "", "llm_external_api_key_set": false }
 ```
@@ -448,18 +448,18 @@ changes everything the library endpoints return. Model weights (`models/`) and
 the runtime binaries (`bin/`) live at the install root and are shared by every
 profile.
 
-The `default` profile is the data directory itself (`~/.soundbox`). An install
+The `default` profile is the data directory itself (`~/.konchi`). An install
 that predates profiles is therefore the default profile. Named profiles live in
-`~/.soundbox/profiles/{id}`.
+`~/.konchi/profiles/{id}`.
 
 `GET /api/profiles`
 ```json
 { "active": "default",
   "profiles": [
     { "id": "default", "name": "Default", "created_at": "",
-      "data_dir": "C:\\Users\\x\\.soundbox", "active": true },
+      "data_dir": "C:\\Users\\x\\.konchi", "active": true },
     { "id": "demo", "name": "Demo", "created_at": "2026-02-01T10:00:00Z",
-      "data_dir": "C:\\Users\\x\\.soundbox\\profiles\\demo", "active": false }
+      "data_dir": "C:\\Users\\x\\.konchi\\profiles\\demo", "active": false }
   ] }
 ```
 
@@ -485,7 +485,7 @@ profile is reopened.
 
 An optional local LLM that rewrites a terse prompt ("scary sound") into a
 descriptive one, off by default (`llm_mode: "off"`). `managed` runs a small
-model Soundbox installs and manages (`llama-server` + a curated GGUF);
+model Konchi installs and manages (`llama-server` + a curated GGUF);
 `external` talks to any OpenAI-compatible endpoint already running on this
 machine. Check `detected` (below) before pointing someone at the managed install.
 
@@ -533,27 +533,27 @@ to use it instead of installing a second local server.
 Streamable-HTTP MCP endpoint at `/mcp` (same port). Twenty-one tools; `server/src/mcp/server.ts` is the authority on their signatures, and [MCP.md](./MCP.md) documents them in full. Summary:
 
 Sounds:
-- `soundbox.generate(prompt, duration_s?, model?, negative_prompt?, seed?, variations?, tags?, lyrics?, source_sound_id?, edit?)` → waits for the job, returns `Sound[]` with absolute file paths.
-- `soundbox.enhance_prompt(prompt, n?, category?, lyrics?, model?)` → `{ variations: string[] }`, or a plain-text explanation when the assistant is off.
-- `soundbox.separate(sound_id, model?, stems?, rest?)` → waits for the job, returns the stems as `Sound[]` with absolute file paths.
-- `soundbox.list_models()` → `Model[]`
-- `soundbox.list_sounds(q?, tag?, limit?)` → `Sound[]`
-- `soundbox.get_sound(sound_id)` → `Sound` + absolute path
-- `soundbox.delete_sound(sound_id)`
+- `konchi.generate(prompt, duration_s?, model?, negative_prompt?, seed?, variations?, tags?, lyrics?, source_sound_id?, edit?)` → waits for the job, returns `Sound[]` with absolute file paths.
+- `konchi.enhance_prompt(prompt, n?, category?, lyrics?, model?)` → `{ variations: string[] }`, or a plain-text explanation when the assistant is off.
+- `konchi.separate(sound_id, model?, stems?, rest?)` → waits for the job, returns the stems as `Sound[]` with absolute file paths.
+- `konchi.list_models()` → `Model[]`
+- `konchi.list_sounds(q?, tag?, limit?)` → `Sound[]`
+- `konchi.get_sound(sound_id)` → `Sound` + absolute path
+- `konchi.delete_sound(sound_id)`
 
 Voices:
-- `soundbox.list_voices()` → the saved voices a script can be cast to.
-- `soundbox.speak(lines, model?, gap_s?, name?, delivery?)` → waits, returns a `Sound`.
+- `konchi.list_voices()` → the saved voices a script can be cast to.
+- `konchi.speak(lines, model?, gap_s?, name?, delivery?)` → waits, returns a `Sound`.
 
 Stories (a script that persists, with lines placed in time):
-- `soundbox.create_story(title?, delivery?)`, `soundbox.list_stories(limit?)`, `soundbox.get_story(story_id)`
-- `soundbox.add_lines(story_id, lines)`, `soundbox.update_line(line_id, …)`, `soundbox.delete_line(line_id)`, `soundbox.split_line(line_id, at_s)`
-- `soundbox.speak_story(story_id, model?, regenerate?)` → reads every silent line; the slow one.
-- `soundbox.export_story(story_id)` → mixes down to one `Sound`.
+- `konchi.create_story(title?, delivery?)`, `konchi.list_stories(limit?)`, `konchi.get_story(story_id)`
+- `konchi.add_lines(story_id, lines)`, `konchi.update_line(line_id, …)`, `konchi.delete_line(line_id)`, `konchi.split_line(line_id, at_s)`
+- `konchi.speak_story(story_id, model?, regenerate?)` → reads every silent line; the slow one.
+- `konchi.export_story(story_id)` → mixes down to one `Sound`.
 
 Arrangement:
-- `soundbox.open_in_studio(sound_id, separate?, stems?, rest?)`
-- `soundbox.mix_track(story_id, track_index, name?, muted?, soloed?, gain_db?)`, `soundbox.remove_track(story_id, track_index)`
-- `soundbox.add_device(story_id, track_index, kind, params?, bypassed?, position?)`, `soundbox.set_device(story_id, track_index, device, params?, bypassed?)`, `soundbox.remove_device(story_id, track_index, device)`
+- `konchi.open_in_studio(sound_id, separate?, stems?, rest?)`
+- `konchi.mix_track(story_id, track_index, name?, muted?, soloed?, gain_db?)`, `konchi.remove_track(story_id, track_index)`
+- `konchi.add_device(story_id, track_index, kind, params?, bypassed?, position?)`, `konchi.set_device(story_id, track_index, device, params?, bypassed?)`, `konchi.remove_device(story_id, track_index, device)`
 
 Stdio bridge for clients that can't do HTTP: `node <checkout>/server/dist/mcp/stdio.js`, which proxies to the running server. The file exists only after `npm run build`, and the bridge covers the sound tools (`generate`, `enhance_prompt`, `list_models`, `list_sounds`, `get_sound`, `delete_sound`). Use HTTP for `separate`, speech and stories. The Agents page prints the line with the path resolved.

@@ -1,4 +1,4 @@
-/** Library — everything Soundbox has generated, searchable and filterable.
+/** Library — everything Konchi has generated, searchable and filterable.
  *
  *  Rendered twice under two different nav items (SFX and Text to Speech — see
  *  routes/sfx-library.tsx and speech-library.tsx; Music has a studio of its

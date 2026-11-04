@@ -75,7 +75,7 @@ export function StepExtras({
   return (
     <div className="space-y-4">
       <p className="text-muted-foreground text-sm leading-relaxed">
-        Two things Soundbox can do that need one more download each. Both are
+        Two things Konchi can do that need one more download each. Both are
         optional, and both run locally like everything else.
       </p>
 

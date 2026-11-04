@@ -238,7 +238,7 @@ let openingSession: Promise<string | null> | null = null;
 /** Dispatched on `window` by anything that wants the mounted composer to
  *  submit — the command palette's Generate row. Ignored when no composer is
  *  mounted with its hotkey on, same as Ctrl+Enter would be. */
-export const GENERATE_EVENT = "soundbox:generate";
+export const GENERATE_EVENT = "konchi:generate";
 
 export function useGenerateSession({ hotkey = true }: GenerateSessionOptions = {}) {
   const qc = useQueryClient();

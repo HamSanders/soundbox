@@ -6,7 +6,7 @@ end to end. The rest are marked unverified.
 
 ## What changed upstream
 
-Soundbox's managed install had been audio.cpp 0.6.1, which registers 50
+Konchi's managed install had been audio.cpp 0.6.1, which registers 50
 loaders. 0.9.2 (released 2026-10-15) registers 124. The current "latest" tag,
 `v0.9.2-drama3-base-small` (2026-10-18), registers 127; it adds Fish Audio
 Drama 3, Plapre and openWakeWord. The full loader and package lists were read
@@ -18,7 +18,7 @@ family and target folder.
 
 ### The binary bump
 
-Soundbox installs `latest` by default, so there is no version pin to bump.
+Konchi installs `latest` by default, so there is no version pin to bump.
 Before this change, however, the installer could not install 0.9.x correctly:
 
 - On Windows with CUDA, it never fetched the `cudart-…` runtime package. It
@@ -40,7 +40,7 @@ the matching `cudart-…-cuda13.3.zip`, and the binary reports
 
 ### A request-option change that needed code
 
-0.9.x rejects any request option a family does not declare. Soundbox sends
+0.9.x rejects any request option a family does not declare. Konchi sends
 every `gen` request `duration_seconds`, `num_inference_steps` and
 `guidance_scale`. The four verified families accept all three. MiDashengLM-Gen
 rejects `duration_seconds` and `num_inference_steps`; ControlFoley also names
@@ -51,9 +51,9 @@ or guidance scale. See `docs/AUDIOCPP.md`.
 
 ## Existing verified models on 0.9.2
 
-All run through a scratch Soundbox server (port 17621, `SOUNDBOX_DATA_DIR` set
-to a scratch folder, the shared `~/.soundbox/models/audiocpp` weights) with
-`SOUNDBOX_AUDIOCPP_BIN` pointed at the 0.9.2 install. Hardware: RTX 5080 16 GB,
+All run through a scratch Konchi server (port 17621, `KONCHI_DATA_DIR` set
+to a scratch folder, the shared `~/.konchi/models/audiocpp` weights) with
+`KONCHI_AUDIOCPP_BIN` pointed at the 0.9.2 install. Hardware: RTX 5080 16 GB,
 CUDA backend. The VRAM figures are the rise in `nvidia-smi` memory while the
 job ran.
 
@@ -66,9 +66,9 @@ job ran.
 | MiniMax Music 3 | orchestral, 15 s | 44.1 kHz stereo, 15.0 s | 42 s | +7 GB |
 
 Stable Audio honours `duration_seconds` exactly on 0.9.2: a raw request for
-10 s and for 3 s returned 10.00 s and 3.00 s. ACE-Step's Soundbox outputs came
+10 s and for 3 s returned 10.00 s and 3.00 s. ACE-Step's Konchi outputs came
 back shorter than asked. Raw CLI runs of 0.6.1 and 0.9.2 both return exactly
-20.00 s for a 20 s request, so the shortfall is Soundbox's trim-silence
+20.00 s for a 20 s request, so the shortfall is Konchi's trim-silence
 setting, not the binary.
 
 ## Added
@@ -101,7 +101,7 @@ non-commercial.
 | Soprano 1.1 80M | `soprano_tts` | TTS, one voice | Apache-2.0 | yes | no |
 
 Two licence findings disagree with audio.cpp's own table
-(`docs/model_licenses.md` upstream). Soundbox follows the upstream rights
+(`docs/model_licenses.md` upstream). Konchi follows the upstream rights
 holder, restrictively:
 
 - **HTDemucs 6-stem.** audio.cpp's table and the GGUF repo list it as MIT and
@@ -113,8 +113,8 @@ holder, restrictively:
 
 ### How the three were verified
 
-Each was downloaded through Soundbox (which delegates to audio.cpp's package
-manager into the shared `~/.soundbox/models/audiocpp`), then generated through
+Each was downloaded through Konchi (which delegates to audio.cpp's package
+manager into the shared `~/.konchi/models/audiocpp`), then generated through
 the scratch server's HTTP API. I checked the output WAV header and a ten-slice
 RMS envelope, which is CONTRIBUTING's "look at the envelope" check. Nobody
 listened to the output.
@@ -129,7 +129,7 @@ listened to the output.
   drums, vocals and guitar stems match the existing 4-stem model's drums,
   vocals and other, to within about 0.01 RMS per slice. Bass, other and piano came
   out flat and loud (RMS ~0.4). The 4-stem model does the same to its bass
-  stem on this clip. It looks like Soundbox's loudness normalisation lifting
+  stem on this clip. It looks like Konchi's loudness normalisation lifting
   the noise floor of a stem the mix does not contain, not something specific
   to 6-stem. Listed under follow-ups.
 - **Chatterbox Turbo** (699 MB). Two English sentences: 24 kHz mono, 3.5 s and
@@ -147,7 +147,7 @@ listened to the output.
 ## Skipped, and why
 
 - **YuE2 3B** (`yue2`). The weights are CC-BY-NC-4.0. Its loader also requires
-  a `style` field, which Soundbox's `gen` request has no slot for. Worth adding
+  a `style` field, which Konchi's `gen` request has no slot for. Worth adding
   if lyrics-to-song with a separate style prompt gets wired up.
 - **Fish Audio Drama 3** (`fish_drama3`, latest tag only). It is a 35B MoE
   model. Its licence metadata names a "research license" whose file does not
@@ -158,7 +158,7 @@ listened to the output.
   Microsoft withdrew; the card says research purposes only.
 - **Echo-TTS** and **ZipVoice**: non-commercial weights on community GGUF
   repos. ZipVoice's loader also requires the reference clip's transcript,
-  which Soundbox's speak path does not send.
+  which Konchi's speak path does not send.
 - **Kitten TTS 2**, **Audio8 TTS**, **Sopro**, **sanoTTS**, **VieNeu**,
   **OuteTTS**, **GLM-TTS**: community conversions hosted outside the audio-cpp
   org, often with bundled third-party files. Kitten TTS 2 is also
@@ -166,11 +166,11 @@ listened to the output.
 - **Piper (lessac)**: the voice is trained on a research-only dataset.
 - **Plapre 3**: Danish only. It is CC-BY-4.0 and could be added.
 - **SAM Audio, AudioSR, UniverSR, Apollo, Sidon, RE-USE**: audio-to-audio
-  (`s2s`) tasks. Soundbox has no route for them yet.
+  (`s2s`) tasks. Konchi has no route for them yet.
 - **MossFormer2 / TF-GridNet**: speech separation at 16 kHz / 8 kHz. The Split
   action and its stem names assume a music mix.
 - **AuK, FireRedAudio, LFM2.5-Audio, PersonaPlex, LiveAvatar**: speech editing,
-  speech-to-speech or video. They don't fit an existing Soundbox task.
+  speech-to-speech or video. They don't fit an existing Konchi task.
 - **ASR, VAD, diarisation, wake-word, classification and MIDI families**: not
   generation.
 
@@ -179,7 +179,7 @@ listened to the output.
 These come from the model cards where stated (Maya1, BreezeTTS 2, MagpieTTS,
 KugelAudio and Soprano state a rate). Otherwise they are the family's usual
 codec rate, and should be read as estimates until someone runs the model.
-Soundbox reads the real rate from the output WAV, so a wrong value here only
+Konchi reads the real rate from the output WAV, so a wrong value here only
 affects resampling of a source clip and what the model card displays.
 
 ## Follow-ups (not done here)
@@ -187,7 +187,7 @@ affects resampling of a source clip and what the model card displays.
 1. **Stale resident model after an audio.cpp server restart.** Changing the
    models folder in Settings while a model was loading killed the server
    mid-request ("fetch failed"). After that, every request failed with
-   "unknown model id" until the model was unloaded by hand, because Soundbox
+   "unknown model id" until the model was unloaded by hand, because Konchi
    still believed the model was resident in a server that had restarted.
 2. **Normalising an empty stem.** A stem the mix does not contain is
    normalised to -16 LUFS and comes out as loud, flat noise. This happens

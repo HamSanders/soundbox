@@ -42,7 +42,7 @@ export interface BlogFrontmatter {
   /** Root-relative, e.g. `/blog/why-audio-cpp.jpg`. 1200x630. */
   image?: string;
   /** Root-relative path to a spoken version of the post, e.g.
-   *  `/blog/audio/why-audio-cpp.mp3`. Soundbox reads its own blog. */
+   *  `/blog/audio/why-audio-cpp.mp3`. Konchi reads its own blog. */
   audio?: string;
 }
 

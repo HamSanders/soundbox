@@ -180,7 +180,7 @@ const MODELS: ModelCard[] = [
 
 const MCP_CONFIG = `{
   "mcpServers": {
-    "soundbox": { "type": "http", "url": "http://127.0.0.1:17494/mcp" }
+    "konchi": { "type": "http", "url": "http://127.0.0.1:17494/mcp" }
   }
 }`;
 
@@ -189,7 +189,7 @@ const CURL = `curl -X POST http://127.0.0.1:17494/api/generate \\
   -d '{"model":"audiocpp-stable-audio-3-sfx","prompt":"heavy wooden door slamming in a stone corridor","duration_s":3}'`;
 
 const INSTALL = `git clone ${REPO_URL}
-cd soundbox
+cd konchi
 npm install
 npm run dev`;
 
@@ -343,7 +343,7 @@ function HeroPrompt({
             type="submit"
             size="icon"
             disabled={!value.trim()}
-            aria-label="Download Soundbox to run this prompt"
+            aria-label="Download Konchi to run this prompt"
             className="mb-1 shrink-0 rounded-full shadow-sm transition-transform hover:scale-105 active:scale-95"
           >
             <ArrowUpIcon />
@@ -351,7 +351,7 @@ function HeroPrompt({
         </div>
       </div>
       <p id="hero-prompt-hint" className="text-muted-foreground mt-2 text-xs">
-        Soundbox runs on your own machine, so this opens the download page.
+        Konchi runs on your own machine, so this opens the download page.
         Prompts work best when they name the material, the action and the
         space.
       </p>
@@ -589,7 +589,7 @@ function Local() {
         eyebrow="Local and offline"
         title="Nothing is uploaded"
       >
-        Soundbox is a server on your loopback interface and a folder on your
+        Konchi is a server on your loopback interface and a folder on your
         disk. Weights download from Hugging Face when you ask for them. After
         that it works offline.
       </SectionHead>
@@ -601,7 +601,7 @@ function Local() {
             without an account.
           </Feature>
           <Feature icon={FolderIcon} title="Your library is files on disk">
-            One SQLite file and one folder of WAVs under <code>~/.soundbox</code>.
+            One SQLite file and one folder of WAVs under <code>~/.konchi</code>.
             Back it up, sync it or delete it like any other folder.
           </Feature>
           <Feature icon={ScaleIcon} title="Licences before downloads">
@@ -618,7 +618,7 @@ function Local() {
         <div className="bg-muted/50 ring-border min-w-0 rounded-2xl p-5 ring-1 ring-inset">
           <h3 className="text-sm font-semibold tracking-tight">Where things live</h3>
           <pre className="text-muted-foreground mt-3 overflow-x-auto text-xs leading-relaxed">
-            <code className="font-mono">{`~/.soundbox/
+            <code className="font-mono">{`~/.konchi/
 ├── soundbox.db      SQLite: prompts, seeds, tags
 ├── sounds/          the WAVs, one per generation
 └── models/          weights you chose to download`}</code>
@@ -696,7 +696,7 @@ function Prompting() {
 /* ---------------------------------------------------------------- agents */
 
 /**
- * The companion-app pitch. Soundbox is built to be driven by AI agents, not
+ * The companion-app pitch. Konchi is built to be driven by AI agents, not
  * just clicked through — this section leads with that rather than burying it
  * under "Developers", and shows the part a screenshot actually sells: the
  * in-app Agents page, which is where "an agent can call this" turns into
@@ -779,11 +779,11 @@ function Agents() {
             metric over standard OTLP/HTTP.
           </Feature>
           <Feature icon={SparklesIcon} title="Bundled agent skills">
-            Three skills ship with Soundbox: prompting for sound effects, a
+            Three skills ship with Konchi: prompting for sound effects, a
             sound pass that finds and generates every sound a project needs,
             and writing and voicing dialogue. Install them from the Agents page
             or with{" "}
-            <code className="font-mono text-xs">soundbox skills install</code>.
+            <code className="font-mono text-xs">konchi skills install</code>.
           </Feature>
         </div>
       </div>
@@ -870,7 +870,7 @@ const STEPS: { title: string; body: React.ReactNode }[] = [
         on port 17494 and the UI on 5174. Inference runs in{" "}
         <code className="font-mono text-xs">audiocpp_cli</code>, a native binary
         that picks CUDA, HIP, Metal, Vulkan or CPU automatically and is cached
-        under <code className="font-mono text-xs">~/.soundbox/bin/</code>.
+        under <code className="font-mono text-xs">~/.konchi/bin/</code>.
       </>
     ),
   },
@@ -941,14 +941,14 @@ function Footer() {
             <span className="bg-primary text-primary-foreground flex size-7 items-center justify-center rounded-lg">
               <AudioLinesIcon className="size-4" aria-hidden="true" />
             </span>
-            <span className="font-heading font-semibold tracking-tight">Soundbox</span>
+            <span className="font-heading font-semibold tracking-tight">Konchi</span>
           </div>
           <p className="text-muted-foreground mt-4 max-w-md text-sm leading-relaxed">
             <strong className="text-foreground font-medium">
-              Soundbox is MIT licensed. The model weights are not.
+              Konchi is MIT licensed. The model weights are not.
             </strong>{" "}
             Each model carries its own licence and several forbid commercial
-            use. Soundbox downloads weights from Hugging Face at your direction
+            use. Konchi downloads weights from Hugging Face at your direction
             and does not redistribute them. What you may do with a generated
             sound is governed by the licence of the model that produced it.
           </p>
@@ -1012,10 +1012,10 @@ function Footer() {
 export function WelcomePage() {
   return (
     <div className="bg-background text-foreground min-h-svh overflow-x-clip">
-      {/* "Soundbox" alone is a name several unrelated products share, so the
+      {/* "Konchi" alone is a name several unrelated products share, so the
           title carries what it is as well as what it is called. */}
       <SeoHead
-        title="Soundbox: free local ElevenLabs and Suno alternative for AI sound effects, music and voices"
+        title="Konchi: free local ElevenLabs and Suno alternative for AI sound effects, music and voices"
         description="Free, open-source alternative to ElevenLabs and Suno that runs on your own GPU: AI sound effects, music with lyrics, text-to-speech and voice cloning. No account, no credits, works offline, with an MCP server for Claude Code and Cursor."
         path="/"
         jsonLd={[softwareAppJsonLd()]}
@@ -1050,7 +1050,7 @@ export function WelcomePage() {
         <RevealPillars />
 
         {/* And then the unglamorous version of the same thing. Everything above
-            this point is a drawing of Soundbox — animated and interactive,
+            this point is a drawing of Konchi — animated and interactive,
             which is what makes those sections worth their space, but also what
             makes them illustrations. Someone deciding whether to install this
             eventually wants to see the actual application, so here it is,

@@ -56,7 +56,7 @@ import type {
   SoundEditRequest,
   SoundPatch,
   SoundQuery,
-  SoundboxApi,
+  KonchiApi,
   SoundsPage,
   StemSelection,
   TagCount,
@@ -946,8 +946,8 @@ const DOWNLOADED_EXTRAS = new Set(["audiocpp-heartmula"]);
 const mockDisk: Record<string, string[]> = {
   "C:\\": ["Program Files", "Users", "Windows"],
   "C:\\Users": ["you", "Public"],
-  "C:\\Users\\you": [".soundbox", "Documents", "Downloads", "Music"],
-  "C:\\Users\\you\\.soundbox": ["artwork", "bin", "cache", "models", "sounds"],
+  "C:\\Users\\you": [".konchi", "Documents", "Downloads", "Music"],
+  "C:\\Users\\you\\.konchi": ["artwork", "bin", "cache", "models", "sounds"],
   "C:\\Users\\you\\Music": ["Recordings", "Samples"],
   "D:\\": ["audio", "backups"],
   "D:\\audio": ["libraries", "renders"],
@@ -981,7 +981,7 @@ function mockListing(path: string): DirectoryListing {
 }
 
 let settings: Settings = {
-  data_dir: "C:\\Users\\you\\.soundbox",
+  data_dir: "C:\\Users\\you\\.konchi",
   hf_token_set: false,
   output_format: "wav",
   normalize_lufs: -16,
@@ -991,8 +991,8 @@ let settings: Settings = {
   otel_endpoint: "",
   enabled_audiocpp_models: [],
   audiocpp_mode: "managed",
-  audiocpp_models_dir: "C:\\Users\\you\\.soundbox\\models\\audiocpp",
-  sounds_dir: "C:\\Users\\you\\.soundbox\\sounds",
+  audiocpp_models_dir: "C:\\Users\\you\\.konchi\\models\\audiocpp",
+  sounds_dir: "C:\\Users\\you\\.konchi\\sounds",
   llm_mode: "off",
   llm_model: "qwen3-1.7b",
   llm_external_base_url: "",
@@ -1017,14 +1017,14 @@ let profiles: Profile[] = [
     id: "default",
     name: "Default",
     created_at: "",
-    data_dir: "C:\\Users\\you\\.soundbox",
+    data_dir: "C:\\Users\\you\\.konchi",
     active: true,
   },
   {
     id: "demo",
     name: "Demo",
     created_at: "2026-02-01T10:00:00Z",
-    data_dir: "C:\\Users\\you\\.soundbox\\profiles\\demo",
+    data_dir: "C:\\Users\\you\\.konchi\\profiles\\demo",
     active: false,
   },
 ];
@@ -1503,7 +1503,7 @@ function mockFailure(prompt: string, job: Job): Failure | null {
         topic: "disk_full",
         title: "The disk is full",
         hint:
-          "There was no room to write the file, so the partial file was removed. Free space on the drive that holds the Soundbox data directory, or move the models folder to another drive, then try again.",
+          "There was no room to write the file, so the partial file was removed. Free space on the drive that holds the Konchi data directory, or move the models folder to another drive, then try again.",
         fixes: [{ label: "Check storage in Settings", to: "/settings" }],
         detail: "ENOSPC: no space left on device, write",
       };
@@ -1962,28 +1962,28 @@ async function runDownloadJob(job: Job, modelId: string) {
 
 const MOCK_TOOLS: Omit<McpToolInfo, "calls">[] = [
   {
-    name: "soundbox.generate",
+    name: "konchi.generate",
     title: "Generate a sound effect",
     description:
       "Generate one or more sound effects from a text description and save them to the library.",
   },
   {
-    name: "soundbox.list_models",
+    name: "konchi.list_models",
     title: "List sound models",
     description: "List available generation models with their status and licence.",
   },
   {
-    name: "soundbox.list_sounds",
+    name: "konchi.list_sounds",
     title: "Search the sound library",
     description: "Search previously generated sounds. Use before generating something new.",
   },
   {
-    name: "soundbox.get_sound",
+    name: "konchi.get_sound",
     title: "Get one sound",
     description: "Fetch a single sound by id, including its absolute file path.",
   },
   {
-    name: "soundbox.delete_sound",
+    name: "konchi.delete_sound",
     title: "Delete a sound",
     description: "Permanently delete a sound and its audio file.",
   },
@@ -1996,7 +1996,7 @@ const mcpCalls: McpCall[] = [
   {
     id: "call-1",
     ts: ago(0.3),
-    tool: "soundbox.generate",
+    tool: "konchi.generate",
     status: "ok",
     client_name: "claude-code",
     client_version: "2.1.0",
@@ -2011,7 +2011,7 @@ const mcpCalls: McpCall[] = [
   {
     id: "call-2",
     ts: ago(2),
-    tool: "soundbox.list_models",
+    tool: "konchi.list_models",
     status: "ok",
     client_name: "claude-code",
     client_version: "2.1.0",
@@ -2026,7 +2026,7 @@ const mcpCalls: McpCall[] = [
   {
     id: "call-3",
     ts: ago(2.2),
-    tool: "soundbox.list_sounds",
+    tool: "konchi.list_sounds",
     status: "ok",
     client_name: "claude-code",
     client_version: "2.1.0",
@@ -2041,7 +2041,7 @@ const mcpCalls: McpCall[] = [
   {
     id: "call-4",
     ts: ago(60 * 26),
-    tool: "soundbox.generate",
+    tool: "konchi.generate",
     status: "ok",
     client_name: "cursor",
     client_version: "1.4.2",
@@ -2056,7 +2056,7 @@ const mcpCalls: McpCall[] = [
   {
     id: "call-5",
     ts: ago(60 * 26 + 3),
-    tool: "soundbox.delete_sound",
+    tool: "konchi.delete_sound",
     status: "error",
     client_name: "cursor",
     client_version: "1.4.2",
@@ -2121,7 +2121,7 @@ const withCount = (c: Conversation): Conversation => ({
   entry_count: historyEntries.filter((e) => e.conversation_id === c.id).length,
 });
 
-export const mockApi: SoundboxApi = {
+export const mockApi: KonchiApi = {
   async getHealth(): Promise<HealthStatus> {
     await wait(60);
     const loaded = models.find((e) => e.status === "loaded");
@@ -2149,13 +2149,13 @@ export const mockApi: SoundboxApi = {
 
   async getAudioCppRuntime() {
     await wait(40);
-    const managedDir = "C:\\Users\\you\\.soundbox\\models\\audiocpp";
+    const managedDir = "C:\\Users\\you\\.konchi\\models\\audiocpp";
     return {
       mode: settings.audiocpp_mode,
       engine: {
         installed: true,
         version: "release-0.6.1",
-        path: "C:\\Users\\you\\.soundbox\\bin\\audiocpp\\release-0.6.1\\audiocpp_cli.exe",
+        path: "C:\\Users\\you\\.konchi\\bin\\audiocpp\\release-0.6.1\\audiocpp_cli.exe",
         backend: "cuda",
         source: "managed" as const,
       },
@@ -3133,7 +3133,7 @@ export const mockApi: SoundboxApi = {
     if (!voice) throw new Error(`Unknown voice ${id}`);
     // No clip bytes in the mock — the file is the right shape, minus audio.
     return {
-      format: "soundbox-voice" as const,
+      format: "konchi-voice" as const,
       version: 1,
       exported_at: new Date().toISOString(),
       voice: {
@@ -3150,8 +3150,8 @@ export const mockApi: SoundboxApi = {
   async importVoice(file): Promise<Voice> {
     await wait(120);
     const f = file as { format?: string; voice?: Partial<Voice> };
-    if (f?.format !== "soundbox-voice" || !f.voice?.name) {
-      throw new Error("That isn't a Soundbox voice file.");
+    if (f?.format !== "konchi-voice" || !f.voice?.name) {
+      throw new Error("That isn't a Konchi voice file.");
     }
     const names = new Set(voices.map((v) => v.name));
     let name = f.voice.name;
@@ -3212,14 +3212,14 @@ export const mockApi: SoundboxApi = {
     const t = (n: number) =>
       new Date(Date.now() - n * 1000).toISOString().slice(11, 19);
     const out = [
-      `${t(90)} INFO    soundbox.api: Soundbox 0.1.0 ready`,
-      `${t(70)} INFO    soundbox.jobs: job ${mockJobId} queued (kind=generate model=audiocpp-stable-audio-3-sfx)`,
-      `${t(68)} INFO    soundbox.jobs: job ${mockJobId} started (kind=generate model=audiocpp-stable-audio-3-sfx)`,
-      `${t(60)} INFO    soundbox.jobs: job ${mockJobId} 30% phase=generating Step 3/8`,
-      `${t(52)} WARNING soundbox.models.audiocpp: no CUDA device found; running on the CPU backend (slower, same output)`,
-      `${t(44)} INFO    soundbox.jobs: job ${mockJobId} 90% phase=generating Step 7/8`,
-      `${t(40)} INFO    soundbox.jobs: job ${mockJobId} done in 28.4s`,
-      `${t(20)} ERROR   soundbox.jobs: job ${mockOtherJobId} failed: audio.cpp exited with code 1 (see the log above)`,
+      `${t(90)} INFO    konchi.api: Konchi 0.1.0 ready`,
+      `${t(70)} INFO    konchi.jobs: job ${mockJobId} queued (kind=generate model=audiocpp-stable-audio-3-sfx)`,
+      `${t(68)} INFO    konchi.jobs: job ${mockJobId} started (kind=generate model=audiocpp-stable-audio-3-sfx)`,
+      `${t(60)} INFO    konchi.jobs: job ${mockJobId} 30% phase=generating Step 3/8`,
+      `${t(52)} WARNING konchi.models.audiocpp: no CUDA device found; running on the CPU backend (slower, same output)`,
+      `${t(44)} INFO    konchi.jobs: job ${mockJobId} 90% phase=generating Step 7/8`,
+      `${t(40)} INFO    konchi.jobs: job ${mockJobId} done in 28.4s`,
+      `${t(20)} ERROR   konchi.jobs: job ${mockOtherJobId} failed: audio.cpp exited with code 1 (see the log above)`,
     ];
     return { lines: out.slice(-lines) };
   },
@@ -3280,7 +3280,7 @@ export const mockApi: SoundboxApi = {
       id,
       name: name.trim(),
       created_at: new Date().toISOString(),
-      data_dir: `C:\\Users\\you\\.soundbox\\profiles\\${id}`,
+      data_dir: `C:\\Users\\you\\.konchi\\profiles\\${id}`,
       active: false,
     };
     profiles = [...profiles, record];
@@ -3653,7 +3653,7 @@ export const mockApi: SoundboxApi = {
     return {
       endpoint: `${window.location.origin.replace(/:\d+$/, ":17494")}/mcp`,
       stdio_command: "node /absolute/path/to/soundbox/server/dist/mcp/stdio.js",
-      server_name: "soundbox",
+      server_name: "konchi",
       server_version: "0.1.0-mock",
       tools: MOCK_TOOLS.map((t) => ({ ...t, calls: perTool.get(t.name) ?? 0 })),
       clients: computeMcpClients(),
@@ -3673,28 +3673,28 @@ export const mockApi: SoundboxApi = {
         installed: true,
         endpoint: otelOn ? settings.otel_endpoint : null,
         source: otelOn ? "settings" : "none",
-        service_name: "soundbox",
+        service_name: "konchi",
         error: null,
       },
       skills: [
         {
-          name: "soundbox-sfx",
+          name: "konchi-sfx",
           description:
-            "Generate sound effects, foley and ambience locally through the Soundbox MCP server.",
-          path: "backend/src/soundbox/skills/soundbox-sfx",
+            "Generate sound effects, foley and ambience locally through the Konchi MCP server.",
+          path: "backend/src/konchi/skills/konchi-sfx",
           files: ["SKILL.md", "references/prompting.md"],
           installed_at: mockSkillsInstalledTo.claude
-            ? { claude: `${mockSkillsInstalledTo.claude}/soundbox-sfx` }
+            ? { claude: `${mockSkillsInstalledTo.claude}/konchi-sfx` }
             : {},
         },
         {
-          name: "soundbox-sound-pass",
+          name: "konchi-sound-pass",
           description:
             "Do a full sound pass over a project: inventory, generate and wire up every sound event it needs.",
-          path: "backend/src/soundbox/skills/soundbox-sound-pass",
+          path: "backend/src/konchi/skills/konchi-sound-pass",
           files: ["SKILL.md"],
           installed_at: mockSkillsInstalledTo.claude
-            ? { claude: `${mockSkillsInstalledTo.claude}/soundbox-sound-pass` }
+            ? { claude: `${mockSkillsInstalledTo.claude}/konchi-sound-pass` }
             : {},
         },
       ],
@@ -3722,6 +3722,6 @@ export const mockApi: SoundboxApi = {
         ? (req.path ?? "")
         : `~/.${req.target === "claude" ? "claude" : req.target}/skills`;
     if (req.target !== "dir") mockSkillsInstalledTo = { ...mockSkillsInstalledTo, [req.target]: dest };
-    return { target: req.target, dest, installed: req.skills ?? ["soundbox-sfx", "soundbox-sound-pass"] };
+    return { target: req.target, dest, installed: req.skills ?? ["konchi-sfx", "konchi-sound-pass"] };
   },
 };

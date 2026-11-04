@@ -3,7 +3,7 @@
  * separate — drawn as what each one does to the same waveform.
  *
  * These are the audio-to-audio routes and the separation task mode from
- * `docs/AUDIOCPP.md`, and they are the least self-evident thing Soundbox
+ * `docs/AUDIOCPP.md`, and they are the least self-evident thing Konchi
  * does. "Cover" and "repaint" are words a reader either already knows from a
  * DAW or has to be shown, and a bullet list shows nothing. Holding one source
  * clip fixed and changing only what the route does to it is the difference
@@ -86,7 +86,7 @@ const ROUTES: Route[] = [
     id: "separate",
     title: "separation",
     detail:
-      "Split a mix into stems. htdemucs gives vocals, drums, bass and other. Separation is a task mode of its own, separate from generation. It needs 44.1 kHz, so Soundbox resamples first.",
+      "Split a mix into stems. htdemucs gives vocals, drums, bass and other. Separation is a task mode of its own, separate from generation. It needs 44.1 kHz, so Konchi resamples first.",
   },
 ];
 

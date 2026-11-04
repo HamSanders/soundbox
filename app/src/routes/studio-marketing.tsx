@@ -65,7 +65,7 @@ function Close() {
             id="studio-close-heading"
             className="font-heading mt-2 text-2xl font-semibold tracking-tight text-balance sm:text-3xl"
           >
-            The studio ships with Soundbox
+            The studio ships with Konchi
           </h2>
           <p className="text-muted-foreground mt-3 leading-relaxed">
             There is no account and nothing extra to buy. The timeline runs
@@ -102,11 +102,11 @@ export function StudioMarketingPage() {
   return (
     <div className="bg-background text-foreground min-h-svh overflow-x-clip">
       <SeoHead
-        title="Multi-track studio for generated audio | Soundbox"
+        title="Multi-track studio for generated audio | Konchi"
         description="Cast a script across speakers, lay music and sound effects on a timeline, add per-track effects and mix down to one file. Everything is generated and arranged on your own machine."
         path="/studio"
         image="/product/studio.png"
-        imageAlt="The Soundbox studio: a script cast across three speakers above a multi-track timeline of spoken lines, music and sound effects"
+        imageAlt="The Konchi studio: a script cast across three speakers above a multi-track timeline of spoken lines, music and sound effects"
         jsonLd={[softwareAppJsonLd()]}
       />
       <a
@@ -125,7 +125,7 @@ export function StudioMarketingPage() {
             would leave the page with no top-level heading at all, which is a
             worse trade than an invisible one. */}
         <h1 id="studio-hero-heading" className="sr-only">
-          The Soundbox studio
+          The Konchi studio
         </h1>
 
         {/* The workspace goes first because it is the only section a reader

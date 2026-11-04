@@ -104,8 +104,8 @@ describe("voice routes", () => {
   let dataDir: string;
 
   beforeAll(async () => {
-    scratch = await mkdtemp(join(tmpdir(), "soundbox-voices-scratch-"));
-    dataDir = await mkdtemp(join(tmpdir(), "soundbox-voices-test-"));
+    scratch = await mkdtemp(join(tmpdir(), "konchi-voices-scratch-"));
+    dataDir = await mkdtemp(join(tmpdir(), "konchi-voices-test-"));
     app = buildApp(new Config(dataDir), { serveUi: false });
     await app.ready();
   });
@@ -116,7 +116,7 @@ describe("voice routes", () => {
     await rm(scratch, { recursive: true, force: true });
   });
 
-  const soundsDir = () => app.soundbox.config.paths.sounds;
+  const soundsDir = () => app.konchi.config.paths.sounds;
   const onDisk = (served: string) => join(soundsDir(), served.replace(/^\/files\//, ""));
 
   async function upload(name: string, clip: Float32Array, tidy = false): Promise<Voice> {
@@ -178,7 +178,7 @@ describe("voice routes", () => {
     const removed = await app.inject({
       method: "DELETE",
       url: `/api/voices/${voice.id}/samples/${two.samples![1]!.id}`,
-      headers: { "x-soundbox": "1" },
+      headers: { "x-konchi": "1" },
     });
     expect(removed.statusCode, removed.body).toBe(200);
     const one = removed.json() as Voice;
@@ -194,7 +194,7 @@ describe("voice routes", () => {
     const res = await app.inject({
       method: "DELETE",
       url: `/api/voices/${voice.id}/samples/${voice.samples![0]!.id}`,
-      headers: { "x-soundbox": "1" },
+      headers: { "x-konchi": "1" },
     });
     expect(res.statusCode).toBe(400);
     expect(res.json().detail).toMatch(/only clip/);
@@ -249,7 +249,7 @@ describe("voice routes", () => {
     const res = await app.inject({
       method: "DELETE",
       url: `/api/voices/${voice.id}`,
-      headers: { "x-soundbox": "1" },
+      headers: { "x-konchi": "1" },
     });
     expect(res.statusCode).toBe(204);
     files.forEach((f) => expect(existsSync(f)).toBe(false));
@@ -266,9 +266,9 @@ describe("voice routes", () => {
 
     const exported = await app.inject({ method: "GET", url: `/api/voices/${voice.id}/export` });
     expect(exported.statusCode).toBe(200);
-    expect(exported.headers["content-disposition"]).toContain("Gus.soundbox-voice.json");
+    expect(exported.headers["content-disposition"]).toContain("Gus.konchi-voice.json");
     const file = exported.json();
-    expect(file.format).toBe("soundbox-voice");
+    expect(file.format).toBe("konchi-voice");
     expect(file.samples).toHaveLength(2);
 
     const imported = await app.inject({ method: "POST", url: "/api/voices/import", payload: file });
@@ -283,7 +283,7 @@ describe("voice routes", () => {
 
   it("imports a voice whose model this library doesn't know, without the model", async () => {
     const file = {
-      format: "soundbox-voice",
+      format: "konchi-voice",
       version: 1,
       voice: { name: "Hal", kind: "clone", model_id: "no-such-model" },
       samples: [{ wav_base64: wavBytes(tone(2)).toString("base64") }],

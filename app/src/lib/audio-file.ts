@@ -2,7 +2,7 @@
  * Turn whatever audio the user hands us into the WAV the server expects.
  *
  * `POST /api/voices/upload` decodes with `wavefile`, which reads WAV and
- * nothing else, and Soundbox does not bundle ffmpeg — so the server cannot be
+ * nothing else, and Konchi does not bundle ffmpeg — so the server cannot be
  * taught m4a without a new dependency the user would have to install. The
  * browser already ships a decoder for every format it can play (m4a/aac, mp3,
  * ogg, opus, flac, and the webm the recorder produces), so the conversion

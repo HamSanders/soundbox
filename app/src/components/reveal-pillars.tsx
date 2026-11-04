@@ -5,7 +5,7 @@
  * show one generation end to end (`reveal-prompt-to-sample`) and it could point
  * at the studio, but the four pillar pages — /sfx, /music, /voices, /studio —
  * were only reachable from the header, so a first-time reader could finish the
- * page believing Soundbox is a sound-effect box that happens to have a timeline
+ * page believing Konchi is a sound-effect box that happens to have a timeline
  * bolted on. The parts are not four features. They are one prompt box with
  * three kinds of output and one workspace they all land in.
  *
@@ -365,7 +365,7 @@ export function RevealPillars() {
 
         return (
           <figure className="border-border/60 bg-card/80 overflow-hidden rounded-xl border shadow-sm">
-            <WindowChrome label="Soundbox: one prompt box, one workspace" />
+            <WindowChrome label="Konchi: one prompt box, one workspace" />
 
             <div className="p-4 sm:p-5">
               <PillRail step={step} select={select} />

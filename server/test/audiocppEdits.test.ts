@@ -14,18 +14,18 @@ import { ModelError } from "../src/errors.js";
  */
 
 let tmp: string;
-const previousBin = process.env.SOUNDBOX_AUDIOCPP_BIN;
+const previousBin = process.env.KONCHI_AUDIOCPP_BIN;
 
 beforeAll(async () => {
-  tmp = await mkdtemp(join(tmpdir(), "soundbox-audiocpp-edits-"));
+  tmp = await mkdtemp(join(tmpdir(), "konchi-audiocpp-edits-"));
   const fake = join(tmp, "audiocpp_cli");
   await writeFile(fake, "");
-  process.env.SOUNDBOX_AUDIOCPP_BIN = fake;
+  process.env.KONCHI_AUDIOCPP_BIN = fake;
 });
 
 afterAll(async () => {
-  if (previousBin === undefined) delete process.env.SOUNDBOX_AUDIOCPP_BIN;
-  else process.env.SOUNDBOX_AUDIOCPP_BIN = previousBin;
+  if (previousBin === undefined) delete process.env.KONCHI_AUDIOCPP_BIN;
+  else process.env.KONCHI_AUDIOCPP_BIN = previousBin;
   await rm(tmp, { recursive: true, force: true });
 });
 

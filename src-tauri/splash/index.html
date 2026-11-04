@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Soundbox</title>
+    <title>Konchi</title>
     <style>
       /* Standalone on purpose: this page is shown before the real frontend is
          reachable, so it cannot depend on anything the backend serves. The
@@ -72,7 +72,7 @@
           <path d="M2 12h2M6 8v8M10 4v16M14 7v10M18 10v4M22 12h-2" />
         </svg>
       </div>
-      <h1 id="title">Soundbox</h1>
+      <h1 id="title">Konchi</h1>
       <p id="status">Starting…</p>
       <p class="hint" id="hint">First launch takes a little longer while models warm up.</p>
     </div>
@@ -90,7 +90,7 @@
         "Tip: describe material, action, and space — \"heavy wooden door slamming in a stone corridor\" beats \"scary sound\".",
         "Tip: models differ in licensing — check before using output commercially.",
         "Tip: generation runs locally, so results stay on this machine.",
-        "Tip: you can browse past generations from the library once Soundbox opens.",
+        "Tip: you can browse past generations from the library once Konchi opens.",
       ];
       let tipIndex = 0;
       let tipTimer = setInterval(() => {
@@ -104,7 +104,7 @@
         document.body.dataset.stage = stage ?? "starting";
         if (message) statusEl.textContent = message;
         if (stage === "error") {
-          titleEl.textContent = "Soundbox could not start";
+          titleEl.textContent = "Konchi could not start";
           hintEl.textContent = "";
           clearInterval(tipTimer);
         }

@@ -204,7 +204,7 @@ describe("custom endpoints through the API", () => {
   const received: { url: string; body: unknown; auth: string | undefined }[] = [];
 
   beforeAll(async () => {
-    dataDir = await mkdtemp(join(tmpdir(), "soundbox-endpoints-test-"));
+    dataDir = await mkdtemp(join(tmpdir(), "konchi-endpoints-test-"));
     app = buildApp(new Config(dataDir), { serveUi: false });
     await app.ready();
     stub = createServer((req, res) => {
@@ -338,7 +338,7 @@ describe("custom endpoints through the API", () => {
     const del = await app.inject({
       method: "DELETE",
       url: "/api/endpoints/homelab",
-      headers: { "x-soundbox": "1" },
+      headers: { "x-konchi": "1" },
     });
     expect(del.statusCode).toBe(204);
     const models = (await app.inject({ method: "GET", url: "/api/models" })).json() as { id: string }[];

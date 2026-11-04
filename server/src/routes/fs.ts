@@ -5,7 +5,7 @@
  * paths like `sounds_dir`. It has to be a server route rather than anything in
  * the browser because the path the user picks is a path *the server* will
  * write to: a browser file input hands back a sandboxed name with no real
- * location, and on a Soundbox reached over the network the user's own disk is
+ * location, and on a Konchi reached over the network the user's own disk is
  * the wrong disk entirely.
  *
  * Read-only and directory-names-only — no file names, no contents, no

@@ -36,7 +36,7 @@ async function patch(name: string, body: Record<string, unknown>): Promise<void>
 }
 
 beforeAll(async () => {
-  dataDir = await mkdtemp(join(tmpdir(), "soundbox-placement-test-"));
+  dataDir = await mkdtemp(join(tmpdir(), "konchi-placement-test-"));
   app = buildApp(new Config(dataDir), { serveUi: false });
   await app.ready();
 });

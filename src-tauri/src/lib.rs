@@ -1,4 +1,4 @@
-//! Soundbox desktop shell.
+//! Konchi desktop shell.
 //!
 //! Deliberately thin. The Node server already serves the built frontend,
 //! the HTTP API and the MCP server on one port, so this process starts that
@@ -55,8 +55,8 @@ fn restart_backend(app: tauri::AppHandle) -> Result<(), String> {
     }
 
     let home = find_server_home(&app).ok_or_else(|| {
-        "Could not find the Soundbox server. Reinstall the app, or set \
-         SOUNDBOX_PROJECT_ROOT to a checkout."
+        "Could not find the Konchi server. Reinstall the app, or set \
+         KONCHI_PROJECT_ROOT to a checkout."
             .to_string()
     })?;
     let port = backend::DEFAULT_PORT;
@@ -83,7 +83,7 @@ fn find_server_home(app: &tauri::AppHandle) -> Option<backend::ServerHome> {
         dir.join("server").join("package.json").is_file()
     }
 
-    if let Ok(explicit) = std::env::var("SOUNDBOX_PROJECT_ROOT") {
+    if let Ok(explicit) = backend::env_var("PROJECT_ROOT") {
         let p = PathBuf::from(explicit);
         if has_backend(&p) {
             return Some(backend::ServerHome { root: p, bundled: false });
@@ -147,7 +147,7 @@ fn find_checkout() -> Option<PathBuf> {
 /// Anything else (a link with `target="_blank"`) keeps the default
 /// behaviour; this exists for the panels, not as a general browser.
 /// Must match `POPOUT_CLOSE_TITLE` in app/src/lib/popout.ts.
-const POPOUT_CLOSE_TITLE: &str = "soundbox:close-popout";
+const POPOUT_CLOSE_TITLE: &str = "konchi:close-popout";
 
 fn popout_handler(
     app: tauri::AppHandle,
@@ -160,7 +160,7 @@ fn popout_handler(
         let label = format!("panel-{}", NEXT.fetch_add(1, Ordering::Relaxed));
         let built = WebviewWindowBuilder::new(&app, label, WebviewUrl::External(url))
             .window_features(features)
-            .title("Soundbox")
+            .title("Konchi")
             // The page names itself after the panel ("Timeline · My story"),
             // and the taskbar is where you find which window is which.
             .on_document_title_changed(|window, title| {
@@ -203,7 +203,7 @@ pub fn run() {
                 "main",
                 WebviewUrl::App("index.html".into()),
             )
-            .title("Soundbox")
+            .title("Konchi")
             .inner_size(1200.0, 820.0)
             .min_inner_size(720.0, 560.0)
             .resizable(true)
@@ -227,13 +227,13 @@ pub fn run() {
                 let Some(home) = find_server_home(&handle) else {
                     notify(
                         "error",
-                        "Could not find the Soundbox server. Reinstall the app, or set \
-                         SOUNDBOX_PROJECT_ROOT to a checkout.",
+                        "Could not find the Konchi server. Reinstall the app, or set \
+                         KONCHI_PROJECT_ROOT to a checkout.",
                     );
                     return;
                 };
 
-                notify("starting", "Starting the Soundbox server…");
+                notify("starting", "Starting the Konchi server…");
                 let port = backend::DEFAULT_PORT;
                 match backend::start(&home, port) {
                     Ok(handle_backend) => {
@@ -250,7 +250,7 @@ pub fn run() {
                 if !backend::wait_until_healthy(port, STARTUP_TIMEOUT) {
                     notify(
                         "error",
-                        "The Soundbox server did not start in time. Check the log file in your \
+                        "The Konchi server did not start in time. Check the log file in your \
                          data directory (docs/INSTALL.md explains where it lives).",
                     );
                     return;
@@ -279,7 +279,7 @@ pub fn run() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("failed to start Soundbox");
+        .expect("failed to start Konchi");
 
     app.run(|handle, event| {
         // Stop the server we started. Without this the server process outlives

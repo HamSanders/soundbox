@@ -20,7 +20,7 @@ import { Config } from "../src/config.js";
 import { buildMcp } from "../src/mcp/server.js";
 import type { ModelInfo } from "../src/models/types.js";
 import type { Voice } from "../src/schemas.js";
-import { SoundboxService } from "../src/service.js";
+import { KonchiService } from "../src/service.js";
 
 const VEVO2 = "audiocpp-vevo2";
 const VIBEVOICE = "audiocpp-vibevoice";
@@ -29,7 +29,7 @@ const CHATTERBOX = "audiocpp-chatterbox";
 const FISH = "audiocpp-fish-audio";
 
 let client: Client;
-let svc: SoundboxService;
+let svc: KonchiService;
 let dataDir: string;
 /** Model id → the texts it was asked to speak, in order. */
 const spoken = new Map<string, string[]>();
@@ -57,8 +57,8 @@ function voice(id: string, name: string, modelId: string | null): void {
 }
 
 beforeAll(async () => {
-  dataDir = await mkdtemp(join(tmpdir(), "soundbox-mcp-voice-model-"));
-  svc = new SoundboxService(new Config(dataDir));
+  dataDir = await mkdtemp(join(tmpdir(), "konchi-mcp-voice-model-"));
+  svc = new KonchiService(new Config(dataDir));
   await svc.models.setAudiocppEnabled([VEVO2, VIBEVOICE, CHATTERBOX, FISH]);
 
   // Vevo2 is the loaded one — the model the old resolution reached for.
@@ -99,8 +99,8 @@ afterAll(async () => {
 });
 
 async function storyWith(lines: { text: string; voice_id: string | null }[]): Promise<string> {
-  const story = await call("soundbox.create_story", {});
-  await call("soundbox.add_lines", { story_id: story.story_id, lines });
+  const story = await call("konchi.create_story", {});
+  await call("konchi.add_lines", { story_id: story.story_id, lines });
   return story.story_id;
 }
 
@@ -114,7 +114,7 @@ describe("speak_story", () => {
       { text: "And they're off!", voice_id: "v-announcer" },
       { text: "Down the stretch.", voice_id: "v-announcer" },
     ]);
-    const res = await call("soundbox.speak_story", { story_id: id });
+    const res = await call("konchi.speak_story", { story_id: id });
 
     expect(spoken.get(VIBEVOICE)).toEqual(["And they're off!", "Down the stretch."]);
     expect(spoken.has(VEVO2)).toBe(false);
@@ -128,7 +128,7 @@ describe("speak_story", () => {
       { text: "One.", voice_id: "v-announcer" },
       { text: "Two.", voice_id: "v-guy" },
     ]);
-    const res = await call("soundbox.speak_story", { story_id: id, model: VEVO2 });
+    const res = await call("konchi.speak_story", { story_id: id, model: VEVO2 });
 
     expect(spoken.get(VEVO2)).toEqual(["One.", "Two."]);
     expect(soundModels(id)).toEqual([VEVO2, VEVO2]);
@@ -143,7 +143,7 @@ describe("speak_story", () => {
       { text: "Narration.", voice_id: null },
       { text: "Before models.", voice_id: "v-old" },
     ]);
-    const res = await call("soundbox.speak_story", { story_id: id });
+    const res = await call("konchi.speak_story", { story_id: id });
 
     expect(spoken.get(CHATTERBOX)).toEqual(["Who's there?", "Oh."]);
     expect(spoken.get(VIBEVOICE)).toEqual(["The announcer."]);
@@ -155,7 +155,7 @@ describe("speak_story", () => {
 
   it("falls back when the voice's model is not installed, and says so", async () => {
     const id = await storyWith([{ text: "Glub.", voice_id: "v-fish" }]);
-    const res = await call("soundbox.speak_story", { story_id: id });
+    const res = await call("konchi.speak_story", { story_id: id });
 
     expect(spoken.has(FISH)).toBe(false);
     expect(spoken.get(VEVO2)).toEqual(["Glub."]);
@@ -169,7 +169,7 @@ describe("speak_story", () => {
 
 describe("speak", () => {
   it("reads a voice on its own model when no model is passed", async () => {
-    const [sound] = await call("soundbox.speak", {
+    const [sound] = await call("konchi.speak", {
       lines: [{ text: "Hello.", voice_id: "v-guy" }],
     });
     expect(spoken.get(CHATTERBOX)).toEqual(["Hello."]);
@@ -178,7 +178,7 @@ describe("speak", () => {
   });
 
   it("lets an explicit model override the voice", async () => {
-    const [sound] = await call("soundbox.speak", {
+    const [sound] = await call("konchi.speak", {
       lines: [{ text: "Hello.", voice_id: "v-guy" }],
       model: VIBEVOICE,
     });
@@ -187,7 +187,7 @@ describe("speak", () => {
   });
 
   it("reads a dialogue across families, one model per voice", async () => {
-    const [sound] = await call("soundbox.speak", {
+    const [sound] = await call("konchi.speak", {
       lines: [
         { text: "Hi.", voice_id: "v-guy" },
         { text: "Hey.", voice_id: "v-announcer" },
@@ -199,7 +199,7 @@ describe("speak", () => {
   });
 
   it("falls back when the voice's model is not installed, and says so", async () => {
-    const [sound] = await call("soundbox.speak", {
+    const [sound] = await call("konchi.speak", {
       lines: [{ text: "Glub.", voice_id: "v-fish" }],
     });
     expect(spoken.get(VEVO2)).toEqual(["Glub."]);

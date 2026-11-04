@@ -1,6 +1,6 @@
 # The library
 
-Everything Soundbox makes is saved automatically. There is no "save" button:
+Everything Konchi makes is saved automatically. There is no "save" button:
 a generation writes a WAV to disk and a row to the database before you hear
 it. The library is where you find it again.
 
@@ -83,7 +83,7 @@ the studio, which splits it and puts one stem on each lane.
 ## Where the files are
 
 ```
-~/.soundbox/sounds/<id>.wav
+~/.konchi/sounds/<id>.wav
 ```
 
 Plain WAV, one per sound, named by id. The library's "reveal" opens your file
@@ -91,7 +91,7 @@ manager with the file selected. Downloads can be converted to mp3 if ffmpeg is
 installed. Without it you get the WAV, and the app tells you.
 
 The audio is plain files and the metadata is one SQLite file, so to back up
-your work, copy `~/.soundbox`. Deleting a sound from the library deletes its
+your work, copy `~/.konchi`. Deleting a sound from the library deletes its
 row and its file, and never a derived clip made from it.
 
 ## From the API

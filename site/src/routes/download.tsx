@@ -1,5 +1,5 @@
 /**
- * `/download` — the installers, the launch film and the repo's numbers, on the site.
+ * `/download` — the installers, the Soundbox film and the repo's numbers, on the site.
  *
  * The installer filenames carry the version (`Soundbox_0.4.1_x64-setup.exe`),
  * so a link to one file would go stale on every release. The page therefore
@@ -7,20 +7,16 @@
  * release) and, once mounted, asks the GitHub API for that release and for the
  * repository, then swaps in the direct asset links, version and sizes and fills
  * in the star, fork and download counts. If either request fails or is rate
- * limited, the fallback links still work and the readouts stay dark.
+ * limited, the fallback links still work and the numbers show a dash.
  *
- * It is dressed in the console's hardware kit (`components/console`): panels
- * with screws, LEDs, seven-segment readouts, a VU meter. The app's own
- * instrument is the most recognisable thing Soundbox has, so the page that
- * hands it over looks like it. The visitor's OS is guessed after mount, so the
- * prerendered HTML is the same for everyone.
+ * The visitor's OS is guessed after mount, so the prerendered HTML is the same
+ * for everyone. Every moving part (the aurora, the film's tilt, the counters,
+ * the prompt marquee) is decoration and stops under reduced motion.
  */
 
-import { ArrowDownIcon, ExternalLinkIcon, StarIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowDownIcon, ArrowUpRightIcon, StarIcon } from "lucide-react";
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 
-import { Led, Meter, Panel, Seg } from "@/components/console/hardware";
-import "@/components/console/console.css";
 import { SiteVideo } from "@/components/site-video";
 import { SeoHead } from "@/components/seo-head";
 import { REPO_URL } from "@/lib/marketing-links";
@@ -52,7 +48,6 @@ type PlatformId = "windows" | "mac-arm" | "mac-intel";
 
 interface Platform {
   id: PlatformId;
-  channel: string;
   label: string;
   short: string;
   detail: string;
@@ -62,61 +57,57 @@ interface Platform {
 const PLATFORMS: Platform[] = [
   {
     id: "windows",
-    channel: "OUT 1",
     label: "Windows",
     short: "Windows",
-    detail: "10 / 11 · x64 · .exe",
+    detail: "Windows 10 and 11, x64",
     match: (n) => /x64-setup\.exe$/i.test(n),
   },
   {
     id: "mac-arm",
-    channel: "OUT 2",
-    label: "Mac · Apple silicon",
+    label: "macOS",
     short: "Mac",
-    detail: "M1 and later · .dmg",
+    detail: "Apple silicon, M1 and later",
     match: (n) => /aarch64\.dmg$/i.test(n),
   },
   {
     id: "mac-intel",
-    channel: "OUT 3",
-    label: "Mac · Intel",
+    label: "macOS Intel",
     short: "Intel Mac",
-    detail: "x64 · .dmg",
+    detail: "Older Macs, x64",
     match: (n) => /x64\.dmg$/i.test(n),
   },
 ];
 
-/** The ticker: prompts in the material / action / space shape that works. */
+/** The marquee: prompts in the material / action / space shape that works. */
 const PROMPTS = [
   "heavy wooden door slamming in a stone corridor",
-  "rain on a tin roof, distant thunder",
   "lo-fi hip hop, dusty vinyl, 82 bpm",
+  "rain on a tin roof, distant thunder",
+  "a warm narrator, close to the mic",
+  "synthwave chorus, big gated drums",
   "boots on wet gravel at night",
-  "old freight lift motor starting under load",
-  "synthwave chorus, female vocal, big drums",
   "glass bottle shattering on tile",
-  "a narrator, warm and close: “it began with a sound”",
+  "old freight lift starting under load",
 ];
 
-/** Bar heights for the hero waveform: fixed, so the prerender matches. */
-const BARS = Array.from({ length: 120 }, (_, i) => {
-  const env = Math.sin((i / 119) * Math.PI);
-  const wobble = Math.abs(Math.sin(i * 1.7) * 0.6 + Math.sin(i * 0.43) * 0.4);
-  return 0.08 + env * (0.25 + wobble * 0.67);
-});
-
-const KEYFRAMES = `
-@keyframes dl-eq { 0%,100% { transform: scaleY(.45) } 50% { transform: scaleY(1) } }
-@keyframes dl-ticker { to { transform: translateX(-50%) } }
+const STYLES = `
+@keyframes dl-drift-a { 0%,100% { transform: translate(-10%, 0) scale(1) } 50% { transform: translate(8%, 6%) scale(1.15) } }
+@keyframes dl-drift-b { 0%,100% { transform: translate(10%, 4%) scale(1.1) } 50% { transform: translate(-6%, -4%) scale(.95) } }
+@keyframes dl-marquee { to { transform: translateX(-50%) } }
+@keyframes dl-flatten { from { transform: perspective(1400px) rotateX(18deg) scale(.92); opacity: .6 } to { transform: none; opacity: 1 } }
+@media (prefers-reduced-motion: no-preference) {
+  .dl-a { animation: dl-drift-a 18s ease-in-out infinite }
+  .dl-b { animation: dl-drift-b 22s ease-in-out infinite }
+  .dl-marquee { animation: dl-marquee 50s linear infinite }
+  @supports (animation-timeline: view()) {
+    .dl-tilt { animation: dl-flatten linear both; animation-timeline: view(); animation-range: entry 0% cover 40% }
+  }
+}
+.dl-grain { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") }
 `;
 
 function megabytes(bytes: number): number {
   return Math.round(bytes / 1024 / 1024);
-}
-
-/** Readout text: the number, or dashes until it arrives. */
-function readout(n: number | undefined, digits: number): string {
-  return n === undefined ? "-".repeat(digits) : String(n);
 }
 
 /** `GET` a GitHub API path and hand back the JSON, or null on any failure. */
@@ -144,56 +135,80 @@ function detectPlatform(): PlatformId | null {
   return null;
 }
 
-/** A needle that drifts like it is riding a signal. Parked for reduced motion. */
-function useSignal(): number {
-  const [level, setLevel] = useState(0.55);
+/** Counts up to `target` once it arrives. Jumps straight there under reduced motion. */
+function useCountUp(target: number | undefined): number | undefined {
+  const [shown, setShown] = useState<number | undefined>(undefined);
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const id = window.setInterval(() => setLevel(0.45 + Math.random() * 0.4), 220);
-    return () => window.clearInterval(id);
-  }, []);
-  return level;
+    if (target === undefined) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setShown(target);
+      return;
+    }
+    const start = performance.now();
+    let frame = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / 1200);
+      setShown(Math.round(target * (1 - Math.pow(1 - t, 3))));
+      if (t < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [target]);
+  return shown;
 }
 
-function Waveform() {
+function Stat({ value, label }: { value: number | undefined; label: string }) {
+  const shown = useCountUp(value);
   return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none flex h-40 items-center gap-[3px] [mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent)] sm:h-56"
-    >
-      {BARS.map((h, i) => (
-        <span
-          key={i}
-          className="bg-primary min-w-0 flex-1 rounded-full opacity-80 motion-safe:animate-[dl-eq_1.4s_ease-in-out_infinite]"
-          style={{
-            height: `${h * 100}%`,
-            animationDelay: `${(i % 17) * -0.09}s`,
-            boxShadow: "0 0 12px var(--cx-lamp-glow)",
-          }}
-        />
-      ))}
+    <div className="flex flex-col items-center gap-1 px-3 text-center sm:px-10">
+      <span className="font-heading text-3xl font-semibold tracking-tight tabular-nums sm:text-5xl">
+        {shown === undefined ? "–" : shown.toLocaleString("en")}
+      </span>
+      <span className="text-muted-foreground text-sm">{label}</span>
     </div>
   );
 }
 
-function Ticker() {
-  const row = [...PROMPTS, ...PROMPTS];
+/** A card whose border and wash follow the pointer. */
+function SpotlightCard({
+  className,
+  children,
+  highlight,
+}: {
+  className?: string;
+  children: React.ReactNode;
+  highlight?: boolean;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const onMove = (e: MouseEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty("--x", `${e.clientX - r.left}px`);
+    el.style.setProperty("--y", `${e.clientY - r.top}px`);
+  };
   return (
     <div
-      aria-hidden="true"
-      className="border-y border-[var(--cx-line)] bg-[var(--cx-seg-bg)] py-3 [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]"
+      ref={ref}
+      onMouseMove={onMove}
+      className={cn(
+        "group relative overflow-hidden rounded-3xl border p-6 transition-colors sm:p-8",
+        highlight
+          ? "border-primary/40 bg-primary/[0.06]"
+          : "border-foreground/10 bg-foreground/[0.02] hover:border-foreground/20",
+        className,
+      )}
+      style={{ "--x": "50%", "--y": "0px" } as CSSProperties}
     >
-      <div className="flex w-max motion-safe:animate-[dl-ticker_60s_linear_infinite]">
-        {row.map((p, i) => (
-          <span
-            key={i}
-            className="flex items-center gap-3 px-6 font-mono text-sm whitespace-nowrap text-[var(--cx-lamp)] [text-shadow:0_0_8px_var(--cx-lamp-glow)]"
-          >
-            <span className="text-[var(--cx-engrave-dim)]">▸</span>
-            {p}
-          </span>
-        ))}
-      </div>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        style={{
+          background:
+            "radial-gradient(400px circle at var(--x) var(--y), color-mix(in oklch, var(--primary) 14%, transparent), transparent 60%)",
+        }}
+      />
+      <div className="relative">{children}</div>
     </div>
   );
 }
@@ -202,7 +217,6 @@ export function DownloadPage() {
   const [release, setRelease] = useState<Release | null>(null);
   const [repo, setRepo] = useState<Repo | null>(null);
   const [mine, setMine] = useState<PlatformId | null>(null);
-  const signal = useSignal();
 
   useEffect(() => {
     setMine(detectPlatform());
@@ -216,184 +230,211 @@ export function DownloadPage() {
   const primary = PLATFORMS.find((p) => p.id === mine);
   const primaryAsset = primary && assetFor(primary);
   const downloads = release?.assets.reduce((sum, a) => sum + a.download_count, 0);
+  // Your system first, so the big card is the one you want.
+  const ordered = [...PLATFORMS].sort((a, b) => Number(b.id === mine) - Number(a.id === mine));
 
   return (
-    <div className="console bg-background text-foreground min-h-svh overflow-x-clip">
+    <div className="bg-background text-foreground relative min-h-svh overflow-x-clip">
       <SeoHead
         title="Download Soundbox for Windows and macOS | Soundbox"
         description="Download the Soundbox desktop app for Windows 10/11 or macOS. Free, open source, no account. Models download from inside the app."
         path="/download"
       />
-      <style>{KEYFRAMES}</style>
+      <style>{STYLES}</style>
+
+      {/* Decorative: two slow colour fields, a masked grid and film grain. */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[60rem]">
+        <div className="dl-a absolute top-[-12rem] left-[10%] size-[38rem] rounded-full bg-[oklch(0.7_0.15_190/0.28)] blur-[120px]" />
+        <div className="dl-b absolute top-[-6rem] right-[5%] size-[32rem] rounded-full bg-[oklch(0.6_0.2_290/0.25)] blur-[120px]" />
+        <div className="absolute inset-0 [mask-image:radial-gradient(ellipse_at_top,black_20%,transparent_70%)] bg-[linear-gradient(to_right,color-mix(in_oklch,var(--foreground)_6%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_oklch,var(--foreground)_6%,transparent)_1px,transparent_1px)] bg-[size:64px_64px]" />
+        <div className="dl-grain absolute inset-0 opacity-[0.07] mix-blend-overlay" />
+      </div>
 
       {/* ------------------------------------------------------------ hero */}
-      <section aria-labelledby="download-heading" className="relative pt-14 sm:pt-20">
-        <div
-          aria-hidden="true"
-          className="bg-primary/20 pointer-events-none absolute top-40 left-1/2 h-72 w-[70rem] -translate-x-1/2 rounded-full blur-[120px]"
-        />
-        <div className="relative mx-auto w-full max-w-6xl px-4">
+      <section aria-labelledby="download-heading" className="relative px-4 pt-20 sm:pt-28">
+        <div className="mx-auto flex w-full max-w-4xl flex-col items-center text-center">
           <a
             href={release?.html_url ?? LATEST_URL}
-            className="inline-flex items-center gap-3 rounded-md border border-[var(--cx-line)] bg-[var(--cx-seg-bg)] px-3 py-1.5 transition-colors hover:border-[var(--cx-lamp)]"
+            className="border-foreground/10 bg-foreground/[0.04] text-muted-foreground hover:text-foreground hover:border-foreground/20 inline-flex items-center gap-2 rounded-full border py-1 pr-3 pl-1 text-sm backdrop-blur transition-colors"
           >
-            <Led on blink color="red" label="New" />
-            <span className="cx-label">{release ? release.tag_name : "latest"}</span>
-            <span className="cx-label text-[var(--cx-lamp)]!">Release notes →</span>
+            <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs font-semibold">
+              {release?.tag_name ?? "New"}
+            </span>
+            Free and open source
+            <ArrowUpRightIcon className="size-3.5" aria-hidden="true" />
           </a>
 
           <h1
             id="download-heading"
-            className="font-heading text-foreground mt-6 text-[clamp(3.6rem,13vw,11rem)] leading-[0.85] font-black tracking-[-0.055em]"
+            className="font-heading mt-8 bg-gradient-to-b from-[var(--foreground)] to-[color-mix(in_oklch,var(--foreground)_55%,transparent)] bg-clip-text text-[clamp(3rem,9vw,6.5rem)] leading-[0.95] font-semibold tracking-[-0.045em] text-balance text-transparent"
           >
-            Make
-            <br />
-            <span className="text-primary [text-shadow:0_0_40px_var(--cx-lamp-glow)]">noise.</span>
+            Every sound you need, on your own machine.
           </h1>
+          <p className="text-muted-foreground mt-6 max-w-xl text-lg leading-relaxed text-pretty">
+            Sound effects, music and voices from open models, generated on your GPU. No account,
+            no credits, no cloud.
+          </p>
 
-          <div className="mt-8 grid items-end gap-8 lg:grid-cols-[1fr_auto]">
-            <p className="text-muted-foreground max-w-md text-lg leading-relaxed text-pretty">
-              Sound effects, music and voices from open models, made on your own GPU. No account,
-              no credits, no cloud.
-            </p>
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
-              <a
-                href={primaryAsset?.browser_download_url ?? "#installers"}
-                className="cx-transport flex items-center gap-4 px-6 py-4 font-semibold"
-              >
-                <ArrowDownIcon className="size-6" aria-hidden="true" />
-                <span className="flex flex-col leading-tight">
-                  <span className="text-lg">
-                    {primary ? `Download for ${primary.short}` : "Choose your download"}
-                  </span>
-                  <span className="font-mono text-xs font-normal opacity-75">
-                    {primaryAsset
-                      ? `${release?.tag_name} · ${megabytes(primaryAsset.size)} MB`
-                      : "Windows · macOS"}
-                  </span>
+          <div className="mt-10 flex w-full flex-col items-center justify-center gap-3 sm:w-auto sm:flex-row">
+            <a
+              href={primaryAsset?.browser_download_url ?? "#installers"}
+              className="bg-foreground text-background group inline-flex h-12 w-full items-center justify-center gap-2 rounded-full px-7 text-[15px] font-medium shadow-[0_0_0_1px_color-mix(in_oklch,var(--foreground)_20%,transparent),0_8px_40px_-8px_var(--primary)] transition-transform hover:scale-[1.02] active:scale-[0.98] sm:w-auto"
+            >
+              <ArrowDownIcon
+                className="size-4 transition-transform group-hover:translate-y-0.5"
+                aria-hidden="true"
+              />
+              {primary ? `Download for ${primary.short}` : "Download Soundbox"}
+            </a>
+            <a
+              href={REPO_URL}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="border-foreground/15 bg-foreground/[0.03] hover:bg-foreground/[0.07] inline-flex h-12 w-full items-center justify-center gap-2 rounded-full border px-6 text-[15px] font-medium backdrop-blur transition-colors sm:w-auto"
+            >
+              <StarIcon className="size-4" aria-hidden="true" />
+              Star on GitHub
+              {repo ? (
+                <span className="text-muted-foreground tabular-nums">
+                  {repo.stargazers_count.toLocaleString("en")}
                 </span>
-              </a>
-              <a
-                href={REPO_URL}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="cx-push w-auto! items-center! gap-3! px-4!"
-              >
-                <StarIcon className="size-4 text-amber-400" aria-hidden="true" />
-                <span className="cx-label">Star</span>
-                <Seg value={readout(repo?.stargazers_count, 3)} digits={3} />
-              </a>
-            </div>
+              ) : null}
+            </a>
           </div>
+          <p className="text-muted-foreground mt-4 text-xs">
+            {primaryAsset
+              ? `${release?.tag_name} · ${megabytes(primaryAsset.size)} MB · `
+              : "Windows and macOS · "}
+            <a href="#installers" className="hover:text-foreground underline-offset-4 hover:underline">
+              other platforms
+            </a>
+          </p>
         </div>
 
-        <div className="relative mt-10">
-          <Waveform />
-        </div>
-      </section>
-
-      <Ticker />
-
-      {/* --------------------------------------------------- monitor + meters */}
-      <section aria-label="Launch film and project numbers" className="px-4 pt-16">
-        <div className="mx-auto grid w-full max-w-6xl gap-4 lg:grid-cols-[1fr_17rem]">
-          <Panel
-            title="Monitor · soundbox-vibe.mp4"
-            aside={<Led on blink color="red" label="Rec" />}
-            bodyClassName="pb-5"
-          >
+        {/* The film, tilted back and flattening as it scrolls into view. */}
+        <div className="relative mx-auto mt-16 w-full max-w-5xl sm:mt-20">
+          <div
+            aria-hidden="true"
+            className="bg-primary/30 absolute inset-x-[10%] top-[20%] bottom-0 rounded-full blur-[100px]"
+          />
+          <div className="dl-tilt border-foreground/10 bg-foreground/[0.03] relative origin-top rounded-[1.75rem] border p-2 shadow-2xl backdrop-blur">
             <SiteVideo
               src="/media/soundbox-vibe.mp4"
               poster="/media/posters/vibe.jpg"
               label="Soundbox in thirty seconds: type a prompt, hear sound effects, music and voices, switch models"
+              className="[&>div]:rounded-[1.25rem] [&>div]:border-0"
             />
-          </Panel>
+          </div>
+        </div>
+      </section>
 
-          <Panel title="Counters" aside={<Led on={Boolean(repo)} color="green" label="Live" />}>
-            <div className="flex flex-col items-center gap-5 pt-1">
-              <Meter value={signal} label="Signal" />
-              <dl className="grid w-full gap-4">
-                {[
-                  { label: "GitHub stars", value: repo?.stargazers_count },
-                  { label: release ? `Downloads ${release.tag_name}` : "Downloads", value: downloads },
-                  { label: "Forks", value: repo?.forks_count },
-                ].map(({ label, value }) => (
-                  <div key={label} className="flex flex-col gap-1.5">
-                    <dt className="cx-label">{label}</dt>
-                    <dd>
-                      <Seg
-                        value={readout(value, 5)}
-                        digits={5}
-                        className="w-full text-4xl"
-                        dim={value === undefined}
-                      />
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          </Panel>
+      {/* ---------------------------------------------------------- marquee */}
+      <div
+        aria-hidden="true"
+        className="mt-16 [mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]"
+      >
+        <div className="dl-marquee flex w-max gap-3">
+          {[...PROMPTS, ...PROMPTS].map((p, i) => (
+            <span
+              key={i}
+              className="border-foreground/10 text-muted-foreground rounded-full border px-4 py-2 text-sm whitespace-nowrap"
+            >
+              {p}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* ------------------------------------------------------------ stats */}
+      <section aria-label="Project numbers" className="px-4 pt-20">
+        <div className="divide-foreground/10 mx-auto grid w-fit grid-cols-3 divide-x">
+          <Stat value={repo?.stargazers_count} label="GitHub stars" />
+          <Stat value={downloads} label={release ? `Downloads of ${release.tag_name}` : "Downloads"} />
+          <Stat value={repo?.forks_count} label="Forks" />
         </div>
       </section>
 
       {/* ------------------------------------------------------- installers */}
-      <section id="installers" aria-labelledby="installers-heading" className="scroll-mt-20 px-4 pt-20">
-        <div className="mx-auto w-full max-w-6xl">
+      <section id="installers" aria-labelledby="installers-heading" className="scroll-mt-20 px-4 pt-28">
+        <div className="mx-auto w-full max-w-5xl">
           <h2
             id="installers-heading"
-            className="font-heading text-foreground text-4xl font-black tracking-[-0.04em] sm:text-6xl"
+            className="font-heading text-center text-4xl font-semibold tracking-[-0.035em] sm:text-5xl"
           >
-            Pick your <span className="text-primary">output.</span>
+            Pick your platform
           </h2>
-          <ul className="mt-8 grid gap-4 md:grid-cols-3">
-            {PLATFORMS.map((platform) => {
+          <p className="text-muted-foreground mx-auto mt-4 max-w-md text-center">
+            One installer with everything inside. Models download from the app the first time you
+            use them.
+          </p>
+
+          <div className="mt-12 grid gap-4 md:grid-cols-2">
+            {ordered.map((platform, i) => {
               const asset = assetFor(platform);
               const isMine = platform.id === mine;
+              const big = i === 0;
               return (
-                <li key={platform.id}>
-                  <Panel
-                    title={platform.channel}
-                    aside={<Led on={isMine} label={isMine ? "Your system" : "Ready"} />}
-                    className={cn(isMine && "ring-primary/70 shadow-primary/20 shadow-2xl ring-2")}
-                  >
-                    <p className="font-heading text-2xl font-bold tracking-tight text-[var(--cx-nameplate)]">
+                <SpotlightCard
+                  key={platform.id}
+                  highlight={isMine}
+                  className={cn(big && "md:row-span-2 md:flex md:flex-col")}
+                >
+                  <div className={cn("flex h-full flex-col", big && "md:min-h-72")}>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground text-sm">{platform.detail}</span>
+                      {isMine ? (
+                        <span className="text-primary text-xs font-medium">Detected</span>
+                      ) : null}
+                    </div>
+                    <h3
+                      className={cn(
+                        "font-heading mt-3 font-semibold tracking-[-0.03em]",
+                        big ? "text-4xl sm:text-5xl" : "text-2xl",
+                      )}
+                    >
                       {platform.label}
-                    </p>
-                    <p className="cx-label mt-1 text-[var(--cx-engrave-dim)]!">{platform.detail}</p>
-                    <div className="mt-5 flex items-end justify-between gap-3">
-                      <div className="flex flex-col gap-1.5">
-                        <span className="cx-label">Size · MB</span>
-                        <Seg
-                          value={asset ? String(megabytes(asset.size)) : "--"}
-                          digits={3}
-                          size="lg"
-                          dim={!asset}
-                        />
-                      </div>
+                    </h3>
+                    {big ? (
+                      <ul className="text-muted-foreground mt-6 grid gap-2 text-sm">
+                        {[
+                          "The desktop app and its local server",
+                          "audio.cpp, the native engine. No Python",
+                          "An MCP server for Claude Code and Cursor",
+                        ].map((line) => (
+                          <li key={line} className="flex items-center gap-2.5">
+                            <span className="bg-primary size-1.5 shrink-0 rounded-full" aria-hidden="true" />
+                            {line}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    <div className="mt-auto flex items-end justify-between gap-4 pt-8">
+                      <span className="text-muted-foreground font-mono text-xs">
+                        {asset ? `${megabytes(asset.size)} MB` : " "}
+                      </span>
                       <a
                         href={asset?.browser_download_url ?? LATEST_URL}
                         className={cn(
-                          "flex items-center gap-2 px-5 py-3 text-sm font-semibold",
-                          isMine ? "cx-transport" : "cx-push w-auto!",
+                          "inline-flex h-10 items-center gap-2 rounded-full px-5 text-sm font-medium transition-colors",
+                          isMine || big
+                            ? "bg-foreground text-background hover:opacity-90"
+                            : "border-foreground/15 hover:bg-foreground/[0.06] border",
                         )}
                       >
                         <ArrowDownIcon className="size-4" aria-hidden="true" />
                         Download
                       </a>
                     </div>
-                    <p className="mt-4 truncate font-mono text-[11px] text-[var(--cx-engrave-dim)]">
-                      {asset?.name ?? "fetching the latest build…"}
-                    </p>
-                  </Panel>
-                </li>
+                  </div>
+                </SpotlightCard>
               );
             })}
-          </ul>
-          <p className="text-muted-foreground mt-6 text-sm">
-            Linux: no installer yet, so{" "}
+          </div>
+
+          <p className="text-muted-foreground mt-6 text-center text-sm">
+            On Linux?{" "}
             <a className="text-foreground underline underline-offset-4" href={`${REPO_URL}#run-from-source`}>
-              run it from source
+              Run it from source
             </a>
             . Older builds are on the{" "}
             <a className="text-foreground underline underline-offset-4" href={`${REPO_URL}/releases`}>
@@ -404,50 +445,43 @@ export function DownloadPage() {
         </div>
       </section>
 
-      {/* ----------------------------------------------------------- github */}
-      <section aria-labelledby="github-heading" className="px-4 py-24">
-        <Panel className="mx-auto w-full max-w-6xl" bodyClassName="px-6 py-12 sm:px-12">
-          <div className="grid items-center gap-8 md:grid-cols-[1fr_auto]">
-            <div>
-              <p className="cx-title">Open source</p>
-              <h2
-                id="github-heading"
-                className="font-heading mt-3 text-4xl font-black tracking-[-0.04em] text-[var(--cx-nameplate)] sm:text-6xl"
-              >
-                Patch in.
-              </h2>
-              <p className="text-muted-foreground mt-3 max-w-md leading-relaxed">
-                Read the code, file an issue, send a pull request. A star helps the next person
-                find it.
-              </p>
-            </div>
-            <div className="flex flex-col gap-3">
-              <a
-                href={REPO_URL}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="cx-transport flex items-center justify-between gap-6 px-5 py-3 font-semibold"
-              >
-                <span className="flex items-center gap-2">
-                  <StarIcon className="size-4" aria-hidden="true" />
-                  Star on GitHub
-                </span>
-                <span className="font-mono tabular-nums">
-                  {readout(repo?.stargazers_count, 2)}
-                </span>
-              </a>
-              <a
-                href={`${REPO_URL}/issues`}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="cx-push justify-between! px-5!"
-              >
-                <span className="cx-label">Issues</span>
-                <ExternalLinkIcon className="size-3.5" aria-hidden="true" />
-              </a>
-            </div>
+      {/* ------------------------------------------------------------ outro */}
+      <section aria-labelledby="github-heading" className="relative px-4 pt-32 pb-28">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-96 bg-[radial-gradient(ellipse_at_bottom,color-mix(in_oklch,var(--primary)_22%,transparent),transparent_65%)]"
+        />
+        <div className="relative mx-auto flex max-w-3xl flex-col items-center text-center">
+          <h2
+            id="github-heading"
+            className="font-heading text-[clamp(2.5rem,7vw,5rem)] leading-[0.95] font-semibold tracking-[-0.045em] text-balance"
+          >
+            Built in the open.
+          </h2>
+          <p className="text-muted-foreground mt-5 max-w-md text-lg leading-relaxed">
+            Read the code, file an issue, send a pull request. A star helps the next person find it.
+          </p>
+          <div className="mt-9 flex flex-wrap justify-center gap-3">
+            <a
+              href={REPO_URL}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="bg-foreground text-background inline-flex h-12 items-center gap-2 rounded-full px-7 text-[15px] font-medium transition-transform hover:scale-[1.02]"
+            >
+              <StarIcon className="size-4" aria-hidden="true" />
+              Star on GitHub
+            </a>
+            <a
+              href={`${REPO_URL}/issues`}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="border-foreground/15 hover:bg-foreground/[0.06] inline-flex h-12 items-center gap-2 rounded-full border px-6 text-[15px] font-medium transition-colors"
+            >
+              Issues
+              <ArrowUpRightIcon className="size-4" aria-hidden="true" />
+            </a>
           </div>
-        </Panel>
+        </div>
       </section>
     </div>
   );

@@ -24,6 +24,7 @@ to follow [Semantic Versioning](https://semver.org/).
 - Docker: the image sets `KONCHI_DATA_DIR`, `KONCHI_AUDIOCPP_BIN` and
   `KONCHI_AUDIOCPP_BACKEND`, so overriding those in a compose file now needs the
   `KONCHI_` names. The volume names are unchanged.
+- The site's download page has a new design: a full-width hero, the launch film in a frame that flattens as you scroll, live GitHub numbers and a card per installer.
 
 ### Fixed
 - Security: updated dependencies with open advisories: the system information library, the HTTP server adapter, and the desktop updater's zip support (Dependabot alerts).

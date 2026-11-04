@@ -6,6 +6,9 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- The site's download page has a new design: a full-width hero, the Soundbox film in a frame that flattens as you scroll, live GitHub numbers and a card per installer.
+
 ### Fixed
 - Security: updated dependencies with open advisories: the system information library, the HTTP server adapter, and the desktop updater's zip support (Dependabot alerts).
 

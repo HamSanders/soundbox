@@ -1,107 +1,93 @@
 ---
 title: One model at a time
-description: One GPU holds one model at a time. One run in the server's own log — 15.1s when the model has to load, 1.7s when it is already resident.
+description: Soundbox keeps one model in VRAM at a time. In one run from the server log, a job took 15.1s with a model load and 1.7s without one.
 date: 2026-08-25
+updated: 2026-11-04
 author: Anthony Saviano
 tags: [models, performance]
 image: /blog/one-model-at-a-time.jpg
 draft: false
 ---
 
-The Soundbox catalogue runs to forty-six models and the app holds exactly one of
-them in VRAM. Loading a new one unloads the old — the Models page says so in its
-own subtitle — and every other decision follows from it: why the first call to a
-model is slow and the second is not, why the stdio bridge refuses to load
-anything, why the VRAM column sits next to the Load button rather than behind a
-details pane. This post is about that constraint and what it costs you in
-seconds. It does not cover which model to pick for what — that is the Models
-page — or how audio.cpp works underneath, which is
+The Soundbox catalogue has 65 models, and the app keeps one of them in VRAM at
+a time. Loading a new model unloads the old one. The Models page says this in
+its subtitle. It's why the first call to a model is slow and the second isn't,
+why the stdio bridge won't load models, and why the VRAM column sits next to
+the Load button.
+
+This post covers that rule and how many seconds it costs. For which model to
+pick, see the Models page. For how audio.cpp works underneath, see
 [what audio.cpp replaced](/blog/what-audio-cpp-replaced).
 
-## The arithmetic
+## The numbers
 
-The catalogue in `server/src/models/audiocpp_models_catalog.json` holds four
-models verified end to end — weights downloaded, loaded, generated and decoded
-on a real machine — and forty-two more that are catalogued but untested, each
-hidden until you opt its id in from Settings. So the length of your list is your
-own doing: `GET /api/models` returns the four plus whatever you have switched
-on, and the machine below has enough extras enabled to show fifteen rows. The
-Status column is honest rather than aspirational, and it stays that way because
-the alternative is a list where every row looks equally proven and one of them
-is a stub.
+The catalogue in `server/src/models/audiocpp_models_catalog.json` has four
+models verified end to end: weights downloaded, loaded, generated and decoded
+on a real machine. The other 61 are catalogued but untested, and each stays
+hidden until you enable it in Settings. `GET /api/models` returns the four plus
+whatever you've switched on. The machine below has enough extras enabled to
+show fifteen rows. The Status column marks which ones are verified, so an
+untested row doesn't look the same as a tested one.
 
 ![The Models page: each row shows a licence badge, sample rate, maximum length, VRAM estimate and installed status, under the line "One model is resident in VRAM at a time. Loading a new one unloads the old."](/blog/models-page.png)
 
-The VRAM column is the point. Stable Audio 3.0 SFX wants 2.4 GB. ACE-Step 1.5
-Turbo wants 3.9 GB. MiniMax Music 3 wants 9.8 GB, and further down there is a
-MiniMax H3 entry estimated at 35.9 GB, sitting in the same table with the same
-Download button as though all four were interchangeable rows in a list. On an
-8 GB card the first two are a choice, the third does not fit, and the fourth is
-a different computer.
+Look at the VRAM column. Stable Audio 3.0 SFX needs 2.4 GB. ACE-Step 1.5 Turbo
+needs 3.9 GB. MiniMax Music 3 needs 9.8 GB. Further down, a MiniMax H3 entry is
+estimated at 35.9 GB, with the same Download button as the rest. On an 8 GB
+card you can run the first two, the third won't fit, and the fourth needs a
+much bigger machine.
 
-Forty-six models, one slot. No card holds that catalogue open at once, so the
-honest design is a single tenancy stated up front with the rent printed beside
-each name. Licences are surfaced the same way and for the same reason: the
-things that will stop you are shown before the download, not after.
+No consumer card can hold all 65 at once, so Soundbox loads one and prints each
+model's VRAM next to its name. Licences are shown the same way, before the
+download, so you find out what will stop you before you've spent the bandwidth.
 
 ## What the log shows
 
-Two jobs on the same model, half a minute apart, in the server's own log — which
-the app puts on the Activity page by default.
+Here are two jobs on the same model, half a minute apart, from the server log.
+The app shows this log on the Activity page.
 
 ![The Activity page log: job 94a73efc enters phase=loading "Loading Vevo2 (audio.cpp)" at 15:33:31, reaches Ready at 15:33:41, decodes, and is done in 15.1s. Job 0e275aab at 15:34:05 has no loading phase at all — straight to phase=generating "Running Vevo2" — and is done in 1.7s.](/blog/activity-log.png)
 
 The first job spends ten seconds in `phase=loading` before it reaches `Ready`,
-then decodes, and finishes in 15.1s. The second has no loading phase in it
-anywhere: straight to `phase=generating Running Vevo2`, done in 1.7s. Same
-model, same machine, same afternoon, and the only difference is that the weights
-were already there the second time.
+then decodes, and finishes in 15.1s. The second has no loading phase. It goes
+straight to `phase=generating Running Vevo2` and finishes in 1.7s. The model,
+machine and afternoon are the same. The only difference is that the weights
+were already loaded the second time.
 
-That is one run on one machine and not a benchmark — your card, your model and
-your clip length will all move those numbers. What generalises is the shape: the
-load is a fixed cost you pay once per residency, and everything after it is the
-generation itself. Which is why the fix for a slow session is scheduling rather
-than tuning. Do all your sound effects, then all your music, then all your voice
-lines, and you pay the load three times instead of thirty.
+That's one run on one machine, not a benchmark. Your card, model and clip
+length will change the numbers. What carries over is that you pay the load once
+each time a model becomes resident, and after that you're only paying for
+generation. So if a session feels slow, change the order of your work. Do all
+the sound effects, then all the music, then all the voice lines, and you pay
+the load three times instead of thirty.
 
-The model does idle out — `auto_unload_minutes` defaults to 10 in
-`server/src/config.ts`, so one you have stopped using gives the VRAM back rather
-than squatting on it until you quit. Come back after lunch and you pay the load
-again. That is the trade, and it is visible in a log rather than inferred from a
-spinner.
+Models do unload when idle. `auto_unload_minutes` defaults to 10 in
+`server/src/config.ts`, so a model you've stopped using gives its VRAM back
+before you quit the app. If you come back after lunch, you pay the load again,
+and you can see it in the log.
 
-## Why the bridge will not load a model
+## Why the bridge won't load a model
 
-The stdio MCP bridge, for clients that cannot speak streamable HTTP, is a thin
-proxy onto a running Soundbox server and nothing more. Its header says why in
-seven words: one GPU, one process holding the weights. If the server is not
-running the tools return an actionable error rather than quietly starting a
-second copy — because a second copy is a second process convinced it owns the
-VRAM, and the first sign of that is a failure in whichever of the two happened
-to ask second.
+The stdio MCP bridge is for clients that can't speak streamable HTTP. It's a
+thin proxy to a running Soundbox server. Its header comment gives the reason:
+one GPU, one process holding the weights. If the server isn't running, the
+tools return an error that tells you what to do. They don't start a second
+copy, because a second copy is a second process that thinks it owns the VRAM,
+and whichever of the two asks second fails.
 
-One slot means one owner, so the bridge is a client of the thing that owns it.
 Connecting an agent is covered in
 [point your agent at Soundbox](/blog/point-your-agent-at-soundbox) and in
 [docs/MCP.md](./MCP.md).
 
-## The alternative, and why not
+## Why not keep several loaded
 
-The obvious other answer is to keep several models resident and let the driver
-sort it out. On a consumer card that does not degrade into a slowdown; it
-degrades into an out-of-memory error, mid-generation, three layers down, as a
-failure your agent has no way to explain to you. The comment in
-`server/src/models/manager.ts` names the design target — a 16 GB consumer card —
-and the conclusion follows: loading model B unloads model A first. The cost
-becomes ten seconds you can see in a log, at a moment you chose, on a page that
-tells you what is resident. A visible ten seconds beats an invisible crash.
+The other option is to keep several models resident and let the driver manage
+it. On a consumer card that doesn't just slow down. It runs out of memory
+partway through a generation, and your agent gets an error it can't explain.
+A comment in `server/src/models/manager.ts` names the target hardware as a
+16 GB consumer card, so loading model B unloads model A first. You get a
+ten-second load that shows up in the log and on a page that says what's
+resident, instead of a crash.
 
-Hosted models are the exception, and they are the exception because they are not
-resident at all. A model running on fal never takes the slot and never evicts
-whatever has it — but the prompt leaves your machine, which is why
-`enabled_fal_models` defaults to empty and every hosted model is opt-in per id.
-Everything else here runs on your own hardware, works offline once the weights
-are down, and uploads nothing. Soundbox itself is MIT.
-
-One slot is not a limitation the product apologises for. It is the shape of the
-hardware, written down where you can read it.
+Everything runs on your own hardware, works offline once the weights are
+downloaded, and uploads nothing. Soundbox itself is MIT.

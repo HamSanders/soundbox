@@ -88,7 +88,7 @@ export function ArtworkSettingsCard({ settings }: { settings: Settings }) {
           <div className="space-y-0.5">
             <Label htmlFor="image-mode">Mode</Label>
             <p className="text-muted-foreground text-xs">
-              Local runs an image model Soundbox installs; External points at a server you
+              Local runs an image model Konchi installs; External points at a server you
               already run (Automatic1111, ComfyUI's API, anything OpenAI-compatible).
             </p>
           </div>

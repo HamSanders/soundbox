@@ -130,7 +130,7 @@ export function breadcrumbJsonLd(
 }
 
 /**
- * `SoftwareApplication` for Soundbox itself, on the home page and /studio.
+ * `SoftwareApplication` for Konchi itself, on the home page and /studio.
  *
  * No `aggregateRating`: there are no ratings to cite, and inventing one is the
  * fastest way to get a rich result revoked. Without it Google will not show a
@@ -142,7 +142,7 @@ export function softwareAppJsonLd(): object {
   return {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "Soundbox",
+    name: "Konchi",
     applicationCategory: "MultimediaApplication",
     operatingSystem: "Windows 10, Windows 11, macOS",
     softwareVersion: "0.1.0",

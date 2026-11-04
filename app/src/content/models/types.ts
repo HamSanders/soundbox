@@ -1,6 +1,6 @@
 /**
  * Content model for the `/models` pages — the public write-up of every model
- * Soundbox can run.
+ * Konchi can run.
  *
  * ## Why this file was rewritten
  *
@@ -79,7 +79,7 @@ export interface LicenseFinding {
    * when that is the truth.
    */
   output: string;
-  /** Whether the weights Soundbox downloads require accepting terms on a
+  /** Whether the weights Konchi downloads require accepting terms on a
    *  Hugging Face account. Every audio model downloads audio.cpp's ungated
    *  GGUF conversion, so "no" even where the original upstream repo is gated. */
   gated: Tristate;
@@ -130,7 +130,7 @@ export interface ModelContent {
    *  URL should not carry it. */
   slug: string;
   /** The catalog id, which is what the CLI and API want. Shown on the page so
-   *  a reader can copy it straight into `soundbox pull`. */
+   *  a reader can copy it straight into `konchi pull`. */
   catalogId: string;
   name: string;
   vendor: string;

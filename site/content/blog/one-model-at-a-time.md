@@ -1,6 +1,6 @@
 ---
 title: One model at a time
-description: Soundbox keeps one model in VRAM at a time. In one run from the server log, a job took 15.1s with a model load and 1.7s without one.
+description: Konchi keeps one model in VRAM at a time. In one run from the server log, a job took 15.1s with a model load and 1.7s without one.
 date: 2026-08-25
 updated: 2026-11-04
 author: Anthony Saviano
@@ -9,7 +9,7 @@ image: /blog/one-model-at-a-time.jpg
 draft: false
 ---
 
-The Soundbox catalogue has 65 models, and the app keeps one of them in VRAM at
+The Konchi catalogue has 65 models, and the app keeps one of them in VRAM at
 a time. Loading a new model unloads the old one. The Models page says this in
 its subtitle. It's why the first call to a model is slow and the second isn't,
 why the stdio bridge won't load models, and why the VRAM column sits next to
@@ -37,7 +37,7 @@ estimated at 35.9 GB, with the same Download button as the rest. On an 8 GB
 card you can run the first two, the third won't fit, and the fourth needs a
 much bigger machine.
 
-No consumer card can hold all 65 at once, so Soundbox loads one and prints each
+No consumer card can hold all 65 at once, so Konchi loads one and prints each
 model's VRAM next to its name. Licences are shown the same way, before the
 download, so you find out what will stop you before you've spent the bandwidth.
 
@@ -69,14 +69,14 @@ and you can see it in the log.
 ## Why the bridge won't load a model
 
 The stdio MCP bridge is for clients that can't speak streamable HTTP. It's a
-thin proxy to a running Soundbox server. Its header comment gives the reason:
+thin proxy to a running Konchi server. Its header comment gives the reason:
 one GPU, one process holding the weights. If the server isn't running, the
 tools return an error that tells you what to do. They don't start a second
 copy, because a second copy is a second process that thinks it owns the VRAM,
 and whichever of the two asks second fails.
 
 Connecting an agent is covered in
-[point your agent at Soundbox](/blog/point-your-agent-at-soundbox) and in
+[point your agent at Konchi](/blog/point-your-agent-at-soundbox) and in
 [docs/MCP.md](./MCP.md).
 
 ## Why not keep several loaded
@@ -90,4 +90,4 @@ ten-second load that shows up in the log and on a page that says what's
 resident, instead of a crash.
 
 Everything runs on your own hardware, works offline once the weights are
-downloaded, and uploads nothing. Soundbox itself is MIT.
+downloaded, and uploads nothing. Konchi itself is MIT.

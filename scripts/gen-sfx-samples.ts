@@ -31,8 +31,11 @@ import { wavToMp3 } from "./encode-mp3.mjs";
 import { SFX_CATEGORIES } from "../app/src/content/sfx/categories.ts";
 import { isPublished, type SfxSample } from "../app/src/content/sfx/types.ts";
 
+/** `KONCHI_<name>`, or its pre-rename spelling `SOUNDBOX_<name>`. */
+const env = (name: string) => process.env[`KONCHI_${name}`] ?? process.env[`SOUNDBOX_${name}`];
+
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const API = process.env.SOUNDBOX_API ?? "http://127.0.0.1:17494";
+const API = env("API") ?? "http://127.0.0.1:17494";
 
 /** What a sample renders on when it doesn't name a model of its own. */
 const DEFAULT_MODEL = "audiocpp-stable-audio-3-sfx";

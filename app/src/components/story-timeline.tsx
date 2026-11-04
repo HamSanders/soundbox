@@ -61,6 +61,7 @@ import { toast } from "sonner";
 import { AUDIO_ACCEPT, stemOf, toWav } from "@/lib/audio-file";
 import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useUiPrefs } from "@/lib/ui-prefs";
 import { createLaneChain } from "@/lib/device-chain";
 import { currentSoundDrag, getSoundDrag, isSoundDrag } from "@/lib/dnd";
 import { laneColor, laneIsFree, lanesFor, nextFreeTrack } from "@/lib/lanes";
@@ -383,7 +384,7 @@ export interface StoryTimelineProps {
    * A file from the user's own machine, already converted to WAV.
    *
    * Converted here rather than on the server because the server decodes WAV
-   * and nothing else, and Soundbox does not ship ffmpeg — but the browser
+   * and nothing else, and Konchi does not ship ffmpeg — but the browser
    * already has a decoder for every format it can play. `lib/audio-file`
    * exists for exactly this and the voice uploader uses it too, so an mp3 or
    * an m4a drops onto a lane without anything new being installed.
@@ -546,6 +547,7 @@ export function StoryTimeline({
 }: StoryTimelineProps) {
   const [pxPerSecond, setPxPerSecond] = useState(DEFAULT_PPS);
   const [playhead, setPlayhead] = useState(0);
+  const waveStyle = useUiPrefs((s) => s.waveStyle);
   // For play(), which starts from wherever the playhead is parked but must
   // not be rebuilt every frame it moves — a new `play` re-publishes the
   // transport upward, and that re-rendered the whole studio at frame rate.
@@ -2364,7 +2366,19 @@ export function StoryTimeline({
           <div
             className="bg-primary pointer-events-none absolute top-0 bottom-0 z-30 w-px"
             style={{ left: GUTTER + playhead * pxPerSecond }}
-          />
+          >
+            {/* Waterline mode: the playhead is a mooring line, and its float
+                sits on the ruler's bottom edge, the timeline's surface. */}
+            {waveStyle === "waterline" && (
+              <span
+                aria-hidden="true"
+                className="bg-primary ring-background absolute left-1/2 h-2.5 w-2 -translate-x-1/2 rounded-full ring-2"
+                style={{ top: RULER_HEIGHT - 6 }}
+              >
+                <span className="bg-primary absolute -top-1.5 left-1/2 h-1.5 w-px -translate-x-1/2" />
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -3349,7 +3363,7 @@ function GeneratingOutline() {
         height="calc(100% - 2px)"
         rx="5"
         fill="none"
-        className="stroke-primary soundbox-crawl"
+        className="stroke-primary konchi-crawl"
         strokeWidth="1.5"
         strokeDasharray="8 4"
         filter={`url(#${id})`}
@@ -3375,6 +3389,7 @@ function Waveform({
   color: string;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const waveStyle = useUiPrefs((s) => s.waveStyle);
 
   useEffect(() => {
     const canvas = ref.current;
@@ -3394,6 +3409,34 @@ function Waveform({
     // `currentColor` through the canvas: the clip sets the colour in CSS, so
     // the waveform follows the theme without this component knowing about it.
     ctx.fillStyle = getComputedStyle(canvas).color;
+
+    if (waveStyle === "waterline") {
+      // The sound above the water, its reflection below. One filled path
+      // per half rather than hundreds of rects, sampled every 2px. The
+      // waterline sits below centre so the half that carries the reading
+      // gets the room; the reflection is decoration, so it can be small.
+      const water = Math.round(height * 0.62) + 0.5;
+      const above = water - 4;
+      const below = height - water - 1;
+      const steps = Math.max(1, Math.floor(width / 2));
+      const at = (i: number) => peaks[Math.floor((i / steps) * (peaks.length - 1))] ?? 0;
+      const half = (dir: 1 | -1, reach: number) => {
+        ctx.beginPath();
+        ctx.moveTo(0, water);
+        for (let i = 0; i <= steps; i++) ctx.lineTo((i / steps) * width, water - dir * at(i) * reach);
+        ctx.lineTo(width, water);
+        ctx.closePath();
+        ctx.fill();
+      };
+      half(1, above);
+      ctx.globalAlpha = 0.3;
+      half(-1, below);
+      ctx.globalAlpha = 0.5;
+      ctx.fillRect(0, water - 0.5, width, 1);
+      ctx.globalAlpha = 1;
+      return;
+    }
+
     const bars = Math.max(1, Math.floor(width / 3));
     const mid = height / 2;
     for (let i = 0; i < bars; i++) {
@@ -3401,7 +3444,7 @@ function Waveform({
       const h = Math.max(1, peak * (height - 6));
       ctx.fillRect(i * 3, mid - h / 2, 2, h);
     }
-  }, [peaks, width, color]);
+  }, [peaks, width, color, waveStyle]);
 
   // The colour arrives as an inline `color` and is read back through
   // `currentColor`, so the canvas still does not know what a lane is.

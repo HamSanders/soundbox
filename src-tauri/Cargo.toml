@@ -2,7 +2,7 @@
 name = "soundbox-desktop"
 version = "0.4.1"
 description = "Local sound effects, music and speech from open-weight models"
-authors = ["Soundbox contributors"]
+authors = ["Konchi contributors"]
 license = "MIT"
 repository = "https://github.com/HamSanders/soundbox"
 edition = "2021"

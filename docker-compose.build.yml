@@ -8,6 +8,6 @@
 #     -f docker-compose.build.yml -f docker-compose.build-cuda.yml up -d --build
 
 services:
-  soundbox:
+  konchi:
     build:
       context: .

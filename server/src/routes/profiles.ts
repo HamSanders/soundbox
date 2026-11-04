@@ -9,10 +9,10 @@
 import type { FastifyInstance } from "fastify";
 
 import { profileNameSchema } from "../schemas.js";
-import type { SoundboxService } from "../service.js";
+import type { KonchiService } from "../service.js";
 import { HttpError, strQuery } from "./helpers.js";
 
-export function registerProfiles(app: FastifyInstance, svc: SoundboxService): void {
+export function registerProfiles(app: FastifyInstance, svc: KonchiService): void {
   app.get("/api/profiles", async () => svc.listProfiles());
 
   app.post("/api/profiles", async (request, reply) => {

@@ -39,7 +39,7 @@ function DocBody({ page }: { page: DocPage }) {
   return (
     <>
       <SeoHead
-        title={`${page.metaTitle ?? page.title} | Soundbox docs`}
+        title={`${page.metaTitle ?? page.title} | Konchi docs`}
         description={page.description ?? page.blurb}
         path={`/docs/${page.slug}`}
       />
@@ -62,10 +62,10 @@ function DocBody({ page }: { page: DocPage }) {
 
         {island?.after === "top" && <div className="mb-10">{island.node}</div>}
 
-        {/* The document itself. `soundbox-doc` carries the prose styling —
+        {/* The document itself. `konchi-doc` carries the prose styling —
             see index.css — because the HTML comes from markdown and cannot
             carry classes of its own. */}
-        <div className="soundbox-doc" dangerouslySetInnerHTML={{ __html: page.html }} />
+        <div className="konchi-doc" dangerouslySetInnerHTML={{ __html: page.html }} />
       </article>
 
       <footer className="border-border/60 mt-12 border-t pt-6">

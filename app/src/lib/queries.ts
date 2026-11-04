@@ -749,7 +749,7 @@ export function useExportVoice() {
       try {
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${voice.name.replace(/[\\/:*?"<>|]+/g, "").trim() || "voice"}.soundbox-voice.json`;
+        a.download = `${voice.name.replace(/[\\/:*?"<>|]+/g, "").trim() || "voice"}.konchi-voice.json`;
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -769,7 +769,7 @@ export function useImportVoice() {
       try {
         parsed = JSON.parse(await file.text());
       } catch {
-        throw new Error("That file isn't a Soundbox voice file.");
+        throw new Error("That file isn't a Konchi voice file.");
       }
       return api.importVoice(parsed);
     },

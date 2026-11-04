@@ -92,7 +92,7 @@ principle:
 ## Reading a post aloud
 
 A post with `audio: /blog/audio/<slug>.mp3` in its frontmatter gets a player
-under the header. Soundbox makes the recording, which is the only reason this
+under the header. Konchi makes the recording, which is the only reason this
 is worth doing: the blog is narrated by the thing the blog is about.
 
 The pipeline:
@@ -126,7 +126,7 @@ misled, however briefly, and this blog does not spend its credibility on that.
 
 ## What a post may claim
 
-Only what this repository can show. Every claim about Soundbox — a model it
+Only what this repository can show. Every claim about Konchi — a model it
 runs, a number it reports, a thing it does — has to be checkable against the
 code, the docs or a run you can reproduce, and a claim nobody has checked does
 not go on the page.

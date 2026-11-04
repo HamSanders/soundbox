@@ -146,24 +146,24 @@ describe("trusted origins", () => {
     expect(isTrustedOrigin("null")).toBe(false);
   });
 
-  it("matches SOUNDBOX_ALLOWED_HOSTS on the parsed host, not a suffix", () => {
-    process.env.SOUNDBOX_ALLOWED_HOSTS = "example.com";
+  it("matches KONCHI_ALLOWED_HOSTS on the parsed host, not a suffix", () => {
+    process.env.KONCHI_ALLOWED_HOSTS = "example.com";
     try {
       expect(isOriginAllowed("https://example.com")).toBe(true);
       expect(isOriginAllowed("https://evil-example.com")).toBe(false);
       expect(isOriginAllowed("https://example.com.evil.net")).toBe(false);
     } finally {
-      delete process.env.SOUNDBOX_ALLOWED_HOSTS;
+      delete process.env.KONCHI_ALLOWED_HOSTS;
     }
   });
 
-  it("holds a host:port entry in SOUNDBOX_ALLOWED_HOSTS to that port", () => {
-    process.env.SOUNDBOX_ALLOWED_HOSTS = "example.com:8443";
+  it("holds a host:port entry in KONCHI_ALLOWED_HOSTS to that port", () => {
+    process.env.KONCHI_ALLOWED_HOSTS = "example.com:8443";
     try {
       expect(isTrustedOrigin("https://example.com:8443")).toBe(true);
       expect(isTrustedOrigin("https://example.com")).toBe(false);
     } finally {
-      delete process.env.SOUNDBOX_ALLOWED_HOSTS;
+      delete process.env.KONCHI_ALLOWED_HOSTS;
     }
   });
 });
@@ -173,7 +173,7 @@ describe("routes", () => {
   let dataDir: string;
 
   beforeAll(async () => {
-    dataDir = await mkdtemp(join(tmpdir(), "soundbox-hardening-"));
+    dataDir = await mkdtemp(join(tmpdir(), "konchi-hardening-"));
     app = buildApp(new Config(dataDir), { serveUi: false });
     await app.ready();
   });
@@ -230,7 +230,7 @@ describe("downloadToFile", () => {
   let dir: string;
 
   beforeAll(async () => {
-    dir = await mkdtemp(join(tmpdir(), "soundbox-download-"));
+    dir = await mkdtemp(join(tmpdir(), "konchi-download-"));
     server = createServer((req, res) => {
       if (req.url === "/ok") {
         res.writeHead(200, { "content-length": "5" });

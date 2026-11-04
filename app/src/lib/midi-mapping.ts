@@ -237,7 +237,7 @@ export const DEFAULT_LAYOUT_ID = "general";
 
 /* ----------------------------------------------------------- persistence */
 
-const STORAGE_KEY = "soundbox.midi-map.v1";
+const STORAGE_KEY = "konchi.midi-map.v1";
 
 interface StoredMap {
   layoutId: string;

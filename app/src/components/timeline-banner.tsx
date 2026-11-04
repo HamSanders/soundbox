@@ -185,7 +185,7 @@ export function TimelineBanner({ className }: { className?: string }) {
       // Decorative in the accessibility tree, but not *meaningless* — one
       // sentence is worth more here than nine clip labels read in sequence.
       role="img"
-      aria-label="A Soundbox studio timeline: four lanes of generated sound effects — an ambience bed, footsteps, door and glass impacts, and two designed risers — arranged in time as a playhead moves across them."
+      aria-label="A Konchi studio timeline: four lanes of generated sound effects — an ambience bed, footsteps, door and glass impacts, and two designed risers — arranged in time as a playhead moves across them."
     >
       <WindowChrome label="Studio — every sound you generate, arranged" />
 

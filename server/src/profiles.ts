@@ -1,10 +1,10 @@
 /**
- * Named profiles — one Soundbox install, several separate libraries.
+ * Named profiles — one Konchi install, several separate libraries.
  *
  * A profile is a data directory: its own `soundbox.db`, `sounds/`, `artwork/`
  * and `settings.json`. Switching to another one is how you keep a curated
  * "demo" library apart from the scratch you generate while developing,
- * without a second checkout or a second `SOUNDBOX_DATA_DIR` to remember.
+ * without a second checkout or a second `KONCHI_DATA_DIR` to remember.
  *
  * Two things deliberately do *not* move with the profile:
  *
@@ -18,7 +18,7 @@
  *
  * The default profile's directory **is** the install root, not a subdirectory
  * of it. That is what makes this backwards compatible: an existing
- * `~/.soundbox` written before profiles existed is the default profile,
+ * `~/.konchi` written before profiles existed is the default profile,
  * found exactly where it already is, with no migration step.
  */
 

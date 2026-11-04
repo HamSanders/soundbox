@@ -42,16 +42,16 @@ export const DOC_PAGES: DocPage[] = [
     slug: "install",
     label: "Install",
     section: "Start here",
-    blurb: "Get Soundbox running, with models, on your own machine.",
-    metaTitle: "Install and run Soundbox from source on Windows, macOS or Linux",
+    blurb: "Get Konchi running, with models, on your own machine.",
+    metaTitle: "Install and run Konchi from source on Windows, macOS or Linux",
     description:
-      "Run Soundbox from a clone with Node 22: the audio.cpp runtime and its GPU backends, downloading models, gated models, where files live, and Windows notes.",
+      "Run Konchi from a clone with Node 22: the audio.cpp runtime and its GPU backends, downloading models, gated models, where files live, and Windows notes.",
     ...install,
   },
   {
     slug: "generating",
     label: "Generating sound",
-    section: "Using Soundbox",
+    section: "Using Konchi",
     blurb:
       "Prompt, model, seed and takes: how a generation runs, and what each parameter changes.",
     ...generating,
@@ -59,7 +59,7 @@ export const DOC_PAGES: DocPage[] = [
   {
     slug: "studio",
     label: "The studio",
-    section: "Using Soundbox",
+    section: "Using Konchi",
     blurb:
       "Arranging: lanes and clips, trimming, fades and crossfades, the mixer, the device rack, and the export.",
     ...studio,
@@ -67,7 +67,7 @@ export const DOC_PAGES: DocPage[] = [
   {
     slug: "library",
     label: "Library & projects",
-    section: "Using Soundbox",
+    section: "Using Konchi",
     blurb:
       "Where everything you make goes, how to find it again, and how editing works without destroying the original.",
     ...library,
@@ -77,14 +77,14 @@ export const DOC_PAGES: DocPage[] = [
     // were dead on the site.
     slug: "artwork",
     label: "Artwork",
-    section: "Using Soundbox",
+    section: "Using Konchi",
     blurb: "Cover art for generated music, avatars for saved voices, and the image models behind them.",
     ...artwork,
   },
   {
     slug: "endpoints",
     label: "Custom endpoints",
-    section: "Using Soundbox",
+    section: "Using Konchi",
     blurb: "Send generation to a server you already run, such as LocalAI or an OpenAI-compatible speech server.",
     ...endpoints,
   },
@@ -101,14 +101,14 @@ export const DOC_PAGES: DocPage[] = [
     label: "audio.cpp",
     section: "Internals",
     blurb:
-      "The inference engine: one binary, no Python and no CUDA install, and how Soundbox picks a backend for your machine.",
+      "The inference engine: one binary, no Python and no CUDA install, and how Konchi picks a backend for your machine.",
     ...audiocpp,
   },
   {
     slug: "desktop",
     label: "Desktop app",
     section: "Internals",
-    blurb: "Building and shipping Soundbox as a Tauri desktop app.",
+    blurb: "Building and shipping Konchi as a Tauri desktop app.",
     ...desktop,
   },
   {
@@ -122,9 +122,9 @@ export const DOC_PAGES: DocPage[] = [
     slug: "mcp",
     label: "MCP tools",
     section: "Reference",
-    blurb: "The tools an agent gets when it connects to Soundbox over MCP.",
+    blurb: "The tools an agent gets when it connects to Konchi over MCP.",
     metaTitle: "MCP server reference: tools and connecting a client",
-    description: `The ${MCP_TOOLS.length} tools an agent gets over MCP, and how to connect Claude Code or any HTTP or stdio MCP client to Soundbox running on your own machine.`,
+    description: `The ${MCP_TOOLS.length} tools an agent gets over MCP, and how to connect Claude Code or any HTTP or stdio MCP client to Konchi running on your own machine.`,
     ...mcp,
   },
 ];

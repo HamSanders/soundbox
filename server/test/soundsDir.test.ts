@@ -26,8 +26,8 @@ let dataDir: string;
 let elsewhere: string;
 
 beforeEach(async () => {
-  dataDir = await mkdtemp(join(tmpdir(), "soundbox-sounds-dir-"));
-  elsewhere = await mkdtemp(join(tmpdir(), "soundbox-sounds-elsewhere-"));
+  dataDir = await mkdtemp(join(tmpdir(), "konchi-sounds-dir-"));
+  elsewhere = await mkdtemp(join(tmpdir(), "konchi-sounds-elsewhere-"));
   app = buildApp(new Config(dataDir), { serveUi: false });
   await app.ready();
 });
@@ -45,8 +45,8 @@ async function patch(body: Record<string, unknown>) {
 /** Put a file in the library: on disk in the current sounds folder, and named
  *  by a row. A clone voice is the lightest row that owns a file there. */
 async function libraryFile(name: string, body = "RIFFfake"): Promise<void> {
-  await writeFile(join(app.soundbox.config.paths.sounds, name), body, "utf-8");
-  app.soundbox.db.createVoice(
+  await writeFile(join(app.konchi.config.paths.sounds, name), body, "utf-8");
+  app.konchi.db.createVoice(
     { id: `v-${name}`, name, kind: "clone", created_at: new Date().toISOString() },
     name,
   );

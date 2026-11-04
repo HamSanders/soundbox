@@ -95,7 +95,7 @@ function ModelBody({ model }: { model: ModelContent }) {
       other.spec.family !== model.spec.family,
   ).slice(0, 8);
 
-  const pullCommand = `soundbox pull ${model.catalogId}`;
+  const pullCommand = `konchi pull ${model.catalogId}`;
 
   return (
     <>
@@ -263,13 +263,13 @@ function ModelBody({ model }: { model: ModelContent }) {
             <CopyButton value={pullCommand} label="Copy command" />
           </div>
           <pre className="overflow-x-auto px-3 py-3 text-xs leading-relaxed">
-            <code className="font-mono">{`soundbox model install audiocpp\n${pullCommand}`}</code>
+            <code className="font-mono">{`konchi model install audiocpp\n${pullCommand}`}</code>
           </pre>
         </div>
         <ul className="text-muted-foreground mt-4 max-w-2xl list-disc space-y-2 pl-5 text-sm leading-relaxed">
           <li>
             The binary is fetched from audio.cpp's GitHub releases the first time you ask for it
-            and cached under your own data directory. Soundbox ships no native binaries and
+            and cached under your own data directory. Konchi ships no native binaries and
             vendors none.
           </li>
           <li>
@@ -286,7 +286,7 @@ function ModelBody({ model }: { model: ModelContent }) {
           {model.license.gated === "yes" && (
             <li>
               The download is gated. Accept the terms on your own Hugging Face account and add an
-              access token in Settings first. Soundbox cannot accept terms on your behalf.
+              access token in Settings first. Konchi cannot accept terms on your behalf.
             </li>
           )}
         </ul>
@@ -328,7 +328,7 @@ function ModelBody({ model }: { model: ModelContent }) {
               rel="noreferrer noopener"
               className="hover:text-primary inline-flex items-center gap-1.5 text-sm underline-offset-4 hover:underline"
             >
-              How Soundbox drives audio.cpp, including the catalog format
+              How Konchi drives audio.cpp, including the catalog format
               <ExternalLinkIcon className="size-3.5 shrink-0" aria-hidden="true" />
             </a>
           </li>
@@ -390,7 +390,7 @@ function ModelBody({ model }: { model: ModelContent }) {
           GitHub
         </a>
         <MarketingLink href={WELCOME_HREF} className="hover:text-foreground">
-          What Soundbox is
+          What Konchi is
         </MarketingLink>
       </footer>
     </>

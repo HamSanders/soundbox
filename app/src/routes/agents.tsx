@@ -1,7 +1,7 @@
 /**
  * Agents — the companion-app view of the MCP surface.
  *
- * Soundbox's other screens are about sounds; this one is about *who asked for
+ * Konchi's other screens are about sounds; this one is about *who asked for
  * them*. Every agent that has ever connected over MCP, what it called, how it
  * went, and the two levers a team actually needs — the connection details to
  * hand a new client, and installing the bundled skills that make an agent use
@@ -24,7 +24,7 @@ import {
   FileTextIcon,
   Loader2Icon,
   PlugZapIcon,
-  SparklesIcon,
+  ScrollTextIcon,
   TerminalIcon,
   XCircleIcon,
 } from "lucide-react";
@@ -51,7 +51,7 @@ import { cn } from "@/lib/utils";
 /* --------------------------------------------------------------- helpers */
 
 function toolShortName(tool: string): string {
-  return tool.replace(/^soundbox\./, "");
+  return tool.replace(/^konchi\./, "");
 }
 
 const STATUS_ICON: Record<McpCall["status"], React.ReactNode> = {
@@ -99,7 +99,7 @@ function ConnectCard({
           <p className="text-sm font-medium">Claude Code</p>
           <CopyBlock
             label="Copy the claude mcp add command"
-            code={`claude mcp add --transport http soundbox ${endpoint}`}
+            code={`claude mcp add --transport http konchi ${endpoint}`}
           />
         </div>
         <div className="space-y-1.5">
@@ -131,13 +131,13 @@ function SkillsCard({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <SparklesIcon className="size-4" aria-hidden="true" />
+          <ScrollTextIcon className="size-4" aria-hidden="true" />
           Skills
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-muted-foreground text-sm leading-relaxed">
-          Soundbox ships agent skills that teach a connected agent how to use it well — prompting
+          Konchi ships agent skills that teach a connected agent how to use it well — prompting
           text-to-audio models, checking licences, running a full sound pass over a project. Install
           them once and any agent that reads skills from this machine picks them up.
         </p>
@@ -191,7 +191,7 @@ function SkillsCard({
           </Button>
         </div>
         <p className="text-muted-foreground text-xs">
-          Or from a terminal: <code className="font-mono">soundbox skills install</code>
+          Or from a terminal: <code className="font-mono">konchi skills install</code>
         </p>
       </CardContent>
     </Card>
@@ -346,7 +346,7 @@ export function AgentsPage() {
           Agents
         </h1>
         <p className="text-muted-foreground mt-1 max-w-2xl text-sm leading-relaxed">
-          Soundbox is built to be driven by AI agents over MCP, not just by this app. This page is
+          Konchi is built to be driven by AI agents over MCP, not just by this app. This page is
           the mission control for that: who has connected, what they have called, and how it went.
         </p>
       </div>
@@ -422,7 +422,7 @@ export function AgentsPage() {
                 ) : (
                   <p className="text-muted-foreground py-4 text-center text-sm">
                     No agent has connected yet. Add the endpoint above to your client and call{" "}
-                    <code className="font-mono">soundbox.list_models</code> to check.
+                    <code className="font-mono">konchi.list_models</code> to check.
                   </p>
                 )}
               </CardContent>

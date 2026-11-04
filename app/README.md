@@ -1,6 +1,6 @@
-# Soundbox web app
+# Konchi web app
 
-The React front end for [Soundbox](../README.md). It is one npm workspace of
+The React front end for [Konchi](../README.md). It is one npm workspace of
 the monorepo; run it from the repository root, not from here.
 
 ```bash

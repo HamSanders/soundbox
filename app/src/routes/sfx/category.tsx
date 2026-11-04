@@ -37,7 +37,7 @@ import { cn } from "@/lib/utils";
 import { assetUrl } from "@/lib/asset-url";
 
 
-const MCP_SNIPPET = `claude mcp add --transport http soundbox http://127.0.0.1:17494/mcp`;
+const MCP_SNIPPET = `claude mcp add --transport http konchi http://127.0.0.1:17494/mcp`;
 
 const CURL_SNIPPET = `curl -X POST http://127.0.0.1:17494/api/generate \\
   -H 'Content-Type: application/json' \\
@@ -103,7 +103,7 @@ function CategoryBody({ category }: { category: PublishedCategory }) {
         {...(category.coverImage
           ? {
               image: coverCard(category.coverImage),
-              imageAlt: `Cover art for Soundbox's ${category.name.toLowerCase()} sound effects`,
+              imageAlt: `Cover art for Konchi's ${category.name.toLowerCase()} sound effects`,
             }
           : {})}
         jsonLd={[
@@ -145,7 +145,7 @@ function CategoryBody({ category }: { category: PublishedCategory }) {
         </p>
         <div className="mt-6 flex flex-wrap gap-2">
           <Button asChild>
-            <MarketingLink href={GENERATOR_HREF}>Download Soundbox</MarketingLink>
+            <MarketingLink href={GENERATOR_HREF}>Download Konchi</MarketingLink>
           </Button>
           <Button variant="outline" asChild>
             <a href={REPO_URL} target="_blank" rel="noreferrer noopener">
@@ -208,17 +208,17 @@ function CategoryBody({ category }: { category: PublishedCategory }) {
             {
               icon: WifiOffIcon,
               title: "Offline after download",
-              body: "Weights are fetched once. After that, generation, the library and the API all work with the network off. Everything lives in one SQLite file and one folder of WAVs under ~/.soundbox, and nothing is uploaded.",
+              body: "Weights are fetched once. After that, generation, the library and the API all work with the network off. Everything lives in one SQLite file and one folder of WAVs under ~/.konchi, and nothing is uploaded.",
             },
             {
               icon: BotIcon,
               title: "Your agent can use it",
-              body: "Soundbox runs an MCP server in the same process, with tools for generating and listing sounds. Generated files come back as absolute paths, so an agent can copy them into a project.",
+              body: "Konchi runs an MCP server in the same process, with tools for generating and listing sounds. Generated files come back as absolute paths, so an agent can copy them into a project.",
             },
             {
               icon: ScaleIcon,
               title: "Licences stated up front",
-              body: "Every model's terms are shown before you download it, and non-commercial weights need an explicit confirmation. Soundbox is MIT. The licence of the model that made a sound governs what you may do with it.",
+              body: "Every model's terms are shown before you download it, and non-commercial weights need an explicit confirmation. Konchi is MIT. The licence of the model that made a sound governs what you may do with it.",
             },
           ].map(({ icon: Icon, title, body }) => (
             <div key={title} className="bg-card ring-border/70 rounded-2xl p-5 ring-1">
@@ -277,7 +277,7 @@ function CategoryBody({ category }: { category: PublishedCategory }) {
           GitHub
         </a>
         <MarketingLink href={WELCOME_HREF} className="hover:text-foreground">
-          What Soundbox is
+          What Konchi is
         </MarketingLink>
       </footer>
     </>

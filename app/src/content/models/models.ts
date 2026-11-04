@@ -1,5 +1,5 @@
 /**
- * Every model Soundbox can run, written up for `/models`.
+ * Every model Konchi can run, written up for `/models`.
  *
  * ## Where these facts come from
  *
@@ -124,7 +124,7 @@ const STABILITY_COMMUNITY: LicenseFinding = {
     "Commercial use, including selling what you make, is free while you or your organisation have under USD $1,000,000 in annual revenue. Above that you need an Enterprise licence from Stability AI. The threshold applies to your total annual revenue from all sources.",
   conditions: [
     'Section III: "If at any time You or Your Affiliate(s), either individually or in aggregate, generate more than USD $1,000,000 in annual revenue" you must obtain an Enterprise License.',
-    "Stability's original weights are gated on Hugging Face. Soundbox downloads audio.cpp's GGUF conversion from an ungated repo, so you need no Hugging Face account or token. The licence still applies to the GGUF weights.",
+    "Stability's original weights are gated on Hugging Face. Konchi downloads audio.cpp's GGUF conversion from an ungated repo, so you need no Hugging Face account or token. The licence still applies to the GGUF weights.",
     "The models embed a pre-trained T5Gemma text encoder redistributed under the Gemma Terms of Use, which also apply however you obtain the weights. The Gemma terms were not reviewed for this page, so what they add is not documented here.",
   ],
   output:
@@ -180,7 +180,7 @@ function pocketTts(language: string): LicenseFinding {
     name: "CC-BY-4.0 (weights) + MIT (code)",
     commercial: "conditional",
     summary:
-      "The weights are CC-BY-4.0 and the code is MIT, so commercial use is permitted with attribution. Two things complicate it: Kyutai's original repo is gated behind prohibited-use terms (Soundbox downloads an ungated GGUF conversion, so you do not see that prompt), and the bundled speaker voices carry their own separate licences.",
+      "The weights are CC-BY-4.0 and the code is MIT, so commercial use is permitted with attribution. Two things complicate it: Kyutai's original repo is gated behind prohibited-use terms (Konchi downloads an ungated GGUF conversion, so you do not see that prompt), and the bundled speaker voices carry their own separate licences.",
     conditions: [
       "Attribution, per CC-BY-4.0.",
       'The upstream Kyutai gate prompt prohibits "voice impersonation or cloning without explicit and lawful consent", and misinformation or deception including presenting generated audio as a genuine recording. Kyutai disclaims all liability for non-compliant use.',
@@ -238,12 +238,12 @@ export const MODELS: ModelContent[] = [
     tier: "listed",
     verified: true,
     capabilities: ["generation"],
-    metaTitle: "Stable Audio 3.0 SFX, run locally | Soundbox",
+    metaTitle: "Stable Audio 3.0 SFX, run locally | Konchi",
     metaDescription:
       "Stability AI's sound-effect model, run through audio.cpp from a quantised GGUF: 44.1kHz stereo, ~2.5 GB VRAM, Stability Community License with a $1M revenue cap.",
     tagline: "The default sound-effect model: 44.1kHz stereo, eight steps, about 2.5 GB of VRAM.",
     distinctiveness:
-      "Soundbox's default sound-effect model; the prompting advice in the README is written for it. It runs from a quantised GGUF on audio.cpp's C++/ggml runtime instead of torch, which gives a much smaller footprint and no Python stack. The cost is that the model reloads on every generation, so a batch of short clips pays that overhead on every clip. It responds to physical description (material, action, space), not to mood words.",
+      "Konchi's default sound-effect model; the prompting advice in the README is written for it. It runs from a quantised GGUF on audio.cpp's C++/ggml runtime instead of torch, which gives a much smaller footprint and no Python stack. The cost is that the model reloads on every generation, so a batch of short clips pays that overhead on every clip. It responds to physical description (material, action, space), not to mood words.",
     spec: {
       vendor: "Stability AI",
       family: "stable_audio",
@@ -257,7 +257,7 @@ export const MODELS: ModelContent[] = [
     license: STABILITY_COMMUNITY,
     downloadSize: "~2 GB",
     quirks: [
-      "Soundbox downloads audio.cpp's GGUF conversion from an ungated repo, so no Hugging Face account or token is needed. Stability's original weights are gated, and the Community License still applies to the GGUF.",
+      "Konchi downloads audio.cpp's GGUF conversion from an ungated repo, so no Hugging Face account or token is needed. Stability's original weights are gated, and the Community License still applies to the GGUF.",
       "Defaults are 8 steps at CFG 1.0, and the catalog caps CFG at 3.0. This is a few-step model; high guidance makes the output worse without making it follow the prompt more closely.",
       "No negative prompt. No family on the audio.cpp path exposes one, so the composer does not show that field for this model.",
     ],
@@ -280,7 +280,7 @@ export const MODELS: ModelContent[] = [
     tier: "listed",
     verified: true,
     capabilities: ["generation"],
-    metaTitle: "Stable Audio 3.0 Small Music, run locally | Soundbox",
+    metaTitle: "Stable Audio 3.0 Small Music, run locally | Konchi",
     metaDescription:
       "The music-tuned sibling of Stable Audio 3.0 SFX: same loader, same GGUF repo, different fine-tune. Stability Community License, $1M revenue cap.",
     tagline: "Same loader and footprint as the SFX model, fine-tuned for music instead.",
@@ -317,7 +317,7 @@ export const MODELS: ModelContent[] = [
     tier: "listed",
     verified: true,
     capabilities: ["generation", "lyrics", "extend", "cover", "repaint"],
-    metaTitle: "ACE-Step 1.5 Turbo: local lyrics-conditioned music | Soundbox",
+    metaTitle: "ACE-Step 1.5 Turbo: local lyrics-conditioned music | Konchi",
     metaDescription:
       "Lyrics-conditioned vocal music at 48kHz stereo through audio.cpp, with extend, cover and repaint. MIT licensed (verified; the shipped catalog's Apache-2.0 label is wrong).",
     tagline: "Generates sung vocals. Distilled for few-step sampling, and the only listed model that can extend, cover and repaint.",
@@ -336,7 +336,7 @@ export const MODELS: ModelContent[] = [
     license: ACE_STEP_MIT,
     downloadSize: "~3.5 GB",
     quirks: [
-      "48kHz, unlike everything else here. htdemucs accepts only 44.1kHz, so an ACE-Step render is resampled before stem splitting. Soundbox does this for you.",
+      "48kHz, unlike everything else here. htdemucs accepts only 44.1kHz, so an ACE-Step render is resampled before stem splitting. Konchi does this for you.",
       "Extend is a repaint whose window starts past the end of the source, so the original is kept bit-for-bit and not re-rendered.",
       "Distilled: 8 steps at CFG 1.0 is the intended operating point.",
     ],
@@ -355,7 +355,7 @@ export const MODELS: ModelContent[] = [
     tier: "listed",
     verified: true,
     capabilities: ["generation", "lyrics"],
-    metaTitle: "MiniMax Music 3: local lyrics-conditioned music | Soundbox",
+    metaTitle: "MiniMax Music 3: local lyrics-conditioned music | Konchi",
     metaDescription:
       "A five-component package model, run locally through audio.cpp. MiniMax Music 3 Community License: commercial use under $20M revenue, with attribution.",
     tagline: "Lyrics-conditioned, ~10 GB of VRAM, and the only entry that loads a package of five components.",
@@ -407,7 +407,7 @@ export const MODELS: ModelContent[] = [
     },
     downloadSize: "~8.5 GB",
     quirks: [
-      "It will not run without lyrics. When you give none, Soundbox supplies an explicit [instrumental] marker so the run does not fail.",
+      "It will not run without lyrics. When you give none, Konchi supplies an explicit [instrumental] marker so the run does not fail.",
       "Component filenames are compiled into the audio.cpp binary and checked before any option is parsed, so no --session-option or --load-option can redirect them. The catalog entry mirrors audio.cpp 0.6.1's minimax_music3_q4_0 package exactly, mixed quantisation and all.",
       "~10 GB of VRAM. On a modest card this is the listed entry most likely to fall back to CPU, which makes generation far slower.",
     ],
@@ -426,7 +426,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["generation", "lyrics", "extend", "cover", "repaint"],
-    metaTitle: "ACE-Step 1.5 Base, non-distilled | Soundbox",
+    metaTitle: "ACE-Step 1.5 Base, non-distilled | Konchi",
     metaDescription:
       "The base fine-tune the ACE-Step turbo was distilled from: slower, needs higher guidance and roughly 3x the steps, same MIT licence. Opt-in and untested here.",
     tagline: "The model the turbo was distilled from. Slower, needs higher guidance, higher quality ceiling.",
@@ -463,7 +463,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["generation"],
-    metaTitle: "Stable Audio 3.0 Medium (2B) | Soundbox",
+    metaTitle: "Stable Audio 3.0 Medium (2B) | Konchi",
     metaDescription:
       "The larger Stable Audio 3.0, ~5 GB VRAM, same stable_audio loader and same Stability Community License. Opt-in and untested here.",
     tagline: "The 2B sibling of the Small models: twice the VRAM, same loader, same licence.",
@@ -500,7 +500,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["generation"],
-    metaTitle: "HeartMuLa music generation via audio.cpp | Soundbox",
+    metaTitle: "HeartMuLa music generation via audio.cpp | Konchi",
     metaDescription:
       "Music generation through the heartmula loader. Apache-2.0 per the upstream README and the HF tag; the shipped catalog says 'Unknown'. Opt-in and untested here.",
     tagline: "Apache-2.0 music generation. Not yet run here.",
@@ -554,7 +554,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["generation"],
-    metaTitle: "MiniMax H3: ~36 GB VRAM, region-limited licence | Soundbox",
+    metaTitle: "MiniMax H3: ~36 GB VRAM, region-limited licence | Konchi",
     metaDescription:
       "The largest entry in the catalog. Its licence excludes the US, EU, UK and South Korea. Opt-in and untested.",
     tagline: "~36 GB of VRAM, and a licence that excludes the US, EU, UK and South Korea by name.",
@@ -586,7 +586,7 @@ export const MODELS: ModelContent[] = [
         "Territory: the EU, UK, South Korea and USA are excluded from the standard grant; the model card carries a separate application form for those regions.",
         "Prior written authorisation required above US$20M yearly revenue.",
         'Attribution: you must "prominently display ‘MiniMax H3’ on the user interface".',
-        "MiniMax's original weights are gated behind the Community License Agreement on Hugging Face. Soundbox downloads an ungated GGUF conversion; the agreement still applies to it.",
+        "MiniMax's original weights are gated behind the Community License Agreement on Hugging Face. Konchi downloads an ungated GGUF conversion; the agreement still applies to it.",
       ],
       output:
         "This licence covers output, in your favour: MiniMax “claims no rights over the Outputs you generate”, while making you “entirely responsible for the Outputs and any subsequent use thereof”. Two restrictions ride along: outputs may not be used to improve competing AI models, and machine-generated content must be disclosed in public settings.",
@@ -632,7 +632,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["separation"],
-    metaTitle: "HTDemucs stem separation via audio.cpp | Soundbox",
+    metaTitle: "HTDemucs stem separation via audio.cpp | Konchi",
     metaDescription:
       "Splits a mix into vocals, drums, bass and other. The code is MIT; the pretrained weights are research-only per the maintainer. The shipped catalog had this wrong.",
     tagline: "Four stems: vocals, drums, bass, other. MIT code, research-only weights.",
@@ -674,9 +674,9 @@ export const MODELS: ModelContent[] = [
     },
     downloadSize: null,
     quirks: [
-      "Requires exactly 44.1kHz. Anything else fails with a sample-rate mismatch, so Soundbox resamples the source first. The common case is splitting a 48kHz ACE-Step render.",
+      "Requires exactly 44.1kHz. Anything else fails with a sample-rate mismatch, so Konchi resamples the source first. The common case is splitting a 48kHz ACE-Step render.",
       "The source goes in as the audio input, not the reference input. The reference input is for voice conversion and style transfer; using it here fails with an unrelated-sounding contract error.",
-      "Soundbox reads stem names and count from the output directory, because this has not been run end-to-end here. htdemucs emits vocals, drums, bass and other.",
+      "Konchi reads stem names and count from the output directory, because this has not been run end-to-end here. htdemucs emits vocals, drums, bass and other.",
     ],
     sources: [
       gh("facebookresearch/demucs", "Demucs upstream project"),
@@ -692,7 +692,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["separation"],
-    metaTitle: "BS-RoFormer stem separation via audio.cpp | Soundbox",
+    metaTitle: "BS-RoFormer stem separation via audio.cpp | Konchi",
     metaDescription:
       "Band-split RoFormer separation. The reference code is MIT, but the checkpoint's own licence is undeclared upstream and could not be confirmed.",
     tagline: "MIT reference code. The checkpoint's licence is not declared anywhere upstream.",
@@ -734,7 +734,7 @@ export const MODELS: ModelContent[] = [
     downloadSize: null,
     quirks: [
       "Untested end-to-end here. Both the weights glob and the licence need confirming before real use.",
-      "Same input rules as htdemucs: source goes in as the audio input, and Soundbox resamples to the model's rate first.",
+      "Same input rules as htdemucs: source goes in as the audio input, and Konchi resamples to the model's rate first.",
     ],
     sources: [
       gh("lucidrains/BS-RoFormer", "Reference implementation"),
@@ -751,7 +751,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["separation"],
-    metaTitle: "Mel-Band RoFormer separation via audio.cpp | Soundbox",
+    metaTitle: "Mel-Band RoFormer separation via audio.cpp | Konchi",
     metaDescription:
       "Mel-band RoFormer vocal separation. The author's Hugging Face repo tags the checkpoint MIT, but there is no LICENSE file upstream.",
     tagline: "The vocal-separation sibling. Author-tagged MIT, though only as repo metadata.",
@@ -819,7 +819,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: true,
     capabilities: ["tts"],
-    metaTitle: "VibeVoice 1.5B: local long-form TTS | Soundbox",
+    metaTitle: "VibeVoice 1.5B: local long-form TTS | Konchi",
     metaDescription:
       "Microsoft's MIT-licensed 1.5B speech model, run through audio.cpp. The only voice entry that has been run here, and the only one whose code Microsoft pulled.",
     tagline: "MIT-licensed, up to ten minutes of speech, and the only voice model run end-to-end here.",
@@ -876,7 +876,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "Chatterbox: MIT-licensed local TTS | Soundbox",
+    metaTitle: "Chatterbox: MIT-licensed local TTS | Konchi",
     metaDescription:
       "Resemble AI's Chatterbox, run through audio.cpp. Plain MIT: no revenue cap, no gate, no research-only clause.",
     tagline: "Plain MIT, no revenue cap, no gate.",
@@ -914,12 +914,12 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "Fish Audio S2 Pro: research-only licence | Soundbox",
+    metaTitle: "Fish Audio S2 Pro: research-only licence | Konchi",
     metaDescription:
       "Fish Audio S2 Pro through audio.cpp. Research and non-commercial only: commercial use needs a separate written agreement.",
     tagline: "Research and non-commercial only. Commercial use needs a written agreement.",
     distinctiveness:
-      "Non-commercial, and explicit about it: the upstream download gate makes you tick a box agreeing to non-commercial use only. Soundbox's GGUF download has no gate, but the licence still applies. The licence defines commercial use broadly; internal business operations and indirect revenue count, as well as selling the audio.",
+      "Non-commercial, and explicit about it: the upstream download gate makes you tick a box agreeing to non-commercial use only. Konchi's GGUF download has no gate, but the licence still applies. The licence defines commercial use broadly; internal business operations and indirect revenue count, as well as selling the audio.",
     spec: {
       vendor: "Fish Audio",
       family: "fish_audio",
@@ -937,7 +937,7 @@ export const MODELS: ModelContent[] = [
         'Research and non-commercial use only. "Any use of the Fish Audio Materials or Derivative Works for a Commercial Purpose requires a separate written license agreement from Fish Audio." Commercial Purpose is defined broadly: internal business operations and indirect revenue count.',
       conditions: [
         "Commercial use requires a written agreement with Fish Audio (business@fish.audio).",
-        "The original weights are gated: you supply country and date and tick a box agreeing to non-commercial use only, plus a DMCA/legal-compliance consent. Soundbox downloads an ungated GGUF conversion, and the licence still applies to it.",
+        "The original weights are gated: you supply country and date and tick a box agreeing to non-commercial use only, plus a DMCA/legal-compliance consent. Konchi downloads an ungated GGUF conversion, and the licence still applies to it.",
         "You may not use the materials or their outputs to create or improve any other foundational generative AI model.",
       ],
       output:
@@ -968,7 +968,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "IndexTTS2, bilibili's speech model | Soundbox",
+    metaTitle: "IndexTTS2, bilibili's speech model | Konchi",
     metaDescription:
       "IndexTTS2 through audio.cpp. Its Hugging Face repo declares no licence at all; the upstream project now ships the bilibili Model Use License. Treat it as bilibili-licensed.",
     tagline: "The Hugging Face repo declares no licence. Assume the bilibili agreement applies.",
@@ -1024,7 +1024,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "IndexTTS2.5: bilibili Model Use License | Soundbox",
+    metaTitle: "IndexTTS2.5: bilibili Model Use License | Konchi",
     metaDescription:
       "IndexTTS2.5 through audio.cpp. Commercial use permitted below 100M monthly users or RMB 1bn revenue, a Llama-style scale cap.",
     tagline: "Commercial use is fine below 100M monthly users or RMB 1bn revenue.",
@@ -1079,7 +1079,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "Higgs Audio v3 TTS 4B: Creator Use Grant | Soundbox",
+    metaTitle: "Higgs Audio v3 TTS 4B: Creator Use Grant | Konchi",
     metaDescription:
       "Boson AI's 4B speech model through audio.cpp. Research and non-commercial by default, with a Creator Use Grant that permits monetised creative work if you credit them.",
     tagline: "Non-commercial by default, with a carve-out that lets creators monetise if they credit it.",
@@ -1133,7 +1133,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts", "voice-conversion"],
-    metaTitle: "Vevo2: non-commercial weights | Soundbox",
+    metaTitle: "Vevo2: non-commercial weights | Konchi",
     metaDescription:
       "Vevo2 from the Amphion project through audio.cpp. The code is MIT but the checkpoints are CC-BY-NC-ND-4.0: non-commercial, no derivatives, attribution required.",
     tagline: "MIT code, CC-BY-NC-ND weights. You run the weights, so it is non-commercial.",
@@ -1194,7 +1194,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "NeuTTS 2E: $5M revenue cap | Soundbox",
+    metaTitle: "NeuTTS 2E: $5M revenue cap | Konchi",
     metaDescription:
       "Neuphonic's NeuTTS 2E through audio.cpp. The sources disagree: the conversion table says Apache-2.0, the upstream repo ships a custom licence with a $5M revenue cap.",
     tagline: "Two sources give two different licences. This page follows the stricter one: a $5M revenue cap.",
@@ -1217,7 +1217,7 @@ export const MODELS: ModelContent[] = [
         "Commercial use is permitted below the licence's Threshold, defined as USD $5,000,000 in annual revenue; a legal entity above it needs a commercial licence from Neuphonic. Non-profits are exempt for research and non-commercial purposes.",
       conditions: [
         'The licence states that commercial use "by a Legal Entity that exceeds the Threshold is not licensed", with the Threshold set at USD $5,000,000 annual revenue.',
-        "The original upstream weights are gated: you accept conditions and share contact details to get the files. Soundbox downloads an ungated GGUF conversion, and the licence still applies to it.",
+        "The original upstream weights are gated: you accept conditions and share contact details to get the files. Konchi downloads an ungated GGUF conversion, and the licence still applies to it.",
         "Do not generalise from Neuphonic's other models. neutts-air is plain Apache-2.0 and the Nano models are 'other'; 2E is the restricted tier of the lineup.",
       ],
       output:
@@ -1248,7 +1248,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "Supertonic 3: Open RAIL-M licence | Soundbox",
+    metaTitle: "Supertonic 3: Open RAIL-M licence | Konchi",
     metaDescription:
       "Supertone's Supertonic 3 through audio.cpp: ~800 MB of VRAM, BigScience Open RAIL-M, with use restrictions that travel into anything you redistribute.",
     tagline: "~800 MB of VRAM, licensed Open RAIL-M with its use restrictions.",
@@ -1303,7 +1303,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "DramaBox: LTX-2 Community License | Soundbox",
+    metaTitle: "DramaBox: LTX-2 Community License | Konchi",
     metaDescription:
       "DramaBox through audio.cpp: ~21 GB of VRAM and the LTX-2 Community License, which caps free commercial use at $10M revenue and bars training on its output.",
     tagline: "~21 GB of VRAM, a $10M revenue cap, and outputs you may not train on.",
@@ -1360,7 +1360,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "OmniVoice: non-commercial weights | Soundbox",
+    metaTitle: "OmniVoice: non-commercial weights | Konchi",
     metaDescription:
       "OmniVoice through audio.cpp. Apache-2.0 code, CC-BY-NC weights because of the training data. No commercial use, whatever the conversion table says.",
     tagline: "Apache-2.0 code, CC-BY-NC weights. Non-commercial.",
@@ -1407,7 +1407,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["voice-conversion"],
-    metaTitle: "Seed-VC voice conversion, GPL-3.0 | Soundbox",
+    metaTitle: "Seed-VC voice conversion, GPL-3.0 | Konchi",
     metaDescription:
       "Seed-VC through audio.cpp. GPL-3.0 on both code and weights: the only copyleft licence in this catalog, and a constraint if you ship closed source.",
     tagline: "The only copyleft entry here: GPL-3.0 on the code and the weights alike.",
@@ -1446,7 +1446,7 @@ export const MODELS: ModelContent[] = [
       ],
       readByUs: true,
       correction:
-        'The shipped catalog says "Unknown". It is GPL-3.0, on both the code and the weights repo. It is the only copyleft licence in this catalog, and it matters most to anyone embedding Soundbox in other software.',
+        'The shipped catalog says "Unknown". It is GPL-3.0, on both the code and the weights repo. It is the only copyleft licence in this catalog, and it matters most to anyone embedding Konchi in other software.',
     },
     downloadSize: null,
     quirks: [
@@ -1464,7 +1464,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["voice-conversion"],
-    metaTitle: "RVC voice conversion, MIT | Soundbox",
+    metaTitle: "RVC voice conversion, MIT | Konchi",
     metaDescription:
       "Retrieval-based Voice Conversion through audio.cpp. MIT on both code and weights, with the caveat that RVC bundles third-party components that were not separately checked.",
     tagline: "MIT on both code and weights. Bundled components not separately checked.",
@@ -1517,7 +1517,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["voice-conversion"],
-    metaTitle: "MioCodec: MIT neural audio codec | Soundbox",
+    metaTitle: "MioCodec: MIT neural audio codec | Konchi",
     metaDescription:
       "MioCodec through audio.cpp: ~700 MB of VRAM, MIT licensed. Upstream it is the neural audio codec behind MioTTS, not a voice-conversion model.",
     tagline: "~700 MB of VRAM. MIT. Upstream, it is a codec.",
@@ -1554,7 +1554,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "Confucius4 TTS: Apache-2.0, 14 languages | Soundbox",
+    metaTitle: "Confucius4 TTS: Apache-2.0, 14 languages | Konchi",
     metaDescription:
       "NetEase Youdao's Confucius4 TTS through audio.cpp. Apache-2.0. It advertises unconstrained voice cloning and has no consent clause.",
     tagline: "Apache-2.0, 14 languages, voice cloning, and no consent clause.",
@@ -1593,7 +1593,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "Inflect Micro v2: 9M parameters, Apache-2.0 | Soundbox",
+    metaTitle: "Inflect Micro v2: 9M parameters, Apache-2.0 | Konchi",
     metaDescription:
       "A 9.36M-parameter speech model with one fixed synthetic voice, Apache-2.0, ~400 MB of VRAM. It takes no reference audio, so it cannot clone a voice.",
     tagline: "9.36M parameters, ~400 MB, one fixed synthetic voice. Apache-2.0.",
@@ -1635,7 +1635,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "VoxCPM2: Apache-2.0 speech from OpenBMB | Soundbox",
+    metaTitle: "VoxCPM2: Apache-2.0 speech from OpenBMB | Konchi",
     metaDescription:
       "OpenBMB's VoxCPM2 through audio.cpp. Apache-2.0 on weights and code, with the model card explicitly stating it is free for commercial use.",
     tagline: "Apache-2.0 on weights and code, and the card says commercial use is fine.",
@@ -1671,7 +1671,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "MOSS TTS Local v1.5, Apache-2.0 | Soundbox",
+    metaTitle: "MOSS TTS Local v1.5, Apache-2.0 | Konchi",
     metaDescription:
       "OpenMOSS's 4B local speech transformer through audio.cpp. Apache-2.0 across the whole MOSS-TTS family, with no acceptable-use policy attached.",
     tagline: "The 4B half of OpenMOSS's pair. Apache-2.0, ~8.6 GB of VRAM.",
@@ -1705,7 +1705,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "MOSS TTS Nano 100M: Apache-2.0, ~600 MB | Soundbox",
+    metaTitle: "MOSS TTS Nano 100M: Apache-2.0, ~600 MB | Konchi",
     metaDescription:
       "The 100M-parameter member of OpenMOSS's MOSS-TTS family, ~600 MB of VRAM, Apache-2.0 like the rest of the family.",
     tagline: "100M parameters, ~600 MB of VRAM, same Apache-2.0 as its 4B sibling.",
@@ -1739,7 +1739,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "MioTTS 1.7B: Apache-2.0, Qwen3-based | Soundbox",
+    metaTitle: "MioTTS 1.7B: Apache-2.0, Qwen3-based | Konchi",
     metaDescription:
       "MioTTS 1.7B through audio.cpp. Apache-2.0, built on Qwen3-1.7B-Base (also Apache-2.0), so nothing restrictive is inherited from the base model.",
     tagline: "Apache-2.0 on an Apache-2.0 base, so no inherited restrictions.",
@@ -1775,7 +1775,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "Irodori TTS 500M v3: MIT, ~1.5 GB | Soundbox",
+    metaTitle: "Irodori TTS 500M v3: MIT, ~1.5 GB | Konchi",
     metaDescription:
       "The smallest Irodori TTS variant, MIT licensed, ~1.5 GB of VRAM, through audio.cpp with no Python stack.",
     tagline: "The compact Irodori: MIT, ~1.5 GB of VRAM.",
@@ -1808,7 +1808,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "Irodori TTS 600M v3 VoiceDesign, MIT | Soundbox",
+    metaTitle: "Irodori TTS 600M v3 VoiceDesign, MIT | Konchi",
     metaDescription:
       "Describe a voice in text; no reference clip needed. MIT licensed, and it watermarks what it generates with SilentCipher.",
     tagline: "Describe the voice in words; no clip needed. MIT, and watermarked.",
@@ -1847,7 +1847,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "Irodori TTS v4 Small: MIT, superseded upstream | Soundbox",
+    metaTitle: "Irodori TTS v4 Small: MIT, superseded upstream | Konchi",
     metaDescription:
       "The newest Irodori variant in the shipped catalog, MIT licensed. Its model card points to a newer v4.1 Small that this catalog does not carry.",
     tagline: "The newest Irodori carried here. Its card points to a newer one.",
@@ -1884,7 +1884,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "Dots TTS SOAR, Apache-2.0 | Soundbox",
+    metaTitle: "Dots TTS SOAR, Apache-2.0 | Konchi",
     metaDescription:
       "The SOAR variant of rednote HiLab's dots.tts, Apache-2.0 and ungated, run locally through audio.cpp.",
     tagline: "Apache-2.0 and ungated, one of three dots.tts variants here.",
@@ -1917,7 +1917,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "Dots TTS MF, Apache-2.0 | Soundbox",
+    metaTitle: "Dots TTS MF, Apache-2.0 | Konchi",
     metaDescription:
       "The MF variant of rednote HiLab's dots.tts, Apache-2.0 with the licence linked from the model card itself, run locally through audio.cpp.",
     tagline: "Apache-2.0, with the licence text linked from the card.",
@@ -1950,7 +1950,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "Dots TTS Edit: licence unresolved | Soundbox",
+    metaTitle: "Dots TTS Edit: licence unresolved | Konchi",
     metaDescription:
       "The Edit variant of dots.tts declares 'other' with no licence name, link or LICENSE file, while its siblings are Apache-2.0. Its terms could not be confirmed.",
     tagline: "Its siblings are Apache-2.0. This one declares 'other' and names nothing.",
@@ -2003,7 +2003,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "Qwen3 TTS 0.6B Base, Apache-2.0 | Soundbox",
+    metaTitle: "Qwen3 TTS 0.6B Base, Apache-2.0 | Konchi",
     metaDescription:
       "The smallest Qwen3 TTS variant, Apache-2.0 and ungated like the rest of the family, run locally through audio.cpp.",
     tagline: "The small Qwen3 TTS. Apache-2.0, ungated, ~2.5 GB.",
@@ -2037,7 +2037,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "Qwen3 TTS 1.7B Base, Apache-2.0 | Soundbox",
+    metaTitle: "Qwen3 TTS 1.7B Base, Apache-2.0 | Konchi",
     metaDescription:
       "The 1.7B Qwen3 TTS base model, Apache-2.0 and ungated, run locally through audio.cpp with no Python stack.",
     tagline: "The larger Qwen3 TTS base model. Apache-2.0, ungated, ~3.3 GB.",
@@ -2070,7 +2070,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "Qwen3 TTS 1.7B CustomVoice, Apache-2.0 | Soundbox",
+    metaTitle: "Qwen3 TTS 1.7B CustomVoice, Apache-2.0 | Konchi",
     metaDescription:
       "The voice-cloning variant of Qwen3 TTS 1.7B. Apache-2.0 has no consent clause, so consent is your responsibility.",
     tagline: "Clones a voice from a reference. Apache-2.0, with no consent clause.",
@@ -2103,7 +2103,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "Qwen3 TTS 1.7B VoiceDesign, Apache-2.0 | Soundbox",
+    metaTitle: "Qwen3 TTS 1.7B VoiceDesign, Apache-2.0 | Konchi",
     metaDescription:
       "Generates a voice from a text description, with no cloning. Apache-2.0 and ungated, run locally through audio.cpp.",
     tagline: "Describe the voice in text; no cloning. Apache-2.0, ungated.",
@@ -2136,7 +2136,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "Pocket TTS English: CC-BY-4.0 weights | Soundbox",
+    metaTitle: "Pocket TTS English: CC-BY-4.0 weights | Konchi",
     metaDescription:
       "Kyutai's Pocket TTS with 26 bundled speakers. CC-BY-4.0 weights and MIT code. Each voice carries its own licence, and some collections are non-commercial.",
     tagline: "26 named speakers, CC-BY-4.0 weights, and a separate licence for each voice.",
@@ -2177,7 +2177,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "Pocket TTS German: CC-BY-4.0 weights | Soundbox",
+    metaTitle: "Pocket TTS German: CC-BY-4.0 weights | Konchi",
     metaDescription:
       "The German Pocket TTS package. Same CC-BY-4.0 weights and MIT code as the English entry, same per-voice licensing caveat.",
     tagline: "The German package. Same weights licence, same per-voice caveat.",
@@ -2215,7 +2215,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "Pocket TTS Italian: CC-BY-4.0 weights | Soundbox",
+    metaTitle: "Pocket TTS Italian: CC-BY-4.0 weights | Konchi",
     metaDescription:
       "The Italian Pocket TTS package. Same CC-BY-4.0 weights and MIT code as the English entry, same per-voice licensing caveat.",
     tagline: "The Italian package. Same weights licence, same per-voice caveat.",
@@ -2253,7 +2253,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "Pocket TTS Portuguese: CC-BY-4.0 weights | Soundbox",
+    metaTitle: "Pocket TTS Portuguese: CC-BY-4.0 weights | Konchi",
     metaDescription:
       "The Portuguese Pocket TTS package. Same CC-BY-4.0 weights and MIT code as the English entry, same per-voice licensing caveat.",
     tagline: "The Portuguese package. Same weights licence, same per-voice caveat.",
@@ -2291,7 +2291,7 @@ export const MODELS: ModelContent[] = [
     tier: "extra",
     verified: false,
     capabilities: ["tts"],
-    metaTitle: "Pocket TTS Spanish: CC-BY-4.0 weights | Soundbox",
+    metaTitle: "Pocket TTS Spanish: CC-BY-4.0 weights | Konchi",
     metaDescription:
       "The Spanish Pocket TTS package. Same CC-BY-4.0 weights and MIT code as the English entry, same per-voice licensing caveat.",
     tagline: "The Spanish package. Same weights licence, same per-voice caveat.",

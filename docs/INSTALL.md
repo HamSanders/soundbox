@@ -21,15 +21,15 @@ process.
   [DESKTOP.md](DESKTOP.md).
 - Optional: `ffmpeg` on `PATH` for MP3 export.
 
-## Running the `soundbox` CLI from a clone
+## Running the `konchi` CLI from a clone
 
-The CLI is not published to npm, so every `soundbox …` command on this page
+The CLI is not published to npm, so every `konchi …` command on this page
 runs from your checkout. Run `npm install` at the repo root, then either build
 once and use the linked binary:
 
 ```bash
 npm run build          # builds the app and the server into server/dist
-npx soundbox --help    # from the repo root; npm links the bin there
+npx konchi --help    # from the repo root; npm links the bin there
 ```
 
 or skip the build and run the TypeScript source directly:
@@ -38,31 +38,31 @@ or skip the build and run the TypeScript source directly:
 npx tsx server/src/cli.ts --help
 ```
 
-Both take the same subcommands. `npx soundbox` with no subcommand starts the
+Both take the same subcommands. `npx konchi` with no subcommand starts the
 server. `npm run dev` starts the server and the Vite dev server for the UI.
 
 ## Step 1: the audio.cpp runtime
 
 ```bash
-soundbox model install audiocpp
+konchi model install audiocpp
 ```
 
 This downloads and verifies a prebuilt `audiocpp_cli` for your platform. Check
-what was installed with `soundbox model status audiocpp`. To use a binary you
-built or downloaded yourself, set `SOUNDBOX_AUDIOCPP_BIN`.
+what was installed with `konchi model status audiocpp`. To use a binary you
+built or downloaded yourself, set `KONCHI_AUDIOCPP_BIN`.
 
 Verify with `GET /api/health`. Its `device` field shows the backend the binary
 picked.
 
 ## How the native binaries are managed
 
-Soundbox ships and vendors no native binaries. It uses three, each fetched
+Konchi ships and vendors no native binaries. It uses three, each fetched
 from upstream GitHub releases on demand and cached under your data directory:
 
 | Binary | Upstream | What it is | When it's fetched |
 |---|---|---|---|
-| `audiocpp_cli` | [`0xShug0/audio.cpp`](https://github.com/0xShug0/audio.cpp) | the audio inference runtime | `soundbox model install audiocpp` |
-| `llama-server` | [`ggml-org/llama.cpp`](https://github.com/ggml-org/llama.cpp) | the optional prompt assistant | `soundbox model install llm`, and only when the prompt assistant is set to *managed* |
+| `audiocpp_cli` | [`0xShug0/audio.cpp`](https://github.com/0xShug0/audio.cpp) | the audio inference runtime | `konchi model install audiocpp` |
+| `llama-server` | [`ggml-org/llama.cpp`](https://github.com/ggml-org/llama.cpp) | the optional prompt assistant | `konchi model install llm`, and only when the prompt assistant is set to *managed* |
 | `sd-server` | [`leejet/stable-diffusion.cpp`](https://github.com/leejet/stable-diffusion.cpp) | the optional artwork generator | when you turn artwork on in the setup wizard or Settings → Generation (`POST /api/image/engine/install`) |
 
 Nothing is downloaded until you ask for it, and nothing is installed
@@ -83,15 +83,15 @@ are running.
 Downloads are checksum-verified before anything is unpacked: against GitHub's
 SHA-256 digest for the asset, and against the release's checksum manifest when
 it publishes one. An asset covered by neither is refused. To install such a
-release anyway, set `SOUNDBOX_ALLOW_UNVERIFIED_BINARIES=1` for that run, or
+release anyway, set `KONCHI_ALLOW_UNVERIFIED_BINARIES=1` for that run, or
 download the binary yourself and point the environment override below at it.
 
 ### Resolution order
 
-When Soundbox needs one of these binaries it checks, in order:
+When Konchi needs one of these binaries it checks, in order:
 
-1. the environment override (`SOUNDBOX_AUDIOCPP_BIN`,
-   `SOUNDBOX_LLAMA_SERVER_BIN` or `SOUNDBOX_SD_SERVER_BIN`), an absolute path
+1. the environment override (`KONCHI_AUDIOCPP_BIN`,
+   `KONCHI_LLAMA_SERVER_BIN` or `KONCHI_SD_SERVER_BIN`), an absolute path
    to a binary of yours;
 2. the managed install under `<data dir>/bin/`;
 3. `PATH`;
@@ -100,31 +100,31 @@ When Soundbox needs one of these binaries it checks, in order:
    a `brew install`ed binary would otherwise be missed.
 
 The managed install is checked before `PATH` so that a binary you installed
-through Soundbox wins over a stray system-wide copy.
+through Konchi wins over a stray system-wide copy.
 
 The backend is detected per machine (Metal on Apple silicon, CUDA where
 `nvidia-smi` answers, Vulkan or CPU otherwise) and decides which release asset
-is downloaded. Override the detection with `SOUNDBOX_AUDIOCPP_BACKEND`,
-`SOUNDBOX_LLAMA_SERVER_BACKEND` or `SOUNDBOX_SD_SERVER_BACKEND`, or pin the
+is downloaded. Override the detection with `KONCHI_AUDIOCPP_BACKEND`,
+`KONCHI_LLAMA_SERVER_BACKEND` or `KONCHI_SD_SERVER_BACKEND`, or pin the
 download with `--backend` and `--version` on `install`. See
 [AUDIOCPP.md](AUDIOCPP.md#choosing-a-backend).
 
 ### Checking and installing
 
 ```bash
-soundbox model status audiocpp                 # version, backend, resolved path
-soundbox model install audiocpp
-soundbox model install audiocpp --backend cuda --version 0.6.1
+konchi model status audiocpp                 # version, backend, resolved path
+konchi model install audiocpp
+konchi model install audiocpp --backend cuda --version 0.6.1
 
-soundbox model status llm
-soundbox model install llm                     # engine plus the default model
-soundbox model install llm --engine-only       # engine only, no weights
+konchi model status llm
+konchi model install llm                     # engine plus the default model
+konchi model install llm --engine-only       # engine only, no weights
 ```
 
 `status` shows whether the binary is managed or your own. A managed install
 reports its version. A bring-your-own binary reports `external (env)` or
-`external (PATH)` with no version, since Soundbox did not install it.
-`soundbox model status llm` also lists the prompt-assistant models and whether
+`external (PATH)` with no version, since Konchi did not install it.
+`konchi model status llm` also lists the prompt-assistant models and whether
 each is downloaded.
 
 For the bring-your-own routes (prebuilt packages, the Homebrew tap, building
@@ -133,9 +133,9 @@ from source), see [AUDIOCPP.md](AUDIOCPP.md#using-a-binary-you-already-have).
 ## Step 2: models
 
 ```bash
-soundbox list                                            # the catalog
-soundbox pull audiocpp-stable-audio-3-sfx                 # download weights
-soundbox run  audiocpp-stable-audio-3-sfx "glass breaking" --out test.wav
+konchi list                                            # the catalog
+konchi pull audiocpp-stable-audio-3-sfx                 # download weights
+konchi run  audiocpp-stable-audio-3-sfx "glass breaking" --out test.wav
 ```
 
 You can also use the Models page in the app, which has the same catalog and
@@ -143,7 +143,7 @@ downloads. The audio models need no account. See Step 3 for the one download
 that does.
 
 Each model is an audio.cpp package of GGUF files (the catalog entry's
-`weights_glob` names them). Soundbox downloads only those files, not the whole
+`weights_glob` names them). Konchi downloads only those files, not the whole
 Hugging Face repo.
 
 The catalogue has two tiers. **Listed** models appear in the picker and are
@@ -159,7 +159,7 @@ open use of the weights but forbid selling what the model makes.
 The audio models come from audio.cpp's GGUF repo (`audio-cpp/audio.cpp-gguf`),
 which is not gated. Their licences still apply, but there is nothing to sign.
 The optional artwork model, Stable Diffusion 3.5 Medium, is gated on Hugging
-Face, as is any custom catalog entry pointing at a gated repo. Soundbox cannot
+Face, as is any custom catalog entry pointing at a gated repo. Konchi cannot
 accept the terms for you.
 
 1. Sign in to Hugging Face and accept the licence on the model page
@@ -167,7 +167,7 @@ accept the terms for you.
 2. Create a **read** token at <https://huggingface.co/settings/tokens>.
 3. Paste it into Settings in the app (or set `HF_TOKEN` in your environment).
 
-The token is stored in `~/.soundbox/settings.json` and is never returned by
+The token is stored in `~/.konchi/settings.json` and is never returned by
 the API. `GET /api/settings` reports only the boolean `hf_token_set`.
 
 ## Optional extras
@@ -183,7 +183,7 @@ returns 501 and WAV still works.
 ## Where things go
 
 ```
-~/.soundbox/
+~/.konchi/
   soundbox.db     library index
   sounds/         generated WAVs (move this one on its own from Settings)
   cache/          mp3 transcodes
@@ -191,12 +191,12 @@ returns 501 and WAV still works.
   bin/audiocpp/   the audio.cpp runtime, one directory per version
   bin/llama/      the prompt-assistant engine, same layout
   bin/sd/         the artwork engine, same layout
-  soundbox-<port>.log   the server log (rotated)
+  konchi-<port>.log   the server log (rotated)
   settings.json   settings, including the HF token
 ```
 
 To uninstall, delete that folder. Override the location with
-`SOUNDBOX_DATA_DIR` or `soundbox --data-dir`. You can move the folder safely:
+`KONCHI_DATA_DIR` or `konchi --data-dir`. You can move the folder safely:
 downloaded weights are picked up in the new place, and an interrupted download
 resumes.
 
@@ -219,7 +219,7 @@ and open <http://localhost:17494>. The audio.cpp runtime is already in the
 image, so skip Step 1: download a model from the Models page, or
 
 ```bash
-docker compose exec soundbox soundbox pull audiocpp-stable-audio-3-sfx
+docker compose exec konchi konchi pull audiocpp-stable-audio-3-sfx
 ```
 
 That pulls the prebuilt image, `ghcr.io/hamsanders/soundbox:latest`. Each
@@ -234,12 +234,12 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 Without Compose:
 
 ```bash
-docker run -d --name soundbox -p 127.0.0.1:17494:17494 \
+docker run -d --name konchi -p 127.0.0.1:17494:17494 \
   -v soundbox-data:/data -v soundbox-models:/data/models \
   ghcr.io/hamsanders/soundbox:latest
 ```
 
-or build it yourself with `docker build -t soundbox .` and run `soundbox` in
+or build it yourself with `docker build -t konchi .` and run `konchi` in
 place of the image name.
 
 **No authentication.** The server has no login of any kind. Anyone who can
@@ -251,7 +251,7 @@ nginx with basic auth, Authelia, Authentik, a Tailscale/WireGuard-only
 listener — and do not publish `0.0.0.0:17494` on a network you do not
 control.
 
-**Volumes.** The container's `/data` is the whole of `~/.soundbox` (see
+**Volumes.** The container's `/data` is the whole of `~/.konchi` (see
 [Where things go](#where-things-go)); `/data/models` is the weights, mounted
 separately so tens of gigabytes can live on another disk. The container runs
 as uid 1000. Named volumes just work; with host folders, create them first and
@@ -263,15 +263,15 @@ and the server cannot write to it.
 from the published port. It logs a warning about binding beyond loopback on
 every start; that is expected here, and is the reason for the paragraph above.
 
-**`SOUNDBOX_ALLOWED_HOSTS` and the MCP endpoint.** `/mcp` checks the `Host`
+**`KONCHI_ALLOWED_HOSTS` and the MCP endpoint.** `/mcp` checks the `Host`
 header (and `Origin`, when a browser sends one) against loopback and answers
 **403** to anything else, so a web page cannot reach your server through DNS
 rebinding. `http://localhost:17494/mcp` from the Docker host passes as is.
 Reach it by any other name — a LAN IP, a proxy hostname — and that name has
-to be listed in `SOUNDBOX_ALLOWED_HOSTS`:
+to be listed in `KONCHI_ALLOWED_HOSTS`:
 
 ```bash
--e SOUNDBOX_ALLOWED_HOSTS=soundbox.example.lan,192.168.1.20:17494
+-e KONCHI_ALLOWED_HOSTS=konchi.example.lan,192.168.1.20:17494
 ```
 
 A bare `host` matches that name on any port; `host:port` matches only that
@@ -290,18 +290,18 @@ Forbidden host** to a request whose `Host` header is not `localhost`,
 authentication, so anything you open up should sit behind a proxy that has
 some.
 
-**Built app (`soundbox`, the desktop app) behind Caddy or nginx.** Keep the
+**Built app (`konchi`, the desktop app) behind Caddy or nginx.** Keep the
 server on `127.0.0.1` and list the name the proxy forwards as `Host`:
 
 ```bash
-SOUNDBOX_ALLOWED_HOSTS=soundbox.example.lan soundbox
+KONCHI_ALLOWED_HOSTS=konchi.example.lan konchi
 ```
 
 That one list feeds every check: the `Host` allowlist for the UI and
 `/api/*`, the MCP endpoint's `Host` check, and the trusted browser origins
 (CORS and the MCP `Origin` check). A bare `host` matches that name on any
 port; `host:port` matches only that port, so write
-`soundbox.example.lan:8443` to accept nothing else. Binding a specific address
+`konchi.example.lan:8443` to accept nothing else. Binding a specific address
 with `--host 192.168.1.20` also accepts that address as `Host` for the UI and
 `/api/*`, but `/mcp` still wants it listed.
 
@@ -309,20 +309,20 @@ with `--host 192.168.1.20` also accepts that address as `Host` for the UI and
 `/api`, `/mcp`, `/files` and `/artwork` to the server, which stays on
 `127.0.0.1`. Two variables open it up:
 
-- `SOUNDBOX_DEV_HOST` is the address Vite listens on (`0.0.0.0` for every
+- `KONCHI_DEV_HOST` is the address Vite listens on (`0.0.0.0` for every
   interface, or one LAN IP). Unset, Vite stays on localhost. `scripts/dev.mjs`
   warns when it is set to anything else.
-- `SOUNDBOX_ALLOWED_HOSTS` is also handed to Vite's `server.allowedHosts`
+- `KONCHI_ALLOWED_HOSTS` is also handed to Vite's `server.allowedHosts`
   (ports dropped), so Vite stops answering "Blocked request" for those names,
   and the server trusts them as origins.
 
 ```bash
-SOUNDBOX_DEV_HOST=0.0.0.0 SOUNDBOX_ALLOWED_HOSTS=soundbox.example.lan npm run dev
+KONCHI_DEV_HOST=0.0.0.0 KONCHI_ALLOWED_HOSTS=konchi.example.lan npm run dev
 ```
 
-Behind a proxy on the same machine, `SOUNDBOX_ALLOWED_HOSTS` alone is enough;
+Behind a proxy on the same machine, `KONCHI_ALLOWED_HOSTS` alone is enough;
 point the proxy at `127.0.0.1:5174`. Vite accepts IP addresses as `Host` on
-its own, so a LAN IP only needs `SOUNDBOX_DEV_HOST`.
+its own, so a LAN IP only needs `KONCHI_DEV_HOST`.
 
 **NVIDIA GPUs.** The default image is CPU-only and runs anywhere (amd64, and
 arm64 when built from source). For CUDA, install the
@@ -352,10 +352,10 @@ docker run -d --gpus all -p 127.0.0.1:17494:17494 \
 or build it:
 
 ```bash
-docker build -t soundbox:cuda \
+docker build -t konchi:cuda \
   --build-arg AUDIOCPP_TAG=full-cuda12 --build-arg AUDIOCPP_BACKEND=cuda .
 docker run -d --gpus all -p 127.0.0.1:17494:17494 \
-  -v soundbox-data:/data -v soundbox-models:/data/models soundbox:cuda
+  -v soundbox-data:/data -v soundbox-models:/data/models konchi:cuda
 ```
 
 `full-cuda12` is built on CUDA 12.9 and needs a driver that supports it
@@ -368,9 +368,9 @@ CUDA runtime; the CPU image is about 3.5 GB. `full-vulkan` with
 **How the image is built.** It starts from
 [audio.cpp's own published images](https://github.com/0xShug0/audio.cpp/blob/main/docs/docker.md)
 (`ghcr.io/0xshug0/audio.cpp:full-<backend>`), which carry `audiocpp_cli`, its
-backend libraries and ffmpeg, and adds Node and Soundbox on top.
-`SOUNDBOX_AUDIOCPP_BIN` points at that binary, so `soundbox model install
-audiocpp` is never needed — and `SOUNDBOX_AUDIOCPP_BACKEND` is set from the
+backend libraries and ffmpeg, and adds Node and Konchi on top.
+`KONCHI_AUDIOCPP_BIN` points at that binary, so `konchi model install
+audiocpp` is never needed — and `KONCHI_AUDIOCPP_BACKEND` is set from the
 build arg rather than detected, so a CPU image given `--gpus` does not ask its
 binary for a CUDA backend it lacks. Upstream's tags move daily; pass a dated
 one (`--build-arg AUDIOCPP_TAG=full-cuda12-<date>-<sha>`) for a reproducible
@@ -380,13 +380,13 @@ point the assistant at an external OpenAI-compatible endpoint instead.
 ## Windows notes
 
 **Keep the data directory path short.** The Hugging Face cache layout adds
-about 130 characters to `SOUNDBOX_DATA_DIR`, and Windows caps paths at 260
+about 130 characters to `KONCHI_DATA_DIR`, and Windows caps paths at 260
 unless long paths are enabled. Past that limit a download fails partway
 through with *"The system cannot find the path specified"*, even though the
-directory exists. Soundbox detects this and tells you. To fix it, do one of:
+directory exists. Konchi detects this and tells you. To fix it, do one of:
 
-- use a short data dir: `set SOUNDBOX_DATA_DIR=C:\soundbox` (the default
-  `%USERPROFILE%\.soundbox` is short enough for a normal username), or
+- use a short data dir: `set KONCHI_DATA_DIR=C:\konchi` (the default
+  `%USERPROFILE%\.konchi` is short enough for a normal username), or
 - enable long paths once, in an **admin** PowerShell, then reboot:
 
   ```powershell
@@ -399,11 +399,11 @@ Files already downloaded are kept. Move the folder and the download completes.
 ## Troubleshooting
 
 **Where the logs are.** Every run writes a rotating log file to
-`<data_dir>/soundbox-<port>.log` (3 x 10MB, so `.1`/`.2` may exist too)
-alongside the console output. `soundbox --data-dir` or `SOUNDBOX_DATA_DIR`
+`<data_dir>/konchi-<port>.log` (3 x 10MB, so `.1`/`.2` may exist too)
+alongside the console output. `konchi --data-dir` or `KONCHI_DATA_DIR`
 sets the location, and the server prints the exact path at startup. Every
 job-related line is tagged with its job id, so
-`grep <job-id> soundbox-17494.log` shows everything that happened in one
+`grep <job-id> konchi-17494.log` shows everything that happened in one
 generation. Without shell access, `GET /api/logs?lines=200` returns the tail
 of the same file as JSON.
 
@@ -417,7 +417,7 @@ with `GET /api/jobs` (or the log file) before assuming something is wrong.
 output device your browser is using has stopped consuming audio. The usual
 cause is a wireless headset that is off or out of range. Windows still lists
 the endpoint as present, so `play()` succeeds, the button flips to Pause, no
-error is raised, and the position never advances. Soundbox detects this and
+error is raised, and the position never advances. Konchi detects this and
 tells you. Go to **Settings → Playback device**, pick another output, and
 click **Play test tone** to confirm.
 
@@ -426,12 +426,12 @@ is not running. Vite is serving the frontend on 5174 but its proxy target on
 17494 is down. `npm run dev` from the repo root starts both. If you started
 Vite alone (`npm run dev:ui`), start the backend separately.
 
-**`soundbox model status audiocpp` says not installed.** Run
-`soundbox model install audiocpp`, or set `SOUNDBOX_AUDIOCPP_BIN` to a binary
+**`konchi model status audiocpp` says not installed.** Run
+`konchi model install audiocpp`, or set `KONCHI_AUDIOCPP_BIN` to a binary
 you built or downloaded yourself.
 
 **A model says Installed but Load fails.** The download was interrupted and
-the cache is partial. Click Download again; it resumes. (Soundbox writes a
+the cache is partial. Click Download again; it resumes. (Konchi writes a
 completion marker at the end of a download and does not mark a model
 installed without it, so this should be rare.)
 
@@ -443,41 +443,41 @@ its terms, or the token is missing. See step 3.
 
 **MCP client can't connect.** The endpoint is `http://127.0.0.1:17494/mcp`
 with no trailing slash. If you bound a non-loopback host with `--host`, also
-set `SOUNDBOX_ALLOWED_HOSTS=your.host` (or `your.host:port` to accept only that
+set `KONCHI_ALLOWED_HOSTS=your.host` (or `your.host:port` to accept only that
 port), or the MCP endpoint's DNS-rebinding check answers 403.
 
 **403 "Forbidden host" through a reverse proxy.** The proxy forwards a `Host`
-the server does not know. List it in `SOUNDBOX_ALLOWED_HOSTS`; see
+the server does not know. List it in `KONCHI_ALLOWED_HOSTS`; see
 [Reverse proxy or another machine](#reverse-proxy-or-another-machine).
 
 ## Environment variables
 
-Server-side variables are read by the process running `soundbox` (or
+Server-side variables are read by the process running `konchi` (or
 `npm run dev`, or the desktop shell, which passes its environment through).
 
 | Variable | Read by | What it does |
 |---|---|---|
-| `SOUNDBOX_DATA_DIR` | server | Install root. Default `~/.soundbox`; `--data-dir` does the same per run. |
-| `SOUNDBOX_AUDIOCPP_BIN` | server | Absolute path to an `audiocpp_cli` of yours; nothing is downloaded. |
-| `SOUNDBOX_LLAMA_SERVER_BIN` | server | Same, for `llama-server`. |
-| `SOUNDBOX_SD_SERVER_BIN` | server | Same, for `sd-server`. |
-| `SOUNDBOX_AUDIOCPP_BACKEND` | server | Force the audio.cpp backend instead of auto-detecting (`cuda`, `hip`, `metal`, `vulkan`, `cpu`). |
-| `SOUNDBOX_LLAMA_SERVER_BACKEND` | server | Same, for the `llama-server` download. |
-| `SOUNDBOX_SD_SERVER_BACKEND` | server | Same, for the `sd-server` download. |
-| `SOUNDBOX_ALLOW_UNVERIFIED_BINARIES` | server | `1` installs an engine archive that no published SHA-256 covers. Off by default; a checksum *mismatch* is refused regardless. |
-| `SOUNDBOX_ALLOWED_HOSTS` | server, Vite | Comma-separated `host` (any port) or `host:port` (that port only). Adds `Host` values the server accepts (UI, `/api/*` and `/mcp`) and trusted browser origins (CORS and the MCP `Origin` check); under `npm run dev` also Vite's `server.allowedHosts`. See [Reverse proxy or another machine](#reverse-proxy-or-another-machine) and [SECURITY.md](https://github.com/HamSanders/soundbox/blob/main/SECURITY.md). |
-| `SOUNDBOX_DEV_HOST` | `npm run dev`, Vite | Address the Vite dev server listens on (`0.0.0.0`, a LAN IP). Default localhost. The server stays on `127.0.0.1`. No authentication, so open it up only on a network you trust or behind a proxy that has some. |
-| `SOUNDBOX_LOG_LEVEL` | server | `debug`, `info` (default), `warning`, `error` or `critical`; `warn` works too. Used when `--log-level` isn't given, so it reaches `npm run dev`, Docker and the desktop app, none of which pass the flag. The startup banner shows the level in force; an unknown value logs a warning and runs at `info`. At `debug`, every request to the prompt assistant, artwork and custom endpoints is logged with its full URL, HTTP status and timing. Custom endpoints also log the body's field names. Keys, headers, prompts and lyrics are never logged. For the desktop app, set it as a user environment variable (Windows) or with `launchctl setenv` (macOS), then restart the app. |
+| `KONCHI_DATA_DIR` | server | Install root. Default `~/.konchi`; `--data-dir` does the same per run. |
+| `KONCHI_AUDIOCPP_BIN` | server | Absolute path to an `audiocpp_cli` of yours; nothing is downloaded. |
+| `KONCHI_LLAMA_SERVER_BIN` | server | Same, for `llama-server`. |
+| `KONCHI_SD_SERVER_BIN` | server | Same, for `sd-server`. |
+| `KONCHI_AUDIOCPP_BACKEND` | server | Force the audio.cpp backend instead of auto-detecting (`cuda`, `hip`, `metal`, `vulkan`, `cpu`). |
+| `KONCHI_LLAMA_SERVER_BACKEND` | server | Same, for the `llama-server` download. |
+| `KONCHI_SD_SERVER_BACKEND` | server | Same, for the `sd-server` download. |
+| `KONCHI_ALLOW_UNVERIFIED_BINARIES` | server | `1` installs an engine archive that no published SHA-256 covers. Off by default; a checksum *mismatch* is refused regardless. |
+| `KONCHI_ALLOWED_HOSTS` | server, Vite | Comma-separated `host` (any port) or `host:port` (that port only). Adds `Host` values the server accepts (UI, `/api/*` and `/mcp`) and trusted browser origins (CORS and the MCP `Origin` check); under `npm run dev` also Vite's `server.allowedHosts`. See [Reverse proxy or another machine](#reverse-proxy-or-another-machine) and [SECURITY.md](https://github.com/HamSanders/soundbox/blob/main/SECURITY.md). |
+| `KONCHI_DEV_HOST` | `npm run dev`, Vite | Address the Vite dev server listens on (`0.0.0.0`, a LAN IP). Default localhost. The server stays on `127.0.0.1`. No authentication, so open it up only on a network you trust or behind a proxy that has some. |
+| `KONCHI_LOG_LEVEL` | server | `debug`, `info` (default), `warning`, `error` or `critical`; `warn` works too. Used when `--log-level` isn't given, so it reaches `npm run dev`, Docker and the desktop app, none of which pass the flag. The startup banner shows the level in force; an unknown value logs a warning and runs at `info`. At `debug`, every request to the prompt assistant, artwork and custom endpoints is logged with its full URL, HTTP status and timing. Custom endpoints also log the body's field names. Keys, headers, prompts and lyrics are never logged. For the desktop app, set it as a user environment variable (Windows) or with `launchctl setenv` (macOS), then restart the app. |
 | `PORT` | server, Vite | The Vite dev server's port (default 5174); the server also trusts it as a dev origin. |
 | `HF_TOKEN` / `HUGGING_FACE_HUB_TOKEN` | server | Hugging Face token for gated models, used when none is saved in Settings. |
-| `HF_HOME` | server | Hugging Face cache location. Left alone if set; otherwise Soundbox points it at `<data dir>/models`. |
+| `HF_HOME` | server | Hugging Face cache location. Left alone if set; otherwise Konchi points it at `<data dir>/models`. |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | server | OpenTelemetry collector for MCP call traces and metrics. Wins over the Settings value. |
-| `SOUNDBOX_URL` | stdio MCP bridge | Where the running server is. Default `http://127.0.0.1:17494`. |
-| `SOUNDBOX_PORT` | `npm run dev`, Vite | Port `scripts/dev.mjs` starts the server on, and the port Vite proxies `/api`, `/mcp`, `/files` and `/artwork` to. Default 17494. The `soundbox` CLI itself takes `--port`. |
-| `SOUNDBOX_NODE` | desktop shell | Node interpreter to run the built server with, if `node` is not on `PATH`. |
-| `SOUNDBOX_PROJECT_ROOT` | desktop shell | Path to the checkout, if the shell cannot find it from its own location. |
+| `KONCHI_URL` | stdio MCP bridge | Where the running server is. Default `http://127.0.0.1:17494`. |
+| `KONCHI_PORT` | `npm run dev`, Vite | Port `scripts/dev.mjs` starts the server on, and the port Vite proxies `/api`, `/mcp`, `/files` and `/artwork` to. Default 17494. The `konchi` CLI itself takes `--port`. |
+| `KONCHI_NODE` | desktop shell | Node interpreter to run the built server with, if `node` is not on `PATH`. |
+| `KONCHI_PROJECT_ROOT` | desktop shell | Path to the checkout, if the shell cannot find it from its own location. |
 | `VITE_MOCK` | app build | `1` runs the UI against the in-browser fake backend (`npm run dev:mock` sets it). |
 | `VITE_REPO_URL` | app build | Repository URL used in the app's links. Default `https://github.com/HamSanders/soundbox`. |
 | `VITE_SITE_ORIGIN` | app and site builds | Absolute origin for canonical URLs and the site's RSS feed. |
 
-The server sets `SOUNDBOX_LOG_FILE` for its own use; you do not need to.
+The server sets `KONCHI_LOG_FILE` for its own use; you do not need to.

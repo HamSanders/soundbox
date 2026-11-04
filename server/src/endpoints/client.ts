@@ -30,7 +30,7 @@ import { type Audio, decodeWav } from "../audio/dsp.js";
 import { CancelledJob, ModelError } from "../errors.js";
 import { getLogger } from "../logging.js";
 
-const log = getLogger("soundbox.endpoints");
+const log = getLogger("konchi.endpoints");
 
 /** Long: Privateer's docs warn that a 60s client default abandons a track
  *  already paid for, and a long ACE-Step render on a homelab GPU takes minutes. */
@@ -207,7 +207,7 @@ export function decodePcm16(bytes: Buffer, sampleRate: number): EndpointAudio {
  * to find their index, which a pipe cannot do.
  */
 async function ffmpegToWav(bytes: Buffer): Promise<Buffer> {
-  const dir = await mkdtemp(join(tmpdir(), "soundbox-endpoint-"));
+  const dir = await mkdtemp(join(tmpdir(), "konchi-endpoint-"));
   const src = join(dir, "in");
   const dst = join(dir, "out.wav");
   try {

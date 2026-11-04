@@ -27,7 +27,7 @@ import {
 let base: string;
 
 beforeEach(async () => {
-  base = await mkdtemp(join(tmpdir(), "soundbox-profiles-"));
+  base = await mkdtemp(join(tmpdir(), "konchi-profiles-"));
 });
 
 afterAll(async () => {

@@ -16,7 +16,7 @@
  * Where a sample's audio actually came from.
  *
  * This exists so the page can never quietly imply a model made something it
- * did not. `"model"` samples are real renders from a named Soundbox model and
+ * did not. `"model"` samples are real renders from a named Konchi model and
  * carry that model's id and licence consequences. `"placeholder"` samples are
  * stand-ins used while a category is being built out — the template labels them
  * as such, and a category with any placeholder left in it is not publishable.

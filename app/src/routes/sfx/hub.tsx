@@ -150,7 +150,7 @@ export function SfxHubPage() {
   return (
     <div className="bg-background text-foreground min-h-svh">
       <SeoHead
-        title={`AI sound effects generated locally: ${TOTAL_SAMPLES} samples with prompts | Soundbox`}
+        title={`AI sound effects generated locally: ${TOTAL_SAMPLES} samples with prompts | Konchi`}
         description={`${TOTAL_SAMPLES} sound effects across ${PUBLISHED.length} categories, each with the exact prompt that made it. Download the MP3 or generate your own on your machine, with no account.`}
         path="/sfx"
       />
@@ -168,10 +168,10 @@ export function SfxHubPage() {
           </p>
           <div className="mt-6 flex flex-wrap gap-2">
             <Button asChild>
-              <MarketingLink href={GENERATOR_HREF}>Download Soundbox</MarketingLink>
+              <MarketingLink href={GENERATOR_HREF}>Download Konchi</MarketingLink>
             </Button>
             <Button variant="outline" asChild>
-              <MarketingLink href={WELCOME_HREF}>What Soundbox is</MarketingLink>
+              <MarketingLink href={WELCOME_HREF}>What Konchi is</MarketingLink>
             </Button>
           </div>
 

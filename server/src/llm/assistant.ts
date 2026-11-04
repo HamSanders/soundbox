@@ -1,5 +1,5 @@
 /**
- * The guide: a conversation that explains Soundbox and points you at it.
+ * The guide: a conversation that explains Konchi and points you at it.
  *
  * This used to be the assistant that built a prompt with you and handed back
  * a request to run. It is not any more, and the split is the point. Doing
@@ -8,7 +8,7 @@
  * it does no CRUD at all: it creates nothing, edits nothing, deletes nothing
  * and proposes no work. Two jobs that were fighting for one prompt.
  *
- * What it gained instead is the manual. Soundbox ships a README and eleven
+ * What it gained instead is the manual. Konchi ships a README and eleven
  * files in `docs/`, and every question people actually asked the old
  * assistant — which model can I ship, what is a stem, how do I connect an
  * agent, where is the licence — is answered in there in prose someone wrote
@@ -359,7 +359,7 @@ export function buildAssistantMessages(
   const routes = SITE_MAP.map((r) => `  ${r.to} — ${r.label}: ${r.what}`).join("\n");
 
   const system =
-    "You are the guide inside Soundbox, a local app that makes sound effects, " +
+    "You are the guide inside Konchi, a local app that makes sound effects, " +
     "music and speech with open-weight models that run on this machine. You " +
     "explain how it works and point people at the part of it they need.\n" +
     "\n" +
@@ -462,7 +462,7 @@ export function buildAssistantMessages(
 export function buildOpenerMessages(ctx: AssistantContext): ChatMessage[] {
   const cards = ctx.models.length ? ctx.models.map(describeCard).join("\n") : "  (none installed)";
   const system =
-    "You write conversation starters for the guide inside Soundbox, a local " +
+    "You write conversation starters for the guide inside Konchi, a local " +
     "app that makes sound effects, music and speech with open-weight models " +
     "on this machine. You are not answering a question. You are offering " +
     "four things a person might tap to begin talking.\n" +

@@ -1,6 +1,6 @@
 # Generating sound
 
-Every sound in Soundbox is made from a prompt, a model, a few parameters, and
+Every sound in Konchi is made from a prompt, a model, a few parameters, and
 a job you can watch. This page follows one generation through, then covers the
 parameters that change the result.
 
@@ -12,7 +12,7 @@ parameters that change the result.
 4. The takes land in your library, each with the prompt and seed that made it.
 
 Nothing is uploaded. The model runs on your machine, and the WAV is written to
-`~/.soundbox/sounds` before you hear it.
+`~/.konchi/sounds` before you hear it.
 
 ## Writing a prompt
 
@@ -42,15 +42,15 @@ LLM, is optional, and tells you when it is unavailable.
 There are three ways to supply the LLM, all of which keep your prompts on
 your own setup:
 
-- Let Soundbox install `llama-server` and a small GGUF (Models page, or
-  `soundbox model install llm`).
-- Point it at a `llama-server` you built, with `SOUNDBOX_LLAMA_SERVER_BIN`.
+- Let Konchi install `llama-server` and a small GGUF (Models page, or
+  `konchi model install llm`).
+- Point it at a `llama-server` you built, with `KONCHI_LLAMA_SERVER_BIN`.
 - Set the mode to *external* and give it any OpenAI-compatible base URL
   (Ollama, LM Studio, vLLM, LocalAI, a hosted endpoint). With or without
-  `/v1` both work, since Soundbox adds `/v1/chat/completions` without
+  `/v1` both work, since Konchi adds `/v1/chat/completions` without
   doubling it. An error names the full URL it tried.
 
-`soundbox model status llm` shows which one is live.
+`konchi model status llm` shows which one is live.
 
 Music tracks can also carry generated cover art, and saved voices generated
 avatars; see [ARTWORK.md](ARTWORK.md). Both are off by default. The instrument
@@ -160,7 +160,7 @@ curl -N http://127.0.0.1:17494/api/jobs/<job_id>/events
 ```
 
 Every endpoint and field is in the [API reference](./API.md). To drive
-Soundbox from an agent, use [MCP](./MCP.md): the same operations, with schemas
+Konchi from an agent, use [MCP](./MCP.md): the same operations, with schemas
 the model can read.
 
 ## When it goes wrong

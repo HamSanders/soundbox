@@ -12,15 +12,15 @@ draft: false
 
 If you've tried to run two open-weight audio models on one machine, you know
 how it goes: two repos, two `requirements.txt` files, and two different ideas
-about which torch build to use. In Soundbox every model runs through one native
+about which torch build to use. In Konchi every model runs through one native
 binary, and adding a model means adding a catalogue entry, not building an
 environment.
 
 This post covers what the old way cost, what replaced it, and two install
 decisions and the failures they avoid. It doesn't cover why only one model
 stays in VRAM (see [one model at a time](/blog/one-model-at-a-time)), driving
-Soundbox from an agent (see
-[point your agent at Soundbox](/blog/point-your-agent-at-soundbox)), or which
+Konchi from an agent (see
+[point your agent at Konchi](/blog/point-your-agent-at-soundbox)), or which
 model is best at what.
 
 ## Two kinds of model
@@ -57,7 +57,7 @@ It implements 50+ audio model families behind one CLI, with CUDA, HIP, Metal,
 Vulkan and CPU backends. There's no Python in the inference path, so there's no
 torch to pin.
 
-Soundbox's base install has no model runtimes in it: Node 20+, `npm install`,
+Konchi's base install has no model runtimes in it: Node 20+, `npm install`,
 and no GPU-specific wheel to match to your hardware. The backend is detected
 per machine (Metal on Apple silicon, CUDA where `nvidia-smi` responds, Vulkan
 or CPU otherwise), and that picks which release asset to download. The server
@@ -73,8 +73,8 @@ You can check the "no Python" claim without installing the app. The CLI runs
 with no server and no web app:
 
 ```bash
-soundbox pull audiocpp-stable-audio-3-sfx
-soundbox run  audiocpp-stable-audio-3-sfx "glass breaking on concrete" --out test.wav
+konchi pull audiocpp-stable-audio-3-sfx
+konchi run  audiocpp-stable-audio-3-sfx "glass breaking on concrete" --out test.wav
 ```
 
 That's one process writing a WAV. If a hidden sidecar process existed, you'd
@@ -89,7 +89,7 @@ in `<data dir>/models/custom.json` is loaded alongside the shipped catalogue in
 the same format. A quantised version of your own fine-tune is a file you write,
 not a fork you maintain.
 
-![The Soundbox Models table: each model with its licence badge, VRAM estimate and installed status](/blog/models-page.png)
+![The Konchi Models table: each model with its licence badge, VRAM estimate and installed status](/blog/models-page.png)
 
 **Listed** models appear in the picker. **Extras** are catalogued but hidden
 until you enable them on the Models page. Enabling one adds it to
@@ -98,7 +98,7 @@ not code.
 
 ## Two install decisions
 
-Soundbox doesn't ship or vendor any native binaries. `audiocpp_cli` is
+Konchi doesn't ship or vendor any native binaries. `audiocpp_cli` is
 downloaded from upstream GitHub releases the first time it's needed and cached
 in your data directory, not in the checkout.
 
@@ -110,11 +110,11 @@ manifest. If the manifest leaves out your platform, the installer warns and
 installs anyway, because refusing would make the automatic install less
 reliable than downloading it by hand.
 
-**Why `PATH` comes last.** When Soundbox needs the binary, it checks the
-`SOUNDBOX_AUDIOCPP_BIN` override first, then the managed install in
+**Why `PATH` comes last.** When Konchi needs the binary, it checks the
+`KONCHI_AUDIOCPP_BIN` override first, then the managed install in
 `<data dir>/bin/`, then `PATH`. The managed install comes before `PATH` so that
 after you run the installer, you get what you just installed, not an old
-system-wide copy from a `brew install` months ago. `soundbox model status
+system-wide copy from a `brew install` months ago. `konchi model status
 audiocpp` reports which one it found and where.
 
 Caching follows the same thinking. Runtimes live in `bin/` next to `models/`,
@@ -130,7 +130,7 @@ what the model makes.
 
 Speed. CPU works, but it takes minutes. In practice you need an NVIDIA GPU with
 8 GB. If a generation is much slower than expected, it has usually fallen back
-to CPU without telling you, and `soundbox model status audiocpp` will show it.
+to CPU without telling you, and `konchi model status audiocpp` will show it.
 
 Testing. Four models are verified end to end and the rest are untested, which
 is what the Status column shows. Because every model installs the same way,

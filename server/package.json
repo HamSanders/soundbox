@@ -1,9 +1,9 @@
 {
-  "name": "@soundbox/server",
+  "name": "@konchi/server",
   "version": "0.4.1",
   "private": true,
   "type": "module",
-  "description": "Soundbox backend: HTTP API + MCP server driving audio.cpp",
+  "description": "Konchi backend: HTTP API + MCP server driving audio.cpp",
   "license": "MIT",
   "homepage": "https://github.com/HamSanders/soundbox#readme",
   "bugs": {
@@ -15,6 +15,8 @@
     "directory": "server"
   },
   "bin": {
+    "konchi": "./dist/cli.js",
+    "konchi-mcp": "./dist/mcp/stdio.js",
     "soundbox": "./dist/cli.js",
     "soundbox-mcp": "./dist/mcp/stdio.js"
   },

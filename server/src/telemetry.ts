@@ -1,11 +1,11 @@
 /**
- * MCP call telemetry: the record of what agents did through Soundbox.
+ * MCP call telemetry: the record of what agents did through Konchi.
  *
  * Three consumers, one source of truth:
  *
  * 1. **The Agents page.** Every tool call is written to the `mcp_calls` table
  *    (see `db.ts`) and pushed to live subscribers over SSE, so the app can show
- *    "Claude Code called soundbox.generate 4s ago → 2 sounds" the moment it
+ *    "Claude Code called konchi.generate 4s ago → 2 sounds" the moment it
  *    happens, and still show it tomorrow.
  * 2. **The log file.** One structured line per call, so grepping the server log
  *    gives the same trail without the app.
@@ -32,10 +32,10 @@ import { getLogger } from "./logging.js";
 import type { McpCall, OtelStatus } from "./schemas.js";
 
 // Every MCP call gets one structured line here — same file the jobs queue
-// writes to, same reason: `grep mcp soundbox.log` and the Activity page's
+// writes to, same reason: `grep mcp konchi.log` and the Activity page's
 // tail both depend on this actually reaching the rotating file rather than
 // console.info, which doesn't.
-const _logger = getLogger("soundbox.telemetry");
+const _logger = getLogger("konchi.telemetry");
 const log = { info: (msg: string) => _logger.info(msg), warn: (msg: string) => _logger.warning(msg) };
 
 /** A client counts as "active" if it made a call within this window. */
@@ -46,7 +46,7 @@ const ARG_MAX = 300;
 /** Retention for the persisted call log. */
 const KEEP_CALLS = 5000;
 
-const SERVICE_NAME = "soundbox";
+const SERVICE_NAME = "konchi";
 
 /** The slice of the database this module needs, so telemetry can be constructed
  *  with any conforming store (and tested with a fake). */
@@ -181,14 +181,14 @@ export class OtelBridge {
       this.meterProvider = meterProvider;
       const meter = meterProvider.getMeter(SERVICE_NAME, VERSION);
       this.metrics = {
-        callCounter: meter.createCounter("soundbox.mcp.calls", {
+        callCounter: meter.createCounter("konchi.mcp.calls", {
           description: "Number of MCP tool calls",
         }),
-        durationHistogram: meter.createHistogram("soundbox.mcp.call.duration", {
+        durationHistogram: meter.createHistogram("konchi.mcp.call.duration", {
           description: "MCP tool call duration",
           unit: "ms",
         }),
-        soundsCounter: meter.createCounter("soundbox.mcp.sounds_generated", {
+        soundsCounter: meter.createCounter("konchi.mcp.sounds_generated", {
           description: "Sounds produced by MCP tool calls",
         }),
       };
@@ -261,17 +261,17 @@ export class CallRecord {
 
   setJob(jobId: string): void {
     this.call.job_id = jobId;
-    this.span.setAttribute("soundbox.job.id", jobId);
+    this.span.setAttribute("konchi.job.id", jobId);
   }
 
   setSounds(soundIds: string[]): void {
     this.call.sound_ids = [...soundIds];
-    this.span.setAttribute("soundbox.sound.count", soundIds.length);
-    this.span.setAttribute("soundbox.sound.ids", soundIds.join(","));
+    this.span.setAttribute("konchi.sound.count", soundIds.length);
+    this.span.setAttribute("konchi.sound.ids", soundIds.join(","));
   }
 
   setModel(modelId: string): void {
-    this.span.setAttribute("soundbox.model", modelId);
+    this.span.setAttribute("konchi.model", modelId);
   }
 
   elapsedMs(): number {
@@ -387,7 +387,7 @@ export class McpTelemetry {
         if (v !== null && v !== undefined) metricAttrs[k] = v;
       }
       metricAttrs.status = call.status;
-      metricAttrs["soundbox.model"] = String(call.args.model ?? "");
+      metricAttrs["konchi.model"] = String(call.args.model ?? "");
       this.otel.recordCall(metricAttrs, call.duration_ms, call.sound_ids.length);
       const client = `${clientName || "unknown"}${clientVersion ? `/${clientVersion}` : ""}`;
       log.info(

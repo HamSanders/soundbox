@@ -1,16 +1,16 @@
 ---
-name: soundbox-sound-pass
-description: Do a full "sound pass" on a project — read the code/design of a game, app, video or prototype, derive the list of sound events it needs, generate every one through the Soundbox MCP server, drop the files into the project and wire them up. Use when the user says "add sound to my game", "it needs SFX", "do an audio pass", "make all the sounds for this", or hands you a project with silent interactions.
+name: konchi-sound-pass
+description: Do a full "sound pass" on a project — read the code/design of a game, app, video or prototype, derive the list of sound events it needs, generate every one through the Konchi MCP server, drop the files into the project and wire them up. Use when the user says "add sound to my game", "it needs SFX", "do an audio pass", "make all the sounds for this", or hands you a project with silent interactions.
 ---
 
-# Soundbox: sound pass over a whole project
+# Konchi: sound pass over a whole project
 
 A sound pass is a batch job with judgement: find every moment that should make a
 sound, decide what it should sound like, generate it, and integrate it. Do it in
 that order — inventory before generation — so the set is coherent and the user
 can veto items before minutes of GPU time are spent.
 
-Requires the `soundbox-sfx` skill's rules for prompting and tool use; this skill
+Requires the `konchi-sfx` skill's rules for prompting and tool use; this skill
 is about the *process* around it.
 
 ## 1. Inventory
@@ -37,20 +37,20 @@ Ask the user to approve/edit the table (or proceed if they said "just do it").
 
 ## 2. Pre-flight
 
-- `soundbox.list_models` → pick the loaded model; flag `commercial_use` if
+- `konchi.list_models` → pick the loaded model; flag `commercial_use` if
   the project looks commercial.
-- `soundbox.list_sounds(q=…)` for anything generic (`click`, `whoosh`) — reuse.
+- `konchi.list_sounds(q=…)` for anything generic (`click`, `whoosh`) — reuse.
 
 ## 3. Generate
 
-Call `soundbox.generate` per row, in order, `tags=[<project-name>, <kind>]`.
+Call `konchi.generate` per row, in order, `tags=[<project-name>, <kind>]`.
 Sets: `variations=N`. Loops: ask for `steady`, `even`, `no events` in the prompt
 so the loop point isn't obvious. Report progress every few sounds — generation
 takes seconds to a minute each.
 
 Listen-by-proxy: you can't hear results, so check `duration_s` matches intent
 and re-run anything the model cut short. If a prompt errors, adjust per
-`soundbox-sfx` and retry once; then move on and list it as "needs a manual take".
+`konchi-sfx` and retry once; then move on and list it as "needs a manual take".
 
 ## 4. Integrate
 
@@ -76,4 +76,4 @@ and re-run anything the model cut short. If a prompt errors, adjust per
 
 Give the user: the final table with file paths, model + licence used, what was
 skipped and why, and how to regenerate any single item (prompt + seed are in
-the Soundbox library, tagged with the project name).
+the Konchi library, tagged with the project name).

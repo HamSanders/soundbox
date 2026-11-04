@@ -1,7 +1,7 @@
 /**
  * Real screenshots of the running app, switchable.
  *
- * Everything else on this site that looks like Soundbox is a drawing of it —
+ * Everything else on this site that looks like Konchi is a drawing of it —
  * `timeline-banner`, the `reveal-*` panels, `model-params-demo`. Those exist to
  * animate and to be interactive, which a screenshot cannot be, and they are
  * honest about being illustrations. But a visitor deciding whether to install
@@ -20,9 +20,9 @@
  *     `TangoFlux Base` and `AudioGen Medium` — Python-era models that are not in
  *     the audio.cpp catalog at all. A product shot naming models the /models page
  *     does not list is worse than no product shot.
- *   - The Agents page showed `uv run soundbox-mcp` as the stdio bridge command.
+ *   - The Agents page showed `uv run konchi-mcp` as the stdio bridge command.
  *     `uv` is Python tooling and had to go, but the fix is not `npx
- *     soundbox-mcp` either — `soundbox-mcp` is a private package, so npx
+ *     konchi-mcp` either — `konchi-mcp` is a private package, so npx
  *     cannot resolve it, and `npm install` only links the bin into the
  *     checkout's own `node_modules/.bin`, off any editor's spawn `PATH`. The
  *     real command is by absolute path — `node
@@ -56,7 +56,7 @@ const SHOTS: Shot[] = [
     id: "library",
     label: "Library",
     src: "/product/library.png",
-    alt: "The Soundbox library: eight generated sounds in a list, each with a waveform, the prompt that made it, its model, seed, file size and age. Two rows carry a badge showing the agent that generated them.",
+    alt: "The Konchi library: eight generated sounds in a list, each with a waveform, the prompt that made it, its model, seed, file size and age. Two rows carry a badge showing the agent that generated them.",
     caption:
       "Everything generated, with the prompt, model and seed kept beside it. The badge on a row is the agent that made it.",
   },

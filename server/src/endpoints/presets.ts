@@ -8,7 +8,7 @@
  * form shows the template rather than hiding it behind the preset.
  *
  * Only servers people run themselves get a preset. A hosted, billed API can
- * still be added by hand — the template takes any URL — but Soundbox does not
+ * still be added by hand — the template takes any URL — but Konchi does not
  * promote one with a one-click entry.
  */
 

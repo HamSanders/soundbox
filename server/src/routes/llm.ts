@@ -13,11 +13,11 @@ import {
   studioCommandRequestSchema,
 } from "../schemas.js";
 import { engineInstallRequestSchema } from "../models/releaseInstall.js";
-import type { SoundboxService } from "../service.js";
+import type { KonchiService } from "../service.js";
 
 type ModelParams = { Params: { model_id: string } };
 
-export function registerLlm(app: FastifyInstance, svc: SoundboxService): void {
+export function registerLlm(app: FastifyInstance, svc: KonchiService): void {
   app.post("/api/enhance", async (request) => {
     const req = enhanceRequestSchema.parse(request.body ?? {});
     const result = await svc.enhancePrompt({

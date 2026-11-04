@@ -10,7 +10,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { ClipboardPasteIcon, SparklesIcon, XIcon } from "lucide-react";
+import { ClipboardPasteIcon, ListPlusIcon, XIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -176,7 +176,7 @@ export function ScriptImportPanel({
             onClose();
           }}
         >
-          <SparklesIcon className="size-3.5" aria-hidden="true" />
+          <ListPlusIcon className="size-3.5" aria-hidden="true" />
           Add {n > 0 ? `${n} line${n === 1 ? "" : "s"}` : "lines"}
         </Button>
       </div>

@@ -132,7 +132,7 @@ export function useRecorder(): Recorder {
     // land here, and "this browser can't record" would be a lie.
     if (!window.isSecureContext) {
       setError(
-        "Recording needs a secure page. Open Soundbox on localhost (or over https) and try again.",
+        "Recording needs a secure page. Open Konchi on localhost (or over https) and try again.",
       );
       return;
     }

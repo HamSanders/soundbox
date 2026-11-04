@@ -24,7 +24,7 @@ import {
   voicePatchSchema,
   voiceSampleCreateSchema,
 } from "../schemas.js";
-import type { SoundboxService } from "../service.js";
+import type { KonchiService } from "../service.js";
 import { HttpError, MAX_UPLOAD_BYTES, boolQuery, strQuery } from "./helpers.js";
 
 type IdParams = { Params: { voice_id: string } };
@@ -40,7 +40,7 @@ async function decodeUpload(body: unknown): Promise<{ audio: dsp.Audio; sampleRa
   if (body.length > MAX_UPLOAD_BYTES) {
     throw new HttpError(413, "Reference clip is too large");
   }
-  const tmp = await mkdtemp(join(tmpdir(), "soundbox-voice-"));
+  const tmp = await mkdtemp(join(tmpdir(), "konchi-voice-"));
   try {
     const path = join(tmp, "upload.wav");
     await writeFile(path, body);
@@ -54,7 +54,7 @@ async function decodeUpload(body: unknown): Promise<{ audio: dsp.Audio; sampleRa
   }
 }
 
-export function registerVoices(app: FastifyInstance, svc: SoundboxService): void {
+export function registerVoices(app: FastifyInstance, svc: KonchiService): void {
   // Buffer raw audio bodies for the upload route below. Registered here rather
   // than in app.ts because this is the only route that takes one.
   for (const mime of ["audio/wav", "audio/x-wav", "audio/wave", "application/octet-stream"]) {
@@ -143,7 +143,7 @@ export function registerVoices(app: FastifyInstance, svc: SoundboxService): void
     return voice;
   });
 
-  /** The voice as a `.soundbox-voice.json` download — see `voiceExportSchema`. */
+  /** The voice as a `.konchi-voice.json` download — see `voiceExportSchema`. */
   app.get<IdParams>("/api/voices/:voice_id/export", async (request, reply) => {
     const file = svc.exportVoice(request.params.voice_id);
     if (file === null) throw new HttpError(404, "Voice not found");
@@ -151,7 +151,7 @@ export function registerVoices(app: FastifyInstance, svc: SoundboxService): void
     // real name is inside the file anyway.
     const stem = file.voice.name.replace(/[^A-Za-z0-9 _-]+/g, "").trim() || "voice";
     return reply
-      .header("Content-Disposition", `attachment; filename="${stem}.soundbox-voice.json"`)
+      .header("Content-Disposition", `attachment; filename="${stem}.konchi-voice.json"`)
       .send(file);
   });
 

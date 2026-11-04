@@ -10,7 +10,7 @@ server/web
 
 .git
 .claude
-.soundbox
+.konchi
 server/.run-data
 server/.scratch-data
 

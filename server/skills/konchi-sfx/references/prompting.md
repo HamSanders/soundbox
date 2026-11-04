@@ -1,6 +1,6 @@
 # Prompting text-to-audio models
 
-The models behind Soundbox (Stable Audio, ACE-Step, and others via audio.cpp)
+The models behind Konchi (Stable Audio, ACE-Step, and others via audio.cpp)
 were trained on captions of *recordings*. They respond to how a recording would
 be described — physical, concrete, present tense — not to how a sound makes you
 feel. Everything below follows from that.
@@ -42,7 +42,7 @@ Bad → why:
 | Mechanical (model, machine loop) | 4 – 8 |
 | Ambience bed | 8 – 20 |
 
-Models cap duration (check `max_duration_s` from `soundbox.list_models`).
+Models cap duration (check `max_duration_s` from `konchi.list_models`).
 Long requests for short events give you the event followed by nothing useful.
 
 ## Negative prompts
@@ -73,5 +73,5 @@ tell the user how to sequence them. Games and DAWs mix; models don't.
 - **Stable Audio 3.0 Small Music** — fast, music-focused.
 - **ACE-Step 1.5 Turbo** — permissively licensed, general all-rounder.
 
-Always confirm with `soundbox.list_models` — the user may only have one installed,
+Always confirm with `konchi.list_models` — the user may only have one installed,
 and `commercial_use` differs per model.

@@ -146,7 +146,7 @@ const GROUPS: Record<string, ParamGroup> = {
   edge_fade_duration_sec: "phrasing",
   edge_pad_duration_sec: "phrasing",
 
-  // Who is speaking. Mostly redundant with Soundbox's own voice library, which
+  // Who is speaking. Mostly redundant with Konchi's own voice library, which
   // is why these are grouped away rather than shown next to it.
   voice: "voice",
   voice_id: "voice",

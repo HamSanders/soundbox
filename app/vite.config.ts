@@ -3,18 +3,21 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-// The server's port. scripts/dev.mjs starts the server on SOUNDBOX_PORT and
+/** `KONCHI_<name>`, or its pre-rename spelling `SOUNDBOX_<name>`. */
+const env = (name: string) => process.env[`KONCHI_${name}`] ?? process.env[`SOUNDBOX_${name}`];
+
+// The server's port. scripts/dev.mjs starts the server on KONCHI_PORT and
 // Vite inherits the same environment, so moving one moves the proxy with it.
-const backend = `http://127.0.0.1:${process.env.SOUNDBOX_PORT || 17494}`;
+const backend = `http://127.0.0.1:${env("PORT") || 17494}`;
 
 // Reaching the dev UI from another machine or through a reverse proxy. Both are
 // opt-in: the server has no authentication, and Vite proxies all of it.
-//  - SOUNDBOX_DEV_HOST is the address Vite listens on (Vite's `server.host`;
+//  - KONCHI_DEV_HOST is the address Vite listens on (Vite's `server.host`;
 //    `0.0.0.0` or a LAN IP). Unset, it stays on localhost.
-//  - SOUNDBOX_ALLOWED_HOSTS (the same list the server reads) becomes Vite's
+//  - KONCHI_ALLOWED_HOSTS (the same list the server reads) becomes Vite's
 //    `server.allowedHosts`, which takes bare hostnames, so ports are dropped.
-const devHost = process.env.SOUNDBOX_DEV_HOST?.trim() || undefined;
-const allowedHosts = (process.env.SOUNDBOX_ALLOWED_HOSTS ?? "")
+const devHost = env("DEV_HOST")?.trim() || undefined;
+const allowedHosts = (env("ALLOWED_HOSTS") ?? "")
   .split(",")
   .map((h) => h.trim().toLowerCase())
   .filter(Boolean)

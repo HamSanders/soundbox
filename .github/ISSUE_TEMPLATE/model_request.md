@@ -1,6 +1,6 @@
 ---
 name: Model request
-about: Propose a new open-weight audio model for Soundbox
+about: Propose a new open-weight audio model for Konchi
 title: "[Model] "
 labels: model
 ---
@@ -20,7 +20,7 @@ labelled as such in the UI.
 Parameter count, sample rate, channels, max duration, approximate VRAM.
 
 **audio.cpp support**
-Soundbox runs every model through [audio.cpp](https://github.com/0xShug0/audio.cpp).
+Konchi runs every model through [audio.cpp](https://github.com/0xShug0/audio.cpp).
 Is there an audio.cpp loader family and a GGUF conversion for it? Link them if
 so. This is the part that becomes the catalog entry.
 

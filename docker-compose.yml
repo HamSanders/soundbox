@@ -1,4 +1,4 @@
-# Soundbox, headless. See docs/INSTALL.md#docker.
+# Konchi, headless. See docs/INSTALL.md#docker.
 #
 #   docker compose up -d
 #
@@ -11,16 +11,16 @@
 # such as :v0.4.0 (and :cuda to :v0.4.0-cuda in the override).
 #
 # Then open http://localhost:17494 and download a model from the Models page,
-# or: docker compose exec soundbox soundbox pull audiocpp-stable-audio-3-sfx
+# or: docker compose exec konchi konchi pull audiocpp-stable-audio-3-sfx
 #
 # THERE IS NO AUTHENTICATION. Anyone who can reach port 17494 can generate
 # audio, read and delete your library, and drive the MCP tools. The port is
 # published on 127.0.0.1 only below; to reach it from other machines, put a
 # reverse proxy with auth in front (and add its hostname to
-# SOUNDBOX_ALLOWED_HOSTS) rather than changing that to 0.0.0.0.
+# KONCHI_ALLOWED_HOSTS) rather than changing that to 0.0.0.0.
 
 services:
-  soundbox:
+  konchi:
     image: ghcr.io/hamsanders/soundbox:latest
     restart: unless-stopped
     ports:
@@ -31,14 +31,14 @@ services:
       # proxy, or from another machine, the Host header is whatever name the
       # client used, so list every one, exactly as sent: with the port unless
       # it is 80/443. Comma-separated. Not needed for http://localhost:17494.
-      SOUNDBOX_ALLOWED_HOSTS: "soundbox.example.lan"
+      KONCHI_ALLOWED_HOSTS: "konchi.example.lan"
       # Needed only for gated Hugging Face models (docs/INSTALL.md, Step 3).
       # HF_TOKEN: "hf_..."
       # debug, info (default), warning, error or critical. Shown in the
-      # startup banner; `docker compose logs` and /data/soundbox-17494.log.
-      # SOUNDBOX_LOG_LEVEL: "debug"
+      # startup banner; `docker compose logs` and /data/konchi-17494.log.
+      # KONCHI_LOG_LEVEL: "debug"
     volumes:
-      # Settings, library database, generated sounds — ~/.soundbox on a desktop.
+      # Settings, library database, generated sounds — ~/.konchi on a desktop.
       - soundbox-data:/data
       # Model weights, tens of gigabytes. Its own volume so it can live on a
       # different disk. To use host folders instead, e.g. `./models:/data/models`,

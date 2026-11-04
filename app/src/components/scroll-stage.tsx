@@ -8,7 +8,7 @@
  * **The copy lives here, not inside the product.** The first version of this
  * put the step description in a `<figcaption>` inside the mockup's own frame,
  * which made the explanation look like part of the application's UI — a
- * caption bar no screen in Soundbox actually has. Out here it is plainly the
+ * caption bar no screen in Konchi actually has. Out here it is plainly the
  * page talking about the product rather than the product talking about
  * itself, and it can cross-fade between steps instead of hard-swapping.
  *
@@ -178,7 +178,7 @@ export function ScrollStage({
 
   /**
    * `key={step}` so the panel settles in fresh on every step boundary — see
-   * the `soundbox-panel-settle` keyframes in index.css for why the panel
+   * the `konchi-panel-settle` keyframes in index.css for why the panel
    * needs its own motion rather than riding on the text's cross-fade. This is
    * a genuine remount, not a class toggle, and that is deliberate: every
    * `reveal-*` panel derives everything it draws from the `step` argument it
@@ -190,7 +190,7 @@ export function ScrollStage({
    * here interrupts a scroll-driven animation already in flight.
    */
   const panel = (
-    <div key={step} className="soundbox-panel-settle">
+    <div key={step} className="konchi-panel-settle">
       {children(progress, step, selectStep)}
     </div>
   );

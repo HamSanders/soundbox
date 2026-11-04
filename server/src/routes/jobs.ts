@@ -11,14 +11,14 @@ import {
   separateRequestSchema,
   speakRequestSchema,
 } from "../schemas.js";
-import type { SoundboxService } from "../service.js";
+import type { KonchiService } from "../service.js";
 import { HttpError, intQuery, streamSse } from "./helpers.js";
 
 type IdParams = { Params: { job_id: string } };
 
 const TERMINAL = new Set(["done", "error", "cancelled"]);
 
-export function registerJobs(app: FastifyInstance, svc: SoundboxService): void {
+export function registerJobs(app: FastifyInstance, svc: KonchiService): void {
   app.post("/api/generate", async (request, reply) => {
     const req = generateRequestSchema.parse(request.body);
     // ModelError (unknown model, duration/cfg out of range) → 400 globally.

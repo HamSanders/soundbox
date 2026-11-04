@@ -13,7 +13,7 @@
  */
 
 import { useState } from "react";
-import { WandSparklesIcon } from "lucide-react";
+import { PianoIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -191,7 +191,7 @@ export function TakeActions({
             disabled={disabled || !canCover || !notes.length || placing || !prompt.trim()}
             onClick={() => void place({ prompt: prompt.trim(), strength })}
           >
-            <WandSparklesIcon />
+            <PianoIcon />
             {placing ? "Rendering…" : "Generate instrument"}
           </Button>
         </div>

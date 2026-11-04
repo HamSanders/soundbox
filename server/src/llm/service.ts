@@ -1,5 +1,5 @@
 /**
- * `LlmService` — the prompt-assistant façade `SoundboxService` owns.
+ * `LlmService` — the prompt-assistant façade `KonchiService` owns.
  *
  * Resolves `Settings.llm_mode` into a base URL + model name each call (managed
  * or external), keeps the one managed `llama-server` process alive across
@@ -461,14 +461,14 @@ export class LlmService {
     if (!binaryPath) {
       throw new ModelError(
         "The prompt-assistant engine isn't installed. Install it from the Models page, " +
-          "or run `soundbox model install llm`.",
+          "or run `konchi model install llm`.",
       );
     }
     const modelsDir = this.config.paths.models;
     if (!(await isDownloaded(modelsDir, spec))) {
       throw new ModelError(
         `${spec.name} isn't downloaded yet. Download it from the Models page, or run ` +
-          `\`soundbox model install llm --model ${spec.id}\`.`,
+          `\`konchi model install llm --model ${spec.id}\`.`,
       );
     }
     const modelPath = weightsPath(modelsDir, spec);

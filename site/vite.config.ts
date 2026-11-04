@@ -42,7 +42,7 @@ function trailingSlashLinks(): Plugin {
   const shim = path.resolve(__dirname, "src/router-links.tsx");
   const ours = [path.resolve(__dirname, "src"), path.resolve(__dirname, "../app/src")];
   return {
-    name: "soundbox:trailing-slash-links",
+    name: "konchi:trailing-slash-links",
     enforce: "pre",
     resolveId(source, importer) {
       if (source !== "react-router-dom" || !importer) return null;

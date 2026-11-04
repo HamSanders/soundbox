@@ -2,13 +2,13 @@
 /**
  * Stdio MCP bridge for clients that cannot speak streamable HTTP.
  *
- * This does NOT load models. It is a thin proxy onto a running Soundbox server —
+ * This does NOT load models. It is a thin proxy onto a running Konchi server —
  * one GPU, one process holding the weights. If the server isn't running, tools
  * return an actionable error rather than silently starting a second copy.
  *
  * Configure it as:
  *
- *     { "mcpServers": { "soundbox": {
+ *     { "mcpServers": { "konchi": {
  *         "command": "node",
  *         "args": ["/absolute/path/to/soundbox/server/dist/mcp/stdio.js"] } } }
  *
@@ -31,11 +31,12 @@ import { z } from "zod";
 import { DEFAULT_HOST, DEFAULT_PORT, VERSION } from "../config.js";
 import { ProgressReporter } from "./progress.js";
 import { MCP_INSTRUCTIONS } from "./server.js";
+import { envVar } from "../env.js";
 
-const BASE_URL = process.env.SOUNDBOX_URL || `http://${DEFAULT_HOST}:${DEFAULT_PORT}`;
+const BASE_URL = envVar("KONCHI_URL") || `http://${DEFAULT_HOST}:${DEFAULT_PORT}`;
 const NOT_RUNNING =
-  `Cannot reach the Soundbox server at ${BASE_URL}. Start it with \`npx soundbox\` ` +
-  `(or open the Soundbox app), then try again. Set SOUNDBOX_URL if it listens elsewhere.`;
+  `Cannot reach the Konchi server at ${BASE_URL}. Start it with \`npx konchi\` ` +
+  `(or open the Konchi app), then try again. Set KONCHI_URL if it listens elsewhere.`;
 
 /** Generation is slow by nature; a short timeout here would look like a bug. */
 const REQUEST_TIMEOUT_MS = 900_000;
@@ -53,12 +54,12 @@ async function request(
   try {
     response = await fetch(url, {
       method,
-      // X-Soundbox marks this as a deliberate API call — the server refuses
+      // X-Konchi marks this as a deliberate API call — the server refuses
       // body-less mutating requests without it (CSRF defence, see app.ts).
       headers:
         opts.json === undefined
-          ? { "x-soundbox": "1" }
-          : { "content-type": "application/json", "x-soundbox": "1" },
+          ? { "x-konchi": "1" }
+          : { "content-type": "application/json", "x-konchi": "1" },
       body: opts.json === undefined ? undefined : JSON.stringify(opts.json),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
@@ -75,7 +76,7 @@ async function request(
     } catch {
       /* not JSON — use the raw text */
     }
-    throw new Error(`Soundbox error (${response.status}): ${detail}`);
+    throw new Error(`Konchi error (${response.status}): ${detail}`);
   }
   if (response.status === 204) return null;
   return await response.json();
@@ -135,7 +136,7 @@ function json(payload: unknown): CallToolResult {
 
 export function build(): McpServer {
   const mcp = new McpServer(
-    { name: "soundbox", version: VERSION },
+    { name: "konchi", version: VERSION },
     { instructions: MCP_INSTRUCTIONS },
   );
 
@@ -146,7 +147,7 @@ export function build(): McpServer {
   };
 
   mcp.registerTool(
-    "soundbox.enhance_prompt",
+    "konchi.enhance_prompt",
     {
       title: "Rewrite a prompt for a sound model",
       description:
@@ -161,11 +162,11 @@ export function build(): McpServer {
         model: z
           .string()
           .optional()
-          .describe("The model id you intend to pass to soundbox.generate."),
+          .describe("The model id you intend to pass to konchi.generate."),
       },
     },
     async ({ prompt, n, category, lyrics, model }) =>
-      await report("soundbox.enhance_prompt", { prompt, n, category, model }, clientOf(), async () => {
+      await report("konchi.enhance_prompt", { prompt, n, category, model }, clientOf(), async () => {
         try {
           const body = await request("POST", "/api/enhance", {
             json: { prompt, n, category, lyrics, model },
@@ -180,10 +181,10 @@ export function build(): McpServer {
   );
 
   mcp.registerTool(
-    "soundbox.generate",
+    "konchi.generate",
     {
       title: "Generate a sound effect",
-      description: "Generate sound effects and save them to the Soundbox library.",
+      description: "Generate sound effects and save them to the Konchi library.",
       inputSchema: {
         prompt: z
           .string()
@@ -236,7 +237,7 @@ export function build(): McpServer {
       let model: string | undefined = args.model;
       const client = clientOf();
       return await report(
-        "soundbox.generate",
+        "konchi.generate",
         {
           prompt, duration_s, model, negative_prompt, seed, variations, tags, lyrics, track_name,
           source_sound_id, edit, edit_options,
@@ -254,7 +255,7 @@ export function build(): McpServer {
             );
             if (!ready.length) {
               throw new Error(
-                "No model is installed. Open Soundbox and download one from the " +
+                "No model is installed. Open Konchi and download one from the " +
                   "Models tab first.",
               );
             }
@@ -309,13 +310,13 @@ export function build(): McpServer {
   );
 
   mcp.registerTool(
-    "soundbox.list_models",
+    "konchi.list_models",
     {
       title: "List sound models",
       description: "List models with status and licence. Check commercial use terms.",
     },
     async () =>
-      await report("soundbox.list_models", {}, clientOf(), async () => {
+      await report("konchi.list_models", {}, clientOf(), async () => {
         const models = await request("GET", "/api/models");
         return json(
           models.map((e: any) => ({
@@ -333,7 +334,7 @@ export function build(): McpServer {
   );
 
   mcp.registerTool(
-    "soundbox.list_sounds",
+    "konchi.list_sounds",
     {
       title: "Search the sound library",
       description: "Search previously generated sounds before generating something new.",
@@ -345,7 +346,7 @@ export function build(): McpServer {
       },
     },
     async ({ q, tag, voice_id, limit }) =>
-      await report("soundbox.list_sounds", { q, tag, voice_id, limit }, clientOf(), async (rep) => {
+      await report("konchi.list_sounds", { q, tag, voice_id, limit }, clientOf(), async (rep) => {
         const page = await request("GET", "/api/sounds", {
           params: { q, tag, voice_id, limit },
         });
@@ -356,24 +357,24 @@ export function build(): McpServer {
   );
 
   mcp.registerTool(
-    "soundbox.get_sound",
+    "konchi.get_sound",
     { title: "Get one sound", description: "Fetch a single sound by id.", inputSchema: { sound_id: z.string() } },
     async ({ sound_id }) =>
-      await report("soundbox.get_sound", { sound_id }, clientOf(), async (rep) => {
+      await report("konchi.get_sound", { sound_id }, clientOf(), async (rep) => {
         rep.sound_ids = [sound_id];
         return json(await request("GET", `/api/sounds/${sound_id}`));
       }),
   );
 
   mcp.registerTool(
-    "soundbox.delete_sound",
+    "konchi.delete_sound",
     {
       title: "Delete a sound",
       description: "Permanently delete a sound and its audio file.",
       inputSchema: { sound_id: z.string() },
     },
     async ({ sound_id }) =>
-      await report("soundbox.delete_sound", { sound_id }, clientOf(), async (rep) => {
+      await report("konchi.delete_sound", { sound_id }, clientOf(), async (rep) => {
         rep.sound_ids = [sound_id];
         await request("DELETE", `/api/sounds/${sound_id}`);
         return { content: [{ type: "text" as const, text: `Deleted ${sound_id}` }] };
@@ -387,7 +388,7 @@ export async function main(): Promise<void> {
   await build().connect(new StdioServerTransport());
 }
 
-// Only when launched as the `soundbox-mcp` binary, not when imported by tests.
+// Only when launched as the `konchi-mcp` binary, not when imported by tests.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await main();
 }

@@ -1,5 +1,5 @@
 /**
- * Which speakers Soundbox plays through.
+ * Which speakers Konchi plays through.
  *
  * The browser sends audio to whatever Windows/macOS has set as the system
  * default, and a default that has gone silent is indistinguishable from a
@@ -71,7 +71,7 @@ export const useOutputStore = create<OutputState>()(
       },
     }),
     {
-      name: "soundbox.output",
+      name: "konchi.output",
       partialize: (s) => ({ sinkId: s.sinkId }),
     },
   ),

@@ -26,7 +26,7 @@ import { Config } from "../src/config.js";
 import { ProgressReporter, type ProgressExtra } from "../src/mcp/progress.js";
 import { buildMcp } from "../src/mcp/server.js";
 import { build as buildStdio } from "../src/mcp/stdio.js";
-import { SoundboxService } from "../src/service.js";
+import { KonchiService } from "../src/service.js";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -126,14 +126,14 @@ async function connect(server: McpServer): Promise<Client> {
   return client;
 }
 
-describe("soundbox.generate over MCP", () => {
-  let svc: SoundboxService;
+describe("konchi.generate over MCP", () => {
+  let svc: KonchiService;
   let dataDir: string;
   let client: Client;
 
   beforeAll(async () => {
-    dataDir = await mkdtemp(join(tmpdir(), "soundbox-mcp-progress-"));
-    svc = new SoundboxService(new Config(dataDir));
+    dataDir = await mkdtemp(join(tmpdir(), "konchi-mcp-progress-"));
+    svc = new KonchiService(new Config(dataDir));
     // A render that loads, samples and finishes over ~2.5 s, with no model.
     svc.submitGenerate = () =>
       svc.jobs.submit("generate", {}, async (h) => {
@@ -156,7 +156,7 @@ describe("soundbox.generate over MCP", () => {
   it("sends progress before the result when the call carries a progressToken", async () => {
     const events: (Progress | "result")[] = [];
     const res = await client.callTool(
-      { name: "soundbox.generate", arguments: { prompt: "door slam", model: "fake" } },
+      { name: "konchi.generate", arguments: { prompt: "door slam", model: "fake" } },
       undefined,
       { onprogress: (p) => events.push(p) },
     );
@@ -181,7 +181,7 @@ describe("soundbox.generate over MCP", () => {
       seen,
     );
     const res = await client.callTool({
-      name: "soundbox.generate",
+      name: "konchi.generate",
       arguments: { prompt: "door slam", model: "fake" },
     });
     expect(res.isError).toBeFalsy();
@@ -191,7 +191,7 @@ describe("soundbox.generate over MCP", () => {
 
 /* ------------------------------------------------- through the stdio bridge */
 
-describe("soundbox.generate over the stdio bridge", () => {
+describe("konchi.generate over the stdio bridge", () => {
   let client: Client;
 
   beforeAll(async () => {
@@ -225,7 +225,7 @@ describe("soundbox.generate over the stdio bridge", () => {
   it("relays the server's job progress to the stdio client", async () => {
     const notes: Progress[] = [];
     const res = await client.callTool(
-      { name: "soundbox.generate", arguments: { prompt: "door slam", model: "fake" } },
+      { name: "konchi.generate", arguments: { prompt: "door slam", model: "fake" } },
       undefined,
       { onprogress: (p) => notes.push(p) },
     );

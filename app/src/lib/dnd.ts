@@ -17,7 +17,7 @@
  * module with the library pane that started it.
  */
 
-export const SOUND_DND_TYPE = "application/x-soundbox-sound";
+export const SOUND_DND_TYPE = "application/x-konchi-sound";
 
 export interface SoundDrag {
   id: string;

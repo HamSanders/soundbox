@@ -19,12 +19,12 @@ import { buildFailure } from "./failure.js";
 import { getLogger } from "./logging.js";
 import type { Job, JobPhase } from "./schemas.js";
 
-// A job's log lines are what makes `grep <job-id> soundbox.log` reconstruct
+// A job's log lines are what makes `grep <job-id> konchi.log` reconstruct
 // the whole story of one generation (see docs/INSTALL.md's troubleshooting
 // section) and what the Activity page's log tail actually shows — so these
 // must go through the real file-backed logger, not console.info, which never
 // reaches the rotating file at all.
-const log = getLogger("soundbox.jobs");
+const log = getLogger("konchi.jobs");
 
 function now(): string {
   return new Date().toISOString();

@@ -19,10 +19,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { Config } from "../src/config.js";
 import { buildMcp } from "../src/mcp/server.js";
-import { SoundboxService } from "../src/service.js";
+import { KonchiService } from "../src/service.js";
 
 let client: Client;
-let svc: SoundboxService;
+let svc: KonchiService;
 let dataDir: string;
 
 async function call(name: string, args: Record<string, unknown>): Promise<any> {
@@ -36,8 +36,8 @@ async function call(name: string, args: Record<string, unknown>): Promise<any> {
 }
 
 beforeAll(async () => {
-  dataDir = await mkdtemp(join(tmpdir(), "soundbox-mcp-separate-"));
-  svc = new SoundboxService(new Config(dataDir));
+  dataDir = await mkdtemp(join(tmpdir(), "konchi-mcp-separate-"));
+  svc = new KonchiService(new Config(dataDir));
   const server = buildMcp(() => svc);
   client = new Client({ name: "test", version: "0" });
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
@@ -50,9 +50,9 @@ afterAll(async () => {
   await rm(dataDir, { recursive: true, force: true });
 });
 
-describe("soundbox.separate", () => {
+describe("konchi.separate", () => {
   it("is offered, and takes a selection rather than only all-or-nothing", async () => {
-    const tool = (await client.listTools()).tools.find((t) => t.name === "soundbox.separate");
+    const tool = (await client.listTools()).tools.find((t) => t.name === "konchi.separate");
     expect(tool).toBeDefined();
     const props = tool!.inputSchema.properties as Record<string, unknown>;
     expect(Object.keys(props).sort()).toEqual(["model", "rest", "sound_id", "stems"]);
@@ -64,7 +64,7 @@ describe("soundbox.separate", () => {
   it("says which model to install rather than failing a job", async () => {
     // A fresh profile has no separator, which is also the state most users
     // are in the first time an agent reaches for this.
-    await expect(call("soundbox.separate", { sound_id: "nope" })).rejects.toThrow(
+    await expect(call("konchi.separate", { sound_id: "nope" })).rejects.toThrow(
       /No stem-separation model is installed/i,
     );
   });
@@ -80,23 +80,23 @@ describe("with a separator enabled", () => {
 
   it("reports a missing sound as a missing sound", async () => {
     await expect(
-      call("soundbox.separate", { sound_id: "nope", model: "audiocpp-htdemucs-sep" }),
+      call("konchi.separate", { sound_id: "nope", model: "audiocpp-htdemucs-sep" }),
     ).rejects.toThrow(/not found/i);
   });
 
   it("refuses a model that does not separate", async () => {
     const gen = (await svc.listModels()).find((m) => m.task === "gen");
     await expect(
-      call("soundbox.separate", { sound_id: "nope", model: gen!.id }),
+      call("konchi.separate", { sound_id: "nope", model: gen!.id }),
     ).rejects.toThrow(/does not support stem separation/i);
   });
 
-  it("says on soundbox.list_models which surface each model belongs to", async () => {
-    const models = await call("soundbox.list_models", {});
+  it("says on konchi.list_models which surface each model belongs to", async () => {
+    const models = await call("konchi.list_models", {});
     expect(models.length).toBeGreaterThan(0);
     for (const m of models) expect(typeof m.task).toBe("string");
     // The point of the field: a separator sits in this same list and is not
-    // something soundbox.generate can be called with.
+    // something konchi.generate can be called with.
     expect(models.some((m: { task: string }) => m.task === "sep")).toBe(true);
   });
 });

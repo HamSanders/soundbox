@@ -11,7 +11,7 @@
 # a CUDA 13 driver, full-cuda13 works too.
 
 services:
-  soundbox:
+  konchi:
     image: ghcr.io/hamsanders/soundbox:cuda
     deploy:
       resources:

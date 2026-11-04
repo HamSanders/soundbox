@@ -27,7 +27,7 @@ import {
 let root: string;
 
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), "soundbox-delegate-"));
+  root = await mkdtemp(join(tmpdir(), "konchi-delegate-"));
 });
 
 afterEach(async () => {
@@ -76,7 +76,7 @@ describe("download delegation", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("passes the package id audio.cpp knows, not the Soundbox model id", async () => {
+  it("passes the package id audio.cpp knows, not the Konchi model id", async () => {
     const installer = stubInstaller(true);
     await model("audiocpp-ace-step", installer).download();
     expect(installer.calls).toEqual(["ace_step_turbo_q8_0"]);

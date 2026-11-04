@@ -27,11 +27,11 @@ const RATE = 44100;
 const SECONDS = 4;
 
 beforeAll(async () => {
-  dataDir = await mkdtemp(join(tmpdir(), "soundbox-restore-test-"));
+  dataDir = await mkdtemp(join(tmpdir(), "konchi-restore-test-"));
   app = buildApp(new Config(dataDir), { serveUi: false });
   await app.ready();
 
-  const tmp = await mkdtemp(join(tmpdir(), "soundbox-restore-wav-"));
+  const tmp = await mkdtemp(join(tmpdir(), "konchi-restore-wav-"));
   const path = join(tmp, "clip.wav");
   dsp.writeWav(path, [new Float32Array(RATE * SECONDS)], RATE);
   const upload = await app.inject({

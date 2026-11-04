@@ -24,7 +24,7 @@ export function failureFromError(error: string | null | undefined): Failure {
  *  nothing personal beyond what the error text itself contains. */
 export function diagnosticText(failure: Failure, context?: string | null): string {
   return [
-    "Soundbox failure",
+    "Konchi failure",
     `topic: ${failure.topic ?? "unclassified"}`,
     `stage: ${failure.stage ?? "unknown"}`,
     context ? `context: ${context}` : null,

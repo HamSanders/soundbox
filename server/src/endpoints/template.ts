@@ -30,7 +30,7 @@ import { ModelError } from "../errors.js";
 export type TemplateValue = string | number | boolean | null;
 export type TemplateVars = Record<string, TemplateValue>;
 
-/** Every variable Soundbox can fill, with what it means. The settings page
+/** Every variable Konchi can fill, with what it means. The settings page
  *  lists these, and `validateTemplate` rejects any name not here — a typo'd
  *  `{{promt}}` should fail at save time, not as a 400 from someone's server. */
 export const TEMPLATE_VARIABLES: Record<string, string> = {

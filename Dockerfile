@@ -1,19 +1,19 @@
-# Soundbox server + web UI, headless.
+# Konchi server + web UI, headless.
 #
-#   docker build -t soundbox .                                   # CPU, runs anywhere
-#   docker build -t soundbox:cuda \
+#   docker build -t konchi .                                   # CPU, runs anywhere
+#   docker build -t konchi:cuda \
 #     --build-arg AUDIOCPP_TAG=full-cuda12 --build-arg AUDIOCPP_BACKEND=cuda .
 #
 # The audio.cpp runtime is not built here. The final stage starts FROM
 # audio.cpp's own published image (ghcr.io/0xshug0/audio.cpp), which already
 # carries `audiocpp_cli`, its ggml backend libraries, ffmpeg and the matching
-# CUDA/Vulkan runtime, for amd64 and arm64. Soundbox adds Node and itself on
+# CUDA/Vulkan runtime, for amd64 and arm64. Konchi adds Node and itself on
 # top. That keeps the GPU variants a build-arg rather than a second toolchain:
 # upstream's Linux release tarballs ship no CUDA `audiocpp_cli` at all, and
 # compiling ggml's CUDA kernels in this build would take the better part of an
 # hour.
 #
-# See docs/INSTALL.md#docker for volumes, GPUs and SOUNDBOX_ALLOWED_HOSTS.
+# See docs/INSTALL.md#docker for volumes, GPUs and KONCHI_ALLOWED_HOSTS.
 
 # Which upstream audio.cpp image to build on: full-cpu, full-cuda12,
 # full-cuda13 or full-vulkan. Those tags move daily; pin a dated one
@@ -73,7 +73,7 @@ USER root
 # (for the healthcheck), ffmpeg (for mp3 output) and ca-certificates.
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 
-WORKDIR /opt/soundbox
+WORKDIR /opt/konchi
 COPY --from=deps /src/node_modules ./node_modules
 COPY --from=build /src/server/dist ./server/dist
 COPY --from=build /src/server/web ./server/web
@@ -81,18 +81,20 @@ COPY server/package.json ./server/package.json
 COPY server/skills ./server/skills
 COPY LICENSE ./
 
-# `soundbox pull …`, `soundbox list` and friends from `docker exec`.
-RUN printf '#!/bin/sh\nexec node /opt/soundbox/server/dist/cli.js "$@"\n' > /usr/local/bin/soundbox \
- && chmod +x /usr/local/bin/soundbox \
+# `konchi pull …`, `konchi list` and friends from `docker exec` (`soundbox`
+# is the pre-rename name, kept so existing scripts work).
+RUN printf '#!/bin/sh\nexec node /opt/konchi/server/dist/cli.js "$@"\n' > /usr/local/bin/konchi \
+ && chmod +x /usr/local/bin/konchi \
+ && ln -s konchi /usr/local/bin/soundbox \
  && mkdir -p /data/models \
  && chown -R ubuntu:ubuntu /data
 
-# /data is the whole of ~/.soundbox: settings, the library database, generated
+# /data is the whole of ~/.konchi: settings, the library database, generated
 # sounds, and (under /data/models) the weights. Mount /data/models separately
 # to keep tens of gigabytes of weights on a different disk from your library.
-ENV SOUNDBOX_DATA_DIR=/data \
-    SOUNDBOX_AUDIOCPP_BIN=/app/audiocpp_cli \
-    SOUNDBOX_AUDIOCPP_BACKEND=${AUDIOCPP_BACKEND} \
+ENV KONCHI_DATA_DIR=/data \
+    KONCHI_AUDIOCPP_BIN=/app/audiocpp_cli \
+    KONCHI_AUDIOCPP_BACKEND=${AUDIOCPP_BACKEND} \
     NODE_ENV=production
 
 # The upstream image's unprivileged user (uid/gid 1000). A bind-mounted /data
@@ -106,5 +108,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 
 # 0.0.0.0 is required for the published port to reach the server from outside
 # the container. The server has no authentication — see docs/INSTALL.md#docker.
-ENTRYPOINT ["node", "/opt/soundbox/server/dist/cli.js"]
+ENTRYPOINT ["node", "/opt/konchi/server/dist/cli.js"]
 CMD ["--host", "0.0.0.0", "--port", "17494"]

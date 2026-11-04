@@ -1,6 +1,6 @@
 # Contributing
 
-Soundbox runs every model through **audio.cpp**
+Konchi runs every model through **audio.cpp**
 (`server/src/models/audiocpp.ts`), a single native binary. Most model
 contributions are therefore a new entry in the audio.cpp catalog
 (`server/src/models/audiocpp_models_catalog.json`) and need no new adapter

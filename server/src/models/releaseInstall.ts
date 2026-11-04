@@ -18,15 +18,16 @@
  * And then the bytes themselves: an archive with no checksum to compare
  * against is refused, not installed with a warning. A binary we run with the
  * user's privileges is the one download where "probably fine" isn't enough.
- * `SOUNDBOX_ALLOW_UNVERIFIED_BINARIES=1` is the explicit way out for a release
+ * `KONCHI_ALLOW_UNVERIFIED_BINARIES=1` is the explicit way out for a release
  * that genuinely publishes no hashes.
  */
 
 import { z } from "zod";
+import { envVar } from "../env.js";
 
 /** Set to `1` (or `true`) to install an engine archive that no checksum
  *  manifest or GitHub digest covers. Off by default. */
-export const ALLOW_UNVERIFIED_ENV = "SOUNDBOX_ALLOW_UNVERIFIED_BINARIES";
+export const ALLOW_UNVERIFIED_ENV = "KONCHI_ALLOW_UNVERIFIED_BINARIES";
 
 const TAG_PATTERN = /^(latest|v?[A-Za-z0-9][A-Za-z0-9._-]{0,63})$/;
 
@@ -130,7 +131,7 @@ export function checkRelease(
 }
 
 export function allowUnverified(): boolean {
-  const raw = (process.env[ALLOW_UNVERIFIED_ENV] ?? "").trim().toLowerCase();
+  const raw = (envVar(ALLOW_UNVERIFIED_ENV) ?? "").trim().toLowerCase();
   return raw === "1" || raw === "true" || raw === "yes";
 }
 
@@ -183,7 +184,7 @@ export function verifyAsset(
 
 /**
  * Compare a download's hash against the expected one. With nothing to compare
- * against, refuse — unless the user opted in via `SOUNDBOX_ALLOW_UNVERIFIED_BINARIES`,
+ * against, refuse — unless the user opted in via `KONCHI_ALLOW_UNVERIFIED_BINARIES`,
  * in which case warn and carry on.
  */
 export function verifySha256(

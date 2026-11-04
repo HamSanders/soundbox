@@ -12,7 +12,7 @@ import type { AsyncQueue } from "../jobs.js";
 import { isTrustedOrigin } from "../origins.js";
 
 /** Cross-origin callers that are allowed: our own origin, the Vite dev
- *  server, and hosts named in SOUNDBOX_ALLOWED_HOSTS — see `origins.ts` for
+ *  server, and hosts named in KONCHI_ALLOWED_HOSTS — see `origins.ts` for
  *  why it is that list and not "anything on localhost". The server binds
  *  127.0.0.1 by default but can be told to listen elsewhere (`--host`), so
  *  "only local pages can reach it" is not something this check may assume. */
@@ -31,7 +31,7 @@ export function isAllowedOrigin(origin: string, hostHeader?: string): boolean {
 export const MAX_UPLOAD_BYTES = 64 * 1024 * 1024;
 
 /** Set when an mp3 was asked for but a WAV was served instead. */
-export const FORMAT_FALLBACK_HEADER = "X-Soundbox-Format-Fallback";
+export const FORMAT_FALLBACK_HEADER = "X-Konchi-Format-Fallback";
 
 /** Ports FastAPI's `HTTPException`: the error handler in `app.ts` turns this
  *  into `{"detail": ...}` with the given status. */

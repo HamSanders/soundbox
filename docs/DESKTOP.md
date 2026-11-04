@@ -1,13 +1,13 @@
 # Desktop app (Tauri)
 
-Soundbox is a web app you run locally. The desktop shell is a thin wrapper
+Konchi is a web app you run locally. The desktop shell is a thin wrapper
 around it, with no second copy of the UI and no separate API.
 
 ## Installing
 
 1. Download the installer for your machine from the
    [Releases page](https://github.com/HamSanders/soundbox/releases):
-   - Windows: `Soundbox_<version>_x64-setup.exe`
+   - Windows: `Konchi_<version>_x64-setup.exe`
    - macOS: the `.dmg`, `aarch64` for Apple silicon or `x64` for Intel
 2. Run it. The app carries its own Node and server, so nothing else needs
    installing.
@@ -20,9 +20,9 @@ confirm:
   Run anyway**.
 - **macOS:** the app is ad-hoc signed but not notarized, so macOS refuses the
   first open. Open **System Settings → Privacy & Security**, find the note
-  about Soundbox and choose **Open Anyway**. If macOS says the app is
+  about Konchi and choose **Open Anyway**. If macOS says the app is
   "damaged", the download's quarantine flag is the cause. Clear it with
-  `xattr -dr com.apple.quarantine /Applications/Soundbox.app`.
+  `xattr -dr com.apple.quarantine /Applications/Konchi.app`.
 
 ## How it works
 
@@ -40,7 +40,7 @@ confirm:
 | | Installed app | A checkout (`npm run desktop`) |
 |---|---|---|
 | Server | `$RESOURCE/app/server`, staged into the installer | `server/` in the checkout |
-| Node | the one installed beside the app's executable | `SOUNDBOX_NODE`, else `node` on `PATH` |
+| Node | the one installed beside the app's executable | `KONCHI_NODE`, else `node` on `PATH` |
 
 The installed copy is laid out like the repo: `server/{dist,web,skills}`, its
 production `node_modules`, and `README.md` plus `docs/` for the in-app
@@ -112,7 +112,7 @@ also covers a crash or force-kill, via a job object, because a
 graceful-shutdown handler cannot run when the process is terminated, and an
 orphaned server would keep holding the GPU and the port.
 
-**Finds its server** in this order: `SOUNDBOX_PROJECT_ROOT`, then the copy
+**Finds its server** in this order: `KONCHI_PROJECT_ROOT`, then the copy
 installed with the app, then a checkout found by walking up from the
 executable (then the working directory) to `server/package.json`. In a
 checkout with no build yet it falls back to running `server/src/cli.ts` with
@@ -132,9 +132,9 @@ screen, as in the web app.
 
 | Variable | Purpose |
 |---|---|
-| `SOUNDBOX_NODE` | Node interpreter to run the server with. Overrides both the bundled Node and the `PATH` lookup. |
-| `SOUNDBOX_PROJECT_ROOT` | Run a checkout instead of the installed server, or point at one the shell cannot find by walking up. |
-| `SOUNDBOX_DATA_DIR` | Inherited by the server: library, weights, logs. |
+| `KONCHI_NODE` | Node interpreter to run the server with. Overrides both the bundled Node and the `PATH` lookup. |
+| `KONCHI_PROJECT_ROOT` | Run a checkout instead of the installed server, or point at one the shell cannot find by walking up. |
+| `KONCHI_DATA_DIR` | Inherited by the server: library, weights, logs. |
 
 The port is fixed at 17494 in the shell. Every other server variable in
 [INSTALL.md](./INSTALL.md#environment-variables) is inherited the same way.
@@ -202,7 +202,7 @@ publishing it.
 The ad-hoc build keeps the hardened runtime off. With it on, an ad-hoc
 signature stops the bundled Node at its first JIT allocation (a `trace trap`,
 and the app reports that the server did not start in time). To check a build,
-`codesign -dv Soundbox.app/Contents/MacOS/node` should show
+`codesign -dv Konchi.app/Contents/MacOS/node` should show
 `flags=0x2(adhoc)` for an ad-hoc build, without `runtime`.
 
 **Windows:** an unsigned installer works, behind the SmartScreen prompt. A

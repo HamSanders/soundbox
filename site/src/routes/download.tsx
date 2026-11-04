@@ -1,8 +1,9 @@
 /**
- * `/download` — the installers, the Soundbox film and the repo's numbers, on the site.
+ * `/download` — the installers, the Konchi film and the repo's numbers, on the site.
  *
- * The installer filenames carry the version (`Soundbox_0.4.1_x64-setup.exe`),
- * so a link to one file would go stale on every release. The page therefore
+ * The installer filenames carry the version (`Soundbox_0.4.1_x64-setup.exe`;
+ * they keep the old product name until the desktop shell is renamed), so a
+ * link to one file would go stale on every release. The page therefore
  * renders with links to `releases/latest` (which GitHub redirects to the newest
  * release) and, once mounted, asks the GitHub API for that release and for the
  * repository, then swaps in the direct asset links, version and sizes and fills
@@ -236,8 +237,8 @@ export function DownloadPage() {
   return (
     <div className="bg-background text-foreground relative min-h-svh overflow-x-clip">
       <SeoHead
-        title="Download Soundbox for Windows and macOS | Soundbox"
-        description="Download the Soundbox desktop app for Windows 10/11 or macOS. Free, open source, no account. Models download from inside the app."
+        title="Download Konchi for Windows and macOS | Konchi"
+        description="Download the Konchi desktop app for Windows 10/11 or macOS. Free, open source, no account. Models download from inside the app."
         path="/download"
       />
       <style>{STYLES}</style>
@@ -284,7 +285,7 @@ export function DownloadPage() {
                 className="size-4 transition-transform group-hover:translate-y-0.5"
                 aria-hidden="true"
               />
-              {primary ? `Download for ${primary.short}` : "Download Soundbox"}
+              {primary ? `Download for ${primary.short}` : "Download Konchi"}
             </a>
             <a
               href={REPO_URL}
@@ -321,7 +322,7 @@ export function DownloadPage() {
             <SiteVideo
               src="/media/soundbox-vibe.mp4"
               poster="/media/posters/vibe.jpg"
-              label="Soundbox in thirty seconds: type a prompt, hear sound effects, music and voices, switch models"
+              label="Konchi in thirty seconds: type a prompt, hear sound effects, music and voices, switch models"
               className="[&>div]:rounded-[1.25rem] [&>div]:border-0"
             />
           </div>

@@ -26,7 +26,7 @@ import {
   MicVocalIcon,
   MusicIcon,
   ScaleIcon,
-  SparklesIcon,
+  GaugeIcon,
   WifiOffIcon,
 } from "lucide-react";
 
@@ -99,7 +99,7 @@ const CRAFT = [
     body: "“Epic battle music” gives a model nothing to voice. “Staccato low string ostinato, brass ensemble stabs, taiko drum hits on the downbeat” names each part and how it is played, and the render comes back as an arrangement. Naming the parts makes the biggest difference between a first take you keep and one you re-roll.",
   },
   {
-    icon: SparklesIcon,
+    icon: GaugeIcon,
     heading: "Set the tempo in BPM",
     body: "A BPM number moves the output further than “fast”, “driving” and “intense” together, because the model has nothing to interpret. Set it whenever rhythm matters (165 for a racing cue, 68 for a slow blues) and use adjectives for timbre.",
   },

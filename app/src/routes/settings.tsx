@@ -832,6 +832,7 @@ export function SettingsPage() {
  *  reaches the server, so there is no save round trip and no loading state. */
 function InterfaceCard() {
   const keep = useUiPrefs((s) => s.sidebarKeepExpanded);
+  const waveStyle = useUiPrefs((s) => s.waveStyle);
   const set = useUiPrefs((s) => s.set);
   return (
     <Card>
@@ -853,6 +854,20 @@ function InterfaceCard() {
             id="sidebar-keep"
             checked={keep}
             onCheckedChange={(on) => set({ sidebarKeepExpanded: on })}
+          />
+        </div>
+        <div className="border-border mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+          <div className="space-y-0.5">
+            <Label htmlFor="wave-style">Waterline waveforms in the studio</Label>
+            <p className="text-muted-foreground text-xs">
+              Draws each clip above a visible zero line, with a fainter reflection below it, and
+              marks the playhead with a buoy. Off: the usual mirrored bars.
+            </p>
+          </div>
+          <Switch
+            id="wave-style"
+            checked={waveStyle === "waterline"}
+            onCheckedChange={(on) => set({ waveStyle: on ? "waterline" : "bars" })}
           />
         </div>
       </CardContent>

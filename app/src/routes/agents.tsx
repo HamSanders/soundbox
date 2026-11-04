@@ -24,7 +24,7 @@ import {
   FileTextIcon,
   Loader2Icon,
   PlugZapIcon,
-  SparklesIcon,
+  ScrollTextIcon,
   TerminalIcon,
   XCircleIcon,
 } from "lucide-react";
@@ -131,7 +131,7 @@ function SkillsCard({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <SparklesIcon className="size-4" aria-hidden="true" />
+          <ScrollTextIcon className="size-4" aria-hidden="true" />
           Skills
         </CardTitle>
       </CardHeader>

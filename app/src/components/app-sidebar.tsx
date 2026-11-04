@@ -66,6 +66,7 @@ import { useUiPrefs, wantsRail } from "@/lib/ui-prefs";
 import { formatMb, formatRelative } from "@/lib/format";
 import { SITE_URL } from "@/lib/marketing-links";
 import { useNewStudioPicker } from "@/components/new-studio-dialog";
+import { KonchiMark } from "@/components/konchi-mark";
 import { useSessionStore } from "@/lib/session-store";
 import { api, IS_MOCK, type Session } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -682,8 +683,10 @@ export function AppSidebar() {
                     is now one conversation among many; `/` lands on the
                     dashboard through the catch-all. */}
                 <NavLink to="/" end onClick={() => setOpenMobile(false)}>
-                  <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                    <AudioLinesIcon className="size-4" />
+                  {/* The spiral alone (no wave tail): this tile is all that
+                      shows when the sidebar collapses to icons. */}
+                  <div className="bg-card ring-border text-shell flex aspect-square size-8 items-center justify-center rounded-lg ring-1 ring-inset">
+                    <KonchiMark variant="icon" className="h-5" />
                   </div>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">Konchi</span>

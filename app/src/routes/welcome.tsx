@@ -5,8 +5,8 @@
  * `site/` only (see `site/src/routes.tsx`), and the app has no marketing
  * routes at all. That move is what removed the live pieces: there is no
  * backend behind this page and no `QueryClientProvider` above it, so nothing
- * here may call a query hook, and the hero prompt no longer hands anything to
- * the composer — see `HeroPrompt`.
+ * here may call a query hook. The hero used to be a prompt box that could
+ * only open the download page; it now plays real renders — see `HeroListen`.
  *
  * Two rules shaped everything else, and both survive the move.
  *
@@ -25,11 +25,9 @@
  *    "should I trust this?" question.
  */
 
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ActivityIcon,
-  ArrowUpIcon,
   AudioLinesIcon,
   BookOpenIcon,
   BotIcon,
@@ -39,15 +37,19 @@ import {
   FolderIcon,
   RadarIcon,
   ScaleIcon,
-  SparklesIcon,
+  ScrollTextIcon,
   TerminalIcon,
   WifiOffIcon,
 } from "lucide-react";
 
 import { SeoHead, softwareAppJsonLd } from "@/components/seo-head";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import { TimelineBanner } from "@/components/timeline-banner";
+import { WaveformPlayer } from "@/components/waveform-player";
+import { SFX_CATEGORIES } from "@/content/sfx/categories";
+import { isPublished, type SfxSample } from "@/content/sfx/types";
+import { sampleToSound, useSampleManifest } from "@/lib/sfx-sample";
 import { RevealPromptToSample } from "@/components/reveal-prompt-to-sample";
 import { RevealPillars } from "@/components/reveal-pillars";
 import { ProductShots } from "@/components/product-shots";
@@ -60,36 +62,30 @@ import { cn } from "@/lib/utils";
 /* ------------------------------------------------------------------- data */
 
 /**
- * Prompt starters, in the material / action / space shape the README's
- * "Writing prompts that work" section argues for. These do double duty: they
- * fill the box, and they are the only teaching material anyone reads.
+ * The renders the hero plays: real outputs from the /sfx library, each with
+ * the exact prompt that made it. They teach the material / action / space
+ * shape the prompting section argues for, and they let a visitor hear the
+ * product before installing it — which a prompt box on a static site could
+ * never do. The waves come first on purpose: it is the sound the name is.
  */
-const EXAMPLES: { label: string; prompt: string }[] = [
-  {
-    label: "Impact",
-    prompt: "heavy wooden crate dropping onto a concrete floor, close mic, dry room",
-  },
-  {
-    label: "Footsteps",
-    prompt: "boots on wet gravel, slow steady pace, outdoors at night",
-  },
-  {
-    label: "Machinery",
-    prompt: "old freight lift motor starting under load, metal cable strain, echoing shaft",
-  },
-  {
-    label: "Ambience",
-    prompt: "rain on a tin roof, distant thunder, steady wind through trees",
-  },
-  {
-    label: "UI",
-    prompt: "small plastic button click, tight and dry, no reverb",
-  },
-  {
-    label: "Whoosh",
-    prompt: "heavy steel blade swinging fast past the microphone, turbulent air",
-  },
+const HERO_SAMPLES: { category: string; slug: string }[] = [
+  { category: "water", slug: "water-ocean-waves-shore" },
+  { category: "door", slug: "door-heavy-vault" },
+  { category: "metal", slug: "metal-hull-groan" },
 ];
+
+/** Counted, not typed: the library grows and a stale number on the front
+ *  page is the kind of small untruth this page promised not to tell. */
+const LIBRARY_SAMPLE_COUNT = SFX_CATEGORIES.filter(isPublished).reduce(
+  (n, c) => n + c.content.samples.length,
+  0,
+);
+
+function heroSample(category: string, slug: string): SfxSample | undefined {
+  return SFX_CATEGORIES.find((c) => c.slug === category)?.content?.samples.find(
+    (s) => s.slug === slug,
+  );
+}
 
 interface ModelCard {
   id: string;
@@ -291,158 +287,119 @@ function Feature({
 
 /* ------------------------------------------------------------------ hero */
 
-function HeroPrompt({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  // This used to hand the typed prompt to the composer through the session
-  // store and navigate to `/app`. That only ever worked because this page was
-  // built into the app; on the public site there is no composer to open and no
-  // store to write to, so the submit goes where someone who wants to run this
-  // prompt actually has to go — the install guide.
-  const go = () => {
-    if (!value.trim()) return;
-    window.open(GENERATOR_HREF, "_blank", "noreferrer,noopener");
-  };
-
+/**
+ * Three renders you can play, each under the prompt that made it.
+ *
+ * This replaced a prompt box with a round send arrow. On a static site that
+ * box could only open the download page, so it promised a sound and handed
+ * over a page; it was also the most chat-product-shaped thing on the site.
+ * Real outputs answer "what does it sound like?" before anyone installs.
+ *
+ * Players come from the /sfx library (`WaveformPlayer`, the same component
+ * and the same global one-at-a-time player store as the category pages).
+ * Each category's manifest is ~10 KB and is fetched after first paint; until
+ * then, and if it fails, the row shows its prompt and a link to the sample's
+ * own page, so the hero still says something without them.
+ */
+function HeroListenRow({ category, slug }: { category: string; slug: string }) {
+  const sample = heroSample(category, slug);
+  const { manifest, failed } = useSampleManifest(category);
+  if (!sample) return null;
+  const meta = manifest?.[slug];
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        go();
-      }}
-      className="mx-auto mt-8 w-full max-w-2xl"
-    >
-      {/* Deliberately the same shell as the real composer — card, soft ring,
-          ring lights up on focus-within — so arriving at Generate feels like
-          the same box got bigger rather than like a different app. */}
-      <div className="bg-card ring-foreground/10 focus-within:ring-ring/40 rounded-2xl p-2 text-left shadow-lg ring-1 transition-shadow">
-        <label htmlFor="hero-prompt" className="sr-only">
-          Describe a sound
-        </label>
-        <div className="flex items-end gap-2">
-          <Textarea
-            id="hero-prompt"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                go();
-              }
-            }}
-            rows={2}
-            placeholder="heavy wooden door slam, dry room, close mic"
-            aria-describedby="hero-prompt-hint"
-            className="max-h-40 min-h-[3.25rem] resize-none overflow-y-auto border-transparent bg-transparent px-2.5 py-2 text-base leading-relaxed shadow-none placeholder:text-muted-foreground/70 focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent"
-          />
-          <Button
-            type="submit"
-            size="icon"
-            disabled={!value.trim()}
-            aria-label="Download Konchi to run this prompt"
-            className="mb-1 shrink-0 rounded-full shadow-sm transition-transform hover:scale-105 active:scale-95"
-          >
-            <ArrowUpIcon />
-          </Button>
-        </div>
+    <li className="grid gap-2 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] sm:items-center sm:gap-4">
+      <div className="min-w-0">
+        <Link
+          to={`/sfx/${category}/${slug}`}
+          className="hover:text-primary text-sm font-medium underline-offset-4 hover:underline"
+        >
+          {sample.title}
+        </Link>
+        <p className="text-muted-foreground mt-0.5 font-mono text-xs leading-relaxed">
+          {sample.prompt}
+        </p>
       </div>
-      <p id="hero-prompt-hint" className="text-muted-foreground mt-2 text-xs">
-        Konchi runs on your own machine, so this opens the download page.
-        Prompts work best when they name the material, the action and the
-        space.
-      </p>
-    </form>
+      <div className="min-w-0">
+        {meta ? (
+          <WaveformPlayer compact sound={sampleToSound(category, sample, meta)} />
+        ) : failed ? (
+          <Link to={`/sfx/${category}/${slug}`} className="text-primary text-xs underline-offset-4 hover:underline">
+            Listen on the sample page
+          </Link>
+        ) : (
+          <Skeleton className="h-8 w-full rounded-lg" />
+        )}
+      </div>
+    </li>
+  );
+}
+
+function HeroListen() {
+  return (
+    <div className="mt-8">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="label-caps text-muted-foreground">Rendered locally · prompt shown as typed</h2>
+        <Link to="/sfx" className="text-primary text-xs underline-offset-4 hover:underline">
+          All {LIBRARY_SAMPLE_COUNT} samples →
+        </Link>
+      </div>
+      <ul className="border-border bg-card divide-border mt-2 divide-y rounded-lg border">
+        {HERO_SAMPLES.map((s) => (
+          <HeroListenRow key={s.slug} category={s.category} slug={s.slug} />
+        ))}
+      </ul>
+    </div>
   );
 }
 
 function Hero() {
-  const [prompt, setPrompt] = useState("");
-
-  const applyExample = (example: string) => {
-    setPrompt(example);
-    document.getElementById("hero-prompt")?.focus();
-  };
-
   return (
-    <section aria-labelledby="hero-heading" className="relative overflow-hidden px-4">
-      {/* Decorative only: a soft teal wash behind the headline, drawn from the
-          accent token. No imagery, no asset, nothing to load — and hidden from
-          assistive tech. */}
-      <div
-        aria-hidden="true"
-        className="bg-primary/12 pointer-events-none absolute -top-48 left-1/2 size-[34rem] -translate-x-1/2 rounded-full blur-3xl"
-      />
-
-      <div className="relative mx-auto w-full max-w-3xl py-16 text-center sm:py-24">
-        <span className="text-muted-foreground ring-border bg-card inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ring-1">
-          <span className="bg-primary size-1.5 rounded-full" aria-hidden="true" />
-          Open source · MIT · runs on your own GPU
-        </span>
+    // Left-aligned, over the page's ground rather than a glow: the centred
+    // badge-headline-box stack, with a teal wash behind it, is the template
+    // every AI product launches with. The banner and the samples carry the
+    // page instead.
+    <section aria-labelledby="hero-heading" className="relative px-4">
+      <div className="relative mx-auto w-full max-w-5xl py-14 sm:py-20">
+        <p className="label-caps text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
+          <span>Open source · MIT</span>
+          <span>Runs on your own GPU</span>
+          <span>Works offline</span>
+          <span>MCP server</span>
+        </p>
 
         <h1
           id="hero-heading"
-          className="font-heading mt-5 text-4xl font-semibold tracking-tight text-balance sm:text-5xl"
+          className="font-display mt-4 max-w-3xl text-4xl leading-[1.05] font-normal tracking-[-0.015em] text-balance sm:text-6xl"
         >
           The local alternative to ElevenLabs and Suno
         </h1>
 
-        <p className="text-muted-foreground mx-auto mt-5 max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
+        <p className="text-muted-foreground mt-5 max-w-2xl text-base leading-relaxed text-pretty sm:text-lg">
           Describe a sound and get a WAV. Write lyrics and get a song. Clone a
           voice from a short clip. Arrange it all on a timeline, or let your
           coding agent do it over MCP. Open-weight models, no account, works
           offline.
         </p>
 
-        {/* The product, under the pitch rather than above it. The banner led
-            the page for a while; with the badge and headline stacked beneath
-            it the top of the hero read as three things shouting at once, and
-            the headline is the one that has to win. The banner still sits
-            above the fold — it just answers the headline now instead of
-            preempting it. Decorative and silent — see components/timeline-banner. */}
-        <TimelineBanner className="mt-10 text-left" />
-
-        <HeroPrompt value={prompt} onChange={setPrompt} />
-
-        <div
-          className="mt-6 flex flex-wrap justify-center gap-2"
-          role="group"
-          aria-label="Example prompts"
-        >
-          {EXAMPLES.map((ex) => (
-            <Button
-              key={ex.label}
-              type="button"
-              variant="outline"
-              size="sm"
-              className="rounded-full"
-              title={ex.prompt}
-              onClick={() => applyExample(ex.prompt)}
-            >
-              {ex.label}
-            </Button>
-          ))}
-        </div>
-        <p className="text-muted-foreground mx-auto mt-3 max-w-md text-xs leading-relaxed">
-          Each example names a material, an action and a space.
-        </p>
-
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+        <div className="mt-7 flex flex-wrap items-center gap-2">
           {/* A real link rather than an onClick navigate: this page is
               prerendered, and a crawler following the site needs an href. */}
           <Button size="lg" asChild>
-            <Link to={MODELS_HUB_HREF}>Browse the models</Link>
-          </Button>
-          <Button size="lg" variant="outline" asChild>
             <a href={GENERATOR_HREF} target="_blank" rel="noreferrer noopener">
               Download
               <ExternalLinkIcon aria-hidden="true" />
             </a>
           </Button>
+          <Button size="lg" variant="outline" asChild>
+            <Link to={MODELS_HUB_HREF}>Browse the models</Link>
+          </Button>
         </div>
+
+        {/* The product, under the pitch. Decorative and silent — see
+            components/timeline-banner. */}
+        <TimelineBanner className="mt-10" />
+
+        <HeroListen />
       </div>
     </section>
   );
@@ -778,7 +735,7 @@ function Agents() {
             your own collector and each tool call is exported as a trace and a
             metric over standard OTLP/HTTP.
           </Feature>
-          <Feature icon={SparklesIcon} title="Bundled agent skills">
+          <Feature icon={ScrollTextIcon} title="Bundled agent skills">
             Three skills ship with Konchi: prompting for sound effects, a
             sound pass that finds and generates every sound a project needs,
             and writing and voicing dialogue. Install them from the Agents page

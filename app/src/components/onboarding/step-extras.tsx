@@ -12,7 +12,7 @@
  * for. Both are one switch away on Settings afterwards, which is what the
  * closing line says. */
 
-import { ImageIcon, SparklesIcon } from "lucide-react";
+import { ImageIcon, PenLineIcon } from "lucide-react";
 
 import { Switch } from "@/components/ui/switch";
 import { formatBytes } from "@/lib/format";
@@ -27,7 +27,7 @@ function ExtraRow({
   checked,
   onCheckedChange,
 }: {
-  icon: typeof SparklesIcon;
+  icon: typeof PenLineIcon;
   label: string;
   hint: string;
   size: string | null;
@@ -80,7 +80,7 @@ export function StepExtras({
       </p>
 
       <ExtraRow
-        icon={SparklesIcon}
+        icon={PenLineIcon}
         label="Prompt assistant"
         hint="Turns “scary sound” into the kind of prompt these models actually respond to, writes lyrics, and answers in the studio chat."
         size={llmPick ? formatBytes(llmPick.size_bytes) : null}

@@ -27,7 +27,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  ArrowUpIcon,
   ArrowUpRightIcon,
   ClockIcon,
   CpuIcon,
@@ -41,7 +40,7 @@ import {
   BanIcon,
   MicIcon,
   SlidersHorizontalIcon,
-  SparklesIcon,
+  PenLineIcon,
   SquareIcon,
   TagIcon,
   Undo2Icon,
@@ -50,6 +49,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { LoadingVerb } from "@/components/loading-verb";
+import { SwellProgress } from "@/components/swell-progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -573,7 +573,7 @@ export function GenerateComposer({
                   onClick={() => enhance.run(1)}
                   className="text-muted-foreground hover:text-foreground h-7 shrink-0 rounded-full px-2 font-normal"
                 >
-                  <SparklesIcon
+                  <PenLineIcon
                     className={cn("size-3.5", enhance.pending && "animate-pulse")}
                     aria-hidden="true"
                   />
@@ -1072,7 +1072,7 @@ export function GenerateComposer({
                         onClick={lyricsAssist.write}
                         className="text-muted-foreground hover:text-foreground h-6 shrink-0 gap-1 rounded-full px-2 text-xs font-normal"
                       >
-                        <SparklesIcon
+                        <PenLineIcon
                           className={cn("size-3", lyricsAssist.pending && "animate-pulse")}
                           aria-hidden="true"
                         />
@@ -1142,7 +1142,7 @@ export function GenerateComposer({
             aria-hidden={!running}
             tabIndex={running ? 0 : -1}
             disabled={!running}
-            className={cn("rounded-full", !running && "invisible")}
+            className={cn("rounded-md", !running && "invisible")}
           >
             <SquareIcon />
           </Button>
@@ -1159,21 +1159,21 @@ export function GenerateComposer({
                   ? `${verb} is unavailable: ${blocker.sentence}`
                   : verb
             }
+            // A transport key, not a send button: square-ish, a record dot
+            // instead of an up arrow, and a pressed edge rather than a
+            // hover-grow. The dot rides the swell while a job runs.
             className={cn(
-              "h-8 w-36 justify-start gap-1.5 overflow-hidden rounded-full pr-3 pl-2.5 text-xs shadow-sm transition-[transform,opacity]",
-              blocker
-                ? "cursor-default opacity-50 hover:bg-primary active:scale-100"
-                : "hover:scale-[1.03] active:scale-95",
+              "h-8 w-36 justify-start gap-2 overflow-hidden rounded-md pr-3 pl-2.5 text-xs font-semibold shadow-[inset_0_-2px_0_rgb(0_0_0/0.18)] transition-[transform,opacity] active:translate-y-px active:shadow-none",
+              blocker && "cursor-default opacity-50 hover:bg-primary active:translate-y-0",
             )}
           >
-            {running ? (
-              <span
-                className="bg-primary-foreground/80 size-2 shrink-0 animate-pulse rounded-full motion-reduce:animate-none"
-                aria-hidden="true"
-              />
-            ) : (
-              <ArrowUpIcon className="size-4 shrink-0" aria-hidden="true" />
-            )}
+            <span
+              className={cn(
+                "bg-primary-foreground size-2.5 shrink-0 rounded-full",
+                running && "konchi-swell-dot",
+              )}
+              aria-hidden="true"
+            />
             <span className="truncate text-left tabular-nums">{stageLabel}</span>
           </Button>
         </div>
@@ -1232,29 +1232,16 @@ export function GenerateComposer({
       </div>
 
       {/* ------------------------------------------------------ progress */}
-      {/* A 2px strip along the card's bottom edge while a job runs. Known
-          progress fills it; an unknown stage (queued, loading) pulses the
-          whole strip rather than parking a bar at zero. */}
+      {/* A waterline along the card's bottom edge while a job runs. Known
+          progress comes in as a tide; an unknown stage (queued, loading)
+          sends one swell across it rather than parking a bar at zero. */}
       {running && (
-        <div
-          className="bg-muted absolute inset-x-0 bottom-0 h-0.5 overflow-hidden rounded-b-2xl"
-          role="progressbar"
-          aria-label="Job progress"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={stripPercent ?? undefined}
-          aria-valuetext={stripPercent === null ? stageLabel : `${stripPercent}%`}
-        >
-          <div
-            className={cn(
-              "bg-primary h-full",
-              stripPercent === null
-                ? "w-full animate-pulse motion-reduce:animate-none"
-                : "transition-[width] duration-300",
-            )}
-            style={stripPercent === null ? undefined : { width: `${stripPercent}%` }}
-          />
-        </div>
+        <SwellProgress
+          value={stripPercent}
+          label="Job progress"
+          valueText={stripPercent === null ? stageLabel : `${stripPercent}%`}
+          className="absolute inset-x-0 bottom-0 rounded-b-2xl"
+        />
       )}
 
       <p id="composer-hint" className="sr-only">

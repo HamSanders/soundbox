@@ -8,7 +8,7 @@ import {
   AudioLinesIcon,
   MessageSquareIcon,
   MusicIcon,
-  SparklesIcon,
+  AudioWaveformIcon,
   TriangleAlertIcon,
 } from "lucide-react";
 
@@ -31,7 +31,7 @@ const RECENT_LIMIT = 5;
 const QUICK_LINKS = [
   {
     to: "/studio",
-    icon: SparklesIcon,
+    icon: AudioWaveformIcon,
     label: "Studio",
     hint: "Everything you have started",
   },

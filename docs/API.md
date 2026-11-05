@@ -58,6 +58,7 @@ route answers `202 { "job_id": "..." }` and the work is followed through
 | POST | `/api/separate` | Split a sound into stems. Body `{ model, source_sound_id, stems?: { keep: string[], rest: "discard" \| "merge" } }` → job |
 | POST | `/api/repaint` | Regenerate one window of a sound. Body `{ source_sound_id, start_s, end_s, prompt?, lyrics?, model?, strength?, mode?, seed?, variations? }` → job |
 | POST | `/api/speak` | Text to speech. Body `{ model, lines: [{ text, voice_id?, speaker? }], gap_s?, seed?, steps?, cfg?, name?, tags?, session_id?, project_id? }` → job |
+| POST | `/api/speak/stream` | One line of speech, sent as it is generated. Body `{ model, text, voice_id?, format?: "sse" \| "pcm", seed?, steps?, cfg?, request_options?, save?, name?, tags?, project_id? }` → SSE or raw PCM, not a job. See [STREAMING.md](STREAMING.md) |
 | POST | `/api/convert` | Voice conversion. Body `{ model, source_sound_id, voice_id, seed? }` → job |
 | GET | `/api/jobs` | Recent jobs, newest first (`?limit`) |
 | GET | `/api/jobs/{id}` | One job |
@@ -356,6 +357,32 @@ history yet for that model, or the job isn't queued.
 `POST /api/jobs/{job_id}/cancel` → `200 Job`. Cancels a queued or running job.
 
 `GET /api/jobs?limit=50` → `Job[]` newest first (in-memory ring, not persisted).
+
+## Streaming speech
+
+`POST /api/speak/stream` speaks one line and sends the audio while it is
+still being made, for game dialogue and chat agents. It is not a job: it
+holds the GPU while you listen, and closing the connection cancels it.
+Nothing is saved unless you pass `"save": true`.
+
+```json
+{ "model": "audiocpp-supertonic-3", "text": "Halt! Who goes there?",
+  "voice_id": null, "format": "sse", "save": false }
+```
+
+- `format: "sse"` (default): `event: start` (`sample_rate`, `channels`,
+  `encoding: "pcm_s16le"`), then `event: audio` with base64 PCM in `pcm`, then
+  `event: done` (`duration_s`, `ttft_ms`, `model_ttft_ms`, `sound_id`). A
+  failure after audio has started arrives as `event: error`.
+- `format: "pcm"`: raw interleaved 16-bit little-endian PCM,
+  `Content-Type: audio/L16; rate=…; channels=…`, with the same values in
+  `X-Soundbox-Sample-Rate` and `X-Soundbox-Channels`.
+- `409` with `reason: "unsupported"` when the model can't stream on this
+  audio.cpp build, or `reason: "busy"` (plus `Retry-After`) when a generation
+  holds the GPU. Streams never queue.
+- Which models stream is `supports.streaming` in `GET /api/models`.
+
+Full details, client examples and limits: [STREAMING.md](STREAMING.md).
 
 ## Logs
 

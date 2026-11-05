@@ -6,6 +6,9 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Streaming speech.** `POST /api/speak/stream` speaks a line and sends the audio while it's still being generated, as server-sent events or raw 16-bit PCM, for game dialogue and chat agents. Closing the connection cancels it; nothing is saved unless you ask. Models that can stream report `supports.streaming`, read from the audio.cpp build's own model specs. See `docs/STREAMING.md`.
+
 ### Changed
 - The site's download page has a new design: a full-width hero, the Soundbox film in a frame that flattens as you scroll, live GitHub numbers and a card per installer.
 

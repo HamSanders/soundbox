@@ -28,10 +28,10 @@ import { fileURLToPath } from "node:url";
 
 import { applyFades, decodeWav, frameCount, readWav, type Audio } from "../audio/dsp.js";
 import { getLogger } from "../logging.js";
-import type { TaskResult } from "./audiocppRuntime.js";
+import type { StreamTaskEvent, TaskResult } from "./audiocppRuntime.js";
 import { defaultDataDir, getConfig } from "../config.js";
 import { downloadToFile } from "../download.js";
-import { CancelledJob, ModelError } from "../errors.js";
+import { CancelledJob, ModelError, StreamUnsupported } from "../errors.js";
 import {
   DEFAULT_SUPPORTS,
   type EditKind,
@@ -41,7 +41,9 @@ import {
   type LicenseInfo,
 } from "../schemas.js";
 import { BIN_ENV, detectBackend, findBinary } from "./audiocppBinary.js";
+import { knownStreamingFamilies, refreshStreamingFamilies } from "./audiocppModes.js";
 import { paramsFor } from "./params.js";
+import type { SpeakOptions, StreamChunk } from "./types.js";
 
 const log = getLogger("soundbox.audiocpp");
 
@@ -786,7 +788,14 @@ export interface PackageInstaller {
 
   /** Make weights resident. False means no management on this build. */
   loadModel?(
-    req: { id: string; path: string; family: string; task: string; loadOptions?: Record<string, string> },
+    req: {
+      id: string;
+      path: string;
+      family: string;
+      task: string;
+      mode?: string;
+      loadOptions?: Record<string, string>;
+    },
     modelsRoot: string,
     backend: string | null,
   ): Promise<boolean>;
@@ -798,6 +807,14 @@ export interface PackageInstaller {
     backend: string | null,
     progress?: { handle?: { cancelled: boolean } },
   ): Promise<TaskResult | null>;
+  /** Stream one request through a resident streaming entry; null means
+   *  unavailable. See `AudioCppRuntime.streamTask`. */
+  streamTask?(
+    body: Record<string, unknown>,
+    modelsRoot: string,
+    backend: string | null,
+    signal: AbortSignal,
+  ): Promise<AsyncGenerator<StreamTaskEvent> | null>;
   /** Whether `id` is loaded in the server process running now. False once
    *  the process it was loaded into has exited or been replaced. */
   isResident?(id: string): boolean;
@@ -829,6 +846,8 @@ export class AudioCppModel {
   /** The id this model is registered under in the runtime, when it is actually
    *  resident. Null means inference goes through a one-shot CLI call. */
   private residentId: string | null = null;
+  /** The `<id>::stream` entry, when a streaming copy is resident. */
+  private streamResidentId: string | null = null;
   error: string | null = null;
 
   readonly extras = [EXTRA];
@@ -888,7 +907,10 @@ export class AudioCppModel {
       max_duration_s: s.max_duration_s,
       sample_rate: s.sample_rate,
       channels: s.channels,
-      supports: { ...s.supports },
+      supports: {
+        ...s.supports,
+        streaming: s.task === "tts" && knownStreamingFamilies().has(s.family),
+      },
       defaults: { ...s.defaults },
       max_cfg: s.max_cfg,
       vram_estimate_mb: s.vram_estimate_mb,
@@ -925,6 +947,7 @@ export class AudioCppModel {
    * runtime is not downloading a model.
    */
   async status(): Promise<ModelInfo> {
+    await refreshStreamingFamilies();
     const info = this.describe();
     info.installed_deps = await this.depsInstalled();
     const downloaded = await this.isDownloaded();
@@ -1238,10 +1261,15 @@ export class AudioCppModel {
 
   async unload(): Promise<void> {
     const resident = this.residentId;
+    const streamResident = this.streamResidentId;
     this.residentId = null;
+    this.streamResidentId = null;
     this.model = null;
     if (resident && this.installer?.unloadModel) {
       await this.installer.unloadModel(resident, this.audiocppRoot, backend());
+    }
+    if (streamResident && this.installer?.unloadModel) {
+      await this.installer.unloadModel(streamResident, this.audiocppRoot, backend());
     }
   }
 
@@ -1636,6 +1664,101 @@ export class AudioCppModel {
    * `steps`/`cfg` are still forwarded when the family declares them, since the
    * diffusion-based TTS families (VibeVoice, IndexTTS2) do use them.
    */
+  /** The `/v1/tasks/run` body for one TTS line — shared by `speak` and
+   *  `speakStream` so a streamed read honours the same voice and options. */
+  private ttsBody(text: string, options: SpeakOptions): Record<string, unknown> {
+    const s = this.spec;
+    const body: Record<string, unknown> = {
+      task: this.cliTask,
+      // Dialogue-native families reject an untagged line outright.
+      text: s.speaker_tagged_prompt ? tagSpeaker(text) : text,
+    };
+    if (options.voiceRefPath) body["voice_ref"] = options.voiceRefPath;
+    else if (options.voiceId) body["voice_id"] = options.voiceId;
+    if (options.seed !== null && options.seed !== undefined) body["seed"] = options.seed;
+    if (s.supports.steps && options.steps) {
+      body["num_inference_steps"] = Math.trunc(options.steps);
+    }
+    if (s.supports.cfg && options.cfg !== null && options.cfg !== undefined) {
+      body["guidance_scale"] = options.cfg;
+    }
+    const requestOptions = { ...s.request_options, ...(options.requestOptions ?? {}) };
+    if (Object.keys(requestOptions).length) body["request_options"] = requestOptions;
+    return body;
+  }
+
+  /**
+   * Speak one line, yielding audio as audio.cpp produces it.
+   *
+   * audio.cpp fixes a model entry's run mode at load time, so streaming uses a
+   * second resident entry (`<id>::stream`, `mode: "streaming"`) alongside the
+   * offline one. That costs the weights twice in memory while both are held;
+   * `unload()` drops both. A family with no streaming session fails that load,
+   * which is reported as "can't stream" rather than faked by chunking a
+   * finished render — the latency is the whole point.
+   */
+  async *speakStream(
+    text: string,
+    options: SpeakOptions & { signal: AbortSignal },
+  ): AsyncGenerator<StreamChunk> {
+    if (this.spec.task !== "tts") {
+      throw new ModelError(`${this.spec.name} is not a text-to-speech model.`);
+    }
+    if (this.spec.requires_voice_reference && !options.voiceRefPath && !options.voiceId) {
+      throw new ModelError(`${this.spec.name} is a cloning-only voice — pick a voice to stream with.`);
+    }
+    if (Object.keys(options.loadOptions ?? {}).length) {
+      throw new StreamUnsupported(
+        `Streaming can't use load options (they pick a weights variant at load time).`,
+      );
+    }
+    const installer = this.installer;
+    if (!installer?.loadModel || !installer.streamTask) {
+      throw new StreamUnsupported(
+        `This audio.cpp build has no model server, so it can't stream. Use /api/speak instead.`,
+      );
+    }
+    if (!this.loaded) await this.load();
+    const weights = this.model!;
+    const streamId = `${this.spec.id}::stream`;
+    if (this.streamResidentId === null || (installer.isResident && !installer.isResident(streamId))) {
+      try {
+        const ok = await installer.loadModel(
+          { id: streamId, path: weights, family: this.spec.family, task: this.cliTask, mode: "streaming" },
+          this.audiocppRoot,
+          backend(),
+        );
+        if (!ok) throw new Error("no model server");
+      } catch (exc) {
+        this.streamResidentId = null;
+        throw new StreamUnsupported(
+          `${this.spec.name} can't stream on this build of audio.cpp (${String(exc instanceof Error ? exc.message : exc)}).`,
+        );
+      }
+      this.streamResidentId = streamId;
+    }
+
+    const events = await installer.streamTask(
+      { ...this.ttsBody(text, options), model: streamId, family: this.spec.family },
+      this.audiocppRoot,
+      backend(),
+      options.signal,
+    );
+    if (events === null) {
+      throw new StreamUnsupported(`audio.cpp's model server isn't available, so it can't stream.`);
+    }
+    for await (const event of events) {
+      if (event.kind === "done") {
+        yield { kind: "done", ttftMs: event.ttftMs };
+        continue;
+      }
+      if (!event.audio) continue;
+      const { audio, sampleRate } = decodeAudio(event.audio);
+      if (frameCount(audio) === 0) continue;
+      yield { kind: "audio", audio, sampleRate };
+    }
+  }
+
   async speak(
     text: string,
     options: {
@@ -1681,22 +1804,7 @@ export class AudioCppModel {
     // variant back to the CLI, which loads exactly what it was told to.
     const wantsVariant = Object.keys(options.loadOptions ?? {}).length > 0;
     if (!wantsVariant) {
-      const body: Record<string, unknown> = {
-        task: this.cliTask,
-        // Dialogue-native families reject an untagged line outright.
-        text: s.speaker_tagged_prompt ? tagSpeaker(text) : text,
-      };
-      if (options.voiceRefPath) body["voice_ref"] = options.voiceRefPath;
-      else if (options.voiceId) body["voice_id"] = options.voiceId;
-      if (options.seed !== null && options.seed !== undefined) body["seed"] = options.seed;
-      if (s.supports.steps && options.steps) {
-        body["num_inference_steps"] = Math.trunc(options.steps);
-      }
-      if (s.supports.cfg && options.cfg !== null && options.cfg !== undefined) {
-        body["guidance_scale"] = options.cfg;
-      }
-      const requestOptions = { ...s.request_options, ...(options.requestOptions ?? {}) };
-      if (Object.keys(requestOptions).length) body["request_options"] = requestOptions;
+      const body = this.ttsBody(text, options);
 
       const served = await this.serverRun(body, progress);
       if (served?.audio) return decodeAudio(served.audio);

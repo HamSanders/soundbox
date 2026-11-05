@@ -1,36 +1,59 @@
 # Streaming speech
 
 > Status: **phase 1 built and run end to end** (the HTTP route, the GPU lock,
-> `supports.streaming`) on Supertonic 3. The WebSocket, the MCP tool and the
+> `supports.streaming`) on Supertonic 3, VoxCPM2 and OmniVoice. The WebSocket, the MCP tool and the
 > UI are still design. Sections marked _(to verify)_ need a measurement
 > before release.
 
 ## Measured (2026-11-05)
 
-Supertonic 3 (`audiocpp-supertonic-3`, q8_0), the audio.cpp Windows CUDA
-build in `~/tools/audio.cpp` (the one the dev machine runs), RTX 5080:
+The audio.cpp Windows CUDA build in `~/tools/audio.cpp` (the one the dev
+machine runs), RTX 5080. The same 26-word line each time; "first audio" is
+when the first chunk reached the client, "last" when the final one did.
 
-| | Wall time | Audio |
-| --- | --- | --- |
-| First stream (loads the offline and streaming copies) | 10.0 s | 5.37 s, 44.1 kHz mono |
-| Warm stream, same line, `format: "pcm"` | 0.52 s | 5.37 s |
-| Request right after a client hung up mid-stream | 0.47 s | GPU lock released, no reload |
+| Model | Cold, first audio | Warm, first audio | Warm, last chunk | Chunks | Audio |
+| --- | --- | --- | --- | --- | --- |
+| **VoxCPM2** (`audiocpp-voxcpm2`) | 5.95 s | **0.19 to 0.21 s** | 1.65 s | 48 x 160 ms | 7.7 s, 48 kHz |
+| OmniVoice (`audiocpp-omnivoice`) | 5.6 s | 0.63 s | same | 1 | 8.8 s, 24 kHz |
+| Supertonic 3 (`audiocpp-supertonic-3`) | 8.5 s | 0.10 to 0.14 s | same | 1 | 10.6 s, 44.1 kHz |
 
-`supports.streaming` came back true from that build's `model_specs`, and
-`save: true` wrote a library sound.
+- **VoxCPM2 is the one that really streams**: the first 160 ms of speech
+  arrives in about 200 ms and the rest follows at roughly 3x real time. Use
+  it for chat agents and long lines.
+- **OmniVoice and Supertonic send each line as one chunk.** Nothing arrives
+  early, but Supertonic is so fast warm (10.6 s of speech in about 0.1 s)
+  that it's the better pick for short game barks.
+- **Cloned voice, VoxCPM2:** works and streams (57 chunks). The first two
+  reads with a new clip took 4.2 to 5.2 s to first audio, the third 0.17 s.
+  _(to verify: what audio.cpp caches per reference clip.)_
+- **Cloned voice, OmniVoice:** refused. audio.cpp needs the clip's
+  transcript (`reference_text`), and Soundbox voices don't store one yet.
+  This affects OmniVoice cloning everywhere, not just streaming.
+- Cold times include loading both the offline and the streaming copy.
+- A client hanging up mid-stream released the GPU lock; the next request
+  took 0.47 s.
+- `supports.streaming` came back true for all three from the build's
+  `model_specs`, and `save: true` wrote a library sound.
 
 **What this build actually does** (and the code now handles):
 
 - `/v1/tasks/stream` ignores `stream_format: "sse"` and answers with one
-  `{ events, result }` JSON body once the run is over. Soundbox reads either
-  shape.
-- Supertonic puts its audio in `named_audio_outputs[].audio`, not `audio`.
-- **Supertonic sends the whole line as one chunk**, on both
-  `/v1/tasks/stream` and `/v1/audio/speech` SSE. So the stream works, but the
-  first sound arrives when the line is finished, not partway through. For a
-  short line on a warm model that is about half a second, which is fine for
-  game barks. Real word-by-word streaming needs a family that emits several
-  chunks _(to verify: VoxCPM2, OmniVoice)_.
+  `{ events, result }` JSON body once the run is over, so it can't stream.
+  `/v1/audio/speech` with `stream_format: "sse"` does stream. Soundbox uses
+  the speech route, and falls back to the task route only for the first
+  stream of a model, because the speech route's PCM deltas carry no sample
+  rate and the task route's WAVs do. The rate is remembered per model after
+  that (an ordinary `/api/speak` read also records it). The catalogue's
+  `sample_rate` was wrong for both VoxCPM2 (listed 44.1 kHz, really 48) and
+  OmniVoice (really 24), so it isn't used for this.
+- Audio can come in `named_audio_outputs[].audio` rather than `audio`.
+- **Per-family request options go in `options`, not `request_options`.**
+  audio.cpp ignored `request_options`, so before this branch every delivery
+  knob (exaggeration, temperature and so on) was silently dropped whenever a
+  model ran resident in the server. Fixed for generate, speak, convert and
+  the stream. It showed up here because VoxCPM2 refuses to stream unless
+  `retry_badcase=false` reaches it; Soundbox now sets that for VoxCPM2
+  streams.
 
 Today `POST /api/speak` is a job: you submit a script, poll or watch
 `/api/jobs/{id}`, and get a finished WAV in the library. That's right for
@@ -306,9 +329,12 @@ Steps 1 to 4 are built (`server/src/models/audiocppRuntime.ts` `streamTask`,
 
 ## Open questions
 
-- Which families emit more than one chunk, and whether switching to
-  `/v1/audio/speech` (which does send SSE on this build) changes that.
-  Both the flat and the nested `request` body were accepted on this build.
+- Whether the first stream of a model can skip the task-route round trip
+  (for example by reading the rate from `/v1/models` if a later build
+  reports it).
+- The catalogue: VoxCPM2 and OmniVoice clone in audio.cpp but aren't marked
+  `supports.voice_reference`, so Soundbox won't attach a clip to them made
+  for that model, and both list the wrong `sample_rate`.
 
 - Which bundled TTS families actually stream in our shipped binary, and their
   measured `ttft_ms` on a mid-range GPU and on CPU.

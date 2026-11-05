@@ -3,7 +3,7 @@
   "extends": ["//"],
   "tasks": {
     "build": {
-      "env": ["SITE_BASE", "SITE_ORIGIN", "VITE_SITE_ORIGIN"]
+      "env": ["SITE_BASE", "SITE_ORIGIN", "VITE_SITE_ORIGIN", "VERCEL_PROJECT_PRODUCTION_URL"]
     }
   }
 }

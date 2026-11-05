@@ -15,7 +15,7 @@ import { sfxSampleFacts } from "./plugins/sfx-sample-facts";
  *
  * `SITE_BASE=/soundbox/` builds for a GitHub Pages project site
  * (`https://hamsanders.github.io/soundbox/`); unset, the site is built for a
- * domain root, which is also what `npm run site:dev` serves. The router's
+ * domain root, which is what Vercel (vercel.json) and `npm run site:dev` serve. The router's
  * `basename` (src/main.tsx) and every raw URL (`@/lib/asset-url`) follow
  * `import.meta.env.BASE_URL`, which Vite derives from this.
  */
@@ -26,9 +26,17 @@ const SITE_BASE = normalizeBase(process.env.SITE_BASE);
  * `VITE_SITE_ORIGIN`, the origin canonical/og:url/RSS links are built from.
  * Copied across before Vite loads its env so `import.meta.env` and the plugins
  * reading `config.env` (blog-feed) both see it.
+ *
+ * On Vercel, with neither set, the project's production domain is used
+ * (`VERCEL_PROJECT_PRODUCTION_URL`, a bare host). Preview deployments get it
+ * too, so their canonical links point at production rather than at a
+ * throwaway preview URL.
  */
-if (process.env.SITE_ORIGIN && !process.env.VITE_SITE_ORIGIN) {
-  process.env.VITE_SITE_ORIGIN = process.env.SITE_ORIGIN.replace(/\/+$/, "");
+const SITE_ORIGIN =
+  process.env.SITE_ORIGIN ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined);
+if (SITE_ORIGIN && !process.env.VITE_SITE_ORIGIN) {
+  process.env.VITE_SITE_ORIGIN = SITE_ORIGIN.replace(/\/+$/, "");
 }
 
 /**
@@ -166,7 +174,7 @@ export default defineConfig({
   },
   ssgOptions: {
     // /sfx/8bit -> /sfx/8bit/index.html, not /sfx/8bit.html — plain static
-    // hosts (Cloudflare Pages, Netlify, GitHub Pages) all serve that shape
+    // hosts (Vercel, Cloudflare Pages, Netlify, GitHub Pages) all serve that shape
     // at the clean URL without extra rewrite rules.
     dirStyle: "nested",
     // Dynamic routes are prerendered only for the paths their

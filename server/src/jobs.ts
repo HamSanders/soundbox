@@ -14,7 +14,7 @@
 
 import { randomUUID } from "node:crypto";
 
-import { CancelledJob, QueueFull } from "./errors.js";
+import { CancelledJob, GpuBusy, QueueFull } from "./errors.js";
 import { buildFailure } from "./failure.js";
 import { getLogger } from "./logging.js";
 import type { Job, JobPhase } from "./schemas.js";
@@ -169,6 +169,9 @@ export class JobManager {
   private workerRunning = false;
   private stopped = false;
   private wake: (() => void) | null = null;
+  /** Held while a speech stream owns the GPU; the worker waits on it before
+   *  starting the next job. See `acquireExclusive`. */
+  private exclusive: { released: Promise<void>; release: () => void } | null = null;
 
   constructor(history = 200) {
     this.historyLimit = history;
@@ -235,6 +238,42 @@ export class JobManager {
     log.info(`job ${job.id} queued (kind=${kind} model=${String(request.model ?? "-")})`);
     this.publish(job);
     return job;
+  }
+
+  /**
+   * Take the GPU for a speech stream, or throw `GpuBusy` if it's not free.
+   *
+   * Streams don't queue: a game or a chat agent asking for a line wants it now
+   * or wants to know it can't have it, not to wait behind a music render. So a
+   * running generation (or another stream) refuses at once. Jobs submitted
+   * while a stream holds the GPU queue as usual and start when it's released.
+   *
+   * The returned function releases it; calling it twice is harmless.
+   */
+  acquireExclusive(): () => void {
+    if (this.exclusive) throw new GpuBusy("Another stream is using the GPU.", 1);
+    const running = [...this.jobs.values()]
+      .map((h) => h.job)
+      .find((j) => j.status === "running" && GENERATION_KINDS.has(j.kind));
+    if (running) {
+      const avg = this.avgDuration(running.kind, running.request.model as string | undefined);
+      const left = avg === null ? null : Math.max(1, Math.ceil(avg * (1 - (running.progress || 0))));
+      throw new GpuBusy(`A ${running.kind} job is using the GPU.`, left);
+    }
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => (release = resolve));
+    const lock = { released, release };
+    this.exclusive = lock;
+    return () => {
+      if (this.exclusive !== lock) return;
+      this.exclusive = null;
+      lock.release();
+    };
+  }
+
+  /** Is a speech stream holding the GPU right now? */
+  get streaming(): boolean {
+    return this.exclusive !== null;
   }
 
   /** Is anything queued or running? Asked before a profile switch, which
@@ -425,6 +464,11 @@ export class JobManager {
       }
       const [handle, runner] = item;
       const job = handle.job;
+      // A stream owns the GPU: hold this job (still "queued") until it's done.
+      // Only generation waits — a download doesn't touch the GPU.
+      while (this.exclusive && GENERATION_KINDS.has(job.kind) && !handle.cancelled) {
+        await this.exclusive.released;
+      }
       if (handle.cancelled) {
         job.status = "cancelled";
         job.finished_at = job.finished_at ?? now();

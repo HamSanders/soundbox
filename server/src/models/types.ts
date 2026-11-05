@@ -54,6 +54,11 @@ export interface SpeakOptions {
   progress?: ProgressFn;
 }
 
+/** One item of a streamed read: a chunk of audio, then the end. */
+export type StreamChunk =
+  | { kind: "audio"; audio: import("../audio/dsp.js").Audio; sampleRate: number }
+  | { kind: "done"; ttftMs: number | null };
+
 /** Re-exported: `ModelProvider` lives in `schemas.ts` because `ModelInfo`
  *  carries it and that is the wire type. Named here too, since this is the
  *  module a model implementation already imports. */
@@ -89,6 +94,11 @@ export interface GenerationModel {
 
   generate(prompt: string, durationS: number, options?: GenerateOptions): Promise<RenderedAudio>;
   speak(text: string, options?: SpeakOptions): Promise<RenderedAudio>;
+  /** Speak one line as it is generated. Absent on models that can't stream. */
+  speakStream?(
+    text: string,
+    options: SpeakOptions & { signal: AbortSignal },
+  ): AsyncGenerator<StreamChunk>;
   convert(
     sourceWavPath: string,
     voiceRefPath: string,

@@ -187,7 +187,7 @@ describe("generate", () => {
     expect(body).not.toHaveProperty("duration_seconds");
     expect(body["audio"]).toBe("/tmp/src.wav");
     expect(body["task_route"]).toBeTruthy();
-    expect(body["request_options"]).toMatchObject({ audio_cover_strength: "0.500" });
+    expect(body["options"]).toMatchObject({ audio_cover_strength: "0.500" });
   });
 
   it("turns extend into a repaint window past the source's end", async () => {
@@ -231,7 +231,7 @@ describe("generate", () => {
     expect(body).not.toHaveProperty("duration_seconds");
     expect(body).not.toHaveProperty("num_inference_steps");
     expect(body).toMatchObject({ guidance_scale: 2, seed: 7 });
-    expect(body["request_options"]).toEqual({ duration_sec: "6.000" });
+    expect(body["options"]).toEqual({ duration_sec: "6.000" });
   });
 });
 

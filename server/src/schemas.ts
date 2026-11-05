@@ -109,6 +109,10 @@ export interface ModelSupports {
    *  `--task-route repaint`). Drives the editor's Repaint tool, `/api/repaint`
    *  and the `repaint` edit on generate. */
   repaint: boolean;
+  /** Can speak a line as it is generated (`POST /api/speak/stream`). Read
+   *  from the running audio.cpp build's own model specs, so it is true only
+   *  where a streaming load will actually work. */
+  streaming: boolean;
 }
 
 export const DEFAULT_SUPPORTS: ModelSupports = {
@@ -122,6 +126,7 @@ export const DEFAULT_SUPPORTS: ModelSupports = {
   extend: false,
   cover: false,
   repaint: false,
+  streaming: false,
 };
 
 /** The audio-to-audio edits a `gen` model can run on a library sound. */
@@ -738,6 +743,31 @@ export const speakRequestSchema = z.object({
 });
 
 export type SpeakRequest = z.infer<typeof speakRequestSchema>;
+
+/**
+ * One utterance streamed as it is generated — `POST /api/speak/stream`.
+ *
+ * The same inputs as a single `/api/speak` line, minus what can't apply to a
+ * live read: no multi-line script, no `load_options` (a weights variant is
+ * chosen at load time). `format` picks the wire shape; `save` also writes the
+ * finished audio to the library.
+ */
+export const speakStreamRequestSchema = z.object({
+  model: z.string(),
+  text: z.string().min(1).max(5000),
+  voice_id: z.string().nullish(),
+  format: z.enum(["sse", "pcm"]).default("sse"),
+  seed: z.number().int().min(0).max(2 ** 31 - 1).nullish(),
+  steps: z.number().int().min(1).max(500).nullish(),
+  cfg: z.number().min(0).max(30).nullish(),
+  request_options: requestOptionsSchema.default({}),
+  save: z.boolean().default(false),
+  name: z.string().max(200).nullish(),
+  tags: z.array(z.string()).default([]).transform(normalizeTags),
+  project_id: z.string().nullish(),
+});
+
+export type SpeakStreamRequest = z.infer<typeof speakStreamRequestSchema>;
 
 /** Re-voice an existing library sound through a `--task vc` model. */
 export const convertRequestSchema = z.object({

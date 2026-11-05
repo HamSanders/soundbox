@@ -45,3 +45,29 @@ export class QueueFull extends Error {
     this.name = "QueueFull";
   }
 }
+
+/**
+ * Raised when a streamed read is asked of a model, build or option that can't
+ * stream. Answered with 409: the request is well-formed, but this model can't
+ * do it here — the caller should use `/api/speak` (or another model) instead.
+ */
+export class StreamUnsupported extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "StreamUnsupported";
+  }
+}
+
+/**
+ * Raised when a stream would have to wait for the GPU. Answered with 409 and
+ * `retry_after_s`: a game or agent would rather know now than queue behind a
+ * long render.
+ */
+export class GpuBusy extends Error {
+  readonly retryAfterS: number | null;
+  constructor(message: string, retryAfterS: number | null = null) {
+    super(message);
+    this.name = "GpuBusy";
+    this.retryAfterS = retryAfterS;
+  }
+}

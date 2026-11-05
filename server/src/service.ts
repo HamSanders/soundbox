@@ -46,7 +46,7 @@ import * as audiocppBinary from "./models/audiocppBinary.js";
 import { migrateLayout } from "./models/audiocppMigrate.js";
 import { withRequirements } from "./models/params.js";
 import { llmModelSpec } from "./models/llmCatalog.js";
-import { CancelledJob, ModelError } from "./errors.js";
+import { CancelledJob, ModelError, StreamUnsupported } from "./errors.js";
 import { JobHandle, JobManager } from "./jobs.js";
 import { LlmService, type LlmStatus } from "./llm/service.js";
 import type { StudioContext } from "./llm/studio.js";
@@ -99,6 +99,7 @@ import type {
   SoundEditRequest,
   SoundPage,
   SpeakRequest,
+  SpeakStreamRequest,
   Story,
   StoryBuilder,
   StorySegment,
@@ -2582,6 +2583,109 @@ export class SoundboxService {
     return { sounds: [soundId] };
   }
 
+  /* ------------------------------------------------------------ speak stream */
+
+  /**
+   * Speak one line, yielding 16-bit PCM as the model produces it.
+   *
+   * Not a job: it holds the GPU for as long as the caller is listening and
+   * gives it back when the stream ends or `signal` fires (the client hung up).
+   * Throws before yielding anything if the model can't stream or the GPU is
+   * taken, so the route can still answer with a normal status code.
+   *
+   * The first item is always `start` (rate and channels are only known once
+   * the first chunk is decoded), then `audio` chunks, then `done`.
+   */
+  async *speakStream(
+    req: SpeakStreamRequest,
+    signal: AbortSignal,
+  ): AsyncGenerator<SpeakStreamEvent> {
+    const model = this.models.get(req.model);
+    const info = model.describe();
+    if (info.task !== "tts") throw new ModelError(`${info.name} is not a text-to-speech model.`);
+    if (typeof model.speakStream !== "function") {
+      throw new StreamUnsupported(`${info.name} can't stream. Use /api/speak instead.`);
+    }
+    const { refPath, builtinId } = this.resolveVoice(req.voice_id ?? null);
+
+    const release = this.jobs.acquireExclusive();
+    const startedAt = Date.now();
+    const kept: dsp.Audio[] = [];
+    let sampleRate = 0;
+    let channels = 0;
+    let frames = 0;
+    let firstAudioMs: number | null = null;
+    let upstreamTtft: number | null = null;
+    try {
+      if (!model.loaded) await this.models.load(req.model, () => {});
+      this.models.touch();
+      const chunks = model.speakStream(req.text, {
+        voiceRefPath: refPath,
+        voiceId: builtinId,
+        seed: req.seed ?? null,
+        steps: req.steps ?? null,
+        cfg: req.cfg ?? null,
+        requestOptions: withRequirements(info.family, req.request_options),
+        signal,
+      });
+      for await (const chunk of chunks) {
+        if (signal.aborted) throw new CancelledJob();
+        if (chunk.kind === "done") {
+          upstreamTtft = chunk.ttftMs;
+          continue;
+        }
+        if (sampleRate === 0) {
+          sampleRate = chunk.sampleRate;
+          channels = chunk.audio.length;
+          firstAudioMs = Date.now() - startedAt;
+          yield { kind: "start", sampleRate, channels };
+        }
+        // One stream, one format: a family that changed rate or layout mid-read
+        // would play back garbled, so say so rather than send it.
+        if (chunk.sampleRate !== sampleRate || chunk.audio.length !== channels) {
+          throw new ModelError("The model changed audio format mid-stream.");
+        }
+        const n = dsp.frameCount(chunk.audio);
+        frames += n;
+        if (req.save) kept.push(chunk.audio);
+        yield { kind: "audio", pcm: toPcm16(chunk.audio), frames: n };
+      }
+      if (sampleRate === 0) throw new ModelError(`${info.name} streamed no audio.`);
+
+      let soundId: string | null = null;
+      if (req.save) {
+        const sound = this.writeSound(dsp.concatAudio(kept, sampleRate, 0), sampleRate, {
+          model: req.model,
+          prompt: req.text.slice(0, 2000),
+          name: req.name || defaultName(req.text),
+          seed: req.seed ?? null,
+          steps: info.supports.steps ? req.steps ?? null : null,
+          cfg: info.supports.cfg ? req.cfg ?? null : null,
+          projectId: req.project_id ?? null,
+          voiceId: req.voice_id ?? null,
+          trim: false,
+          // What was heard is what's kept: normalising afterwards would make
+          // the saved file louder or quieter than the stream that played.
+          normalize: false,
+        });
+        if (req.tags.length) this.db.updateSound(sound.id, { tags: req.tags });
+        soundId = sound.id;
+      }
+      this.models.touch();
+      yield {
+        kind: "done",
+        durationS: round3(frames / sampleRate),
+        // Ours includes the model load and the trip through audio.cpp, which
+        // is what a caller actually waits; upstream's starts once it's loaded.
+        ttftMs: firstAudioMs,
+        modelTtftMs: upstreamTtft,
+        soundId,
+      };
+    } finally {
+      release();
+    }
+  }
+
   /* ----------------------------------------------------------------- convert */
 
   submitConvert(request: ConvertRequest): Job {
@@ -3511,4 +3615,32 @@ async function unlinkQuiet(path: string): Promise<void> {
   } catch {
     /* already gone */
   }
+}
+
+/** One item of `SoundboxService.speakStream`. */
+export type SpeakStreamEvent =
+  | { kind: "start"; sampleRate: number; channels: number }
+  | { kind: "audio"; pcm: Buffer; frames: number }
+  | {
+      kind: "done";
+      durationS: number;
+      ttftMs: number | null;
+      modelTtftMs: number | null;
+      soundId: string | null;
+    };
+
+/** Channels-first float audio → interleaved little-endian 16-bit PCM. */
+export function toPcm16(audio: dsp.Audio): Buffer {
+  const channels = audio.length;
+  const frames = channels ? audio[0]!.length : 0;
+  const out = Buffer.allocUnsafe(frames * channels * 2);
+  let o = 0;
+  for (let f = 0; f < frames; f++) {
+    for (let c = 0; c < channels; c++) {
+      const v = Math.max(-1, Math.min(1, audio[c]![f]!));
+      out.writeInt16LE(Math.round(v < 0 ? v * 0x8000 : v * 0x7fff), o);
+      o += 2;
+    }
+  }
+  return out;
 }

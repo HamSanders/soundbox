@@ -156,6 +156,11 @@ export type StreamTaskEvent =
   | { kind: "audio"; audio: string | null; isFinal: boolean }
   | { kind: "done"; ttftMs: number | null };
 
+/** One item from `streamSpeech`: raw interleaved s16le PCM, then the end. */
+export type StreamSpeechEvent =
+  | { kind: "pcm"; pcm: Buffer }
+  | { kind: "done"; ttftMs: number | null };
+
 /** One audio artifact from `/v1/tasks/run` — `audio` is a base64 WAV. */
 export interface TaskAudio {
   id?: string;
@@ -771,6 +776,86 @@ export class AudioCppRuntime {
     })(this);
   }
 
+  /**
+   * Stream one TTS line over `/v1/audio/speech` (OpenAI-shaped SSE), yielding
+   * raw 16-bit PCM as each chunk is made.
+   *
+   * Preferred over `streamTask` because it actually streams on the builds we
+   * run: `/v1/tasks/stream` there holds every event until the line is done.
+   * The catch is that its deltas carry no sample rate, so the caller has to
+   * know it already (see `AudioCppModel.speakStream`).
+   *
+   * Cancellation works like `streamTask`: a listener leaving mid-stream stops
+   * the process, since audio.cpp has no per-request cancel.
+   */
+  async streamSpeech(
+    body: Record<string, unknown>,
+    modelsRoot: string,
+    backend: string | null,
+    signal: AbortSignal,
+  ): Promise<AsyncGenerator<StreamSpeechEvent> | null> {
+    const baseUrl = await this.ensureRunning(modelsRoot, backend);
+    if (baseUrl === null) return null;
+    this.lastUsed = Date.now();
+    const abort = new AbortController();
+    const onAbort = () => abort.abort();
+    if (signal.aborted) abort.abort();
+    else signal.addEventListener("abort", onAbort, { once: true });
+
+    let resp: Response;
+    try {
+      resp = await fetch(`${baseUrl}/v1/audio/speech`, {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "text/event-stream" },
+        body: JSON.stringify({ ...body, response_format: "pcm", stream_format: "sse" }),
+        signal: abort.signal,
+      });
+    } catch (exc) {
+      signal.removeEventListener("abort", onAbort);
+      if (signal.aborted) throw new CancelledJob();
+      throw exc;
+    }
+    if (!resp.ok || resp.body === null) {
+      signal.removeEventListener("abort", onAbort);
+      const text = await resp.text().catch(() => "");
+      throw new ModelError(
+        `audio.cpp could not stream this request (HTTP ${resp.status})` +
+          (text ? `: ${extractError(text)}` : ""),
+      );
+    }
+    const stream = resp.body as unknown as AsyncIterable<Uint8Array>;
+    return (async function* (runtime: AudioCppRuntime) {
+      let finished = false;
+      try {
+        for await (const msg of sseMessages(stream)) {
+          runtime.lastUsed = Date.now();
+          if (msg["type"] === "speech.audio.delta" && typeof msg["audio"] === "string") {
+            yield { kind: "pcm", pcm: Buffer.from(msg["audio"], "base64") };
+          } else if (msg["type"] === "speech.audio.done") {
+            finished = true;
+            const timing = (msg["timing"] ?? {}) as Record<string, unknown>;
+            yield {
+              kind: "done",
+              ttftMs: typeof timing["ttft_ms"] === "number" ? timing["ttft_ms"] : null,
+            };
+          } else if ("error" in msg) {
+            throw new ModelError(`audio.cpp stream failed: ${extractError(JSON.stringify(msg))}`);
+          }
+        }
+        finished = true;
+      } catch (exc) {
+        if (signal.aborted) throw new CancelledJob();
+        throw exc;
+      } finally {
+        signal.removeEventListener("abort", onAbort);
+        if (!finished) {
+          abort.abort();
+          if (signal.aborted) await runtime.stop();
+        }
+      }
+    })(this);
+  }
+
   /* -------------------------------------------------------------- shutdown */
 
   /** Called by the same 30s tick that drives `ModelManager.maybeAutoUnload`. */
@@ -846,4 +931,25 @@ export function eventAudio(event: Record<string, unknown>): string[] {
   return named
     .map((o) => (o as { audio?: unknown }).audio)
     .filter((a): a is string => typeof a === "string");
+}
+
+/**
+ * The `/v1/tasks/run`-style TTS body as a `/v1/audio/speech` body.
+ *
+ * The speech route reads the text as `input` and a built-in voice as
+ * `voice`; everything that isn't a named field goes in `options`, which is
+ * where the task route puts steps and cfg too.
+ */
+export function speechBody(body: Record<string, unknown>): Record<string, unknown> {
+  const options = { ...((body["options"] as Record<string, string> | undefined) ?? {}) };
+  if (body["num_inference_steps"] !== undefined) {
+    options["num_inference_steps"] = String(body["num_inference_steps"]);
+  }
+  if (body["guidance_scale"] !== undefined) options["guidance_scale"] = String(body["guidance_scale"]);
+  const out: Record<string, unknown> = { model: body["model"], input: body["text"] };
+  if (body["voice_id"] !== undefined) out["voice"] = body["voice_id"];
+  if (body["voice_ref"] !== undefined) out["voice_ref"] = body["voice_ref"];
+  if (body["seed"] !== undefined) out["seed"] = body["seed"];
+  if (Object.keys(options).length) out["options"] = options;
+  return out;
 }

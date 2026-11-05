@@ -13,6 +13,7 @@ to follow [Semantic Versioning](https://semver.org/).
 - The site's download page has a new design: a full-width hero, the Soundbox film in a frame that flattens as you scroll, live GitHub numbers and a card per installer.
 
 ### Fixed
+- Per-model delivery options (exaggeration, temperature and the like) were silently ignored whenever a model ran resident in audio.cpp's server, because they were sent under the wrong key. They now reach the model.
 - Security: updated dependencies with open advisories: the system information library, the HTTP server adapter, and the desktop updater's zip support (Dependabot alerts).
 
 ## [0.4.1] - 2026-10-29

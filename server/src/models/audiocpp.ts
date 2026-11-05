@@ -28,7 +28,12 @@ import { fileURLToPath } from "node:url";
 
 import { applyFades, decodeWav, frameCount, readWav, type Audio } from "../audio/dsp.js";
 import { getLogger } from "../logging.js";
-import type { StreamTaskEvent, TaskResult } from "./audiocppRuntime.js";
+import {
+  speechBody,
+  type StreamSpeechEvent,
+  type StreamTaskEvent,
+  type TaskResult,
+} from "./audiocppRuntime.js";
 import { defaultDataDir, getConfig } from "../config.js";
 import { downloadToFile } from "../download.js";
 import { CancelledJob, ModelError, StreamUnsupported } from "../errors.js";
@@ -815,10 +820,26 @@ export interface PackageInstaller {
     backend: string | null,
     signal: AbortSignal,
   ): Promise<AsyncGenerator<StreamTaskEvent> | null>;
+  /** Stream one TTS line over `/v1/audio/speech`: raw PCM, no format. */
+  streamSpeech?(
+    body: Record<string, unknown>,
+    modelsRoot: string,
+    backend: string | null,
+    signal: AbortSignal,
+  ): Promise<AsyncGenerator<StreamSpeechEvent> | null>;
   /** Whether `id` is loaded in the server process running now. False once
    *  the process it was loaded into has exited or been replaced. */
   isResident?(id: string): boolean;
 }
+
+/**
+ * Request options a family needs for a streaming run. VoxCPM2 refuses to
+ * stream with `retry_badcase` on ("retrying a completed bad case is an
+ * offline-only behaviour", upstream), and its default is on.
+ */
+const STREAM_REQUEST_OPTIONS: Record<string, Record<string, string>> = {
+  voxcpm2: { retry_badcase: "false" },
+};
 
 export class AudioCppModel {
   readonly spec: ModelSpec;
@@ -848,6 +869,12 @@ export class AudioCppModel {
   private residentId: string | null = null;
   /** The `<id>::stream` entry, when a streaming copy is resident. */
   private streamResidentId: string | null = null;
+  /** The rate and layout this model's speech comes out at, learned from the
+   *  first WAV it returns. `/v1/audio/speech` streams raw PCM with no header,
+   *  so without this the stream can't say what it's sending. The catalogue's
+   *  `sample_rate` isn't trusted for it: VoxCPM2 is listed at 44.1 kHz and
+   *  speaks at 48. */
+  private speechFormat: { sampleRate: number; channels: number } | null = null;
   error: string | null = null;
 
   readonly extras = [EXTRA];
@@ -1408,7 +1435,9 @@ export class AudioCppModel {
         if (options.trackName) body["track_name"] = options.trackName;
       }
     }
-    if (Object.keys(requestOptions).length) body["request_options"] = requestOptions;
+    // `options` is the key audio.cpp reads (app/cli/request.cpp); `request_options`
+    // was silently ignored, so every per-family knob was dropped on this path.
+    if (Object.keys(requestOptions).length) body["options"] = requestOptions;
     return body;
   }
 
@@ -1683,7 +1712,9 @@ export class AudioCppModel {
       body["guidance_scale"] = options.cfg;
     }
     const requestOptions = { ...s.request_options, ...(options.requestOptions ?? {}) };
-    if (Object.keys(requestOptions).length) body["request_options"] = requestOptions;
+    // `options` is the key audio.cpp reads (app/cli/request.cpp); `request_options`
+    // was silently ignored, so every per-family knob was dropped on this path.
+    if (Object.keys(requestOptions).length) body["options"] = requestOptions;
     return body;
   }
 
@@ -1738,12 +1769,45 @@ export class AudioCppModel {
       this.streamResidentId = streamId;
     }
 
-    const events = await installer.streamTask(
-      { ...this.ttsBody(text, options), model: streamId, family: this.spec.family },
-      this.audiocppRoot,
-      backend(),
-      options.signal,
-    );
+    // Some families need a request option set for a streaming run that an
+    // offline read must not have; the caller's own value still wins.
+    const streamOptions = {
+      ...(STREAM_REQUEST_OPTIONS[this.spec.family] ?? {}),
+      ...(options.requestOptions ?? {}),
+    };
+    const body = {
+      ...this.ttsBody(text, { ...options, requestOptions: streamOptions }),
+      model: streamId,
+      family: this.spec.family,
+    };
+
+    // The live route, once we know what format it speaks in.
+    const format = this.speechFormat;
+    if (format && installer.streamSpeech) {
+      const pcm = await installer.streamSpeech(
+        speechBody(body),
+        this.audiocppRoot,
+        backend(),
+        options.signal,
+      );
+      if (pcm !== null) {
+        for await (const event of pcm) {
+          if (event.kind === "done") {
+            yield { kind: "done", ttftMs: event.ttftMs };
+            continue;
+          }
+          const audio = fromPcm16(event.pcm, format.channels);
+          if (frameCount(audio) === 0) continue;
+          yield { kind: "audio", audio, sampleRate: format.sampleRate };
+        }
+        return;
+      }
+    }
+
+    // First stream for this model: the task route, whose WAVs carry the
+    // format. It may hold every chunk to the end (it does on current builds),
+    // but a first stream is paying for two model loads anyway.
+    const events = await installer.streamTask(body, this.audiocppRoot, backend(), options.signal);
     if (events === null) {
       throw new StreamUnsupported(`audio.cpp's model server isn't available, so it can't stream.`);
     }
@@ -1755,6 +1819,7 @@ export class AudioCppModel {
       if (!event.audio) continue;
       const { audio, sampleRate } = decodeAudio(event.audio);
       if (frameCount(audio) === 0) continue;
+      this.speechFormat = { sampleRate, channels: audio.length };
       yield { kind: "audio", audio, sampleRate };
     }
   }
@@ -1807,7 +1872,11 @@ export class AudioCppModel {
       const body = this.ttsBody(text, options);
 
       const served = await this.serverRun(body, progress);
-      if (served?.audio) return decodeAudio(served.audio);
+      if (served?.audio) {
+        const decoded = decodeAudio(served.audio);
+        this.speechFormat = { sampleRate: decoded.sampleRate, channels: decoded.audio.length };
+        return decoded;
+      }
     }
 
     const binary = await findBinary();
@@ -1901,7 +1970,7 @@ export class AudioCppModel {
       };
       if (options.seed !== null && options.seed !== undefined) body["seed"] = options.seed;
       if (Object.keys(this.spec.request_options).length) {
-        body["request_options"] = { ...this.spec.request_options };
+        body["options"] = { ...this.spec.request_options };
       }
       const served = await this.serverRun(body, progress);
       if (served?.audio) return decodeAudio(served.audio);
@@ -2214,4 +2283,16 @@ function explainHfError(exc: unknown, spec: ModelSpec): string {
     return `Could not reach huggingface.co. Check your network.\n\n(${text})`;
   }
   return `Download failed: ${text}`;
+}
+
+/** Interleaved s16le PCM -> channels-first float audio. */
+export function fromPcm16(pcm: Buffer, channels: number): Audio {
+  const frames = Math.floor(pcm.length / 2 / channels);
+  const out: Audio = Array.from({ length: channels }, () => new Float32Array(frames));
+  for (let f = 0; f < frames; f++) {
+    for (let c = 0; c < channels; c++) {
+      out[c]![f] = pcm.readInt16LE((f * channels + c) * 2) / 0x8000;
+    }
+  }
+  return out;
 }

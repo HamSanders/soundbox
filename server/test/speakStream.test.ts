@@ -177,6 +177,50 @@ describe("AudioCppModel.speakStream", () => {
     expect(chunks.at(-1)).toEqual({ kind: "done", ttftMs: 120 });
   });
 
+  it("switches to the live speech route once it knows the format", async () => {
+    const { host, bodies } = streamingHost();
+    const speech: Record<string, unknown>[] = [];
+    host.streamSpeech = async (body) => {
+      speech.push(body);
+      return (async function* () {
+        yield { kind: "pcm" as const, pcm: Buffer.from([0, 0x40, 0, 0xc0]) };
+        yield { kind: "done" as const, ttftMs: 90 };
+      })();
+    };
+    const m = ttsModel(host);
+    const signal = new AbortController().signal;
+    await collect(m.speakStream("first", { signal })); // learns 24 kHz mono
+    const chunks = await collect(
+      m.speakStream("second", { voiceId: "af_heart", steps: 8, requestOptions: { temperature: "0.7" }, signal }),
+    );
+
+    expect(bodies).toHaveLength(1);
+    expect(speech[0]).toEqual({
+      model: "test-tts::stream",
+      input: "second",
+      voice: "af_heart",
+      // Steps are a named field on the task route; the speech route takes
+      // them as an option.
+      options: { temperature: "0.7", num_inference_steps: "8" },
+    });
+    const audio = chunks[0]!;
+    expect(audio.kind === "audio" && audio.sampleRate).toBe(24000);
+    expect(audio.kind === "audio" && [...audio.audio[0]!]).toEqual([0.5, -0.5]);
+    expect(chunks.at(-1)).toEqual({ kind: "done", ttftMs: 90 });
+  });
+
+  it("turns retry_badcase off for a VoxCPM2 stream unless the caller set it", async () => {
+    const { host, bodies } = streamingHost();
+    const base = catalogById().get("audiocpp-stable-audio-3-sfx")!;
+    const spec = { ...base, id: "vox", name: "Vox", task: "tts", cli_task: "tts", family: "voxcpm2" };
+    const m = new AudioCppModel(spec as typeof base, "/models", null, "/models/audiocpp", host);
+    vi.spyOn(m, "weightsFile").mockResolvedValue("/models/audiocpp/fake/weights.gguf");
+    vi.spyOn(m, "depsInstalled").mockResolvedValue(true);
+    vi.spyOn(m, "requireDeps").mockResolvedValue(undefined);
+    await collect(m.speakStream("x", { signal: new AbortController().signal }));
+    expect(bodies[0]!["options"]).toEqual({ retry_badcase: "false" });
+  });
+
   it("reuses the streaming entry for the next line", async () => {
     const { host, loads } = streamingHost();
     const m = ttsModel(host);

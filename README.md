@@ -8,12 +8,13 @@ Sound effects, music, songs with lyrics, speech and voice cloning from
 open-weight models on your own GPU. Arrange it on a timeline, or let Claude
 Code, Cursor or any MCP agent do it. No account, no credits, works offline. MIT.
 
-[Download](#download) · [Hear it](#hear-it) · [For agents](#for-agents) · [Models](#models) · [Docs](#docs) · [Website](https://hamsanders.github.io/soundbox/)
+[Download](#download) · [Hear it](#hear-it) · [For agents](#for-agents) · [Models](#models) · [Docs](#docs) · [Website](https://hamsanders.github.io/soundbox/) · [Patreon](https://patreon.com/soundboxai)
 
 [![Latest release](https://img.shields.io/github/v/release/HamSanders/soundbox?label=release)](https://github.com/HamSanders/soundbox/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/HamSanders/soundbox/total?label=downloads)](https://github.com/HamSanders/soundbox/releases)
 [![MIT licence](https://img.shields.io/badge/licence-MIT-2ea44f)](LICENSE)
 [![MCP server](https://img.shields.io/badge/MCP-24%20tools-6b4fbb)](docs/MCP.md)
+[![Patreon](https://img.shields.io/badge/Patreon-support-f96854?logo=patreon&logoColor=white)](https://patreon.com/soundboxai)
 
 <img src="site/public/product/same-prompt-three-models.gif" alt="The same prompt and seed rendered by Stable Audio 3.0 Small Music, MiniMax Music 3 and ACE-Step 1.5 Turbo, with measured render times on an RTX 5080" width="880">
 

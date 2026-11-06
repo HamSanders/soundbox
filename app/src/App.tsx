@@ -9,6 +9,7 @@ import {
   useLocation,
 } from "react-router-dom";
 
+import { AccessGate } from "@/components/access-gate";
 import { AppCommandPalette } from "@/components/app-command-palette";
 import { AppHeader } from "@/components/app-header";
 import { HeaderSlotProvider } from "@/components/header-slot";
@@ -181,6 +182,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
         <TooltipProvider>
+          <AccessGate>
           <Router>
             <ScrollToTop />
             {/* Every route here is the app. The marketing surface — the
@@ -194,6 +196,7 @@ export default function App() {
               <Route path="*" element={<AppShell />} />
             </Routes>
           </Router>
+          </AccessGate>
           <Toaster position="bottom-right" closeButton />
         </TooltipProvider>
       </ThemeProvider>

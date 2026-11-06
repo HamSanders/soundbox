@@ -31,11 +31,14 @@ following assumptions. Please report any way to break one of them.
 
 - **The server binds to loopback** (`127.0.0.1`) by default. It is meant to be
   reached only from the same machine.
-- **There is no authentication.** Anything that can send HTTP to the server can
-  use its whole API: generate audio, read and delete the library, change
-  settings. Binding it to a non-loopback interface with `--host` exposes all
-  of that to the network and the server warns when you do; if you do it, put
-  your own authenticating proxy in front of it.
+- **There is no authentication unless an access token is set.** Without
+  `SOUNDBOX_API_TOKEN`, anything that can send HTTP to the server can use its
+  whole API: generate audio, read and delete the library, change settings.
+  Binding it to a non-loopback interface with `--host` exposes all of that to
+  the network, and the server warns when you do without a token. With a token,
+  the API, `/mcp` and served files need it as a bearer header or a session
+  cookie (`server/src/auth.ts`); `GET /api/health` stays open. The token
+  travels in the clear over plain HTTP, so serve it over HTTPS.
 - **Host-header allowlist.** Requests whose `Host` header is not a loopback
   name (`localhost`, `127.0.0.1`, `::1`, any port) are rejected with 403,
   which defends against DNS rebinding from web pages in your browser. Two

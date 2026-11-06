@@ -32,6 +32,7 @@ import { registerJobs } from "./routes/jobs.js";
 import { registerLlm } from "./routes/llm.js";
 import { registerImage } from "./routes/image.js";
 import { registerEndpoints } from "./routes/endpoints.js";
+import { AccessGuard, registerAuth } from "./auth.js";
 import { mountMcp, toolInfos } from "./mcp/server.js";
 import { hostnameOf, isListedHost } from "./origins.js";
 import { registerMcp, type McpToolsProvider } from "./routes/mcp.js";
@@ -70,6 +71,11 @@ export interface BuildAppOptions {
    * `"any"` disables the check (wildcard binds like 0.0.0.0).
    */
   allowedHosts?: string[] | "any";
+  /**
+   * The access token every API, MCP and file request must carry, or null for
+   * none (the default, and right for loopback). See `auth.ts`.
+   */
+  apiToken?: string | null;
 }
 
 /** Loopback names that are always accepted in the Host header. */
@@ -103,7 +109,8 @@ function uiDir(): string | null {
 }
 
 export function buildApp(config: Config, options: BuildAppOptions = {}): FastifyInstance {
-  const { serveUi = true, mcpTools, allowedHosts = [] } = options;
+  const { serveUi = true, mcpTools, allowedHosts = [], apiToken = null } = options;
+  const guard = apiToken ? new AccessGuard(apiToken) : null;
   // bodyLimit, not Fastify's 1 MB default: the audio upload routes take the
   // file as the raw request body, and anything longer than a few seconds of
   // speech is past 1 MB. Over the limit Fastify tears down the connection at
@@ -144,6 +151,12 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
       if (!LOOPBACK_HOSTS.has(name) && !extraHosts.has(name) && !isListedHost(host)) {
         return reply.code(403).send({ detail: "Forbidden host" });
       }
+    }
+    // After the Host check, so a rebinding page is still told "forbidden
+    // host" rather than learning that a token would get it in.
+    if (guard) {
+      const refused = guard.check(request, reply);
+      if (refused) return refused;
     }
     if (MUTATING.has(request.method) && request.url.startsWith("/api/")) {
       if (request.headers[CSRF_HEADER] !== undefined) return;
@@ -195,6 +208,7 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
     },
   });
 
+  registerAuth(app, guard);
   registerModels(app, svc);
   registerJobs(app, svc);
   registerSounds(app, svc);

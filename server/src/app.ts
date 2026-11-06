@@ -31,6 +31,7 @@ import {
 } from "./routes/helpers.js";
 import { registerJobs } from "./routes/jobs.js";
 import { registerSpeakStream } from "./routes/speakStream.js";
+import { registerRender } from "./routes/render.js";
 import { registerLlm } from "./routes/llm.js";
 import { registerImage } from "./routes/image.js";
 import { registerEndpoints } from "./routes/endpoints.js";
@@ -226,6 +227,7 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
   registerModels(app, svc);
   registerJobs(app, svc);
   registerSpeakStream(app, svc);
+  registerRender(app, svc);
   registerSounds(app, svc);
   registerVoices(app, svc);
   registerSessions(app, svc);

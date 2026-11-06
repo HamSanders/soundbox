@@ -13,11 +13,12 @@
 # Then open http://localhost:17494 and download a model from the Models page,
 # or: docker compose exec soundbox soundbox pull audiocpp-stable-audio-3-sfx
 #
-# THERE IS NO AUTHENTICATION. Anyone who can reach port 17494 can generate
-# audio, read and delete your library, and drive the MCP tools. The port is
-# published on 127.0.0.1 only below; to reach it from other machines, put a
-# reverse proxy with auth in front (and add its hostname to
-# SOUNDBOX_ALLOWED_HOSTS) rather than changing that to 0.0.0.0.
+# THERE IS NO AUTHENTICATION unless SOUNDBOX_API_TOKEN is set below. Without
+# it, anyone who can reach port 17494 can generate audio, read and delete your
+# library, and drive the MCP tools. The port is published on 127.0.0.1 only
+# below; to reach it from other machines, set a token and serve it over HTTPS
+# (or put a reverse proxy with auth in front), and add the hostname to
+# SOUNDBOX_ALLOWED_HOSTS.
 
 services:
   soundbox:
@@ -32,6 +33,10 @@ services:
       # client used, so list every one, exactly as sent: with the port unless
       # it is 80/443. Comma-separated. Not needed for http://localhost:17494.
       SOUNDBOX_ALLOWED_HOSTS: "soundbox.example.lan"
+      # An access token, 16+ characters, for use from other machines. The UI
+      # then asks for it once; scripts and MCP clients send it as
+      # "Authorization: Bearer <token>". See docs/INSTALL.md#access-token.
+      # SOUNDBOX_API_TOKEN: "change-me-to-a-long-random-string"
       # Needed only for gated Hugging Face models (docs/INSTALL.md, Step 3).
       # HF_TOKEN: "hf_..."
       # debug, info (default), warning, error or critical. Shown in the

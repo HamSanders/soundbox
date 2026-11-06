@@ -2122,6 +2122,13 @@ const withCount = (c: Conversation): Conversation => ({
 });
 
 export const mockApi: SoundboxApi = {
+  // The mock has no access token, the same as a desktop server.
+  async getAuthStatus() {
+    return { required: false, signed_in: true };
+  },
+  async signIn() {},
+  async signOut() {},
+
   async getHealth(): Promise<HealthStatus> {
     await wait(60);
     const loaded = models.find((e) => e.status === "loaded");

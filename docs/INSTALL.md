@@ -242,14 +242,15 @@ docker run -d --name soundbox -p 127.0.0.1:17494:17494 \
 or build it yourself with `docker build -t soundbox .` and run `soundbox` in
 place of the image name.
 
-**No authentication.** The server has no login of any kind. Anyone who can
-reach the port can generate audio, read and delete your library, change
-settings (including the stored Hugging Face token) and drive every MCP tool.
-The examples publish the port on `127.0.0.1` only. To use it from other
-machines, put it behind a reverse proxy that does authentication — Caddy or
-nginx with basic auth, Authelia, Authentik, a Tailscale/WireGuard-only
-listener — and do not publish `0.0.0.0:17494` on a network you do not
-control.
+**No authentication unless you set a token.** By default the server has no
+login of any kind. Anyone who can reach the port can generate audio, read and
+delete your library, change settings (including the stored Hugging Face token)
+and drive every MCP tool. The examples publish the port on `127.0.0.1` only.
+To use it from other machines, set `SOUNDBOX_API_TOKEN` (see
+[Access token](#access-token)) and serve it over HTTPS, or put it behind a
+reverse proxy that does authentication — Caddy or nginx with basic auth,
+Authelia, Authentik, a Tailscale/WireGuard-only listener. Do not publish
+`0.0.0.0:17494` without either on a network you do not control.
 
 **Volumes.** The container's `/data` is the whole of `~/.soundbox` (see
 [Where things go](#where-things-go)); `/data/models` is the weights, mounted
@@ -261,7 +262,8 @@ and the server cannot write to it.
 **Binding.** Inside the container the server listens on `0.0.0.0` (`--host
 0.0.0.0`, the image default) — loopback inside a container is unreachable
 from the published port. It logs a warning about binding beyond loopback on
-every start; that is expected here, and is the reason for the paragraph above.
+every start unless `SOUNDBOX_API_TOKEN` is set; that is expected here, and is
+the reason for the paragraph above.
 
 **`SOUNDBOX_ALLOWED_HOSTS` and the MCP endpoint.** `/mcp` checks the `Host`
 header (and `Origin`, when a browser sends one) against loopback and answers
@@ -282,13 +284,59 @@ web UI and `/api/*`, so there only `/mcp` needs the list. Outside Docker every
 request is checked; see
 [Reverse proxy or another machine](#reverse-proxy-or-another-machine).
 
+## Access token
+
+To reach Soundbox from another machine (a rented GPU, a box on your LAN, Docker
+on a public address), give it an access token:
+
+```bash
+export SOUNDBOX_API_TOKEN="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+soundbox --host 0.0.0.0
+```
+
+or `-e SOUNDBOX_API_TOKEN=...` for Docker. The token must be at least 16
+characters; a shorter one stops the server at startup. The banner shows
+`Access token -> required` when one is in force.
+
+With a token set, every request to `/api/*`, `/mcp`, `/files/*` and
+`/artwork/*` needs it, or the server answers **401**:
+
+- **The web UI** shows a sign-in screen. Paste the token once and the browser
+  stays signed in for 30 days with an HttpOnly cookie. The cookie holds a
+  value derived from the token, not the token itself, and changing the token
+  signs every browser out. Ten wrong tokens from one address lock the sign-in
+  form for ten minutes.
+- **Scripts, MCP clients and other Soundboxes** send
+  `Authorization: Bearer <token>`. For Claude Code:
+
+  ```bash
+  claude mcp add --transport http soundbox https://gpu-box.example/mcp --header "Authorization: Bearer $SOUNDBOX_API_TOKEN"
+  ```
+
+- **The stdio MCP bridge** and the `soundbox ps` and `soundbox enhance`
+  commands send the token when `SOUNDBOX_API_TOKEN` is set in their own
+  environment.
+
+Three things stay open: `GET /api/health`, which the Docker health check and
+the desktop app's startup probe call and which says nothing about your
+library; the sign-in routes; and the web UI's static files.
+
+Use HTTPS. Over plain `http://` the token and the cookie cross the network
+unencrypted. A reverse proxy with a certificate, a tunnel such as Tailscale, or
+a GPU host's own HTTPS proxy all work. Behind a proxy that terminates HTTPS,
+the cookie is marked `Secure` when the proxy sends `X-Forwarded-Proto: https`.
+
+The token does not replace the `Host` check. Behind a proxy or on a specific
+`--host`, still list the name you reach the server by in
+`SOUNDBOX_ALLOWED_HOSTS`, as described below.
+
 ## Reverse proxy or another machine
 
 By default everything listens on loopback, and the server answers **403
 Forbidden host** to a request whose `Host` header is not `localhost`,
-`127.0.0.1` or `::1`. That is the defence against DNS rebinding. There is no
-authentication, so anything you open up should sit behind a proxy that has
-some.
+`127.0.0.1` or `::1`. That is the defence against DNS rebinding. Anything you open up
+also needs authentication: an [access token](#access-token), a proxy that has
+some, or both.
 
 **Built app (`soundbox`, the desktop app) behind Caddy or nginx.** Keep the
 server on `127.0.0.1` and list the name the proxy forwards as `Host`:
@@ -465,6 +513,7 @@ Server-side variables are read by the process running `soundbox` (or
 | `SOUNDBOX_LLAMA_SERVER_BACKEND` | server | Same, for the `llama-server` download. |
 | `SOUNDBOX_SD_SERVER_BACKEND` | server | Same, for the `sd-server` download. |
 | `SOUNDBOX_ALLOW_UNVERIFIED_BINARIES` | server | `1` installs an engine archive that no published SHA-256 covers. Off by default; a checksum *mismatch* is refused regardless. |
+| `SOUNDBOX_API_TOKEN` | server, stdio MCP bridge, CLI | An access token of at least 16 characters. Set on the server, every `/api/*`, `/mcp`, `/files` and `/artwork` request needs it as `Authorization: Bearer <token>` or a session cookie from the UI's sign-in screen; `GET /api/health` stays open. Set for the stdio bridge, `soundbox ps` or `soundbox enhance`, it is sent to the server. See [Access token](#access-token). |
 | `SOUNDBOX_ALLOWED_HOSTS` | server, Vite | Comma-separated `host` (any port) or `host:port` (that port only). Adds `Host` values the server accepts (UI, `/api/*` and `/mcp`) and trusted browser origins (CORS and the MCP `Origin` check); under `npm run dev` also Vite's `server.allowedHosts`. See [Reverse proxy or another machine](#reverse-proxy-or-another-machine) and [SECURITY.md](https://github.com/HamSanders/soundbox/blob/main/SECURITY.md). |
 | `SOUNDBOX_DEV_HOST` | `npm run dev`, Vite | Address the Vite dev server listens on (`0.0.0.0`, a LAN IP). Default localhost. The server stays on `127.0.0.1`. No authentication, so open it up only on a network you trust or behind a proxy that has some. |
 | `SOUNDBOX_LOG_LEVEL` | server | `debug`, `info` (default), `warning`, `error` or `critical`; `warn` works too. Used when `--log-level` isn't given, so it reaches `npm run dev`, Docker and the desktop app, none of which pass the flag. The startup banner shows the level in force; an unknown value logs a warning and runs at `info`. At `debug`, every request to the prompt assistant, artwork and custom endpoints is logged with its full URL, HTTP status and timing. Custom endpoints also log the body's field names. Keys, headers, prompts and lyrics are never logged. For the desktop app, set it as a user environment variable (Windows) or with `launchctl setenv` (macOS), then restart the app. |
@@ -472,7 +521,7 @@ Server-side variables are read by the process running `soundbox` (or
 | `HF_TOKEN` / `HUGGING_FACE_HUB_TOKEN` | server | Hugging Face token for gated models, used when none is saved in Settings. |
 | `HF_HOME` | server | Hugging Face cache location. Left alone if set; otherwise Soundbox points it at `<data dir>/models`. |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | server | OpenTelemetry collector for MCP call traces and metrics. Wins over the Settings value. |
-| `SOUNDBOX_URL` | stdio MCP bridge | Where the running server is. Default `http://127.0.0.1:17494`. |
+| `SOUNDBOX_URL` | stdio MCP bridge | Where the running server is. Default `http://127.0.0.1:17494`. Set `SOUNDBOX_API_TOKEN` too if that server requires one. |
 | `SOUNDBOX_PORT` | `npm run dev`, Vite | Port `scripts/dev.mjs` starts the server on, and the port Vite proxies `/api`, `/mcp`, `/files` and `/artwork` to. Default 17494. The `soundbox` CLI itself takes `--port`. |
 | `SOUNDBOX_NODE` | desktop shell | Node interpreter to run the built server with, if `node` is not on `PATH`. |
 | `SOUNDBOX_PROJECT_ROOT` | desktop shell | Path to the checkout, if the shell cannot find it from its own location. |

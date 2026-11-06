@@ -63,7 +63,10 @@ The bridge covers six tools: `generate`, `enhance_prompt`, `list_models`,
 stories and arrangement, use the HTTP transport.
 
 Set `SOUNDBOX_URL` if the server listens somewhere other than
-`http://127.0.0.1:17494`.
+`http://127.0.0.1:17494`, and `SOUNDBOX_API_TOKEN` if that server requires an
+access token. Over HTTP, send the token as a header instead:
+`claude mcp add --transport http soundbox <url>/mcp --header "Authorization: Bearer <token>"`.
+See [Access token](INSTALL.md#access-token).
 
 ## Tools
 

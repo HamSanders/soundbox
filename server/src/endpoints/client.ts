@@ -18,7 +18,11 @@
  *     fix, rather than handing an MP3 to a WAV parser.
  *
  * A JSON response is supported too, for servers that wrap the audio: set
- * `responsePath` to where the base64 string lives (`data.0.b64_json`).
+ * `responsePath` to where the base64 string lives (`data.0.b64_json`). Hosted
+ * APIs such as fal and Replicate answer with a link instead (`audio.url`);
+ * when the value at the path is an http(s) URL, or an object with a `url`,
+ * the audio is downloaded from it. That second request carries no key: the
+ * link is usually on a CDN, a different host from the one the key is for.
  */
 
 import { spawn } from "node:child_process";
@@ -41,10 +45,13 @@ const FFMPEG_TIMEOUT_MS = 120_000;
 export interface EndpointRequest {
   url: string;
   apiKey?: string | null;
+  /** Where the key goes. Defaults to `Authorization: Bearer <key>`. */
+  apiKeyHeader?: string;
+  apiKeyPrefix?: string;
   headers?: Record<string, string>;
   body: unknown;
-  /** Dotted path to a base64 audio string in a JSON response, or empty for a
-   *  response whose body *is* the audio. */
+  /** Dotted path to base64 audio, or a link to it, in a JSON response; empty
+   *  for a response whose body *is* the audio. */
   responsePath?: string;
   /** Rate to read a headerless PCM response at. */
   pcmSampleRate?: number;
@@ -65,22 +72,67 @@ export async function requestAudio(
   fetchImpl: FetchFn = fetch,
 ): Promise<EndpointAudio> {
   const { bytes, contentType } = await post(req, fetchImpl);
-  const audioBytes = req.responsePath ? extractFromJson(bytes, req.responsePath) : bytes;
-  if (!req.responsePath && contentType.includes("json")) {
+  if (req.responsePath) {
+    const found = audioFromJson(bytes, req.responsePath);
+    if (found.kind === "url") {
+      const file = await fetchBytes(req, fetchImpl, found.url, { method: "GET" }, "the audio link");
+      return await decodeAudio(file.bytes, file.contentType, req.pcmSampleRate ?? 24_000);
+    }
+    return await decodeAudio(found.bytes, contentType, req.pcmSampleRate ?? 24_000);
+  }
+  if (contentType.includes("json")) {
     // A 200 with JSON where audio was expected is usually a wrapped error or
     // a server that wraps its audio. Either way the body is the best clue.
     throw new ModelError(
       `The endpoint answered with JSON rather than audio: ` +
         `${bytes.toString("utf-8").slice(0, 300)}\n\n` +
-        `If it wraps the audio in JSON, set the response path to where the base64 audio is.`,
+        `If it wraps the audio in JSON, set the response path to where the audio, or a link to it, is.`,
     );
   }
-  return await decodeAudio(audioBytes, contentType, req.pcmSampleRate ?? 24_000);
+  return await decodeAudio(bytes, contentType, req.pcmSampleRate ?? 24_000);
 }
 
 async function post(
   req: EndpointRequest,
   fetchImpl: FetchFn,
+): Promise<{ bytes: Buffer; contentType: string }> {
+  // The body's field names, not their values: the names are what a template
+  // gets wrong (`model` vs `model_id`), and the values are the user's prompt
+  // and lyrics. Never the key or the headers.
+  const fields =
+    req.body && typeof req.body === "object" && !Array.isArray(req.body)
+      ? Object.keys(req.body as Record<string, unknown>).join(", ")
+      : typeof req.body;
+  log.debug(`POST ${req.url} fields: ${fields}`);
+  return await fetchBytes(
+    req,
+    fetchImpl,
+    req.url,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(req.apiKey
+          ? { [req.apiKeyHeader || "Authorization"]: `${req.apiKeyPrefix ?? "Bearer "}${req.apiKey}` }
+          : {}),
+        ...(req.headers ?? {}),
+      },
+      body: JSON.stringify(req.body),
+    },
+    "the endpoint",
+  );
+}
+
+/**
+ * One request under the endpoint's timeout and cancel flag, with the error
+ * text people need: the status and the server's own words.
+ */
+async function fetchBytes(
+  req: EndpointRequest,
+  fetchImpl: FetchFn,
+  url: string,
+  init: RequestInit,
+  what: string,
 ): Promise<{ bytes: Buffer; contentType: string }> {
   const controller = new AbortController();
   let cancelled = false;
@@ -94,38 +146,21 @@ async function post(
       }, CANCEL_POLL_MS)
     : null;
   const started = Date.now();
-  // The body's field names, not their values: the names are what a template
-  // gets wrong (`model` vs `model_id`), and the values are the user's prompt
-  // and lyrics. Never the key or the headers.
-  const fields =
-    req.body && typeof req.body === "object" && !Array.isArray(req.body)
-      ? Object.keys(req.body as Record<string, unknown>).join(", ")
-      : typeof req.body;
-  log.debug(`POST ${req.url} fields: ${fields}`);
+  const method = init.method ?? "GET";
   try {
-    const resp = await fetchImpl(req.url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(req.apiKey ? { Authorization: `Bearer ${req.apiKey}` } : {}),
-        ...(req.headers ?? {}),
-      },
-      body: JSON.stringify(req.body),
-      signal: controller.signal,
-    });
+    const resp = await fetchImpl(url, { ...init, signal: controller.signal });
     log.debug(
-      `POST ${req.url} -> HTTP ${resp.status} ${resp.headers.get("content-type") ?? "(no content-type)"} ` +
+      `${method} ${url} -> HTTP ${resp.status} ${resp.headers.get("content-type") ?? "(no content-type)"} ` +
         `in ${Date.now() - started}ms`,
     );
     if (!resp.ok) {
       const text = await resp.text().catch(() => "");
       throw new ModelError(
-        `The endpoint at ${req.url} returned HTTP ${resp.status}` +
-          `${text ? `: ${text.slice(0, 500)}` : ""}`,
+        `${capitalise(what)} at ${url} returned HTTP ${resp.status}` + `${text ? `: ${text.slice(0, 500)}` : ""}`,
       );
     }
     const bytes = Buffer.from(await resp.arrayBuffer());
-    if (bytes.length === 0) throw new ModelError("The endpoint returned an empty response.");
+    if (bytes.length === 0) throw new ModelError(`${capitalise(what)} returned an empty response.`);
     return { bytes, contentType: (resp.headers.get("content-type") ?? "").toLowerCase() };
   } catch (exc) {
     if (cancelled) throw new CancelledJob();
@@ -133,8 +168,8 @@ async function post(
     const aborted = exc instanceof Error && exc.name === "AbortError";
     throw new ModelError(
       aborted
-        ? `The endpoint at ${req.url} did not answer within ${Math.round((req.timeoutMs ?? DEFAULT_TIMEOUT_MS) / 1000)}s.`
-        : `Could not reach the endpoint at ${req.url}: ${exc instanceof Error ? exc.message : String(exc)}`,
+        ? `${capitalise(what)} at ${url} did not answer within ${Math.round((req.timeoutMs ?? DEFAULT_TIMEOUT_MS) / 1000)}s.`
+        : `Could not reach ${what} at ${url}: ${exc instanceof Error ? exc.message : String(exc)}`,
     );
   } finally {
     clearTimeout(timer);
@@ -142,8 +177,18 @@ async function post(
   }
 }
 
-/** Follow `a.b.0.c` into parsed JSON and decode the base64 string there. */
-function extractFromJson(bytes: Buffer, path: string): Buffer {
+function capitalise(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+type FoundAudio = { kind: "bytes"; bytes: Buffer } | { kind: "url"; url: string };
+
+/**
+ * Follow `a.b.0.c` into parsed JSON. A string there is base64 audio (with or
+ * without a `data:` prefix) or an http(s) link to the file; an object with a
+ * string `url` is a link too, so `audio` works as well as `audio.url` for fal.
+ */
+function audioFromJson(bytes: Buffer, path: string): FoundAudio {
   let node: unknown;
   try {
     node = JSON.parse(bytes.toString("utf-8"));
@@ -159,15 +204,19 @@ function extractFromJson(bytes: Buffer, path: string): Buffer {
     }
     node = (node as Record<string, unknown>)[part];
   }
+  if (node && typeof node === "object" && typeof (node as { url?: unknown }).url === "string") {
+    node = (node as { url: string }).url;
+  }
   if (typeof node !== "string" || !node) {
     throw new ModelError(
-      `The endpoint's JSON has no audio string at "${path}". ` +
+      `The endpoint's JSON has no audio or audio link at "${path}". ` +
         `It answered: ${bytes.toString("utf-8").slice(0, 300)}`,
     );
   }
+  if (/^https?:\/\//i.test(node)) return { kind: "url", url: node };
   const decoded = Buffer.from(node.replace(/^data:[^;,]+;base64,/, ""), "base64");
   if (decoded.length === 0) throw new ModelError(`The audio at "${path}" decoded to nothing.`);
-  return decoded;
+  return { kind: "bytes", bytes: decoded };
 }
 
 /* ------------------------------------------------------------- decoding */

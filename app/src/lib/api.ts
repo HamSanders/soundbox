@@ -442,12 +442,18 @@ export interface AudioEndpoint {
   id: string;
   name: string;
   task: "sfx" | "music" | "speech";
+  /** May hold `{{voice}}` or `{{language}}`, filled URL-encoded. */
   url: string;
   api_key_set: boolean;
+  /** The header the key goes in and what precedes it there:
+   *  `Authorization` + `Bearer ` by default. */
+  api_key_header: string;
+  api_key_prefix: string;
   headers: Record<string, string>;
   /** JSON with `{{variable}}` placeholders. */
   body_template: string;
-  /** Dotted path to base64 audio in a JSON response; "" for a raw audio body. */
+  /** Dotted path to base64 audio, or a link to it, in a JSON response; "" for
+   *  a raw audio body. */
   response_path: string;
   pcm_sample_rate: number;
   max_duration_s: number;
@@ -466,6 +472,9 @@ export interface EndpointPreset {
   label: string;
   hint: string;
   docs_url: string;
+  /** A paid service used with the user's own key, billed by its provider. */
+  hosted: boolean;
+  pricing_url: string;
   endpoint: Omit<AudioEndpoint, "id" | "name" | "api_key_set" | "enabled">;
 }
 

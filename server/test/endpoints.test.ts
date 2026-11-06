@@ -8,17 +8,19 @@ import { WaveFile } from "wavefile";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { buildApp } from "../src/app.js";
-import { Config } from "../src/config.js";
+import { Config, Settings } from "../src/config.js";
 import { decodePcm16, requestAudio } from "../src/endpoints/client.js";
 import { ENDPOINT_PRESETS } from "../src/endpoints/presets.js";
 import {
   bpmFromPrompt,
   keyFromPrompt,
   renderTemplate,
+  renderUrl,
   templateVariables,
   validateTemplate,
+  validateUrlTemplate,
 } from "../src/endpoints/template.js";
-import { isLocalUrl } from "../src/endpoints/types.js";
+import { type AudioEndpoint, isLocalUrl } from "../src/endpoints/types.js";
 import { ModelError } from "../src/errors.js";
 
 /** A short 16-bit mono WAV, as an endpoint would send it. */
@@ -194,6 +196,100 @@ describe("requestAudio", () => {
   });
 });
 
+describe("hosted providers", () => {
+  const json = (value: unknown) =>
+    new Response(JSON.stringify(value), { status: 200, headers: { "Content-Type": "application/json" } });
+
+  it("sends the key in the header and with the prefix the endpoint names", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(wavBytes(), { status: 200 }));
+    await requestAudio(
+      { url: "https://api.example/x", body: {}, apiKey: "k", apiKeyHeader: "xi-api-key", apiKeyPrefix: "" },
+      fetchMock as never,
+    );
+    const [, init] = fetchMock.mock.calls[0]!;
+    expect(init.headers["xi-api-key"]).toBe("k");
+    expect(init.headers.Authorization).toBeUndefined();
+  });
+
+  it("downloads the audio from a link in the JSON, without the key", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(json({ audio: { url: "https://cdn.example/out.wav" }, seed: 3 }))
+      .mockResolvedValueOnce(new Response(wavBytes(), { status: 200, headers: { "Content-Type": "audio/wav" } }));
+    const out = await requestAudio(
+      { url: "https://fal.example/run", body: {}, apiKey: "k", apiKeyPrefix: "Key ", responsePath: "audio.url" },
+      fetchMock as never,
+    );
+    expect(out.audio[0]!.length).toBe(11_025);
+    expect(fetchMock.mock.calls[0]![1].headers.Authorization).toBe("Key k");
+    const [url, init] = fetchMock.mock.calls[1]!;
+    expect(url).toBe("https://cdn.example/out.wav");
+    expect(init.method).toBe("GET");
+    expect(init.headers).toBeUndefined();
+  });
+
+  it("treats an object with a url as a link", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(json({ audio: { url: "https://cdn.example/a.wav", content_type: "audio/wav" } }))
+      .mockResolvedValueOnce(new Response(wavBytes(), { status: 200 }));
+    await requestAudio({ url: "https://x", body: {}, responsePath: "audio" }, fetchMock as never);
+    expect(fetchMock.mock.calls[1]![0]).toBe("https://cdn.example/a.wav");
+  });
+
+  it("names the link when downloading it fails", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(json({ output: "https://cdn.example/gone.wav" }))
+      .mockResolvedValueOnce(new Response("expired", { status: 403 }));
+    await expect(
+      requestAudio({ url: "https://x", body: {}, responsePath: "output" }, fetchMock as never),
+    ).rejects.toThrow(/audio link at https:\/\/cdn\.example\/gone\.wav returned HTTP 403: expired/);
+  });
+
+  it("fills a voice into the URL, encoded", () => {
+    expect(renderUrl("https://api.example/tts/{{voice}}?f=mp3", { voice: "a b/c" })).toBe(
+      "https://api.example/tts/a%20b%2Fc?f=mp3",
+    );
+  });
+
+  it("allows only short identifiers in a URL", () => {
+    expect(() => validateUrlTemplate("https://x/{{voice}}/{{language}}")).not.toThrow();
+    expect(() => validateUrlTemplate("https://x/?q={{prompt}}")).toThrow(/can't use \{\{prompt\}\}/);
+  });
+
+  it("ships hosted presets whose URLs and bodies validate", () => {
+    const hosted = ENDPOINT_PRESETS.filter((p) => p.hosted);
+    expect(hosted.map((p) => p.id)).toEqual(["elevenlabs-sfx", "elevenlabs-music", "elevenlabs-speech", "fal-ace-step"]);
+    for (const p of ENDPOINT_PRESETS) {
+      expect(() => validateUrlTemplate(p.endpoint.url)).not.toThrow();
+      if (p.hosted) expect(p.pricing_url).toMatch(/^https:\/\//);
+    }
+    // Self-hosted presets stay first in the list.
+    expect(ENDPOINT_PRESETS.findIndex((p) => p.hosted)).toBe(ENDPOINT_PRESETS.length - hosted.length);
+  });
+
+  it("gives an endpoint saved before key headers existed the bearer default", () => {
+    const old = {
+      id: "old",
+      name: "Old",
+      task: "music",
+      url: "http://localhost:8080/x",
+      api_key: "k",
+      headers: {},
+      body_template: "{}",
+      response_path: "",
+      pcm_sample_rate: 24_000,
+      max_duration_s: 30,
+      voices: [],
+      enabled: true,
+    } as unknown as AudioEndpoint;
+    const ep = new Settings({ audio_endpoints: [old] }).audio_endpoints[0]!;
+    expect(ep.api_key_header).toBe("Authorization");
+    expect(ep.api_key_prefix).toBe("Bearer ");
+  });
+});
+
 /* ---------------------------------------------------------- end to end */
 
 describe("custom endpoints through the API", () => {
@@ -201,7 +297,7 @@ describe("custom endpoints through the API", () => {
   let dataDir: string;
   let stub: Server;
   let stubUrl: string;
-  const received: { url: string; body: unknown; auth: string | undefined }[] = [];
+  const received: { url: string; body: unknown; auth: string | undefined; xi: string | undefined }[] = [];
 
   beforeAll(async () => {
     dataDir = await mkdtemp(join(tmpdir(), "soundbox-endpoints-test-"));
@@ -211,7 +307,12 @@ describe("custom endpoints through the API", () => {
       let body = "";
       req.on("data", (c) => (body += c));
       req.on("end", () => {
-        received.push({ url: req.url ?? "", body: JSON.parse(body), auth: req.headers.authorization });
+        received.push({
+          url: req.url ?? "",
+          body: JSON.parse(body),
+          auth: req.headers.authorization,
+          xi: req.headers["xi-api-key"] as string | undefined,
+        });
         res.setHeader("Content-Type", "audio/wav");
         res.end(wavBytes(1));
       });
@@ -332,6 +433,39 @@ describe("custom endpoints through the API", () => {
     expect(resp.json().duration_s).toBeCloseTo(1, 1);
     // The saved key is used when the form does not send one.
     expect(received[0]!.auth).toBe("Bearer secret");
+  });
+
+  it("tests a hosted preset with the voice in its URL and the key in its own header", async () => {
+    received.length = 0;
+    const preset = ENDPOINT_PRESETS.find((p) => p.id === "elevenlabs-speech")!.endpoint;
+    const resp = await app.inject({
+      method: "POST",
+      url: "/api/endpoints/test",
+      payload: {
+        ...preset,
+        name: "ElevenLabs",
+        // Same path and query as the preset, pointed at the stub.
+        url: preset.url.replace("https://api.elevenlabs.io", stubUrl),
+        api_key: "el-secret",
+        voices: ["voice one"],
+      },
+    });
+    expect(resp.statusCode).toBe(200);
+    expect(received[0]!.url).toBe("/v1/text-to-speech/voice%20one?output_format=mp3_44100_128");
+    expect(received[0]!.xi).toBe("el-secret");
+    expect(received[0]!.auth).toBeUndefined();
+    // No seed and no language on a test render, so both fields are left out.
+    expect(received[0]!.body).toEqual({ text: "This is a test of the Soundbox endpoint.", model_id: "eleven_multilingual_v2" });
+  });
+
+  it("refuses a prompt in the URL", async () => {
+    const resp = await app.inject({
+      method: "PUT",
+      url: "/api/endpoints/leaky",
+      payload: { ...musicEndpoint(), url: `${stubUrl}/gen?q={{prompt}}` },
+    });
+    expect(resp.statusCode).toBe(400);
+    expect(resp.json().detail).toMatch(/can't use/);
   });
 
   it("removes it from the models list on delete", async () => {

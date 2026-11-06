@@ -31,6 +31,7 @@ import {
   bpmFromPrompt,
   keyFromPrompt,
   renderTemplate,
+  renderUrl,
   type TemplateVars,
   templateVariables,
 } from "./template.js";
@@ -181,8 +182,10 @@ export class EndpointModel implements GenerationModel {
       const handle = progress?.handle;
       const result = await requestAudio(
         {
-          url: ep.url,
+          url: renderUrl(ep.url, vars),
           apiKey: ep.api_key,
+          apiKeyHeader: ep.api_key_header,
+          apiKeyPrefix: ep.api_key_prefix,
           headers: ep.headers,
           body,
           responsePath: ep.response_path,

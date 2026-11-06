@@ -33,7 +33,9 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -49,6 +51,12 @@ const TASK_LABEL: Record<AudioEndpoint["task"], string> = {
   speech: "Speech",
 };
 
+/** Servers people run come first; billed services after, under their own label. */
+const PRESET_GROUPS = [
+  { hosted: false, label: "A server you run" },
+  { hosted: true, label: "Your account with a provider (billed by them)" },
+];
+
 /** A form's worth of state. Strings for the number fields so a half-typed
  *  value doesn't snap back while the user is still typing it. */
 interface Draft {
@@ -58,6 +66,10 @@ interface Draft {
   url: string;
   apiKey: string;
   apiKeySet: boolean;
+  apiKeyHeader: string;
+  apiKeyPrefix: string;
+  /** Not editable here, but carried through so a save keeps them. */
+  headers: Record<string, string>;
   bodyTemplate: string;
   responsePath: string;
   pcmSampleRate: string;
@@ -73,6 +85,9 @@ const EMPTY_DRAFT: Draft = {
   url: "",
   apiKey: "",
   apiKeySet: false,
+  apiKeyHeader: "Authorization",
+  apiKeyPrefix: "Bearer ",
+  headers: {},
   bodyTemplate: '{\n  "prompt": "{{prompt}}",\n  "duration": {{duration}}\n}',
   responsePath: "",
   pcmSampleRate: "24000",
@@ -89,6 +104,9 @@ function draftFrom(ep: AudioEndpoint): Draft {
     url: ep.url,
     apiKey: "",
     apiKeySet: ep.api_key_set,
+    apiKeyHeader: ep.api_key_header,
+    apiKeyPrefix: ep.api_key_prefix,
+    headers: ep.headers,
     bodyTemplate: ep.body_template,
     responsePath: ep.response_path,
     pcmSampleRate: String(ep.pcm_sample_rate),
@@ -105,7 +123,9 @@ function inputFrom(d: Draft): AudioEndpointInput {
     url: d.url.trim(),
     // Blank means "keep the saved key" — undefined is how the API says that.
     api_key: d.apiKey.trim() ? d.apiKey.trim() : undefined,
-    headers: {},
+    api_key_header: d.apiKeyHeader.trim() || "Authorization",
+    api_key_prefix: d.apiKeyPrefix,
+    headers: d.headers,
     body_template: d.bodyTemplate,
     response_path: d.responsePath.trim(),
     pcm_sample_rate: Number(d.pcmSampleRate) || 24000,
@@ -176,8 +196,9 @@ export function EndpointSettingsCard() {
         <CardTitle className="text-base">Custom endpoints</CardTitle>
         <CardDescription>
           Send generation to a server you already run — LocalAI, an OpenAI-compatible speech
-          server, a gateway — instead of downloading the model here. Each endpoint appears in the
-          model pickers alongside your local models.
+          server, a gateway — or to a provider such as ElevenLabs or fal with your own key, instead
+          of running the model here. Each endpoint appears in the model pickers alongside your
+          local models.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -293,9 +314,14 @@ function EndpointDialog({
     const e = preset.endpoint;
     setPresetHint(preset);
     set({
-      name: draft.name || preset.label,
+      // Follow the preset unless the name was typed: switching presets
+      // should not leave the first one's label behind.
+      name: !draft.name || draft.name === presetHint?.label ? preset.label : draft.name,
       task: e.task,
       url: e.url,
+      apiKeyHeader: e.api_key_header,
+      apiKeyPrefix: e.api_key_prefix,
+      headers: e.headers,
       bodyTemplate: e.body_template,
       responsePath: e.response_path,
       pcmSampleRate: String(e.pcm_sample_rate),
@@ -314,8 +340,9 @@ function EndpointDialog({
         <DialogHeader>
           <DialogTitle>{isNew ? "Add an endpoint" : `Edit ${initial.name}`}</DialogTitle>
           <DialogDescription>
-            Soundbox POSTs the body below to the URL and expects audio back. WAV is read directly;
-            MP3, FLAC and other formats need ffmpeg on this machine.
+            Soundbox POSTs the body below to the URL and expects audio back, or JSON holding the
+            audio or a link to it. WAV is read directly; MP3, FLAC and other formats need ffmpeg on
+            this machine.
           </DialogDescription>
         </DialogHeader>
 
@@ -328,11 +355,20 @@ function EndpointDialog({
                   <SelectValue placeholder="Pick a preset (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  {presets.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.label}
-                    </SelectItem>
-                  ))}
+                  {PRESET_GROUPS.map(({ hosted, label }) => {
+                    const group = presets.filter((p) => p.hosted === hosted);
+                    if (group.length === 0) return null;
+                    return (
+                      <SelectGroup key={label}>
+                        <SelectLabel>{label}</SelectLabel>
+                        {group.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    );
+                  })}
                 </SelectContent>
               </Select>
               {presetHint && (
@@ -340,6 +376,15 @@ function EndpointDialog({
                   {presetHint.hint}{" "}
                   <a className="underline" href={presetHint.docs_url} target="_blank" rel="noreferrer">
                     API docs
+                  </a>
+                </p>
+              )}
+              {presetHint?.hosted && (
+                <p className="rounded-md border border-sky-500/40 bg-sky-500/10 px-2.5 py-1.5 text-xs">
+                  This uses your own account with {hostOf(presetHint.endpoint.url)}. They charge you for each
+                  render, including Test. Soundbox takes no cut and never sees the bill.{" "}
+                  <a className="underline" href={presetHint.pricing_url} target="_blank" rel="noreferrer">
+                    Their prices
                   </a>
                 </p>
               )}
@@ -418,9 +463,39 @@ function EndpointDialog({
               type="password"
               autoComplete="off"
               value={draft.apiKey}
-              placeholder={draft.apiKeySet ? "Replace saved key" : "Sent as Authorization: Bearer …"}
+              placeholder={
+                draft.apiKeySet
+                  ? "Replace saved key"
+                  : `Sent as ${draft.apiKeyHeader.trim() || "Authorization"}: ${draft.apiKeyPrefix}…`
+              }
               onChange={(e) => set({ apiKey: e.target.value })}
             />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label htmlFor="ep-key-header" className="text-xs font-normal">
+                  Key header
+                </Label>
+                <Input
+                  id="ep-key-header"
+                  value={draft.apiKeyHeader}
+                  placeholder="Authorization"
+                  className="font-mono text-xs"
+                  onChange={(e) => set({ apiKeyHeader: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="ep-key-prefix" className="text-xs font-normal">
+                  Before the key
+                </Label>
+                <Input
+                  id="ep-key-prefix"
+                  value={draft.apiKeyPrefix}
+                  placeholder="Nothing"
+                  className="font-mono text-xs"
+                  onChange={(e) => set({ apiKeyPrefix: e.target.value })}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="space-y-1.5">
@@ -464,6 +539,7 @@ function EndpointDialog({
                 id="ep-path"
                 value={draft.responsePath}
                 placeholder="Blank when the response is the audio"
+                title="Where the base64 audio, or a link to the audio file, sits in a JSON answer"
                 className="font-mono text-xs"
                 onChange={(e) => set({ responsePath: e.target.value })}
               />

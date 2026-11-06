@@ -18,7 +18,7 @@ import {
 } from "../schemas.js";
 import { EndpointModel } from "./model.js";
 import { ENDPOINT_PRESETS, type EndpointPreset } from "./presets.js";
-import { TEMPLATE_VARIABLES, validateTemplate } from "./template.js";
+import { TEMPLATE_VARIABLES, validateTemplate, validateUrlTemplate } from "./template.js";
 import { type AudioEndpoint, type PublicAudioEndpoint, toPublicEndpoint } from "./types.js";
 
 export interface EndpointList {
@@ -68,6 +68,7 @@ export class EndpointService {
     }
     const input = audioEndpointInputSchema.parse(raw);
     validateTemplate(input.body_template);
+    validateUrlTemplate(input.url);
     const previous = this.stored.find((e) => e.id === id) ?? null;
     const endpoint = this.build(id, input, previous);
     const next = previous
@@ -90,6 +91,7 @@ export class EndpointService {
   async test(raw: unknown): Promise<EndpointTestResult> {
     const req = audioEndpointTestSchema.parse(raw);
     validateTemplate(req.body_template);
+    validateUrlTemplate(req.url);
     const saved = req.id ? (this.stored.find((e) => e.id === req.id) ?? null) : null;
     const endpoint = this.build(req.id || "test", req, saved);
     const model = new EndpointModel(endpoint);
@@ -124,6 +126,8 @@ export class EndpointService {
       task: input.task,
       url: input.url,
       api_key: apiKey,
+      api_key_header: input.api_key_header,
+      api_key_prefix: input.api_key_prefix,
       headers: input.headers,
       body_template: input.body_template,
       response_path: input.response_path,

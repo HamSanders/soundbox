@@ -101,4 +101,73 @@ export const ENDPOINT_PRESETS: EndpointPreset[] = [
       voices: ["alloy", "echo", "fable", "onyx", "nova", "shimmer"],
     },
   },
+  {
+    id: "soundbox-music",
+    label: "Another Soundbox — music",
+    hint:
+      "A Soundbox on another machine, such as a GPU box, through its /api/render route. Change the host, " +
+      "set the model to one installed there, and put its SOUNDBOX_API_TOKEN in the key field if it has one.",
+    docs_url: "https://github.com/HamSanders/soundbox/blob/main/docs/API.md#render-and-wait",
+    endpoint: {
+      ...BASE,
+      task: "music",
+      url: "http://gpu-box:17494/api/render",
+      body_template: json({
+        model: '"audiocpp-ace-step"',
+        prompt: '"{{prompt}}"',
+        lyrics: '"{{lyrics}}"',
+        duration_s: "{{duration}}",
+        seed: "{{seed}}",
+        steps: "{{steps}}",
+        cfg: "{{cfg}}",
+        keep: "false",
+      }),
+      max_duration_s: 240,
+    },
+  },
+  {
+    id: "soundbox-sfx",
+    label: "Another Soundbox — sound effects",
+    hint:
+      "A Soundbox on another machine, through its /api/render route. Change the host, set the model to " +
+      "one installed there, and put its access token in the key field if it has one.",
+    docs_url: "https://github.com/HamSanders/soundbox/blob/main/docs/API.md#render-and-wait",
+    endpoint: {
+      ...BASE,
+      task: "sfx",
+      url: "http://gpu-box:17494/api/render",
+      body_template: json({
+        model: '"audiocpp-stable-audio-3-sfx"',
+        prompt: '"{{prompt}}"',
+        negative_prompt: '"{{negative_prompt}}"',
+        duration_s: "{{duration}}",
+        seed: "{{seed}}",
+        steps: "{{steps}}",
+        cfg: "{{cfg}}",
+        keep: "false",
+      }),
+      max_duration_s: 30,
+    },
+  },
+  {
+    id: "soundbox-speech",
+    label: "Another Soundbox — speech",
+    hint:
+      "A Soundbox on another machine, through its /api/render route. List the names of voices saved " +
+      "there as this endpoint's voices, or leave the list empty for the model's default voice.",
+    docs_url: "https://github.com/HamSanders/soundbox/blob/main/docs/API.md#render-and-wait",
+    endpoint: {
+      ...BASE,
+      task: "speech",
+      url: "http://gpu-box:17494/api/render",
+      body_template: json({
+        model: '"audiocpp-pocket-tts"',
+        text: '"{{text}}"',
+        voice: '"{{voice}}"',
+        seed: "{{seed}}",
+        keep: "false",
+      }),
+      max_duration_s: 300,
+    },
+  },
 ];

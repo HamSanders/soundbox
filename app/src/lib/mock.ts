@@ -1088,6 +1088,23 @@ const MOCK_ENDPOINT_PRESETS: EndpointPreset[] = [
       voices: ["alloy", "echo", "nova"],
     },
   },
+  {
+    id: "soundbox-music",
+    label: "Another Soundbox — music",
+    hint: "A Soundbox on another machine, such as a GPU box, through its /api/render route. Change the host and model, and put its access token in the key field.",
+    docs_url: "https://github.com/HamSanders/soundbox/blob/main/docs/API.md#render-and-wait",
+    endpoint: {
+      task: "music",
+      url: "http://gpu-box:17494/api/render",
+      headers: {},
+      body_template:
+        '{\n  "model": "audiocpp-ace-step",\n  "prompt": "{{prompt}}",\n  "lyrics": "{{lyrics}}",\n  "duration_s": {{duration}},\n  "seed": {{seed}},\n  "keep": false\n}',
+      response_path: "",
+      pcm_sample_rate: 24000,
+      max_duration_s: 240,
+      voices: [],
+    },
+  },
 ];
 
 const MOCK_TEMPLATE_VARIABLES: Record<string, string> = {

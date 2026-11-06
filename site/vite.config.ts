@@ -7,6 +7,7 @@ import { markdownDocs } from "./plugins/markdown";
 import { blogFeed } from "./plugins/blog-feed";
 import { sharedPublicFiles } from "./plugins/shared-public";
 import { notFoundPage } from "./plugins/not-found";
+import { writeCrawlerFiles } from "./plugins/crawlers";
 import { writeSitemap } from "./plugins/sitemap";
 import { sfxSampleFacts } from "./plugins/sfx-sample-facts";
 
@@ -34,7 +35,9 @@ const SITE_BASE = normalizeBase(process.env.SITE_BASE);
  */
 const SITE_ORIGIN =
   process.env.SITE_ORIGIN ??
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined);
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : undefined);
 if (SITE_ORIGIN && !process.env.VITE_SITE_ORIGIN) {
   process.env.VITE_SITE_ORIGIN = SITE_ORIGIN.replace(/\/+$/, "");
 }
@@ -48,14 +51,18 @@ if (SITE_ORIGIN && !process.env.VITE_SITE_ORIGIN) {
  */
 function trailingSlashLinks(): Plugin {
   const shim = path.resolve(__dirname, "src/router-links.tsx");
-  const ours = [path.resolve(__dirname, "src"), path.resolve(__dirname, "../app/src")];
+  const ours = [
+    path.resolve(__dirname, "src"),
+    path.resolve(__dirname, "../app/src"),
+  ];
   return {
     name: "soundbox:trailing-slash-links",
     enforce: "pre",
     resolveId(source, importer) {
       if (source !== "react-router-dom" || !importer) return null;
       const from = path.resolve(importer.split("?")[0]);
-      if (from === shim || !ours.some((dir) => from.startsWith(dir + path.sep))) return null;
+      if (from === shim || !ours.some((dir) => from.startsWith(dir + path.sep)))
+        return null;
       return shim;
     },
   };
@@ -97,7 +104,9 @@ export default defineConfig({
     // Duration and size per sfx sample, for the prerendered sample pages.
     sfxSampleFacts(path.resolve(__dirname, "public/sfx")),
     // Files both builds serve stay in app/public; see the plugin.
-    sharedPublicFiles(path.resolve(__dirname, "../app/public"), ["favicon.svg"]),
+    sharedPublicFiles(path.resolve(__dirname, "../app/public"), [
+      "favicon.svg",
+    ]),
     // 404.html for static hosts, with links that carry the base path.
     notFoundPage(),
   ],
@@ -122,7 +131,10 @@ export default defineConfig({
       // Site-specific override: the app's SeoHead writes tags via a
       // useEffect, which produces nothing during SSR. This must be listed
       // before the general "@" alias below so it wins for this one path.
-      { find: "@/components/seo-head", replacement: path.resolve(__dirname, "./src/seo-head.tsx") },
+      {
+        find: "@/components/seo-head",
+        replacement: path.resolve(__dirname, "./src/seo-head.tsx"),
+      },
       // Escape hatch back to the real app source, used by the override above
       // to re-export the pure (non-head-writing) helpers unchanged.
       { find: "@sfx-app", replacement: path.resolve(__dirname, "../app/src") },
@@ -185,8 +197,13 @@ export default defineConfig({
     // Runs once every page is on disk, so the sitemap is exactly what was
     // prerendered. See plugins/sitemap.ts.
     onFinished(dir) {
-      const count = writeSitemap(dir, process.env.VITE_SITE_ORIGIN ?? "", SITE_BASE);
+      const count = writeSitemap(
+        dir,
+        process.env.VITE_SITE_ORIGIN ?? "",
+        SITE_BASE,
+      );
       if (count) console.log(`[sitemap] ${count} URLs -> sitemap.xml`);
+      writeCrawlerFiles(dir, process.env.VITE_SITE_ORIGIN ?? "", SITE_BASE);
     },
   },
 });

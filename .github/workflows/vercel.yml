@@ -1,0 +1,83 @@
+name: Vercel
+
+# Builds the site (site/) in Actions and deploys it to Vercel with the
+# Vercel CLI: a preview deployment per pull request (its URL posted on the
+# PR), production on every push to main. vercel.json turns off Vercel's own
+# Git deploys so each commit is deployed once, from here.
+#
+# Needs three repository secrets, from the Vercel dashboard:
+#   VERCEL_TOKEN       Account Settings -> Tokens
+#   VERCEL_ORG_ID      Team/Account Settings -> General -> ID
+#   VERCEL_PROJECT_ID  Project Settings -> General -> Project ID
+# Pull requests from forks get no secrets, so they skip the deploy.
+
+on:
+  push:
+    branches: [main]
+    paths: &paths
+      - "site/**"
+      - "app/src/**"
+      - "docs/**"
+      - "README.md"
+      - "package-lock.json"
+      - "vercel.json"
+      - ".github/workflows/vercel.yml"
+  pull_request:
+    paths: *paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: vercel-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  deploy:
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event_name == 'pull_request' && 'preview' || 'production' }}
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Check the secrets are set
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "::error::Set VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID (see the top of this file)."
+            exit 1
+          fi
+      - run: npm install --global vercel@latest
+      - name: Pull the project settings
+        run: vercel pull --yes --environment=${{ github.event_name == 'pull_request' && 'preview' || 'production' }} --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Build
+        run: vercel build ${{ github.event_name != 'pull_request' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy
+        id: deploy
+        run: |
+          url=$(vercel deploy --prebuilt ${{ github.event_name != 'pull_request' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deployed to $url" >> "$GITHUB_STEP_SUMMARY"
+      - name: Post the preview URL on the PR
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          URL: ${{ steps.deploy.outputs.url }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh pr comment "$PR" --repo "$REPO" --edit-last --create-if-none --body "Preview: $URL"

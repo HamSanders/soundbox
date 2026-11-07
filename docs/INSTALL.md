@@ -304,8 +304,7 @@ With a token set, every request to `/api/*`, `/mcp`, `/files/*` and
 - **The web UI** shows a sign-in screen. Paste the token once and the browser
   stays signed in for 30 days with an HttpOnly cookie. The cookie holds a
   value derived from the token, not the token itself, and changing the token
-  signs every browser out. Ten wrong tokens from one address lock the sign-in
-  form for ten minutes.
+  signs every browser out.
 - **Scripts, MCP clients and other Soundboxes** send
   `Authorization: Bearer <token>`. For Claude Code:
 
@@ -320,6 +319,13 @@ With a token set, every request to `/api/*`, `/mcp`, `/files/*` and
 Three things stay open: `GET /api/health`, which the Docker health check and
 the desktop app's startup probe call and which says nothing about your
 library; the sign-in routes; and the web UI's static files.
+
+Wrong tokens are rate limited. After 30 from one address in ten minutes, by
+bearer header, cookie or the sign-in form, that address gets **429** until the
+ten minutes are up, even with the right token. Requests that send no token at
+all don't count, and a signed-in client is never throttled. Behind a reverse
+proxy every client shares the proxy's address, so one guesser can lock
+everyone out for the window.
 
 Use HTTPS. Over plain `http://` the token and the cookie cross the network
 unencrypted. A reverse proxy with a certificate, a tunnel such as Tailscale, or

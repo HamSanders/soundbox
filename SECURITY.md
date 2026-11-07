@@ -37,7 +37,9 @@ following assumptions. Please report any way to break one of them.
   Binding it to a non-loopback interface with `--host` exposes all of that to
   the network, and the server warns when you do without a token. With a token,
   the API, `/mcp` and served files need it as a bearer header or a session
-  cookie (`server/src/auth.ts`); `GET /api/health` stays open. The token
+  cookie (`server/src/auth.ts`); `GET /api/health` stays open. Wrong tokens
+  are rate limited per address: after 30 in ten minutes the address gets 429
+  for the rest of the window, right token included. The token
   travels in the clear over plain HTTP, so serve it over HTTPS.
 - **Host-header allowlist.** Requests whose `Host` header is not a loopback
   name (`localhost`, `127.0.0.1`, `::1`, any port) are rejected with 403,

@@ -37,9 +37,31 @@ export const SESSION_COOKIE = "soundbox_session";
 export const MIN_TOKEN_LENGTH = 16;
 const SESSION_MAX_AGE_S = 30 * 24 * 60 * 60;
 
-/** Failed sign-ins allowed per client address in one window, before 429. */
-const MAX_FAILURES = 10;
-const FAILURE_WINDOW_MS = 10 * 60 * 1000;
+/**
+ * Wrong tokens allowed per client address in one window. Past this, every
+ * protected request from that address gets 429 until the window ends, even one
+ * with the right token: a guesser must not learn which guess was right.
+ *
+ * Generous enough for a browser whose cookie went stale when the token
+ * changed, which sends a burst of requests with it before the sign-in screen
+ * comes up (the first 401 clears the cookie, but some are already in flight).
+ * At 30 guesses per ten minutes a 16-character token is out of reach.
+ */
+export const MAX_FAILURES = 30;
+export const FAILURE_WINDOW_MS = 10 * 60 * 1000;
+
+/**
+ * Counts failures per address. It is `createRateLimit` from
+ * `@fastify/rate-limit`, which app.ts registers and hands over: called with
+ * `{ increment: false }` it only reads the count, otherwise it adds one.
+ */
+export type FailureLimiter = (
+  request: FastifyRequest,
+  options?: { increment?: boolean },
+) => Promise<{ isAllowed: true } | { isAllowed: false; remaining: number; ttlInSeconds: number }>;
+
+/** What a request offered as proof. */
+type Credential = "none" | "valid" | "wrong-bearer" | "wrong-cookie";
 
 export class TokenError extends Error {}
 
@@ -98,27 +120,64 @@ function readCookie(header: string | undefined, name: string): string | null {
 
 export class AccessGuard {
   private readonly session: string;
-  private readonly failures = new Map<string, { count: number; since: number }>();
+  private failures: FailureLimiter | null = null;
 
   constructor(private readonly token: string) {
     this.session = createHmac("sha256", token).update("soundbox-session-v1").digest("base64url");
   }
 
-  /** True when the request carries the token or a valid session cookie. */
-  authorised(request: FastifyRequest): boolean {
+  /** Start counting wrong tokens. Until this is called nothing is limited. */
+  limitWith(failures: FailureLimiter): void {
+    this.failures = failures;
+  }
+
+  private credential(request: FastifyRequest): Credential {
     const auth = request.headers.authorization;
     if (auth?.toLowerCase().startsWith("bearer ")) {
-      return sameSecret(auth.slice(7).trim(), this.token);
+      return sameSecret(auth.slice(7).trim(), this.token) ? "valid" : "wrong-bearer";
     }
     const cookie = readCookie(request.headers.cookie, SESSION_COOKIE);
-    return cookie !== null && sameSecret(cookie, this.session);
+    if (cookie === null) return "none";
+    return sameSecret(cookie, this.session) ? "valid" : "wrong-cookie";
+  }
+
+  /** True when the request carries the token or a valid session cookie. */
+  authorised(request: FastifyRequest): boolean {
+    return this.credential(request) === "valid";
+  }
+
+  /** A 429 when this address has used up its wrong tokens, else undefined. */
+  private async lockedOut(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply | undefined> {
+    if (!this.failures) return undefined;
+    const state = await this.failures(request, { increment: false });
+    if (state.isAllowed || state.remaining > 0) return undefined;
+    const minutes = Math.max(1, Math.ceil(state.ttlInSeconds / 60));
+    return reply
+      .code(429)
+      .header("Retry-After", String(state.ttlInSeconds))
+      .send({
+        detail: `Too many wrong access tokens from this address. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`,
+      });
+  }
+
+  private async recordFailure(request: FastifyRequest): Promise<void> {
+    if (this.failures) await this.failures(request);
   }
 
   /** The onRequest check. Returns a reply when the request is refused. */
-  check(request: FastifyRequest, reply: FastifyReply): FastifyReply | undefined {
+  async check(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply | undefined> {
     if (!isProtectedPath(request.url)) return undefined;
+    // The open routes do their own counting (status, login) or need none.
     if (isOpenRoute(request.method, request.url.split("?")[0]!)) return undefined;
-    if (this.authorised(request)) return undefined;
+    const locked = await this.lockedOut(request, reply);
+    if (locked) return locked;
+    const credential = this.credential(request);
+    if (credential === "valid") return undefined;
+    // Asking without any proof is not a guess, so it does not count: a fresh
+    // browser hits a few 401s before the sign-in screen comes up.
+    if (credential !== "none") await this.recordFailure(request);
+    // A stale cookie is dropped, so the browser stops sending it.
+    if (credential === "wrong-cookie") reply.header("Set-Cookie", this.cookie(request, "", 0));
     return reply
       .code(401)
       .header("WWW-Authenticate", 'Bearer realm="soundbox"')
@@ -129,34 +188,24 @@ export class AccessGuard {
       });
   }
 
-  /** Too many wrong tokens from this address recently. */
-  private limited(ip: string, now: number): boolean {
-    const f = this.failures.get(ip);
-    if (!f) return false;
-    if (now - f.since > FAILURE_WINDOW_MS) {
-      this.failures.delete(ip);
-      return false;
-    }
-    return f.count >= MAX_FAILURES;
-  }
-
-  private recordFailure(ip: string, now: number): void {
-    const f = this.failures.get(ip);
-    if (!f || now - f.since > FAILURE_WINDOW_MS) this.failures.set(ip, { count: 1, since: now });
-    else f.count += 1;
+  /** `GET /api/auth/status`: whether this request is signed in. A wrong
+   *  credential counts as a guess here too, or this would be a free oracle. */
+  async status(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
+    const locked = await this.lockedOut(request, reply);
+    if (locked) return locked;
+    const credential = this.credential(request);
+    if (credential === "wrong-bearer" || credential === "wrong-cookie") await this.recordFailure(request);
+    return reply.send({ required: true, signed_in: credential === "valid" });
   }
 
   /** Sign in: the token for a session cookie. */
-  login(request: FastifyRequest, reply: FastifyReply, given: unknown): FastifyReply {
-    const now = Date.now();
-    if (this.limited(request.ip, now)) {
-      return reply.code(429).send({ detail: "Too many wrong tokens. Wait ten minutes and try again." });
-    }
+  async login(request: FastifyRequest, reply: FastifyReply, given: unknown): Promise<FastifyReply> {
+    const locked = await this.lockedOut(request, reply);
+    if (locked) return locked;
     if (typeof given !== "string" || !sameSecret(given.trim(), this.token)) {
-      this.recordFailure(request.ip, now);
+      await this.recordFailure(request);
       return reply.code(401).send({ detail: "That is not this Soundbox's access token." });
     }
-    this.failures.delete(request.ip);
     return reply
       .header("Set-Cookie", this.cookie(request, this.session, SESSION_MAX_AGE_S))
       .code(204)
@@ -187,10 +236,10 @@ export class AccessGuard {
 
 /** The auth routes. `required: false` means no token is configured. */
 export function registerAuth(app: FastifyInstance, guard: AccessGuard | null): void {
-  app.get("/api/auth/status", async (request) => ({
-    required: guard !== null,
-    signed_in: guard === null ? true : guard.authorised(request),
-  }));
+  app.get("/api/auth/status", async (request, reply) => {
+    if (!guard) return { required: false, signed_in: true };
+    return guard.status(request, reply);
+  });
   app.post("/api/auth/login", async (request, reply) => {
     if (!guard) return reply.code(204).send();
     return guard.login(request, reply, (request.body as { token?: unknown } | undefined)?.token);

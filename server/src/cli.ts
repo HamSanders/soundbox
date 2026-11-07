@@ -24,6 +24,7 @@ import {
   resolveLogLevel,
   setLoggerLevel,
 } from "./logging.js";
+import { bearerHeaders, TOKEN_ENV, TokenError, tokenFromEnv } from "./auth.js";
 import * as skills from "./skills.js";
 import { writeWav } from "./audio/dsp.js";
 
@@ -373,10 +374,13 @@ async function psMain(argv: string[]): Promise<number> {
     },
     allowPositionals: true,
   });
-  const url = `http://${values.host}:${values.port}/models`;
+  const url = `http://${values.host}:${values.port}/api/models`;
   let models: { id: string; name: string; status?: string }[];
   try {
-    const resp = await fetch(url, { signal: AbortSignal.timeout(5_000) });
+    const resp = await fetch(url, { headers: bearerHeaders(), signal: AbortSignal.timeout(5_000) });
+    if (resp.status === 401) {
+      return fail(`error: the server at ${values.host}:${values.port} needs its access token; set ${TOKEN_ENV}`);
+    }
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     models = (await resp.json()) as typeof models;
   } catch (exc) {
@@ -419,7 +423,7 @@ async function enhanceMain(argv: string[]): Promise<number> {
   try {
     const resp = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Soundbox": "1" },
+      headers: { "Content-Type": "application/json", "X-Soundbox": "1", ...bearerHeaders() },
       body: JSON.stringify({ prompt, n, category: values.category }),
       signal: AbortSignal.timeout(60_000),
     });
@@ -504,10 +508,18 @@ async function serveMain(argv: string[]): Promise<number> {
   // which drowns the throttled, job-tagged lines that actually tell the story.
   setLoggerLevel("fastify", "warning");
 
-  if (!["127.0.0.1", "localhost", "::1"].includes(host)) {
+  let apiToken: string | null;
+  try {
+    apiToken = tokenFromEnv();
+  } catch (exc) {
+    if (exc instanceof TokenError) return fail(`error: ${exc.message}`);
+    throw exc;
+  }
+  if (!["127.0.0.1", "localhost", "::1"].includes(host) && !apiToken) {
     log.warning(
-      `Binding ${host} exposes Soundbox beyond this machine. There is no authentication; ` +
-        `anyone who can reach this port can generate audio and read your library.`,
+      `Binding ${host} exposes Soundbox beyond this machine, and no access token is set; ` +
+        `anyone who can reach this port can generate audio and read your library. ` +
+        `Set ${TOKEN_ENV} to require one.`,
     );
   }
 
@@ -518,9 +530,11 @@ async function serveMain(argv: string[]): Promise<number> {
   const app = await buildApp(config, {
     serveUi: !values["no-ui"],
     allowedHosts: wildcard ? "any" : [host],
+    apiToken,
   });
   console.log(`\n  Soundbox ${VERSION}  ->  http://${host}:${port}`);
   console.log(`  MCP endpoint       ->  http://${host}:${port}/mcp`);
+  console.log(`  Access token       ->  ${apiToken ? `required (${TOKEN_ENV})` : "none"}`);
   console.log(`  Profile            ->  ${config.profile}`);
   console.log(`  Data directory     ->  ${config.paths.root}`);
   console.log(`  Log file           ->  ${logPath}`);

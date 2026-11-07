@@ -6,7 +6,7 @@ import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { buildApp } from "../src/app.js";
-import { bearerHeaders, isProtectedPath, MIN_TOKEN_LENGTH, tokenFromEnv } from "../src/auth.js";
+import { bearerHeaders, isProtectedPath, MAX_FAILURES, MIN_TOKEN_LENGTH, tokenFromEnv } from "../src/auth.js";
 import { Config } from "../src/config.js";
 
 const TOKEN = "correct-horse-battery-staple-42";
@@ -156,16 +156,85 @@ describe("a server with a token", () => {
     expect(String(logout.headers["set-cookie"])).toMatch(/^soundbox_session=; .*Max-Age=0/);
   });
 
-  it("refuses a wrong token at sign-in, then slows down a guesser", async () => {
-    const wrong = await app.inject({ method: "POST", url: "/api/auth/login", payload: { token: "nope" } });
-    expect(wrong.statusCode).toBe(401);
-    for (let i = 0; i < 9; i++) {
-      await app.inject({ method: "POST", url: "/api/auth/login", payload: { token: `nope${i}` } });
+  it("drops a stale cookie when refusing it", async () => {
+    const resp = await app.inject({
+      method: "GET",
+      url: "/api/settings",
+      headers: { cookie: "soundbox_session=from-an-old-token" },
+      remoteAddress: "10.0.0.50",
+    });
+    expect(resp.statusCode).toBe(401);
+    expect(String(resp.headers["set-cookie"])).toMatch(/^soundbox_session=; .*Max-Age=0/);
+  });
+});
+
+/** Each test guesses from its own address, so their counts do not mix. */
+describe("wrong tokens are rate limited per address", () => {
+  let app: FastifyInstance;
+  let dataDir: string;
+  const bearer = { authorization: `Bearer ${TOKEN}` };
+
+  beforeAll(async () => {
+    dataDir = await mkdtemp(join(tmpdir(), "soundbox-auth-limit-"));
+    app = buildApp(new Config(dataDir), { serveUi: false, apiToken: TOKEN });
+    await app.ready();
+  });
+
+  afterAll(async () => {
+    await app.close();
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  const guess = (ip: string, token: string, url = "/api/settings") =>
+    app.inject({ method: "GET", url, headers: { authorization: `Bearer ${token}` }, remoteAddress: ip });
+
+  it("locks an address out after 30 wrong bearer tokens, right token included", async () => {
+    const ip = "10.0.0.1";
+    for (let i = 0; i < MAX_FAILURES; i++) {
+      expect((await guess(ip, `wrong-${i}`)).statusCode).toBe(401);
     }
-    // Even the right token waits out the window once the limit is hit.
-    const blocked = await app.inject({ method: "POST", url: "/api/auth/login", payload: { token: TOKEN } });
+    const blocked = await guess(ip, TOKEN);
     expect(blocked.statusCode).toBe(429);
-    // A bearer token is not a sign-in, and is not held up by it.
-    expect((await app.inject({ method: "GET", url: "/api/settings", headers: bearer })).statusCode).toBe(200);
+    expect(Number(blocked.headers["retry-after"])).toBeGreaterThan(0);
+    expect(blocked.json().detail).toMatch(/Too many wrong access tokens/);
+    // The health check stays open, and another address is not affected.
+    expect((await app.inject({ method: "GET", url: "/api/health", remoteAddress: ip })).statusCode).toBe(200);
+    expect((await guess("10.0.0.2", TOKEN)).statusCode).toBe(200);
+  });
+
+  it("counts wrong sign-ins and status checks toward the same limit", async () => {
+    const ip = "10.0.0.3";
+    for (let i = 0; i < MAX_FAILURES / 2; i++) {
+      const login = await app.inject({
+        method: "POST",
+        url: "/api/auth/login",
+        payload: { token: `nope-${i}` },
+        remoteAddress: ip,
+      });
+      expect(login.statusCode).toBe(401);
+      const status = await guess(ip, `nope-${i}`, "/api/auth/status");
+      expect(status.json()).toEqual({ required: true, signed_in: false });
+    }
+    const login = await app.inject({ method: "POST", url: "/api/auth/login", payload: { token: TOKEN }, remoteAddress: ip });
+    expect(login.statusCode).toBe(429);
+    expect((await guess(ip, TOKEN, "/api/auth/status")).statusCode).toBe(429);
+  });
+
+  it("does not count requests that offer no token at all", async () => {
+    const ip = "10.0.0.4";
+    for (let i = 0; i < MAX_FAILURES + 5; i++) {
+      const resp = await app.inject({ method: "GET", url: "/api/settings", remoteAddress: ip });
+      expect(resp.statusCode).toBe(401);
+      await app.inject({ method: "GET", url: "/api/auth/status", remoteAddress: ip });
+    }
+    expect((await app.inject({ method: "GET", url: "/api/settings", headers: bearer, remoteAddress: ip })).statusCode).toBe(200);
+  });
+
+  it("never throttles a signed-in client, however busy", async () => {
+    const ip = "10.0.0.5";
+    for (let i = 0; i < 200; i++) {
+      const resp = await app.inject({ method: "GET", url: "/api/settings", headers: bearer, remoteAddress: ip });
+      expect(resp.statusCode).toBe(200);
+    }
   });
 });

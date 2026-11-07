@@ -12,6 +12,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import fastifyCors from "@fastify/cors";
+import fastifyRateLimit from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
 import Fastify, { type FastifyInstance } from "fastify";
 import { ZodError } from "zod";
@@ -32,7 +33,7 @@ import { registerJobs } from "./routes/jobs.js";
 import { registerLlm } from "./routes/llm.js";
 import { registerImage } from "./routes/image.js";
 import { registerEndpoints } from "./routes/endpoints.js";
-import { AccessGuard, registerAuth } from "./auth.js";
+import { AccessGuard, FAILURE_WINDOW_MS, MAX_FAILURES, registerAuth } from "./auth.js";
 import { mountMcp, toolInfos } from "./mcp/server.js";
 import { hostnameOf, isListedHost } from "./origins.js";
 import { registerMcp, type McpToolsProvider } from "./routes/mcp.js";
@@ -144,6 +145,18 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
   // /api requests must therefore carry a non-simple Content-Type (JSON, the
   // raw audio upload types) or the X-Soundbox header.
   const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+  // Wrong access tokens are rate limited per address (see auth.ts). Not
+  // global: the UI polls job state and keeps event streams open, and a limit
+  // on every request would throttle a signed-in user. The guard counts only
+  // failures, through a limiter made here once the plugin has loaded.
+  void app.register(fastifyRateLimit, { global: false });
+  if (guard) {
+    app.after(() => {
+      guard.limitWith(app.createRateLimit({ max: MAX_FAILURES, timeWindow: FAILURE_WINDOW_MS }));
+    });
+  }
+
   app.addHook("onRequest", async (request, reply) => {
     if (allowedHosts !== "any") {
       const host = request.headers.host ?? "";
@@ -155,7 +168,7 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
     // After the Host check, so a rebinding page is still told "forbidden
     // host" rather than learning that a token would get it in.
     if (guard) {
-      const refused = guard.check(request, reply);
+      const refused = await guard.check(request, reply);
       if (refused) return refused;
     }
     if (MUTATING.has(request.method) && request.url.startsWith("/api/")) {

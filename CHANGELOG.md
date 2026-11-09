@@ -6,10 +6,14 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Streaming speech.** `POST /api/speak/stream` speaks a line and sends the audio while it's still being generated, as server-sent events or raw 16-bit PCM, for game dialogue and chat agents. Closing the connection cancels it; nothing is saved unless you ask. Models that can stream report `supports.streaming`, read from the audio.cpp build's own model specs. See `docs/STREAMING.md`.
+
 ### Changed
 - The site's download page has a new design: a full-width hero, the Soundbox film in a frame that flattens as you scroll, live GitHub numbers and a card per installer.
 
 ### Fixed
+- Per-model delivery options (exaggeration, temperature and the like) were silently ignored whenever a model ran resident in audio.cpp's server, because they were sent under the wrong key. They now reach the model.
 - Security: updated dependencies with open advisories: the system information library, the HTTP server adapter, and the desktop updater's zip support (Dependabot alerts).
 
 ## [0.4.1] - 2026-10-29

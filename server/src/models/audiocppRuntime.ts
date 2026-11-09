@@ -39,6 +39,7 @@ import { dirname, join } from "node:path";
 import type { Readable } from "node:stream";
 
 import { CancelledJob, ModelError } from "../errors.js";
+import { sseData } from "../audio/sse.js";
 import { findBinary } from "./audiocppBinary.js";
 
 type ServerProcess = ChildProcessByStdio<null, Readable, Readable>;
@@ -149,6 +150,16 @@ const CANCEL_POLL_MS = 250;
 export interface ProgressLike {
   handle?: { cancelled: boolean };
 }
+
+/** One item from `streamTask`: an event's audio as it arrives, then the end. */
+export type StreamTaskEvent =
+  | { kind: "audio"; audio: string | null; isFinal: boolean }
+  | { kind: "done"; ttftMs: number | null };
+
+/** One item from `streamSpeech`: raw interleaved s16le PCM, then the end. */
+export type StreamSpeechEvent =
+  | { kind: "pcm"; pcm: Buffer }
+  | { kind: "done"; ttftMs: number | null };
 
 /** One audio artifact from `/v1/tasks/run` — `audio` is a base64 WAV. */
 export interface TaskAudio {
@@ -565,6 +576,8 @@ export class AudioCppRuntime {
       path: string;
       family: string;
       task: string;
+      /** "offline" (audio.cpp's default) or "streaming"; one entry is one mode. */
+      mode?: string;
       loadOptions?: Record<string, string>;
     },
     modelsRoot: string,
@@ -664,6 +677,185 @@ export class AudioCppRuntime {
     }
   }
 
+  /**
+   * Run one request through a resident *streaming* model, yielding each
+   * event's audio (a base64 WAV) as audio.cpp produces it.
+   *
+   * Uses `/v1/tasks/stream` with `stream_format: "sse"`. `body` is the same
+   * flat body `/v1/tasks/run` is sent, so voice, seed and request options
+   * resolve exactly as they do for a finished read; `streamBody` reshapes it. The model must have been loaded with
+   * `mode: "streaming"`; an offline entry is refused upstream.
+   *
+   * Returns null when management is unavailable (no server on this build).
+   *
+   * `signal` is how the caller says the listener went away. Aborting the
+   * fetch alone may leave audio.cpp finishing a sentence nobody hears, and it
+   * exposes no per-request cancel, so an abort before the stream completed
+   * also stops the process — the same trade `runTask` makes on cancel.
+   */
+  async streamTask(
+    body: Record<string, unknown>,
+    modelsRoot: string,
+    backend: string | null,
+    signal: AbortSignal,
+  ): Promise<AsyncGenerator<StreamTaskEvent> | null> {
+    const baseUrl = await this.ensureRunning(modelsRoot, backend);
+    if (baseUrl === null) return null;
+    this.lastUsed = Date.now();
+
+    const abort = new AbortController();
+    const onAbort = () => abort.abort();
+    if (signal.aborted) abort.abort();
+    else signal.addEventListener("abort", onAbort, { once: true });
+
+    let resp: Response;
+    try {
+      resp = await fetch(`${baseUrl}/v1/tasks/stream`, {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "text/event-stream" },
+        // Upstream's documented shape for this route: the model id at the top,
+        // the task fields under `request` (see audio.cpp app/server/api.md).
+        body: JSON.stringify(streamBody(body)),
+        signal: abort.signal,
+      });
+    } catch (exc) {
+      signal.removeEventListener("abort", onAbort);
+      if (signal.aborted) throw new CancelledJob();
+      throw exc;
+    }
+    if (!resp.ok || resp.body === null) {
+      signal.removeEventListener("abort", onAbort);
+      const text = await resp.text().catch(() => "");
+      throw new ModelError(
+        `audio.cpp could not stream this request (HTTP ${resp.status})` +
+          (text ? `: ${extractError(text)}` : ""),
+      );
+    }
+
+    const stream = resp.body;
+    const isSse = (resp.headers.get("content-type") ?? "").includes("text/event-stream");
+    return (async function* (runtime: AudioCppRuntime) {
+      let finished = false;
+      try {
+        const messages = isSse
+          ? sseMessages(stream as unknown as AsyncIterable<Uint8Array>)
+          : jsonMessages(stream as unknown as AsyncIterable<Uint8Array>);
+        for await (const parsed of messages) {
+          runtime.lastUsed = Date.now();
+          if (parsed["type"] === "task.stream.event") {
+            const event = (parsed["event"] ?? {}) as Record<string, unknown>;
+            const isFinal = event["is_final"] === true;
+            const audios = eventAudio(event);
+            if (!audios.length) yield { kind: "audio", audio: null, isFinal };
+            for (const audio of audios) yield { kind: "audio", audio, isFinal };
+          } else if (parsed["type"] === "task.stream.done") {
+            finished = true;
+            const result = (parsed["result"] ?? {}) as Record<string, unknown>;
+            const timing = (result["timing"] ?? {}) as Record<string, unknown>;
+            yield {
+              kind: "done",
+              ttftMs: typeof timing["ttft_ms"] === "number" ? timing["ttft_ms"] : null,
+            };
+          } else if ("error" in parsed) {
+            throw new ModelError(`audio.cpp stream failed: ${extractError(JSON.stringify(parsed))}`);
+          }
+        }
+        finished = true;
+      } catch (exc) {
+        if (signal.aborted) throw new CancelledJob();
+        throw exc;
+      } finally {
+        signal.removeEventListener("abort", onAbort);
+        if (!finished) {
+          abort.abort();
+          // Only kill the runtime if the listener actually left mid-read: a
+          // stream that errored upstream has already stopped on its own.
+          if (signal.aborted) await runtime.stop();
+        }
+      }
+    })(this);
+  }
+
+  /**
+   * Stream one TTS line over `/v1/audio/speech` (OpenAI-shaped SSE), yielding
+   * raw 16-bit PCM as each chunk is made.
+   *
+   * Preferred over `streamTask` because it actually streams on the builds we
+   * run: `/v1/tasks/stream` there holds every event until the line is done.
+   * The catch is that its deltas carry no sample rate, so the caller has to
+   * know it already (see `AudioCppModel.speakStream`).
+   *
+   * Cancellation works like `streamTask`: a listener leaving mid-stream stops
+   * the process, since audio.cpp has no per-request cancel.
+   */
+  async streamSpeech(
+    body: Record<string, unknown>,
+    modelsRoot: string,
+    backend: string | null,
+    signal: AbortSignal,
+  ): Promise<AsyncGenerator<StreamSpeechEvent> | null> {
+    const baseUrl = await this.ensureRunning(modelsRoot, backend);
+    if (baseUrl === null) return null;
+    this.lastUsed = Date.now();
+    const abort = new AbortController();
+    const onAbort = () => abort.abort();
+    if (signal.aborted) abort.abort();
+    else signal.addEventListener("abort", onAbort, { once: true });
+
+    let resp: Response;
+    try {
+      resp = await fetch(`${baseUrl}/v1/audio/speech`, {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "text/event-stream" },
+        body: JSON.stringify({ ...body, response_format: "pcm", stream_format: "sse" }),
+        signal: abort.signal,
+      });
+    } catch (exc) {
+      signal.removeEventListener("abort", onAbort);
+      if (signal.aborted) throw new CancelledJob();
+      throw exc;
+    }
+    if (!resp.ok || resp.body === null) {
+      signal.removeEventListener("abort", onAbort);
+      const text = await resp.text().catch(() => "");
+      throw new ModelError(
+        `audio.cpp could not stream this request (HTTP ${resp.status})` +
+          (text ? `: ${extractError(text)}` : ""),
+      );
+    }
+    const stream = resp.body as unknown as AsyncIterable<Uint8Array>;
+    return (async function* (runtime: AudioCppRuntime) {
+      let finished = false;
+      try {
+        for await (const msg of sseMessages(stream)) {
+          runtime.lastUsed = Date.now();
+          if (msg["type"] === "speech.audio.delta" && typeof msg["audio"] === "string") {
+            yield { kind: "pcm", pcm: Buffer.from(msg["audio"], "base64") };
+          } else if (msg["type"] === "speech.audio.done") {
+            finished = true;
+            const timing = (msg["timing"] ?? {}) as Record<string, unknown>;
+            yield {
+              kind: "done",
+              ttftMs: typeof timing["ttft_ms"] === "number" ? timing["ttft_ms"] : null,
+            };
+          } else if ("error" in msg) {
+            throw new ModelError(`audio.cpp stream failed: ${extractError(JSON.stringify(msg))}`);
+          }
+        }
+        finished = true;
+      } catch (exc) {
+        if (signal.aborted) throw new CancelledJob();
+        throw exc;
+      } finally {
+        signal.removeEventListener("abort", onAbort);
+        if (!finished) {
+          abort.abort();
+          if (signal.aborted) await runtime.stop();
+        }
+      }
+    })(this);
+  }
+
   /* -------------------------------------------------------------- shutdown */
 
   /** Called by the same 30s tick that drives `ModelManager.maybeAutoUnload`. */
@@ -688,4 +880,76 @@ export class AudioCppRuntime {
 
 function log(message: string): void {
   process.stderr.write(`${message}\n`);
+}
+
+/** `{ model, family, ...fields }` → `{ model, stream_format, request: fields }`. */
+export function streamBody(body: Record<string, unknown>): Record<string, unknown> {
+  const { model, family: _family, ...request } = body;
+  return { model, stream_format: "sse", request };
+}
+
+/** SSE `data:` payloads as parsed messages, up to `[DONE]`. */
+async function* sseMessages(body: AsyncIterable<Uint8Array>): AsyncGenerator<Record<string, unknown>> {
+  for await (const data of sseData(body)) {
+    if (data === "[DONE]") return;
+    try {
+      yield JSON.parse(data) as Record<string, unknown>;
+    } catch {
+      // A line that isn't JSON carries nothing we can play.
+    }
+  }
+}
+
+/**
+ * The one-body answer, as the same messages SSE would have sent.
+ *
+ * Some audio.cpp builds ignore `stream_format: "sse"` on `/v1/tasks/stream`
+ * and send `{ events, result }` once the run is over (seen on the build the
+ * dev machine runs). Nothing arrives early that way, but the audio is the
+ * same, so it is played rather than refused.
+ */
+async function* jsonMessages(body: AsyncIterable<Uint8Array>): AsyncGenerator<Record<string, unknown>> {
+  const parts: Buffer[] = [];
+  for await (const chunk of body) parts.push(Buffer.from(chunk));
+  const text = Buffer.concat(parts).toString("utf8");
+  const parsed = JSON.parse(text) as Record<string, unknown>;
+  if ("error" in parsed) throw new ModelError(`audio.cpp stream failed: ${extractError(text)}`);
+  for (const event of (parsed["events"] as unknown[] | undefined) ?? []) {
+    yield { type: "task.stream.event", event };
+  }
+  yield { type: "task.stream.done", result: parsed["result"] ?? {} };
+}
+
+/**
+ * An event's audio, wherever this build put it: `audio` at the top, or one
+ * entry per chunk in `named_audio_outputs` (Supertonic, on the dev build).
+ */
+export function eventAudio(event: Record<string, unknown>): string[] {
+  if (typeof event["audio"] === "string") return [event["audio"]];
+  const named = event["named_audio_outputs"];
+  if (!Array.isArray(named)) return [];
+  return named
+    .map((o) => (o as { audio?: unknown }).audio)
+    .filter((a): a is string => typeof a === "string");
+}
+
+/**
+ * The `/v1/tasks/run`-style TTS body as a `/v1/audio/speech` body.
+ *
+ * The speech route reads the text as `input` and a built-in voice as
+ * `voice`; everything that isn't a named field goes in `options`, which is
+ * where the task route puts steps and cfg too.
+ */
+export function speechBody(body: Record<string, unknown>): Record<string, unknown> {
+  const options = { ...((body["options"] as Record<string, string> | undefined) ?? {}) };
+  if (body["num_inference_steps"] !== undefined) {
+    options["num_inference_steps"] = String(body["num_inference_steps"]);
+  }
+  if (body["guidance_scale"] !== undefined) options["guidance_scale"] = String(body["guidance_scale"]);
+  const out: Record<string, unknown> = { model: body["model"], input: body["text"] };
+  if (body["voice_id"] !== undefined) out["voice"] = body["voice_id"];
+  if (body["voice_ref"] !== undefined) out["voice_ref"] = body["voice_ref"];
+  if (body["seed"] !== undefined) out["seed"] = body["seed"];
+  if (Object.keys(options).length) out["options"] = options;
+  return out;
 }

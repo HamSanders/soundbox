@@ -20,3 +20,12 @@
 @source "../../app/src";
 /* And the site's own: the docs shell, the search box, the islands. */
 @source "../src";
+
+/* On the marketing pages the section titles speak in the display face too;
+   in the app only page titles do (see index.css). Unlayered, like the h1
+   rule there, so it beats the `font-heading` utility the titles carry. */
+h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}

@@ -39,8 +39,8 @@ const CLIENT_JSON = `{"mcpServers":{"soundbox":{"type":"http","url":"${MCP_URL}"
    these weights, and it must not render as a permissive default. See
    app/src/content/models/types.ts. */
 const LICENSE_BADGE: Record<CommercialUse, string> = {
-  yes: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  conditional: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  yes: "bg-ok/10 text-ok",
+  conditional: "bg-warn/10 text-warn",
   no: "bg-muted text-muted-foreground",
   unknown: "bg-muted text-muted-foreground",
 };
@@ -389,7 +389,7 @@ export function McpPage() {
                             {tool.name}
                           </code>
                           {tool.slow && (
-                            <span className="bg-amber-500/10 text-amber-600 shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium dark:text-amber-400">
+                            <span className="bg-warn/10 text-warn shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium">
                               slow
                             </span>
                           )}

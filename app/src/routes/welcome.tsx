@@ -495,7 +495,7 @@ function ModelRow({ model }: { model: ModelCard }) {
         className={cn(
           "mt-3 flex items-start gap-1.5 text-xs leading-relaxed",
           model.verified
-            ? "text-emerald-700 dark:text-emerald-300"
+            ? "text-ok"
             : "text-muted-foreground",
         )}
       >
@@ -740,7 +740,7 @@ function Agents() {
             </div>
             <div className="rounded-lg border px-3 py-2.5">
               <div className="flex items-center gap-2">
-                <span className="size-2 shrink-0 rounded-full bg-emerald-500" aria-hidden="true" />
+                <span className="size-2 shrink-0 rounded-full bg-ok" aria-hidden="true" />
                 <BotIcon className="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
                 <span className="text-sm font-medium">
                   claude-code
@@ -759,7 +759,7 @@ function Agents() {
                 ["generate", "wooden crate dropped on concrete floor"],
               ].map(([tool, prompt], i) => (
                 <li key={i} className="flex items-center gap-2 py-2">
-                  <CheckIcon className="size-3 shrink-0 text-emerald-500" aria-hidden="true" />
+                  <CheckIcon className="size-3 shrink-0 text-ok" aria-hidden="true" />
                   <span className="text-muted-foreground shrink-0 font-mono">{tool}</span>
                   <span className="min-w-0 flex-1 truncate">{prompt}</span>
                 </li>

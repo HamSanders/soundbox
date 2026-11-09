@@ -5,6 +5,7 @@
  * rail (Ctrl/Cmd+B, or the trigger in the header).
  */
 
+import { BrandMark, Wordmark } from "@/components/brand-mark";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
@@ -354,22 +355,22 @@ ${s.sound_count} sound${s.sound_count === 1 ? "" : "s"} · ${formatRelative(s.up
 }
 
 /**
- * One hue per area, so the rail reads as a row of places rather than a
- * column of identical grey glyphs. The tint is on the icon only, muted while
- * the item is idle and full when it is active, and the Samples entries share
- * the hue of the Studio area that makes them (speech with the Voice Lab). The
- * footer utilities stay neutral: they are not places you work.
+ * The rail is monochrome: places are told apart by their glyphs, not by a
+ * colour per area. The map stays so an area can be given a mark again
+ * without re-threading `hue` through every item; today every entry is the
+ * same quiet ink. The footer utilities stay neutral too.
  */
 type NavHue = "studio" | "voice" | "projects" | "models" | "agents" | "sfx" | "music";
 
+const NAV_INK = "[&_svg]:text-foreground/80";
 const HUE_CLASS: Record<NavHue, string> = {
-  studio: "[&_svg]:text-teal-600 dark:[&_svg]:text-teal-400",
-  voice: "[&_svg]:text-violet-600 dark:[&_svg]:text-violet-400",
-  projects: "[&_svg]:text-amber-600 dark:[&_svg]:text-amber-400",
-  models: "[&_svg]:text-sky-600 dark:[&_svg]:text-sky-400",
-  agents: "[&_svg]:text-fuchsia-600 dark:[&_svg]:text-fuchsia-400",
-  sfx: "[&_svg]:text-orange-600 dark:[&_svg]:text-orange-400",
-  music: "[&_svg]:text-indigo-600 dark:[&_svg]:text-indigo-400",
+  studio: NAV_INK,
+  voice: NAV_INK,
+  projects: NAV_INK,
+  models: NAV_INK,
+  agents: NAV_INK,
+  sfx: NAV_INK,
+  music: NAV_INK,
 };
 
 interface NavItem {
@@ -682,11 +683,11 @@ export function AppSidebar() {
                     is now one conversation among many; `/` lands on the
                     dashboard through the catch-all. */}
                 <NavLink to="/" end onClick={() => setOpenMobile(false)}>
-                  <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                    <AudioLinesIcon className="size-4" />
+                  <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-sm">
+                    <BrandMark detail="small" className="size-6" />
                   </div>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">Soundbox</span>
+                    <Wordmark className="truncate text-lg leading-none font-semibold" />
                     <span className="text-muted-foreground truncate text-xs">
                       {IS_MOCK ? "mock backend" : "local sound effects"}
                     </span>

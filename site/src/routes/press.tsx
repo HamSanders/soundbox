@@ -292,25 +292,25 @@ const GIFS: Still[] = [
 
 const MARKS: { label: string; svg: string; png: string; tile: string }[] = [
   {
-    label: "Teal tile",
-    svg: "/press/soundbox-mark.svg",
-    png: "/press/soundbox-mark.png",
-    tile: "bg-[#0a0c0d]",
+    label: "Black tile",
+    svg: "/press/mirli-mark.svg",
+    png: "/press/mirli-mark.png",
+    tile: "bg-[#eeede9]",
   },
   {
-    label: "Dark tile",
-    svg: "/press/soundbox-mark-dark.svg",
-    png: "/press/soundbox-mark-dark.png",
-    tile: "bg-[#e6ecec]",
+    label: "Paper tile",
+    svg: "/press/mirli-mark-light.svg",
+    png: "/press/mirli-mark-light.png",
+    tile: "bg-[#070707]",
   },
 ];
 
 const COLOURS: { name: string; hex: string; use: string; light?: boolean }[] = [
-  { name: "Teal", hex: "#2DD4BF", use: "The mark, waveforms and links." },
-  { name: "Ground", hex: "#0A0C0D", use: "The background of the app and every film." },
-  { name: "Ink", hex: "#E6ECEC", use: "Text on the ground.", light: true },
-  { name: "Muted", hex: "#8E999D", use: "Labels and secondary text." },
-  { name: "Deep teal", hex: "#0D6B64", use: "Teal on a light background." },
+  { name: "Ground", hex: "#070707", use: "The background of the app, the site and the mark's tile." },
+  { name: "Ink", hex: "#EEEDE9", use: "Text on the ground, and the mark.", light: true },
+  { name: "Paper", hex: "#F2F1ED", use: "The light theme's background.", light: true },
+  { name: "Muted", hex: "#9A9893", use: "Labels and secondary text." },
+  { name: "Oxblood", hex: "#8F1D1D", use: "Errors and warnings of loss. The only colour." },
 ];
 
 const LINKS: { label: string; href: string; internal?: boolean }[] = [
@@ -577,8 +577,8 @@ export function PressPage() {
         {/* ----------------------------------------------------------- brand */}
         <Section id="brand" title="Mark, colours and type">
           <p className="text-muted-foreground mt-3 max-w-2xl leading-relaxed">
-            The mark is a waveform on a rounded tile. Use whichever tile suits your background,
-            and please don't recolour or redraw it.
+            The mark is a blackbird in flight whose wing ends in waveform bars, on a rounded tile.
+            Use whichever tile suits your background, and please don't recolour or redraw it.
           </p>
           <ul className="mt-6 grid gap-5 sm:grid-cols-2">
             {MARKS.map((mark) => (
@@ -586,7 +586,7 @@ export function PressPage() {
                 <div className={`flex items-center justify-center py-8 ${mark.tile}`}>
                   <img
                     src={assetUrl(mark.svg)}
-                    alt={`The Soundbox mark, ${mark.label.toLowerCase()}`}
+                    alt={`The Mirli mark, ${mark.label.toLowerCase()}`}
                     width={96}
                     height={96}
                   />
@@ -621,10 +621,12 @@ export function PressPage() {
 
           <h3 className="font-heading mt-10 text-lg font-semibold tracking-tight">Type</h3>
           <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-relaxed">
-            <span className="text-foreground font-medium">Inter</span> for headings and the
-            interface (the films set titles in its 800 and 900 weights), and{" "}
+            <span className="text-foreground font-display text-base font-semibold">Grenze Gotisch</span>,
+            a blackletter drawn to be read, for the wordmark and page titles only;{" "}
+            <span className="text-foreground font-medium">Inter</span> for the interface and
+            everything read at length; and{" "}
             <span className="text-foreground font-mono">JetBrains Mono</span> for prompts, labels
-            and code. Both are free under the SIL Open Font License.
+            and code. All three are free under the SIL Open Font License.
           </p>
         </Section>
 

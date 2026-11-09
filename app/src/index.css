@@ -6,11 +6,15 @@
    the promo films use — see docs/design-direction.md. */
 @import "@fontsource-variable/inter/opsz.css";
 @import "@fontsource-variable/jetbrains-mono";
+/* Grenze Gotisch: a blackletter drawn to be read, for the wordmark and the
+   page titles only. Everything you read at length stays in Inter. */
+@import "@fontsource-variable/grenze-gotisch";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
     --font-heading: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Grenze Gotisch Variable', 'Iowan Old Style', Georgia, serif;
     --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
     --font-mono: 'JetBrains Mono Variable', ui-monospace, 'Cascadia Mono', Consolas, monospace;
     /* One step under text-xs: meter readouts, rack labels, the sidebar's
@@ -77,117 +81,110 @@
 }
 
 /*
- * Palette — "bench at night". See docs/design-direction.md for the reasoning.
+ * Palette: "noir". Black, white and the greys between, like a film still.
  *
- * Neutrals are graphite with a faint teal-blue cast (hue ~210) rather than
- * shadcn's dead-neutral greys: next to the teal they read as one material,
- * the way a DAW's chrome is tinted to sit with its meters. Surfaces step up
- * in luminance — ground, panel, raised — and are separated by hairlines, not
- * shadows. Teal is the *signal*: what is playing, what is selected, the one
- * action that makes sound, and focus. Everything else stays graphite.
+ * There is no brand hue. The signal (what is playing, what is selected, the
+ * one action that makes sound, focus) is full-contrast ink: white on black
+ * in the dark theme, black on paper in the light one. Surfaces step up in
+ * luminance (ground, panel, raised) and are separated by hairlines, not
+ * shadows. Status keeps a colour, because a licence badge or an error has
+ * to be told apart without reading it, but each one is drained to the edge
+ * of recognisable, and only `danger` (an oxblood) is allowed to be loud.
  *
- * Every text pairing below was checked for WCAG AA (4.5:1) against the
- * surfaces it lands on; `wave` and `border-strong` for 3:1 as graphics.
+ * Text pairings clear WCAG AA (4.5:1) on the surfaces they land on; `wave`
+ * and `border-strong` clear 3:1 as graphics.
  */
 :root {
-    --background: #f3f5f5;
-    --foreground: #0e1314;
-    /* Track colours: one hue per lane (see lib/lanes.ts) rendered at this
-       lightness and chroma. Kept here rather than in the palette above because
-       they are not theme *colours* — they are the two numbers that make an
-       arbitrary hue readable on this background. */
-    --lane-l: 0.55;
-    --lane-c: 0.14;
-    --card: #ffffff;
-    --card-foreground: #0e1314;
-    --popover: #ffffff;
-    --popover-foreground: #0e1314;
-    /* Teal-700, a shade deeper. White on it is 6:1, and as text it clears 4.5:1 on every surface —
-       so the same token can colour the Generate button and a link. */
-    --primary: #0d6b64;
-    --primary-foreground: #ffffff;
-    --signal: #0d9488;
-    --secondary: #e8ecec;
-    --secondary-foreground: #0e1314;
-    --muted: #e8ecec;
-    --muted-foreground: #556166;
-    --accent: #e3e8e9;
-    --accent-foreground: #0e1314;
-    --destructive: #c62828;
-    --ok: #036b4e;
-    --warn: #92400e;
-    --danger: #c62828;
-    --border: #dce1e2;
-    --border-strong: #7a868c;
-    --input: #ced5d7;
-    --field: #ffffff;
-    --wave: #7a868c;
-    --ring: #0d9488;
-    --chart-1: #0d9488;
-    --chart-2: #556166;
-    --chart-3: #3c4649;
-    --chart-4: #2a3235;
-    --chart-5: #1a2022;
-    --radius: 0.375rem;
-    --sidebar: #eceff0;
-    --sidebar-foreground: #0e1314;
-    --sidebar-primary: #0d6b64;
-    --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #dfe5e6;
-    --sidebar-accent-foreground: #0e1314;
-    --sidebar-border: #dce1e2;
-    --sidebar-ring: #0d9488;
+    /* Paper, not white: a little warmth keeps pure black type from buzzing. */
+    --background: #f2f1ed;
+    --foreground: #0b0b0b;
+    /* Track colours keep their hue (lib/lanes.ts) but at almost no chroma:
+       lanes are told apart by a tint, not a colour. */
+    --lane-l: 0.5;
+    --lane-c: 0.025;
+    --card: #fbfaf7;
+    --card-foreground: #0b0b0b;
+    --popover: #fbfaf7;
+    --popover-foreground: #0b0b0b;
+    --primary: #0b0b0b;
+    --primary-foreground: #f7f6f2;
+    --signal: #0b0b0b;
+    --secondary: #e6e4df;
+    --secondary-foreground: #0b0b0b;
+    --muted: #e6e4df;
+    --muted-foreground: #57554f;
+    --accent: #e0ded8;
+    --accent-foreground: #0b0b0b;
+    --destructive: #8f1d1d;
+    --ok: #2f5a3f;
+    --warn: #7a5410;
+    --danger: #8f1d1d;
+    --border: #d6d3cc;
+    --border-strong: #75726b;
+    --input: #c9c6be;
+    --field: #fbfaf7;
+    --wave: #75726b;
+    --ring: #0b0b0b;
+    --chart-1: #0b0b0b;
+    --chart-2: #57554f;
+    --chart-3: #85827a;
+    --chart-4: #b0ada5;
+    --chart-5: #d6d3cc;
+    /* Crisp corners: 2px, so a button is a cut card, not a pill. */
+    --radius: 0.125rem;
+    --sidebar: #eae8e3;
+    --sidebar-foreground: #0b0b0b;
+    --sidebar-primary: #0b0b0b;
+    --sidebar-primary-foreground: #f7f6f2;
+    --sidebar-accent: #dedbd5;
+    --sidebar-accent-foreground: #0b0b0b;
+    --sidebar-border: #d6d3cc;
+    --sidebar-ring: #0b0b0b;
 }
 
 .dark {
-    /* The promo films' ground. */
-    --background: #0a0c0d;
-    --foreground: #e6ecec;
-    /* Lighter and a little less saturated than in light mode: the same hue at
-       0.55 lightness disappears into a near-black lane. */
-    --lane-l: 0.75;
-    --lane-c: 0.13;
-    --card: #111416;
-    --card-foreground: #e6ecec;
-    --popover: #15191b;
-    --popover-foreground: #e6ecec;
-    /* #2dd4bf, the brand teal, at full strength: on near-black it needs no
-       help. Its label flips to near-black because white on a bright teal
-       fails contrast (it is ~1.9:1); this pairing is ~10:1. */
-    --primary: #2dd4bf;
-    --primary-foreground: #04201c;
-    --signal: #2dd4bf;
-    --secondary: #1a1f21;
-    --secondary-foreground: #e6ecec;
-    --muted: #1a1f21;
-    --muted-foreground: #8e999d;
-    --accent: #1f2527;
-    --accent-foreground: #e6ecec;
-    --destructive: #f87171;
-    --ok: #34d399;
-    --warn: #fbbf24;
-    --danger: #f87171;
-    --border: #22282b;
-    --border-strong: #67747a;
-    --input: #2b3235;
-    /* Inputs sit *below* the panel they are on, like a recessed fader well,
-       rather than floating above it the way a translucent white fill does. */
-    --field: #0c0f10;
-    --wave: #67747a;
-    --ring: #2dd4bf;
-    --chart-1: #2dd4bf;
-    --chart-2: #8e999d;
-    --chart-3: #5f6b70;
-    --chart-4: #3a4346;
-    --chart-5: #22282b;
-    --sidebar: #0d1011;
-    --sidebar-foreground: #e6ecec;
-    --sidebar-primary: #2dd4bf;
-    --sidebar-primary-foreground: #04201c;
-    --sidebar-accent: #181d1f;
-    --sidebar-accent-foreground: #e6ecec;
-    --sidebar-border: #1c2224;
-    --sidebar-ring: #2dd4bf;
+    --background: #070707;
+    --foreground: #eeede9;
+    --lane-l: 0.74;
+    --lane-c: 0.025;
+    --card: #0e0e0e;
+    --card-foreground: #eeede9;
+    --popover: #121212;
+    --popover-foreground: #eeede9;
+    /* White ink is the signal. Its label is black, ~18:1. */
+    --primary: #eeede9;
+    --primary-foreground: #070707;
+    --signal: #ffffff;
+    --secondary: #171717;
+    --secondary-foreground: #eeede9;
+    --muted: #171717;
+    --muted-foreground: #9a9893;
+    --accent: #1c1c1c;
+    --accent-foreground: #eeede9;
+    --destructive: #e06c6c;
+    --ok: #8fbf9c;
+    --warn: #d6b46a;
+    --danger: #e06c6c;
+    --border: #222222;
+    --border-strong: #6b6964;
+    --input: #2a2a2a;
+    /* Inputs sit below the panel, a recessed well. */
+    --field: #050505;
+    --wave: #6b6964;
+    --ring: #eeede9;
+    --chart-1: #eeede9;
+    --chart-2: #9a9893;
+    --chart-3: #6b6964;
+    --chart-4: #3d3c39;
+    --chart-5: #222222;
+    --sidebar: #0a0a0a;
+    --sidebar-foreground: #eeede9;
+    --sidebar-primary: #eeede9;
+    --sidebar-primary-foreground: #070707;
+    --sidebar-accent: #161616;
+    --sidebar-accent-foreground: #eeede9;
+    --sidebar-border: #1c1c1c;
+    --sidebar-ring: #eeede9;
 }
 
 @layer base {
@@ -235,6 +232,15 @@
     scrollbar-width: thin;
     scrollbar-color: color-mix(in oklab, var(--border-strong) 60%, transparent) transparent;
   }
+}
+
+/* Page titles are the one place the blackletter speaks. Outside any layer on
+   purpose: most titles also carry `font-heading`, and a layered rule would
+   lose to that utility. */
+h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 /*
@@ -554,4 +560,18 @@
   .soundbox-panel-settle {
     animation: none;
   }
+}
+
+/* Film grain: a fixed layer of fractal noise over the page, the texture of a
+   noir print. Decoration only, so it ignores the pointer and goes quiet when
+   the viewer prefers less. Applied by the site's layout, not the app, where a
+   noisy surface would sit under every waveform. */
+@utility film-grain {
+  position: fixed;
+  inset: -50%;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1.2 -0.1'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
 }

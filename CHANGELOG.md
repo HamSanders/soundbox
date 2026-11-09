@@ -7,7 +7,7 @@ to follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
-- A new look for the app and the site: black and white, with a blackbird mark whose wing ends in waveform bars, a blackletter face for page titles, square-cut corners and a film grain on the site. Status colours stay, drained down, with oxblood for errors.
+- A new look for the app and the site: black and white, with a single condensed M for the mark and app icon, Big Shoulders Display for the wordmark and page titles, square-cut corners and a film grain on the site. Status colours stay, drained down, with oxblood for errors.
 - The site's download page has a new design: a full-width hero, the Soundbox film in a frame that flattens as you scroll, live GitHub numbers and a card per installer.
 
 ### Fixed

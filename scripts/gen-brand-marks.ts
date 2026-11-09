@@ -1,11 +1,11 @@
 #!/usr/bin/env -S npx tsx
 /**
- * Writes the static copies of the Mirli mark from the one drawing in
+ * Writes the static copies of the Mirli mark (the display-face M) from
  * app/src/lib/brand-geometry.ts:
  *
- *   app/public/favicon.svg            paper bird on a black tile (both builds)
+ *   app/public/favicon.svg                 paper M on a black tile (both builds)
  *   site/public/press/mirli-mark.svg       the same, 1024 px, for the press kit
- *   site/public/press/mirli-mark-light.svg black bird on a paper tile
+ *   site/public/press/mirli-mark-light.svg black M on a paper tile
  *
  * The press kit's PNGs are rendered from those SVGs with a headless browser:
  *
@@ -18,31 +18,31 @@ import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { VIEWBOX, birdSvgMarkup, type BrandCut } from "../app/src/lib/brand-geometry";
+import { markSvgMarkup, markViewBox } from "../app/src/lib/brand-geometry";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const INK = "#070707";
 const PAPER = "#eeede9";
 
-/** A rounded tile with the bird centred and inset so it breathes. */
-function tile(opts: { cut: BrandCut; ink: string; ground: string; px?: number }): string {
-  const { x, y, size } = VIEWBOX;
-  const pad = size * 0.1;
-  const outer = size + pad * 2;
+/** A rounded tile with the M centred and inset so it breathes. */
+function tile(opts: { ink: string; ground: string; inset: number; px?: number }): string {
+  const box = markViewBox(opts.inset);
+  const [x, y, size] = [box.x, box.y, box.size].map((n) => Math.round(n * 10) / 10);
   const px = opts.px ? ` width="${opts.px}" height="${opts.px}"` : "";
   return (
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x - pad} ${y - pad} ${outer} ${outer}"${px}>` +
-    `<rect x="${x - pad}" y="${y - pad}" width="${outer}" height="${outer}" rx="${outer * 0.18}" fill="${opts.ground}"/>` +
-    birdSvgMarkup(opts.cut, opts.ink) +
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${size} ${size}"${px}>` +
+    `<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="${Math.round(size * 0.18)}" fill="${opts.ground}"/>` +
+    markSvgMarkup(opts.ink) +
     `</svg>\n`
   );
 }
 
 const files: Record<string, string> = {
-  "app/public/favicon.svg": tile({ cut: "small", ink: PAPER, ground: INK }),
-  "site/public/press/mirli-mark.svg": tile({ cut: "full", ink: PAPER, ground: INK, px: 1024 }),
-  "site/public/press/mirli-mark-light.svg": tile({ cut: "full", ink: INK, ground: PAPER, px: 1024 }),
+  // Tighter in the favicon: at 16 px every pixel of letter counts.
+  "app/public/favicon.svg": tile({ ink: PAPER, ground: INK, inset: 0.14 }),
+  "site/public/press/mirli-mark.svg": tile({ ink: PAPER, ground: INK, inset: 0.2, px: 1024 }),
+  "site/public/press/mirli-mark-light.svg": tile({ ink: INK, ground: PAPER, inset: 0.2, px: 1024 }),
 };
 
 for (const [rel, svg] of Object.entries(files)) {

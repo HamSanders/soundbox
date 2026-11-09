@@ -684,10 +684,10 @@ export function AppSidebar() {
                     dashboard through the catch-all. */}
                 <NavLink to="/" end onClick={() => setOpenMobile(false)}>
                   <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-sm">
-                    <BrandMark detail="small" className="size-6" />
+                    <BrandMark inset={0.04} className="size-6" />
                   </div>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <Wordmark className="truncate text-lg leading-none font-semibold" />
+                    <Wordmark className="truncate text-lg leading-none font-extrabold" />
                     <span className="text-muted-foreground truncate text-xs">
                       {IS_MOCK ? "mock backend" : "local sound effects"}
                     </span>

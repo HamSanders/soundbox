@@ -1,51 +1,29 @@
 /**
- * The Mirli blackbird as plain path data, shared by the React mark
- * (`components/brand-mark.tsx`) and the static files written by
- * `scripts/gen-brand-marks.ts` (favicon, press kit), so there is one drawing.
+ * The Mirli mark: a capital M cut from Big Shoulders Display at weight 800,
+ * the same face as the wordmark and page titles. The outline is the font's
+ * own glyph, flattened to a path so the favicon and press-kit files need no
+ * webfont to render it (regenerate with scripts/gen-brand-marks.ts if the
+ * weight changes).
  *
- * Drawn in a 200-unit box; `VIEWBOX` is the square around the bird.
+ * Coordinates are font units (2000 per em) with the origin at the glyph's
+ * top-left: the M is `M_WIDTH` wide and `M_HEIGHT` (cap height) tall.
  */
 
-export const VIEWBOX = { x: 30, y: 29, size: 150 } as const;
+export const M_PATH =
+  "M0 1600V0H422.2L545.2 618L580.7 1370.4H629.2L662.7 618L787.6 0H1208.3V1600H950V1114.5L999.4 227.9H947.6L858 1131L746.9 1598.3H461L351.9 1131L260.7 227.9H210.9L258.3 1114.5V1600Z";
+export const M_WIDTH = 1208.3;
+export const M_HEIGHT = 1600;
 
-/** Body with the eye cut out (draw with `fill-rule="evenodd"`). */
-export const BODY =
-  "M55,93 C62,84 78,82 88,92 L104,110 C116,120 128,128 140,134 L172,150 " +
-  "C168,155 161,156 156,153 L150,151 L133,145 C110,153 82,147 72,129 C66,117 62,107 55,101 Z " +
-  "M73.4,92 a3.4,3.4 0 1,0 -6.8,0 a3.4,3.4 0 1,0 6.8,0 Z";
-export const BEAK = "M34,98 L56,92.5 L55.5,101.5 Z";
-export const WING = "M84,112 C84,94 94,80 112,74 L120,73 L120,118 C108,126 92,124 84,112 Z";
-
-/** Six thin bars for large sizes, four thick ones that survive 16-32px. */
-export const CUTS = {
-  full: { bars: [70, 58, 52, 58, 70, 82], width: 7.5, pitch: 10.5 },
-  small: { bars: [66, 54, 60, 76], width: 11, pitch: 14 },
-} as const;
-
-export type BrandCut = keyof typeof CUTS;
-
-export interface Bar {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  rx: number;
+/**
+ * A square viewBox with the M centred in it. `inset` is the share of the
+ * square left empty above and below the letter.
+ */
+export function markViewBox(inset = 0): { x: number; y: number; size: number } {
+  const size = M_HEIGHT / (1 - inset * 2);
+  return { x: (M_WIDTH - size) / 2, y: (M_HEIGHT - size) / 2, size };
 }
 
-/** The waveform bars: each one stops on the wing's rising underside. */
-export function bars(cut: BrandCut): Bar[] {
-  const c = CUTS[cut];
-  return c.bars.map((top, i) => {
-    const x = 116 + i * c.pitch;
-    const bottom = 118 - (x + c.width / 2 - 118) * 0.45;
-    return { x, y: top, width: c.width, height: bottom - top, rx: c.width / 2 };
-  });
-}
-
-/** The bird as SVG markup in one colour, for files written outside React. */
-export function birdSvgMarkup(cut: BrandCut, ink: string): string {
-  const rects = bars(cut)
-    .map((b) => `<rect x="${b.x}" y="${b.y}" width="${b.width}" height="${b.height.toFixed(2)}" rx="${b.rx}"/>`)
-    .join("");
-  return `<g fill="${ink}"><path d="${BODY}" fill-rule="evenodd"/><path d="${BEAK}"/><path d="${WING}"/>${rects}</g>`;
+/** The M as standalone SVG markup, for the static files. */
+export function markSvgMarkup(ink: string): string {
+  return `<path d="${M_PATH}" fill="${ink}"/>`;
 }

@@ -577,7 +577,7 @@ export function PressPage() {
         {/* ----------------------------------------------------------- brand */}
         <Section id="brand" title="Mark, colours and type">
           <p className="text-muted-foreground mt-3 max-w-2xl leading-relaxed">
-            The mark is a blackbird in flight whose wing ends in waveform bars, on a rounded tile.
+            The mark is a single M in Big Shoulders Display, on a rounded tile.
             Use whichever tile suits your background, and please don't recolour or redraw it.
           </p>
           <ul className="mt-6 grid gap-5 sm:grid-cols-2">
@@ -621,8 +621,8 @@ export function PressPage() {
 
           <h3 className="font-heading mt-10 text-lg font-semibold tracking-tight">Type</h3>
           <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-relaxed">
-            <span className="text-foreground font-display text-base font-semibold">Grenze Gotisch</span>,
-            a blackletter drawn to be read, for the wordmark and page titles only;{" "}
+            <span className="text-foreground font-display text-base font-extrabold">Big Shoulders Display</span>,
+            a condensed poster face, for the mark, the wordmark and page titles only;{" "}
             <span className="text-foreground font-medium">Inter</span> for the interface and
             everything read at length; and{" "}
             <span className="text-foreground font-mono">JetBrains Mono</span> for prompts, labels

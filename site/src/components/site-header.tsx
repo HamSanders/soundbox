@@ -3,7 +3,7 @@
  * (see `Layout` in `../layout.tsx`), so it lives above `<Outlet />` rather
  * than inside any one page.
  *
- * The mark is the app's own (`BrandMark`, the blackbird, and the blackletter
+ * The mark is the app's own (`BrandMark`, the M, and the display-face
  * `Wordmark`, as in `app/src/components/app-sidebar.tsx`) rather than a
  * second logo for the marketing site.
  */
@@ -32,8 +32,10 @@ export function SiteHeader() {
           to="/"
           className="focus-visible:ring-ring/50 flex items-center gap-2 rounded outline-none focus-visible:ring-3"
         >
-          <BrandMark className="size-8" />
-          <Wordmark className="text-2xl leading-none font-semibold" />
+          <span className="bg-foreground text-background flex size-8 items-center justify-center rounded-sm">
+            <BrandMark inset={0.04} className="size-6" />
+          </span>
+          <Wordmark className="text-2xl leading-none font-extrabold" />
         </Link>
 
         <nav aria-label="Primary" className="flex items-center gap-4 text-sm">

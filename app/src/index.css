@@ -6,15 +6,15 @@
    the promo films use — see docs/design-direction.md. */
 @import "@fontsource-variable/inter/opsz.css";
 @import "@fontsource-variable/jetbrains-mono";
-/* Grenze Gotisch: a blackletter drawn to be read, for the wordmark and the
-   page titles only. Everything you read at length stays in Inter. */
-@import "@fontsource-variable/grenze-gotisch";
+/* Big Shoulders Display: a condensed, film-poster face for the wordmark, the
+   M mark and page titles only. Everything you read at length stays in Inter. */
+@import "@fontsource-variable/big-shoulders-display";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
     --font-heading: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
-    --font-display: 'Grenze Gotisch Variable', 'Iowan Old Style', Georgia, serif;
+    --font-display: 'Big Shoulders Display Variable', 'Arial Narrow', 'Roboto Condensed', sans-serif;
     --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
     --font-mono: 'JetBrains Mono Variable', ui-monospace, 'Cascadia Mono', Consolas, monospace;
     /* One step under text-xs: meter readouts, rack labels, the sidebar's
@@ -234,13 +234,13 @@
   }
 }
 
-/* Page titles are the one place the blackletter speaks. Outside any layer on
-   purpose: most titles also carry `font-heading`, and a layered rule would
+/* Page titles are the one place the display face speaks. Outside any layer
+   on purpose: most titles also carry `font-heading`, and a layered rule would
    lose to that utility. */
 h1 {
   font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-weight: 800;
+  letter-spacing: 0.005em;
 }
 
 /*

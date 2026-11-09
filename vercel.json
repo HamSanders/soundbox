@@ -4,7 +4,7 @@
   "installCommand": "npm ci",
   "buildCommand": "npm run site:build",
   "outputDirectory": "site/dist",
-  "git": { "deploymentEnabled": false },
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- site app/src docs README.md package-lock.json vercel.json",
   "trailingSlash": true,
   "headers": [
     {

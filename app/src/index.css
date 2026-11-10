@@ -98,38 +98,41 @@
     /* Paper, not white: a little warmth keeps pure black type from buzzing. */
     --background: #f2f1ed;
     --foreground: #0b0b0b;
-    /* Track colours keep their hue (lib/lanes.ts) but at almost no chroma:
-       lanes are told apart by a tint, not a colour. */
-    --lane-l: 0.5;
-    --lane-c: 0.025;
+    /* The brand is ink on paper, but the work surfaces keep their colour:
+       lanes, status and the live signal are information, not decoration.
+       Track colours are one hue per lane (lib/lanes.ts) at this lightness
+       and chroma. */
+    --lane-l: 0.55;
+    --lane-c: 0.14;
     --card: #fbfaf7;
     --card-foreground: #0b0b0b;
     --popover: #fbfaf7;
     --popover-foreground: #0b0b0b;
     --primary: #0b0b0b;
     --primary-foreground: #f7f6f2;
-    --signal: #0b0b0b;
+    /* What is live: the playhead, a meter, a model that is running. */
+    --signal: #0d9488;
     --secondary: #e6e4df;
     --secondary-foreground: #0b0b0b;
     --muted: #e6e4df;
     --muted-foreground: #57554f;
     --accent: #e0ded8;
     --accent-foreground: #0b0b0b;
-    --destructive: #8f1d1d;
-    --ok: #2f5a3f;
-    --warn: #7a5410;
-    --danger: #8f1d1d;
+    --destructive: #c62828;
+    --ok: #036b4e;
+    --warn: #92400e;
+    --danger: #c62828;
     --border: #d6d3cc;
     --border-strong: #75726b;
     --input: #c9c6be;
     --field: #fbfaf7;
     --wave: #75726b;
     --ring: #0b0b0b;
-    --chart-1: #0b0b0b;
-    --chart-2: #57554f;
-    --chart-3: #85827a;
-    --chart-4: #b0ada5;
-    --chart-5: #d6d3cc;
+    --chart-1: #0d9488;
+    --chart-2: #556166;
+    --chart-3: #3c4649;
+    --chart-4: #2a3235;
+    --chart-5: #1a2022;
     /* Crisp corners: 2px, so a button is a cut card, not a pill. */
     --radius: 0.125rem;
     --sidebar: #eae8e3;
@@ -145,26 +148,27 @@
 .dark {
     --background: #070707;
     --foreground: #eeede9;
-    --lane-l: 0.74;
-    --lane-c: 0.025;
+    /* Lighter lanes in the dark: at 0.55 a lane disappears into the panel. */
+    --lane-l: 0.75;
+    --lane-c: 0.13;
     --card: #0e0e0e;
     --card-foreground: #eeede9;
     --popover: #121212;
     --popover-foreground: #eeede9;
-    /* White ink is the signal. Its label is black, ~18:1. */
+    /* White ink is the brand's one colour. Its label is black, ~18:1. */
     --primary: #eeede9;
     --primary-foreground: #070707;
-    --signal: #ffffff;
+    --signal: #2dd4bf;
     --secondary: #171717;
     --secondary-foreground: #eeede9;
     --muted: #171717;
     --muted-foreground: #9a9893;
     --accent: #1c1c1c;
     --accent-foreground: #eeede9;
-    --destructive: #e06c6c;
-    --ok: #8fbf9c;
-    --warn: #d6b46a;
-    --danger: #e06c6c;
+    --destructive: #f87171;
+    --ok: #34d399;
+    --warn: #fbbf24;
+    --danger: #f87171;
     --border: #222222;
     --border-strong: #6b6964;
     --input: #2a2a2a;
@@ -172,11 +176,11 @@
     --field: #050505;
     --wave: #6b6964;
     --ring: #eeede9;
-    --chart-1: #eeede9;
-    --chart-2: #9a9893;
-    --chart-3: #6b6964;
-    --chart-4: #3d3c39;
-    --chart-5: #222222;
+    --chart-1: #2dd4bf;
+    --chart-2: #8e999d;
+    --chart-3: #5f6b70;
+    --chart-4: #3a4346;
+    --chart-5: #22282b;
     --sidebar: #0a0a0a;
     --sidebar-foreground: #eeede9;
     --sidebar-primary: #eeede9;

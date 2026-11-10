@@ -1,9 +1,12 @@
 /**
  * `/download` — the installers, the Soundbox film and the repo's numbers, on the site.
  *
- * Set as a spec sheet in the noir system: the display face for the big lines,
- * mono caps for labels, hairline rules, square-cut corners and white ink as
- * the only signal. The one-line M draws itself in the hero.
+ * The page is built around the mark's own idea: a line of sound that turns
+ * into the M. In the hero a calm wave runs in from the left edge of the
+ * screen, becomes the pen line of the M, and leaves the other side as a live
+ * waveform that swells under the pointer. Everything else stays out of its
+ * way: one colour of ink, the display face for the big lines, mono caps for
+ * labels, hairline grids and square-cut corners.
  *
  * The installer filenames carry the version (`Soundbox_0.4.1_x64-setup.exe`),
  * so a link to one file would go stale on every release. The page therefore
@@ -14,15 +17,23 @@
  * limited, the fallback links still work and the numbers show a dash.
  *
  * The visitor's OS is guessed after mount, so the prerendered HTML is the same
- * for everyone. Every moving part (the pen drawing the M, the counters, the
- * prompt ticker) is decoration and stops under reduced motion.
+ * for everyone. Every moving part (the wave, the pen, the headline's entrance,
+ * the tilt, the counters, the ticker) is decoration and stops under reduced
+ * motion, where the wave is drawn once and holds still.
  */
 
 import { ArrowDownIcon, ArrowUpRightIcon, StarIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MouseEvent,
+} from "react";
 
 import { SiteVideo } from "@/components/site-video";
 import { SeoHead } from "@/components/seo-head";
+import { TimelineBanner } from "@/components/timeline-banner";
 import { MARK_WEIGHT, M_HEIGHT, M_PATH, M_WIDTH } from "@/lib/brand-geometry";
 import { REPO_URL } from "@/lib/marketing-links";
 import { cn } from "@/lib/utils";
@@ -98,8 +109,13 @@ const PROMPTS = [
   "old freight lift starting under load",
 ];
 
+const HEADLINE = [
+  ["Every", "sound", "you", "need,"],
+  ["on", "your", "own", "machine."],
+];
+
 const INSIDE = [
-  ["The desktop app", "and its local server, on your machine."],
+  ["The desktop app", "and its local server. Nothing leaves your machine."],
   ["audio.cpp", "the native engine. No Python to install."],
   ["An MCP server", "so Claude Code and Cursor can make sound too."],
 ] as const;
@@ -107,9 +123,18 @@ const INSIDE = [
 const STYLES = `
 @keyframes dl-draw { from { stroke-dashoffset: 1 } to { stroke-dashoffset: 0 } }
 @keyframes dl-ticker { to { transform: translateX(-50%) } }
+@keyframes dl-rise { from { opacity: 0; transform: translateY(.35em); filter: blur(10px) } to { opacity: 1; transform: none; filter: blur(0) } }
+@keyframes dl-flatten { from { transform: perspective(1600px) rotateX(18deg) scale(.93) } to { transform: none } }
+@keyframes dl-shine { from { opacity: 1; transform: translateX(-160%) skewX(-20deg) } to { opacity: 1; transform: translateX(520%) skewX(-20deg) } }
+.dl-shine { opacity: 0 }
 @media (prefers-reduced-motion: no-preference) {
-  .dl-pen { animation: dl-draw 2.8s cubic-bezier(.65,0,.35,1) .25s both }
+  .dl-pen { animation: dl-draw 1.9s cubic-bezier(.65,0,.35,1) .5s both }
   .dl-ticker { animation: dl-ticker 60s linear infinite }
+  .dl-rise { animation: dl-rise .9s cubic-bezier(.16,1,.3,1) var(--d, 0s) both }
+  .dl-cta:hover .dl-shine { animation: dl-shine .8s ease-out }
+  @supports (animation-timeline: view()) {
+    .dl-tilt { animation: dl-flatten linear both; animation-timeline: view(); animation-range: entry 0% cover 38% }
+  }
 }
 `;
 
@@ -165,40 +190,210 @@ function useCountUp(target: number | undefined): number | undefined {
   return shown;
 }
 
+/* ------------------------------------------------------------------ wave */
+
+/**
+ * The hero's drawing space. It is far wider than any screen and the SVG is set
+ * to `slice`, so the M keeps its size against the band's height and the wave
+ * simply runs off both edges however wide the window is.
+ */
+const VB_W = 4800;
+const VB_H = 320;
+const M_SCALE = 1.75;
+const M_X = (VB_W - M_WIDTH * M_SCALE) / 2;
+const M_Y = (VB_H - M_HEIGHT * M_SCALE) / 2;
+const LINE = MARK_WEIGHT.large * 0.8 * M_SCALE;
+/** Where the M's pen line starts (`M_PATH` opens at 0, 107.5): the wave in ends here. */
+const TAIL = { x: M_X, y: M_Y + 107.5 * M_SCALE };
+/** Where the sound comes back out, level with the middle of the M. */
+const OUT = { x: M_X + (M_WIDTH + 10) * M_SCALE, y: M_Y + 62 * M_SCALE };
+
+const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+const easeOut = (v: number) => 1 - Math.pow(1 - clamp01(v), 3);
+
+/**
+ * Sound in, mark, sound out. The two waves are redrawn every frame from the
+ * clock; the M between them is the brand path, drawn on by CSS.
+ */
+function HeroWave({ className }: { className?: string }) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const inRef = useRef<SVGPathElement>(null);
+  const outRef = useRef<SVGPathElement>(null);
+
+  useEffect(() => {
+    const svg = svgRef.current;
+    const lineIn = inRef.current;
+    const lineOut = outRef.current;
+    if (!svg || !lineIn || !lineOut) return;
+
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const start = performance.now();
+    let pointerX = VB_W / 2;
+    let near = 0;
+    let wanted = 0;
+    let frame = 0;
+
+    const draw = (now: number) => {
+      const rect = svg.getBoundingClientRect();
+      if (rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight) {
+        const t = still ? 0 : (now - start) / 1000;
+        const half = (rect.width / 2) * (VB_H / rect.height) + 24;
+        const left = VB_W / 2 - half;
+        const right = VB_W / 2 + half;
+        near += (wanted - near) * 0.07;
+        // The line swells where the pointer is.
+        const lift = (x: number) =>
+          1 + 1.5 * near * Math.exp(-Math.pow((x - pointerX) / 240, 2));
+
+        // In: a slow, calm wave that settles onto the M's opening stroke.
+        const inEnd = left + (TAIL.x - left) * (still ? 1 : easeOut(t / 0.7));
+        let d = "";
+        for (let x = left; ; x += 8) {
+          const px = Math.min(x, inEnd);
+          const gap = TAIL.x - px;
+          const env = Math.pow(Math.min(1, gap / 320), 1.6);
+          const y =
+            TAIL.y +
+            0.3 * gap * Math.exp(-gap / 70) +
+            17 * env * lift(px) * Math.sin(px * 0.021 - t * 2.2);
+          d += `${d ? "L" : "M"}${px.toFixed(1)} ${y.toFixed(1)}`;
+          if (px >= inEnd) break;
+        }
+        lineIn.setAttribute("d", d);
+
+        // Out: the same line as a busy, speaking waveform.
+        const grown = still ? 1 : easeOut((t - 2.3) / 0.9);
+        d = "";
+        if (grown > 0) {
+          const outEnd = OUT.x + (right - OUT.x) * grown;
+          for (let x = OUT.x; ; x += 5) {
+            const px = Math.min(x, outEnd);
+            const gap = px - OUT.x;
+            const env = Math.min(1, gap / 130);
+            const burst = 0.62 + 0.38 * Math.sin(px * 0.0045 - t * 1.1);
+            const s =
+              Math.sin(px * 0.05 - t * 5) * 0.6 +
+              Math.sin(px * 0.093 - t * 7.3) * 0.3 +
+              Math.sin(px * 0.021 - t * 2.4) * 0.35;
+            const y =
+              OUT.y + 46 * env * env * (3 - 2 * env) * burst * lift(px) * s;
+            d += `${d ? "L" : "M"}${px.toFixed(1)} ${y.toFixed(1)}`;
+            if (px >= outEnd) break;
+          }
+        }
+        lineOut.setAttribute("d", d);
+      }
+      if (!still) frame = requestAnimationFrame(draw);
+    };
+
+    const onMove = (e: PointerEvent) => {
+      const rect = svg.getBoundingClientRect();
+      if (rect.height === 0) return;
+      pointerX =
+        VB_W / 2 +
+        (e.clientX - (rect.left + rect.width / 2)) * (VB_H / rect.height);
+      // Only while the pointer is somewhere around the band.
+      wanted =
+        e.clientY > rect.top - 160 && e.clientY < rect.bottom + 160 ? 1 : 0;
+    };
+    const onResize = () => still && draw(performance.now());
+
+    draw(start);
+    window.addEventListener("pointermove", onMove, { passive: true });
+    window.addEventListener("resize", onResize);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("resize", onResize);
+    };
+  }, []);
+
+  return (
+    <svg
+      ref={svgRef}
+      viewBox={`0 0 ${VB_W} ${VB_H}`}
+      preserveAspectRatio="xMidYMid slice"
+      className={className}
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={LINE}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <defs>
+        <linearGradient
+          id="dl-out"
+          gradientUnits="userSpaceOnUse"
+          x1={OUT.x}
+          x2={OUT.x + 110}
+        >
+          <stop offset="0" stopColor="currentColor" stopOpacity="0" />
+          <stop offset="1" stopColor="currentColor" stopOpacity="1" />
+        </linearGradient>
+      </defs>
+      <path ref={inRef} />
+      <g transform={`translate(${M_X} ${M_Y}) scale(${M_SCALE})`}>
+        <path
+          className="dl-pen"
+          d={M_PATH}
+          pathLength={1}
+          strokeDasharray="1"
+          strokeWidth={LINE / M_SCALE}
+        />
+      </g>
+      <path ref={outRef} stroke="url(#dl-out)" />
+    </svg>
+  );
+}
+
+/* ----------------------------------------------------------------- pieces */
+
+/** A panel that carries a soft light under the pointer. */
+function Lit({
+  className,
+  children,
+  as: Tag = "div",
+}: {
+  className?: string;
+  children: React.ReactNode;
+  as?: "div" | "li";
+}) {
+  const onMove = (e: MouseEvent<HTMLElement>) => {
+    const el = e.currentTarget;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty("--x", `${e.clientX - r.left}px`);
+    el.style.setProperty("--y", `${e.clientY - r.top}px`);
+  };
+  return (
+    <Tag
+      onMouseMove={onMove}
+      className={cn("group/lit relative overflow-hidden", className)}
+      style={{ "--x": "50%", "--y": "0px" } as CSSProperties}
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover/lit:opacity-100"
+        style={{
+          background:
+            "radial-gradient(380px circle at var(--x) var(--y), color-mix(in oklch, currentColor 11%, transparent), transparent 65%)",
+        }}
+      />
+      <div className="relative flex h-full flex-col">{children}</div>
+    </Tag>
+  );
+}
+
 /** A meter readout: a mono caps label over a big display-face number. */
 function Stat({ value, label }: { value: number | undefined; label: string }) {
   const shown = useCountUp(value);
   return (
-    <div className="flex min-w-0 flex-col gap-3 px-4 py-6 sm:px-6">
+    <Lit className="bg-background flex-1 p-6">
       <span className="label-caps text-muted-foreground">{label}</span>
-      <span className="font-display text-6xl leading-none font-extrabold tabular-nums sm:text-7xl">
+      <span className="font-display mt-auto pt-4 text-6xl leading-[0.85] font-extrabold tabular-nums lg:text-7xl">
         {shown === undefined ? "–" : shown.toLocaleString("en")}
       </span>
-    </div>
-  );
-}
-
-/** The one-line M, drawn by the pen on load (and simply shown under reduced motion). */
-function PenMark({ className }: { className?: string }) {
-  const pad = MARK_WEIGHT.large;
-  return (
-    <svg
-      viewBox={`${-pad} ${-pad} ${M_WIDTH + pad * 2} ${M_HEIGHT + pad * 2}`}
-      className={className}
-      aria-hidden="true"
-    >
-      <path
-        className="dl-pen"
-        d={M_PATH}
-        pathLength={1}
-        strokeDasharray="1"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={MARK_WEIGHT.large * 0.8}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    </Lit>
   );
 }
 
@@ -221,17 +416,63 @@ function ButtonLink({
       href={href}
       {...(external ? { target: "_blank", rel: "noreferrer noopener" } : {})}
       className={cn(
-        "focus-visible:ring-ring/50 inline-flex h-11 items-center justify-center gap-2 rounded-sm px-5 text-sm font-medium whitespace-nowrap outline-none transition-colors focus-visible:ring-3",
+        "dl-cta focus-visible:ring-ring/50 relative inline-flex h-11 items-center justify-center gap-2 overflow-hidden rounded-sm px-5 text-sm font-medium whitespace-nowrap outline-none transition-[background-color,box-shadow,transform] focus-visible:ring-3 active:scale-[0.98]",
         solid
-          ? "bg-foreground text-background hover:bg-foreground/85"
-          : "border-border-strong hover:bg-foreground/[0.06] border",
+          ? "bg-foreground text-background"
+          : "border-border-strong hover:bg-foreground/[0.07] border",
         className,
       )}
     >
-      {children}
+      {solid ? (
+        <span
+          aria-hidden="true"
+          className="dl-shine bg-background/45 pointer-events-none absolute inset-y-0 left-0 w-1/4 blur-md"
+        />
+      ) : null}
+      <span className="relative inline-flex items-center gap-2">
+        {children}
+      </span>
     </a>
   );
 }
+
+/** A section's opening: a numbered mono label, the title, and a line beside it. */
+function SectionHead({
+  index,
+  label,
+  id,
+  title,
+  children,
+}: {
+  index: string;
+  label: string;
+  id: string;
+  title: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-4">
+      <div>
+        <p className="label-caps text-muted-foreground">
+          {index} <span aria-hidden="true">/</span> {label}
+        </p>
+        <h2
+          id={id}
+          className="mt-3 text-5xl leading-[0.9] uppercase sm:text-7xl"
+        >
+          {title}
+        </h2>
+      </div>
+      {children ? (
+        <p className="text-muted-foreground max-w-sm leading-relaxed">
+          {children}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------- page */
 
 export function DownloadPage() {
   const [release, setRelease] = useState<Release | null>(null);
@@ -256,7 +497,7 @@ export function DownloadPage() {
     (sum, a) => sum + a.download_count,
     0,
   );
-  // Your system first, so the top row is the one you want.
+  // Your system first, so on a phone the top card is the one you want.
   const ordered = [...PLATFORMS].sort(
     (a, b) => Number(b.id === mine) - Number(a.id === mine),
   );
@@ -271,78 +512,122 @@ export function DownloadPage() {
       <style>{STYLES}</style>
 
       {/* ------------------------------------------------------------ hero */}
-      <section aria-labelledby="download-heading" className="px-4">
-        <div className="mx-auto grid w-full max-w-5xl gap-10 pt-14 pb-16 sm:pt-20 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.75fr)] lg:items-center lg:gap-12">
-          <div className="min-w-0">
-            <p className="label-caps text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1">
-              <span>Download</span>
-              <span aria-hidden="true">/</span>
-              <a
-                href={release?.html_url ?? LATEST_URL}
-                className="hover:text-foreground"
-              >
-                {release?.tag_name ?? "Latest release"}
-              </a>
-              <span aria-hidden="true">/</span>
-              <span>Free and open source</span>
-            </p>
-            <h1
-              id="download-heading"
-              className="mt-6 text-[clamp(3.25rem,9vw,6.75rem)] leading-[0.88] text-balance uppercase"
-            >
-              Every sound you need, on your own machine.
-            </h1>
-            <p className="text-muted-foreground mt-6 max-w-lg text-lg leading-relaxed text-pretty">
-              Sound effects, music and voices from open models, generated on
-              your GPU. No account, no credits, no cloud.
-            </p>
+      <section aria-labelledby="download-heading" className="relative">
+        {/* One light from above, and a ruled floor fading into the dark. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-[56rem]"
+        >
+          <div className="absolute inset-0 bg-[radial-gradient(70rem_34rem_at_50%_-6rem,color-mix(in_oklch,var(--foreground)_13%,transparent),transparent_70%)]" />
+          <div className="absolute inset-0 [mask-image:radial-gradient(ellipse_60%_55%_at_50%_30%,black,transparent)] bg-[linear-gradient(to_right,color-mix(in_oklch,var(--foreground)_5%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_oklch,var(--foreground)_5%,transparent)_1px,transparent_1px)] bg-[size:72px_72px]" />
+        </div>
 
-            <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <ButtonLink
-                href={primaryAsset?.browser_download_url ?? "#installers"}
-                solid
-                className="h-12 px-7 text-[15px]"
-              >
-                <ArrowDownIcon className="size-4" aria-hidden="true" />
-                {primary
-                  ? `Download for ${primary.short}`
-                  : "Download Soundbox"}
-              </ButtonLink>
-              <ButtonLink
-                href={REPO_URL}
-                external
-                className="h-12 px-6 text-[15px]"
-              >
-                <StarIcon className="size-4" aria-hidden="true" />
-                Star on GitHub
-                {repo ? (
-                  <span className="text-muted-foreground tabular-nums">
-                    {repo.stargazers_count.toLocaleString("en")}
+        <div className="relative flex flex-col items-center pt-12 text-center sm:pt-16">
+          <a
+            href={release?.html_url ?? LATEST_URL}
+            className="label-caps text-muted-foreground hover:text-foreground dl-rise mx-4 inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1 transition-colors"
+          >
+            <span className="bg-foreground text-background rounded-sm px-1.5">
+              {release?.tag_name ?? "Latest"}
+            </span>
+            Free and open source
+            <span aria-hidden="true">/</span>
+            Windows and macOS
+            <ArrowUpRightIcon className="size-3" aria-hidden="true" />
+          </a>
+
+          <HeroWave className="mt-6 h-[clamp(9.5rem,22vw,17.5rem)] w-full [mask-image:linear-gradient(to_right,transparent,black_14%,black_86%,transparent)]" />
+
+          <h1
+            id="download-heading"
+            className="mt-4 px-4 text-[clamp(3.1rem,11.4vw,9.25rem)] leading-[0.84] text-balance uppercase"
+          >
+            {HEADLINE.map((line, l) => (
+              <span key={l} className="block">
+                {line.map((word, w) => (
+                  <span key={word}>
+                    <span
+                      className="dl-rise inline-block"
+                      style={
+                        {
+                          "--d": `${0.15 + (l * 4 + w) * 0.07}s`,
+                        } as CSSProperties
+                      }
+                    >
+                      {word}
+                    </span>
+                    {w < line.length - 1 ? " " : null}
                   </span>
-                ) : null}
-              </ButtonLink>
-            </div>
-            <p className="readout text-muted-foreground mt-4">
-              {primaryAsset
-                ? `${release?.tag_name} · ${megabytes(primaryAsset.size)} MB · ${primaryAsset.name} · `
-                : "Windows and macOS · "}
-              <a
-                href="#installers"
-                className="hover:text-foreground underline underline-offset-4"
-              >
-                every platform
-              </a>
-            </p>
-          </div>
+                ))}
+              </span>
+            ))}
+          </h1>
+          <p
+            className="text-muted-foreground dl-rise mt-7 max-w-xl px-4 text-lg leading-relaxed text-pretty sm:text-xl"
+            style={{ "--d": "0.8s" } as CSSProperties}
+          >
+            Sound effects, music and voices from open models, generated on your
+            GPU. No account, no credits, no cloud.
+          </p>
 
-          <PenMark className="text-foreground mx-auto w-full max-w-sm lg:max-w-none" />
+          <div
+            className="dl-rise mt-9 flex w-full flex-col items-center justify-center gap-3 px-4 sm:w-auto sm:flex-row"
+            style={{ "--d": "0.95s" } as CSSProperties}
+          >
+            <ButtonLink
+              href={primaryAsset?.browser_download_url ?? "#installers"}
+              solid
+              className="h-14 w-full px-9 text-base shadow-[0_0_70px_-14px_var(--foreground)] hover:shadow-[0_0_90px_-10px_var(--foreground)] sm:w-auto"
+            >
+              <ArrowDownIcon className="size-4.5" aria-hidden="true" />
+              {primary ? `Download for ${primary.short}` : "Download Soundbox"}
+            </ButtonLink>
+            <ButtonLink
+              href={REPO_URL}
+              external
+              className="h-14 w-full px-7 text-base sm:w-auto"
+            >
+              <StarIcon className="size-4" aria-hidden="true" />
+              Star on GitHub
+              {repo ? (
+                <span className="text-muted-foreground tabular-nums">
+                  {repo.stargazers_count.toLocaleString("en")}
+                </span>
+              ) : null}
+            </ButtonLink>
+          </div>
+          <p
+            className="readout text-muted-foreground dl-rise mt-5 px-4"
+            style={{ "--d": "1.05s" } as CSSProperties}
+          >
+            {primaryAsset
+              ? `${megabytes(primaryAsset.size)} MB · ${primaryAsset.name} · `
+              : "One installer, everything inside · "}
+            <a
+              href="#installers"
+              className="hover:text-foreground underline underline-offset-4"
+            >
+              every platform
+            </a>
+          </p>
+        </div>
+
+        {/* The studio, tilted back and flattening as it scrolls into view. */}
+        <div className="relative mx-auto mt-16 w-full max-w-5xl px-4 sm:mt-24">
+          <div
+            aria-hidden="true"
+            className="bg-foreground/15 absolute inset-x-[12%] top-[12%] bottom-[-6%] blur-[110px]"
+          />
+          <div className="dl-tilt border-border-strong/60 bg-background relative origin-top border p-1.5 shadow-2xl sm:p-2">
+            <TimelineBanner className="text-left" />
+          </div>
         </div>
       </section>
 
       {/* ----------------------------------------------------------- ticker */}
       <div
         aria-hidden="true"
-        className="border-border overflow-hidden border-y py-3"
+        className="border-border mt-20 overflow-hidden border-y py-3.5 sm:mt-28"
       >
         <div className="dl-ticker label-caps text-muted-foreground flex w-max">
           {[...PROMPTS, ...PROMPTS].map((p, i) => (
@@ -358,75 +643,78 @@ export function DownloadPage() {
       <section
         id="installers"
         aria-labelledby="installers-heading"
-        className="scroll-mt-20 px-4 pt-20 sm:pt-24"
+        className="scroll-mt-20 px-4 pt-24 sm:pt-32"
       >
         <div className="mx-auto w-full max-w-5xl">
-          <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
-            <h2
-              id="installers-heading"
-              className="text-5xl leading-none uppercase sm:text-6xl"
-            >
-              Pick your platform
-            </h2>
-            <p className="text-muted-foreground max-w-sm text-sm leading-relaxed">
-              One installer with everything inside. Models download from the app
-              the first time you use them.
-            </p>
-          </div>
+          <SectionHead
+            index="01"
+            label="Install"
+            id="installers-heading"
+            title="Pick your platform"
+          >
+            One installer with everything inside. Models download from the app
+            the first time you use them.
+          </SectionHead>
 
-          <div className="border-border-strong mt-10 border-t">
-            <div className="label-caps text-muted-foreground border-border hidden grid-cols-[1.1fr_1.2fr_1.7fr_0.5fr_8rem] gap-6 border-b py-3 md:grid">
-              <span>Platform</span>
-              <span>Runs on</span>
-              <span>File</span>
-              <span className="text-right">Size</span>
-              <span />
-            </div>
-            <ul>
-              {ordered.map((platform) => {
-                const asset = assetFor(platform);
-                const isMine = platform.id === mine;
-                return (
-                  <li
-                    key={platform.id}
-                    className={cn(
-                      "border-border relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-1.5 border-b py-5 md:grid-cols-[1.1fr_1.2fr_1.7fr_0.5fr_8rem] md:py-6",
-                      isMine &&
-                        "before:bg-foreground before:absolute before:inset-y-0 before:-left-4 before:w-0.5",
-                    )}
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <h3 className="font-display text-3xl leading-none font-extrabold sm:text-4xl">
-                        {platform.label}
-                      </h3>
-                      {isMine ? (
-                        <span className="label-caps bg-foreground text-background rounded-sm px-1.5">
-                          Yours
-                        </span>
-                      ) : null}
-                    </div>
-                    <span className="text-muted-foreground col-start-1 text-sm md:col-start-auto">
+          <ul className="bg-border border-border mt-10 grid gap-px border md:grid-cols-3">
+            {ordered.map((platform) => {
+              const asset = assetFor(platform);
+              const isMine = platform.id === mine;
+              return (
+                <Lit
+                  as="li"
+                  key={platform.id}
+                  className={cn(
+                    "min-h-72 p-6 sm:p-7",
+                    isMine ? "bg-foreground text-background" : "bg-background",
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span
+                      className={cn(
+                        "label-caps",
+                        !isMine && "text-muted-foreground",
+                      )}
+                    >
                       {platform.detail}
                     </span>
-                    <span className="readout text-muted-foreground col-start-1 min-w-0 truncate md:col-start-auto">
-                      {asset ? asset.name : "From the latest release"}
-                    </span>
-                    <span className="readout text-muted-foreground col-start-1 md:col-start-auto md:text-right">
-                      {asset ? `${megabytes(asset.size)} MB` : "–"}
-                    </span>
-                    <ButtonLink
-                      href={asset?.browser_download_url ?? LATEST_URL}
-                      solid={isMine}
-                      className="col-start-2 row-span-4 row-start-1 w-32 md:col-start-auto md:row-span-1 md:row-start-auto"
+                    {isMine ? (
+                      <span className="label-caps bg-background text-foreground rounded-sm px-1.5">
+                        Yours
+                      </span>
+                    ) : null}
+                  </div>
+                  <h3 className="font-display mt-5 text-6xl leading-[0.85] font-extrabold">
+                    {platform.label}
+                  </h3>
+                  <div className="mt-auto pt-10">
+                    <p
+                      className={cn(
+                        "readout truncate",
+                        !isMine && "text-muted-foreground",
+                      )}
                     >
-                      <ArrowDownIcon className="size-4" aria-hidden="true" />
+                      {asset
+                        ? `${megabytes(asset.size)} MB · ${asset.name}`
+                        : "Latest release"}
+                    </p>
+                    <a
+                      href={asset?.browser_download_url ?? LATEST_URL}
+                      className={cn(
+                        "focus-visible:ring-ring/50 mt-3 inline-flex h-12 w-full items-center justify-between rounded-sm px-4 text-sm font-medium outline-none transition-colors focus-visible:ring-3",
+                        isMine
+                          ? "bg-background text-foreground hover:bg-background/85"
+                          : "border-border-strong hover:bg-foreground hover:text-background border",
+                      )}
+                    >
                       Download
-                    </ButtonLink>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+                      <ArrowDownIcon className="size-4" aria-hidden="true" />
+                    </a>
+                  </div>
+                </Lit>
+              );
+            })}
+          </ul>
 
           <p className="text-muted-foreground mt-6 text-sm">
             On Linux?{" "}
@@ -448,84 +736,81 @@ export function DownloadPage() {
         </div>
       </section>
 
-      {/* ----------------------------------------------------------- inside */}
-      <section aria-labelledby="inside-heading" className="px-4 pt-20 sm:pt-24">
+      {/* ------------------------------------------------- film and numbers */}
+      <section aria-labelledby="proof-heading" className="px-4 pt-24 sm:pt-32">
         <div className="mx-auto w-full max-w-5xl">
-          <h2
-            id="inside-heading"
-            className="text-4xl leading-none uppercase sm:text-5xl"
+          <SectionHead
+            index="02"
+            label="In the box"
+            id="proof-heading"
+            title="See it. Count it."
           >
-            In the box
-          </h2>
-          <ol className="border-border mt-8 grid border-t md:grid-cols-3">
+            Thirty seconds of the app at work, and what the repository says
+            today.
+          </SectionHead>
+
+          <div className="bg-border border-border mt-10 grid gap-px border lg:grid-cols-3">
+            {/* The film predates the noir look; in greyscale it sits in the
+                page until it is re-cut. */}
+            <div className="bg-background p-2 grayscale lg:col-span-2">
+              <SiteVideo
+                src="/media/soundbox-vibe.mp4"
+                poster="/media/posters/vibe.jpg"
+                label="Soundbox in thirty seconds: type a prompt, hear sound effects, music and voices, switch models"
+                className="[&>div]:rounded-none [&>div]:border-0"
+              />
+            </div>
+            <div className="bg-border flex flex-col gap-px sm:flex-row lg:flex-col">
+              <Stat value={repo?.stargazers_count} label="GitHub stars" />
+              <Stat
+                value={downloads}
+                label={
+                  release ? `Downloads of ${release.tag_name}` : "Downloads"
+                }
+              />
+              <Stat value={repo?.forks_count} label="Forks" />
+            </div>
             {INSIDE.map(([title, rest], i) => (
-              <li
-                key={title}
-                className="border-border flex gap-4 border-b py-6 md:border-r md:border-b-0 md:px-6 md:first:pl-0 md:last:border-r-0"
-              >
-                <span className="readout text-muted-foreground pt-1">
+              <Lit key={title} className="bg-background p-6 sm:p-7">
+                <span className="readout text-muted-foreground">
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <p className="leading-relaxed">
+                <p className="mt-8 text-lg leading-snug">
                   <span className="font-semibold">{title}</span>{" "}
                   <span className="text-muted-foreground">{rest}</span>
                 </p>
-              </li>
+              </Lit>
             ))}
-          </ol>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------- film */}
-      {/* The film predates the noir look; in greyscale it sits in the page
-          until it is re-cut. */}
-      <section aria-label="The film" className="px-4 pt-20 sm:pt-24">
-        <div className="border-border mx-auto w-full max-w-5xl border p-2 grayscale">
-          <SiteVideo
-            src="/media/soundbox-vibe.mp4"
-            poster="/media/posters/vibe.jpg"
-            label="Soundbox in thirty seconds: type a prompt, hear sound effects, music and voices, switch models"
-            className="[&>div]:rounded-none [&>div]:border-0"
-          />
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------ stats */}
-      <section aria-label="Project numbers" className="px-4 pt-20 sm:pt-24">
-        <div className="border-border-strong divide-border mx-auto grid w-full max-w-5xl grid-cols-1 divide-y border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          <Stat value={repo?.stargazers_count} label="GitHub stars" />
-          <Stat
-            value={downloads}
-            label={release ? `Downloads of ${release.tag_name}` : "Downloads"}
-          />
-          <Stat value={repo?.forks_count} label="Forks" />
+          </div>
         </div>
       </section>
 
       {/* ------------------------------------------------------------ outro */}
       <section
         aria-labelledby="github-heading"
-        className="px-4 pt-24 pb-28 sm:pt-32"
+        className="relative px-4 pt-28 pb-28 sm:pt-40 sm:pb-36"
       >
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 md:flex-row md:items-end md:justify-between">
-          <div className="max-w-xl">
-            <h2
-              id="github-heading"
-              className="text-[clamp(3rem,8vw,6rem)] leading-[0.9] uppercase"
-            >
-              Built in the open.
-            </h2>
-            <p className="text-muted-foreground mt-5 text-lg leading-relaxed">
-              Read the code, file an issue, send a pull request. A star helps
-              the next person find it.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[32rem] bg-[radial-gradient(60rem_26rem_at_50%_110%,color-mix(in_oklch,var(--foreground)_14%,transparent),transparent_70%)]"
+        />
+        <div className="relative mx-auto flex max-w-5xl flex-col items-center text-center">
+          <h2
+            id="github-heading"
+            className="text-[clamp(3.5rem,13vw,10.5rem)] leading-[0.84] text-balance uppercase"
+          >
+            Built in the open.
+          </h2>
+          <p className="text-muted-foreground mt-7 max-w-md text-lg leading-relaxed">
+            Read the code, file an issue, send a pull request. A star helps the
+            next person find it.
+          </p>
+          <div className="mt-9 flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row">
             <ButtonLink
               href={REPO_URL}
               external
               solid
-              className="h-12 px-7 text-[15px]"
+              className="h-14 px-9 text-base"
             >
               <StarIcon className="size-4" aria-hidden="true" />
               Star on GitHub
@@ -533,7 +818,7 @@ export function DownloadPage() {
             <ButtonLink
               href={`${REPO_URL}/issues`}
               external
-              className="h-12 px-6 text-[15px]"
+              className="h-14 px-7 text-base"
             >
               Issues
               <ArrowUpRightIcon className="size-4" aria-hidden="true" />

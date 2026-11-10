@@ -1,6 +1,6 @@
 #!/usr/bin/env -S npx tsx
 /**
- * Writes the static copies of the Mirli mark (the display-face M) from
+ * Writes the static copies of the Mirli mark (the one-line M) from
  * app/src/lib/brand-geometry.ts:
  *
  *   app/public/favicon.svg                 paper M on a black tile (both builds)
@@ -18,7 +18,7 @@ import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { markSvgMarkup, markViewBox } from "../app/src/lib/brand-geometry";
+import { MARK_WEIGHT, markSvgMarkup, markViewBox } from "../app/src/lib/brand-geometry";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -26,23 +26,29 @@ const INK = "#070707";
 const PAPER = "#eeede9";
 
 /** A rounded tile with the M centred and inset so it breathes. */
-function tile(opts: { ink: string; ground: string; inset: number; px?: number }): string {
-  const box = markViewBox(opts.inset);
+function tile(opts: { ink: string; ground: string; inset: number; weight: number; px?: number }): string {
+  const box = markViewBox(opts.inset, opts.weight);
   const [x, y, size] = [box.x, box.y, box.size].map((n) => Math.round(n * 10) / 10);
   const px = opts.px ? ` width="${opts.px}" height="${opts.px}"` : "";
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${size} ${size}"${px}>` +
     `<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="${Math.round(size * 0.18)}" fill="${opts.ground}"/>` +
-    markSvgMarkup(opts.ink) +
+    markSvgMarkup(opts.ink, opts.weight) +
     `</svg>\n`
   );
 }
 
 const files: Record<string, string> = {
-  // Tighter in the favicon: at 16 px every pixel of letter counts.
-  "app/public/favicon.svg": tile({ ink: PAPER, ground: INK, inset: 0.14 }),
-  "site/public/press/mirli-mark.svg": tile({ ink: PAPER, ground: INK, inset: 0.2, px: 1024 }),
-  "site/public/press/mirli-mark-light.svg": tile({ ink: INK, ground: PAPER, inset: 0.2, px: 1024 }),
+  // Tight and heavy in the favicon: at 16 px every pixel of line counts.
+  "app/public/favicon.svg": tile({ ink: PAPER, ground: INK, inset: 0.06, weight: MARK_WEIGHT.small }),
+  "site/public/press/mirli-mark.svg": tile({ ink: PAPER, ground: INK, inset: 0.14, weight: MARK_WEIGHT.large, px: 1024 }),
+  "site/public/press/mirli-mark-light.svg": tile({
+    ink: INK,
+    ground: PAPER,
+    inset: 0.14,
+    weight: MARK_WEIGHT.large,
+    px: 1024,
+  }),
 };
 
 for (const [rel, svg] of Object.entries(files)) {

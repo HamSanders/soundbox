@@ -577,7 +577,7 @@ export function PressPage() {
         {/* ----------------------------------------------------------- brand */}
         <Section id="brand" title="Mark, colours and type">
           <p className="text-muted-foreground mt-3 max-w-2xl leading-relaxed">
-            The mark is a single M in Big Shoulders Display, on a rounded tile.
+            The mark is an M drawn in one pen line that starts as a sound wave, on a rounded tile.
             Use whichever tile suits your background, and please don't recolour or redraw it.
           </p>
           <ul className="mt-6 grid gap-5 sm:grid-cols-2">

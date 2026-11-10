@@ -1,28 +1,34 @@
 /**
- * The Mirli mark: a single capital M in the display face, drawn as a path
- * (`lib/brand-geometry.ts`, shared with the favicon and press-kit files).
- * One colour, `currentColor`, so it sits on any tile the way a Lucide icon
- * does. `inset` pads the square around the letter.
+ * The Mirli mark: the one-line M, drawn as a stroke (`lib/brand-geometry.ts`,
+ * shared with the favicon and press-kit files). One colour, `currentColor`,
+ * so it sits on any tile the way a Lucide icon does. `inset` pads the square
+ * around the letter; `weight` is the pen width (heavier for small icons).
  */
 
-import { M_PATH, markViewBox } from "@/lib/brand-geometry";
+import { MARK_WEIGHT, M_PATH, markViewBox } from "@/lib/brand-geometry";
 import { cn } from "@/lib/utils";
 
 export function BrandMark({
   inset = 0,
+  weight = MARK_WEIGHT.small,
   className,
   title,
 }: {
   inset?: number;
+  weight?: number;
   className?: string;
   /** Omit for a decorative mark next to the wordmark. */
   title?: string;
 }) {
-  const box = markViewBox(inset);
+  const box = markViewBox(inset, weight);
   return (
     <svg
       viewBox={`${box.x} ${box.y} ${box.size} ${box.size}`}
-      fill="currentColor"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={weight}
+      strokeLinecap="round"
+      strokeLinejoin="round"
       className={className}
       role={title ? "img" : undefined}
       aria-hidden={title ? undefined : true}

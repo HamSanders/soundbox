@@ -241,6 +241,16 @@ a Mac yet, so reports are welcome.
 **How do I remove it?** Delete the app and `~/.soundbox`. There is no account
 to close and nothing was uploaded.
 
+## Star history
+
+<a href="https://www.star-history.com/#HamSanders/soundbox&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=HamSanders/soundbox&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=HamSanders/soundbox&type=Date" />
+   <img alt="Star history chart for HamSanders/soundbox" src="https://api.star-history.com/svg?repos=HamSanders/soundbox&type=Date" />
+ </picture>
+</a>
+
 ## Licence
 
 Soundbox is [MIT](LICENSE). The model weights are not: each carries its own

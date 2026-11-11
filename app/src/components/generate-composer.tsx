@@ -994,7 +994,7 @@ export function GenerateComposer({
                   className={cn(
                     "mt-1.5 text-xs leading-relaxed",
                     (settings.cfg ?? model.defaults.cfg ?? 0) > model.max_cfg
-                      ? "text-amber-700 dark:text-amber-300"
+                      ? "text-warn"
                       : "text-muted-foreground",
                   )}
                 >

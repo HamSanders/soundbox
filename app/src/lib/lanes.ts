@@ -24,7 +24,9 @@
  * that all match.
  */
 
-const LANE_HUES = [225, 17, 263, 55, 301, 93, 339, 131];
+// 75, not the evenly spaced 55: 55 is the beak yellow, which is reserved
+// for "sound is happening here".
+const LANE_HUES = [225, 17, 263, 75, 301, 93, 339, 131];
 
 export function laneHue(lane: number): number {
   // Negative lanes cannot happen, but a modulo that returns -1 would produce

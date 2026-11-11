@@ -668,7 +668,7 @@ function Scrubber({ className }: { className?: string }) {
       ) : (
         <div className="bg-foreground/25 h-0.5 w-full">
           <div
-            className="bg-foreground h-full"
+            className="bg-signal h-full"
             style={{ width: `${progress * 100}%` }}
           />
         </div>

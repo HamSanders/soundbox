@@ -2362,7 +2362,7 @@ export function StoryTimeline({
           {/* Playhead, over everything and ignoring the pointer so it never
               swallows a click meant for a clip. */}
           <div
-            className="bg-primary pointer-events-none absolute top-0 bottom-0 z-30 w-px"
+            className="bg-signal pointer-events-none absolute top-0 bottom-0 z-30 w-0.5"
             style={{ left: GUTTER + playhead * pxPerSecond }}
           />
         </div>

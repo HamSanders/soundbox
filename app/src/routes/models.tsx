@@ -515,7 +515,7 @@ function ModelListItem({
                 {model.gated && needsGateSetup && (
                   <Notice>
                     <KeyRoundIcon
-                      className="mt-0.5 size-3.5 shrink-0 text-amber-700 dark:text-amber-300"
+                      className="mt-0.5 size-3.5 shrink-0 text-warn"
                       aria-hidden="true"
                     />
                     <div className="text-foreground/90 space-y-1.5 leading-relaxed">

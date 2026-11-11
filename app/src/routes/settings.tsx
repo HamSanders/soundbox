@@ -761,7 +761,7 @@ export function SettingsPage() {
               <div className="flex items-start gap-2 border-t pt-3 text-xs">
                 {mcpStatus.otel.enabled ? (
                   <CheckCircle2Icon
-                    className="mt-0.5 size-3.5 shrink-0 text-emerald-500"
+                    className="mt-0.5 size-3.5 shrink-0 text-ok"
                     aria-hidden="true"
                   />
                 ) : (

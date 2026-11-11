@@ -397,7 +397,7 @@ function EndpointDialog({
               onChange={(e) => set({ url: e.target.value })}
             />
             {draft.url.trim() && !isLocalUrl(draft.url.trim()) && (
-              <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs">
+              <p className="rounded-md border border-warn/40 bg-warn/10 px-2.5 py-1.5 text-xs">
                 <span className="font-medium">{hostOf(draft.url.trim())}</span> is outside this machine and
                 your local network. Prompts, lyrics and voice clips you use with this endpoint are sent
                 there, and what that service keeps or charges is up to it.
@@ -501,7 +501,7 @@ function EndpointDialog({
             </Button>
             {test.isSuccess && (
               <p className="flex items-center gap-1.5 text-xs">
-                <CheckCircle2Icon className="size-4 text-emerald-600" aria-hidden="true" />
+                <CheckCircle2Icon className="size-4 text-ok" aria-hidden="true" />
                 Got {test.data.duration_s.toFixed(1)}s of audio at {(test.data.sample_rate / 1000).toFixed(1)} kHz,{" "}
                 {test.data.channels === 1 ? "mono" : `${test.data.channels} channels`}.
               </p>

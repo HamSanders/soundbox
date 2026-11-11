@@ -687,7 +687,7 @@ function EditsCard({
       <p className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-xs font-medium">
         {edits.applied ? (
           <>
-            <CheckIcon className="size-3.5 text-emerald-500" aria-hidden="true" />
+            <CheckIcon className="size-3.5 text-ok" aria-hidden="true" />
             Applied to the studio — Ctrl+Z there undoes it
           </>
         ) : (

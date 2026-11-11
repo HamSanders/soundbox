@@ -292,25 +292,30 @@ const GIFS: Still[] = [
 
 const MARKS: { label: string; svg: string; png: string; tile: string }[] = [
   {
-    label: "Black tile",
+    label: "Dusk tile",
     svg: "/press/mirli-mark.svg",
     png: "/press/mirli-mark.png",
-    tile: "bg-[#eeede9]",
+    tile: "bg-[#f1ece0]",
   },
   {
     label: "Paper tile",
     svg: "/press/mirli-mark-light.svg",
     png: "/press/mirli-mark-light.png",
-    tile: "bg-[#070707]",
+    tile: "bg-[#1b1f2c]",
   },
 ];
 
 const COLOURS: { name: string; hex: string; use: string; light?: boolean }[] = [
-  { name: "Ground", hex: "#070707", use: "The background of the app, the site and the mark's tile." },
-  { name: "Ink", hex: "#EEEDE9", use: "Text on the ground, and the mark.", light: true },
-  { name: "Paper", hex: "#F2F1ED", use: "The light theme's background.", light: true },
-  { name: "Muted", hex: "#9A9893", use: "Labels and secondary text." },
-  { name: "Oxblood", hex: "#8F1D1D", use: "Errors and warnings of loss. The only colour." },
+  { name: "Dusk", hex: "#1B1F2C", use: "The dark theme's background: the sky after sunset, never black." },
+  { name: "Paper", hex: "#F1ECE0", use: "The light theme's background, and text at dusk.", light: true },
+  { name: "Ink", hex: "#14130F", use: "Text on paper, the mark and buttons." },
+  { name: "Chalk", hex: "#A9A797", use: "Labels and secondary text at dusk." },
+  {
+    name: "Beak",
+    hex: "#F2A40C",
+    use: "Where sound is happening: the playhead, a running model. A dot or a thin line, never text.",
+    light: true,
+  },
 ];
 
 const LINKS: { label: string; href: string; internal?: boolean }[] = [
@@ -625,8 +630,9 @@ export function PressPage() {
             a condensed poster face, for the mark, the wordmark and page titles only;{" "}
             <span className="text-foreground font-medium">Inter</span> for the interface and
             everything read at length; and{" "}
-            <span className="text-foreground font-mono">JetBrains Mono</span> for prompts, labels
-            and code. All three are free under the SIL Open Font License.
+            <span className="text-foreground font-(family-name:--font-log)">Courier Prime</span> for
+            labels and the log line under every sound. All three are free under the SIL Open Font
+            License.
           </p>
         </Section>
 

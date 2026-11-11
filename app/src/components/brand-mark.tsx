@@ -39,7 +39,12 @@ export function BrandMark({
   );
 }
 
-/** The name, set in the display face. */
+/** The name, set in the display face, with the beak dot landing after it. */
 export function Wordmark({ className }: { className?: string }) {
-  return <span className={cn("font-display uppercase tracking-[0.04em]", className)}>Mirli</span>;
+  return (
+    <span className={cn("font-display inline-flex items-baseline tracking-[0.04em] uppercase", className)}>
+      Mirli
+      <span aria-hidden="true" className="bg-signal ml-[0.08em] size-[0.17em] shrink-0 rounded-full" />
+    </span>
+  );
 }

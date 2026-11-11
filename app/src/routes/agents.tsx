@@ -432,7 +432,7 @@ export function AgentsPage() {
           {status && !status.otel.enabled && !status.otel.error && (
             <div className="flex items-start gap-2 rounded-lg border px-3 py-2.5 text-sm">
               <AlertTriangleIcon
-                className="mt-0.5 size-4 shrink-0 text-amber-500"
+                className="mt-0.5 size-4 shrink-0 text-warn"
                 aria-hidden="true"
               />
               <p className="text-muted-foreground">
@@ -447,7 +447,7 @@ export function AgentsPage() {
           )}
           {status?.otel.enabled && (
             <div className="flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm">
-              <ActivityIcon className="size-4 shrink-0 text-emerald-500" aria-hidden="true" />
+              <ActivityIcon className="size-4 shrink-0 text-ok" aria-hidden="true" />
               <span className="text-muted-foreground">
                 Exporting traces + metrics to{" "}
                 <code className="font-mono">{status.otel.endpoint}</code>

@@ -6,11 +6,14 @@
  * 404 rather than a page apologising for itself.
  */
 
+import { useRef } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 
 import { SeoHead } from "@/components/seo-head";
 
 import { BLOG_POSTS, postBySlug } from "../blog/posts";
+import { PostListen } from "../blog/listen";
+import { narrationFor } from "../blog/narration";
 import { BlogShell } from "../blog/shell";
 import { REPO_URL } from "@/lib/marketing-links";
 import { assetUrl } from "@/lib/asset-url";
@@ -39,7 +42,12 @@ function formatDate(date: string): string {
 export function BlogPostPage() {
   const { slug } = useParams();
   const post = postBySlug(slug);
+  const proseRef = useRef<HTMLDivElement>(null);
   if (!post) return <Navigate to="/blog" replace />;
+
+  // Timings only count for the recording they were made from.
+  const found = narrationFor(post.slug);
+  const narration = found && found.audio === post.audio ? found : null;
 
   const island = ISLANDS[post.slug];
   const index = BLOG_POSTS.findIndex((p) => p.slug === post.slug);
@@ -98,21 +106,22 @@ export function BlogPostPage() {
             )}
           </header>
 
-          {post.audio && (
-            <figure className="border-border/70 bg-card/40 mb-8 rounded-2xl border p-4">
-              {/* A plain <audio> element on purpose. The app's waveform player
-                  is a real editing surface with a backend behind it; a reader
-                  who wants to listen to a post wants a play button that works
-                  before any JavaScript has run. */}
-              <audio controls preload="none" src={assetUrl(post.audio)} className="w-full">
-                Your browser cannot play audio inline.{" "}
-                <a href={assetUrl(post.audio)}>Download the recording</a> instead.
-              </audio>
-              <figcaption className="text-muted-foreground mt-2.5 text-xs leading-relaxed">
-                Read aloud by Soundbox with a synthetic voice, on the machine that
-                wrote it.
-              </figcaption>
-            </figure>
+          {narration ? (
+            <PostListen narration={narration} title={post.title} contentRef={proseRef} />
+          ) : (
+            post.audio && (
+              // A recording without timings (not yet run through
+              // scripts/blog-narration.mjs) still gets a play button.
+              <figure className="border-border/70 bg-card/40 mb-8 rounded-2xl border p-4">
+                <audio controls preload="none" src={assetUrl(post.audio)} className="w-full">
+                  Your browser cannot play audio inline.{" "}
+                  <a href={assetUrl(post.audio)}>Download the recording</a> instead.
+                </audio>
+                <figcaption className="text-muted-foreground mt-2.5 text-xs leading-relaxed">
+                  Read aloud by Soundbox with a synthetic voice, on the machine that wrote it.
+                </figcaption>
+              </figure>
+            )
           )}
 
           {island?.after === "lede" && island.node}
@@ -128,7 +137,7 @@ export function BlogPostPage() {
             />
           )}
 
-          <div className="soundbox-doc" dangerouslySetInnerHTML={{ __html: post.html }} />
+          <div ref={proseRef} className="soundbox-doc" dangerouslySetInnerHTML={{ __html: post.html }} />
 
           <footer className="border-border/70 mt-16 border-t pt-6">
             <div className="flex flex-wrap justify-between gap-4 text-sm">

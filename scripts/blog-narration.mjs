@@ -125,7 +125,9 @@ function speakInline(tokens) {
         out += " ";
         break;
       case "html":
-        out += t.text.replace(/<[^>]*>/g, "");
+        // Inline HTML is markup, not words; none of it is spoken. Dropping
+        // the token outright rather than stripping tags from it means no
+        // half-removed tag can survive into the script.
         break;
       default:
         out += t.tokens ? speakInline(t.tokens) : unescape(t.text ?? t.raw ?? "");
@@ -134,13 +136,12 @@ function speakInline(tokens) {
   return out;
 }
 
+/** One pass over the entities `marked` emits, so `&amp;lt;` comes out as the
+ *  literal `&lt;` it was written as, not `<`. */
+const ENTITIES = { "&amp;": "&", "&quot;": '"', "&#39;": "'", "&lt;": "<", "&gt;": ">" };
+
 function unescape(text) {
-  return text
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">");
+  return text.replace(/&(?:amp|quot|#39|lt|gt);/g, (m) => ENTITIES[m]);
 }
 
 function forSpeech(raw) {

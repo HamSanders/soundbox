@@ -91,37 +91,45 @@ principle:
 
 ## Reading a post aloud
 
-A post with `audio: /blog/audio/<slug>.mp3` in its frontmatter gets a player
-under the header. Soundbox makes the recording, which is the only reason this
-is worth doing: the blog is narrated by the thing the blog is about.
+A post with `audio: /blog/audio/<slug>.mp3` in its frontmatter gets a Listen
+card under the header: the narrator, the length and a play button. Once it is
+playing, a player docks to the bottom of the page and the paragraph being read
+is highlighted; clicking a paragraph jumps the voice to it. Soundbox makes the
+recording, which is the only reason this is worth doing: the blog is narrated
+by the thing the blog is about.
 
-The pipeline:
+The narrator is **Bea**, a Chatterbox clone from the shared voice library
+(exaggeration 0.3). `scripts/blog-narration.mjs` does everything but the
+speaking, which goes through the Soundbox MCP as a story so each line can be
+re-taken on its own:
 
-1. **Write the spoken script.** Not the post — the post has `curl` commands
-   and tables in it, and a model reading `audiocpp-htdemucs-sep` aloud helps
-   nobody. Strip fenced code, tables and images; unwrap links to their text
-   and inline code to bare words; split paragraphs over ~330 characters on
-   sentence boundaries, because the speech models read a couple of sentences
-   better than a wall of them.
-2. **Speak it in one call.** `POST /api/speak` takes up to 200 lines and a
-   `gap_s` between them, and returns **one** joined WAV rather than a file per
-   line. 0.55s reads as paragraph breathing.
-3. **Convert.** The WAV is 24 kHz mono and roughly 4 MB a minute, so an
-   eight-minute post is 33 MB — not something to put in git.
+1. **Make a story and load the script.** `soundbox.create_story` with
+   `delivery: {"exaggeration": "0.3"}`, then
+   `node scripts/blog-narration.mjs load <slug> <story-id>`. The script is not
+   the post: fenced code, tables and images are dropped, headings become a
+   1.1 s pause, links and inline code become words, and paragraphs over ~330
+   characters are split on sentence ends. `blocks <slug>` prints what it will
+   say, which is the thing to read before spending GPU time on it.
+2. **Speak it.** `soundbox.speak_story`. Minutes, not seconds.
+3. **Lay it out.** `node scripts/blog-narration.mjs layout <story-id>`. A story
+   places each line when it is added, before it has a length, so a freshly
+   voiced script overlaps itself until this puts the lines end to end.
+4. **Export and finish.** `soundbox.export_story`, then
+   `node scripts/blog-narration.mjs finish <slug> <story-id> <exported.wav>`.
+   That writes the 64 kbps mono MP3 to `site/public/blog/audio/<slug>.mp3` and
+   `narration/<slug>.json` here: when each paragraph starts, the waveform the
+   player draws, and who reads it.
 
-```bash
-ffmpeg -i <the-wav> -ac 1 -ar 24000 -b:a 64k -codec:a libmp3lame \
-  site/public/blog/audio/<slug>.mp3
-```
-
-64 kbps mono is plenty for a voice and takes that 33 MB to about 4 MB.
+Every spoken line carries its paragraph's number in its speaker name
+(`Bea #12`), and the page counts paragraphs the same way the script does. If
+you edit a post after it was read, the counts stop agreeing and the player
+turns the highlight off and says so in the console. Re-run the steps.
 
 **Listen to it before you ship it.** Nothing in the build checks that a
 recording is intelligible, that it read a word the way you meant, or that it
 stopped where the paragraph did.
 
-**Say that it is synthetic**, in the caption, every time. The player already
-does. A reader who works out on their own that a voice was generated has been
+**Say that it is synthetic**, every time. The Listen card already does. A reader who works out on their own that a voice was generated has been
 misled, however briefly, and this blog does not spend its credibility on that.
 
 ## What a post may claim

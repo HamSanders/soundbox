@@ -33,6 +33,8 @@ import { ModelsLicenseChip, ModelsLicensePanel } from "@/components/models-licen
 import { CATEGORY_LABEL, ModelMonogram } from "@/components/models-list";
 import { MODELS, getModel } from "@/content/models/models";
 import type { ModelCapability, ModelContent } from "@/content/models/types";
+import { SamplePlay } from "@/components/sample-play";
+import { exampleForModel } from "@/content/examples";
 import { MODELS_HUB_HREF, REPO_URL, WELCOME_HREF } from "@/lib/marketing-links";
 
 
@@ -177,6 +179,18 @@ function ModelBody({ model }: { model: ModelContent }) {
           <ModelsLicensePanel license={model.license} />
         </div>
       </Section>
+
+      {exampleForModel(model.catalogId) ? (
+        <Section
+          id="listen"
+          title="Hear it"
+          lede="A real file made with this model, not a mock-up."
+        >
+          <div className="border-border max-w-xl rounded-md border p-4">
+            <SamplePlay id={exampleForModel(model.catalogId)!} />
+          </div>
+        </Section>
+      ) : null}
 
       <Section
         id="specs"

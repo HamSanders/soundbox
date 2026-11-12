@@ -53,6 +53,8 @@ import { RevealPillars } from "@/components/reveal-pillars";
 import { ProductShots } from "@/components/product-shots";
 import { LicenseChip } from "@/components/license-badge";
 import { DownloadButton, PlatformPicker } from "@/components/download-cta";
+import { SamplePlay } from "@/components/sample-play";
+import { exampleForModel, type ExampleId } from "@/content/examples";
 import type { LicenseInfo } from "@/lib/api";
 import { GENERATOR_HREF, MODELS_HUB_HREF, REPO_URL, repoFile } from "@/lib/marketing-links";
 import { cn } from "@/lib/utils";
@@ -65,29 +67,35 @@ import { cn } from "@/lib/utils";
  * "Writing prompts that work" section argues for. These do double duty: they
  * fill the box, and they are the only teaching material anyone reads.
  */
-const EXAMPLES: { label: string; prompt: string }[] = [
+const EXAMPLES: { label: string; prompt: string; sample: ExampleId }[] = [
   {
     label: "Impact",
+    sample: "impact-wood-crate-smash",
     prompt: "heavy wooden crate dropping onto a concrete floor, close mic, dry room",
   },
   {
     label: "Footsteps",
+    sample: "footsteps-mud-squelch",
     prompt: "boots on wet gravel, slow steady pace, outdoors at night",
   },
   {
     label: "Machinery",
+    sample: "machinery-drill-press",
     prompt: "old freight lift motor starting under load, metal cable strain, echoing shaft",
   },
   {
     label: "Ambience",
+    sample: "rain-thunderstorm-full",
     prompt: "rain on a tin roof, distant thunder, steady wind through trees",
   },
   {
     label: "UI",
+    sample: "ui-keyboard-tap",
     prompt: "small plastic button click, tight and dry, no reverb",
   },
   {
     label: "Whoosh",
+    sample: "whoosh-heavy-door-air",
     prompt: "heavy steel blade swinging fast past the microphone, turbulent air",
   },
 ];
@@ -362,9 +370,11 @@ function HeroPrompt({
 
 function Hero() {
   const [prompt, setPrompt] = useState("");
+  const [active, setActive] = useState(0);
 
-  const applyExample = (example: string) => {
-    setPrompt(example);
+  const applyExample = (index: number) => {
+    setActive(index);
+    setPrompt(EXAMPLES[index].prompt);
     document.getElementById("hero-prompt")?.focus();
   };
 
@@ -418,15 +428,16 @@ function Hero() {
           role="group"
           aria-label="Example prompts"
         >
-          {EXAMPLES.map((ex) => (
+          {EXAMPLES.map((ex, i) => (
             <Button
               key={ex.label}
               type="button"
-              variant="outline"
+              variant={i === active ? "secondary" : "outline"}
               size="sm"
               className="rounded-full"
               title={ex.prompt}
-              onClick={() => applyExample(ex.prompt)}
+              aria-pressed={i === active}
+              onClick={() => applyExample(i)}
             >
               {ex.label}
             </Button>
@@ -435,6 +446,16 @@ function Hero() {
         <p className="text-muted-foreground mx-auto mt-3 max-w-md text-xs leading-relaxed">
           Each example names a material, an action and a space.
         </p>
+
+        {/* One real render per chip, with the prompt that made it. The
+            chip fills the box with a starter prompt; this plays a sound
+            made with a prompt of the same kind. */}
+        <div className="border-border mx-auto mt-5 max-w-md rounded-md border p-3 text-left">
+          <p className="label-caps text-muted-foreground mb-2">
+            Hear one made this way
+          </p>
+          <SamplePlay key={EXAMPLES[active].sample} id={EXAMPLES[active].sample} />
+        </div>
 
         {/* A real link rather than an onClick navigate: this page is
             prerendered, and a crawler following the site needs an href. */}
@@ -482,6 +503,10 @@ function ModelRow({ model }: { model: ModelCard }) {
           </dd>
         </div>
       </dl>
+
+      {exampleForModel(model.id) ? (
+        <SamplePlay id={exampleForModel(model.id)!} className="mt-4" />
+      ) : null}
 
       <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
         <LicenseChip license={model.license} />

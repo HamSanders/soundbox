@@ -24,6 +24,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SeoHead, faqJsonLd } from "@/components/seo-head";
 import { C, CopyBlock, Disclosure, Note } from "@/components/docs-primitives";
+import { SamplePlay } from "@/components/sample-play";
 import { MCP_TOOLS, MCP_TOOL_GROUPS } from "@/content/mcp/tools";
 import { MODELS } from "@/content/models/models";
 import type { CommercialUse } from "@/content/models/types";
@@ -195,6 +196,12 @@ function ExampleTranscript() {
             Done: <C>assets/audio/vault-door.wav</C>, 3 seconds, referenced from the door's
             interact handler.
           </p>
+          <div className="border-border rounded-md border p-3">
+            <p className="label-caps text-muted-foreground mb-2">
+              Hear a door like it
+            </p>
+            <SamplePlay id="door-heavy-vault" />
+          </div>
         </div>
       </div>
 

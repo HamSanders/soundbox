@@ -36,6 +36,7 @@ import { ModelParamsDemo } from "@/components/model-params-demo";
 import { SeoHead } from "@/components/seo-head";
 import { ambientPeaks } from "@/lib/studio-scene";
 import { GENERATOR_HREF, MODELS_HUB_HREF } from "@/lib/marketing-links";
+import { SamplePlay } from "@/components/sample-play";
 import { MODELS } from "@/content/models/models";
 import { cn } from "@/lib/utils";
 
@@ -362,6 +363,16 @@ export function VoicesPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          </Section>
+
+          <Section
+            id="hear"
+            title="Hear a voice"
+            lede="The opening of a post from this site's blog, read by a voice on Chatterbox."
+          >
+            <div className="border-border max-w-xl rounded-md border p-4">
+              <SamplePlay id="narration-intro" />
             </div>
           </Section>
 

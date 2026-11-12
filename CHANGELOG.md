@@ -6,6 +6,9 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Render and wait.** `POST /api/render` runs one generation or speech job and answers with the WAV once it is done, so a single request gets a file back. If the caller hangs up, the job is cancelled. New **Another Soundbox** endpoint presets use it, so one Soundbox can send its renders to another one, such as a desktop with a bigger GPU.
+
 ### Changed
 - Every blog post can be listened to, read by a new, softer Soundbox voice (Bea, on Chatterbox). The post page has a Listen card, a player that docks to the bottom with 15-second skips and 0.75× to 2× speed, and a highlight that follows the paragraph being read; click a paragraph to jump to it.
 - The site's download page has a new design: a full-width hero, the Soundbox film in a frame that flattens as you scroll, live GitHub numbers and a card per installer.

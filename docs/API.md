@@ -58,6 +58,7 @@ route answers `202 { "job_id": "..." }` and the work is followed through
 | POST | `/api/separate` | Split a sound into stems. Body `{ model, source_sound_id, stems?: { keep: string[], rest: "discard" \| "merge" } }` → job |
 | POST | `/api/repaint` | Regenerate one window of a sound. Body `{ source_sound_id, start_s, end_s, prompt?, lyrics?, model?, strength?, mode?, seed?, variations? }` → job |
 | POST | `/api/speak` | Text to speech. Body `{ model, lines: [{ text, voice_id?, speaker? }], gap_s?, seed?, steps?, cfg?, name?, tags?, session_id?, project_id? }` → job |
+| POST | `/api/render` | Run one generate or speak job, wait for it, and answer with the WAV. Body as `/api/generate` or `/api/speak`, plus `text`/`voice` shorthand, `task?` and `keep?`. See [Render and wait](#render-and-wait) |
 | POST | `/api/convert` | Voice conversion. Body `{ model, source_sound_id, voice_id, seed? }` → job |
 | GET | `/api/jobs` | Recent jobs, newest first (`?limit`) |
 | GET | `/api/jobs/{id}` | One job |
@@ -356,6 +357,42 @@ history yet for that model, or the job isn't queued.
 `POST /api/jobs/{job_id}/cancel` → `200 Job`. Cancels a queued or running job.
 
 `GET /api/jobs?limit=50` → `Job[]` newest first (in-memory ring, not persisted).
+
+### Render and wait
+
+`POST /api/render` runs one job and holds the request open until it finishes,
+then answers with the audio itself. Use it when you want a file back from one
+call: a script, a render farm, or another Soundbox that has this one set up as
+a [custom endpoint](ENDPOINTS.md#another-soundbox).
+
+```sh
+curl -X POST http://127.0.0.1:17494/api/render   -H 'Content-Type: application/json'   -d '{"model": "audiocpp-stable-audio-3-sfx", "prompt": "door slam", "duration_s": 2}'   -o door.wav
+```
+
+The body is a `/api/generate` body, or a `/api/speak` body for speech. Speech
+also takes a one-line shorthand, `{ "model", "text", "voice"? }`, where
+`voice` is a saved voice's id or name (case does not matter). The route reads
+two fields of its own:
+
+- `task`: `"generate"` or `"speak"`. Omit it and a body with `text` or
+  `lines` is speech; anything else is a generation.
+- `keep`: `false` deletes the sound from this library once it has been sent,
+  for a server that only renders for others. Default `true`.
+
+A success is `200` with `Content-Type: audio/wav`, plus `X-Soundbox-Job-Id`
+and `X-Soundbox-Sound-Id` headers (the sound id is empty when `keep` is
+false). A render that fails is `500 { detail, failure, job_id }`, and one
+cancelled from the app is `409`. Bad input is `400` before anything runs,
+including `variations` above 1 and `separate`, since the answer is one file.
+A full queue is `429`.
+
+The job goes through the same queue as the app's, so the wait includes any
+jobs ahead of it, and it shows in the app's queue while it runs. If the caller
+disconnects before it finishes, the job is cancelled.
+
+Some proxies cut a request that waits too long; a GPU host's HTTP proxy often
+allows about 100 seconds. For longer renders behind one of those, use
+`/api/generate` and follow the job instead.
 
 ## Logs
 

@@ -32,12 +32,42 @@ server's error. Nothing is added to the library.
 | LocalAI ACE-Step music | `POST /v1/sound-generation` | Sends `model_id`, `caption`, `lyrics`, `bpm`, `keyscale` and `duration_seconds`. LocalAI's ACE-Step example uses `model` instead. If your server rejects `model_id`, rename it. |
 | LocalAI sound effects | `POST /v1/sound-generation` | ElevenLabs-shaped: `model_id`, `text`, `duration_seconds`. |
 | OpenAI-compatible speech | `POST /v1/audio/speech` | Works with LocalAI, OpenAI-compatible servers and most proxies. Asks for `response_format: "wav"`, so ffmpeg is not needed. List your server's voices in **Voices**. |
+| Another Soundbox (music, sound effects, speech) | `POST /api/render` | A Soundbox on another machine. See [Another Soundbox](#another-soundbox). |
 
 Presets cover servers you run yourself. Any other server, including hosted
 APIs, can be added by hand. Servers that expose the same path don't agree on
 the body: two `/v1/audio/music` implementations take `prompt` and
 `duration_seconds` and `input` and `duration` respectively. This is why the
 body is a template and not a fixed format.
+
+## Another Soundbox
+
+A Soundbox can use another Soundbox as an endpoint: a laptop sends its
+renders to a desktop with a big GPU, or to a rented GPU server. The far side
+does the work through its [`/api/render`](API.md#render-and-wait) route, and
+the result lands in the near side's library like any other sound.
+
+On the far machine:
+
+1. Install the models you want to use there.
+2. Start it where the near machine can reach it, for example
+   `soundbox --host 0.0.0.0`, and list the name you will reach it by in
+   `SOUNDBOX_ALLOWED_HOSTS`. Otherwise it answers `403 Forbidden host`.
+3. Give it an [access token](INSTALL.md#access-token) if anything other than
+   your own machines can reach that port.
+
+On the near machine, add an endpoint from one of the **Another Soundbox**
+presets, then:
+
+- Change `gpu-box:17494` in the URL to the far machine's address.
+- Change `"model"` in the template to the id of a model installed there.
+  Its Models page shows the ids, or `GET /api/models`.
+- Put the far machine's access token, if it has one, in **API key**.
+- For speech, list voices saved on the far machine in **Voices**, by name.
+  Leave the list empty to use the model's default voice.
+
+The presets send `"keep": false`, so the far machine does not keep a second
+copy of every render. Remove it from the template to keep them there too.
 
 ## Where requests go
 

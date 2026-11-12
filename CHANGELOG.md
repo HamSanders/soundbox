@@ -24,6 +24,7 @@ to follow [Semantic Versioning](https://semver.org/).
 - Docker: the image sets `KONCHI_DATA_DIR`, `KONCHI_AUDIOCPP_BIN` and
   `KONCHI_AUDIOCPP_BACKEND`, so overriding those in a compose file now needs the
   `KONCHI_` names. The volume names are unchanged.
+- Every blog post can be listened to, read by a new, softer Konchi voice (Bea, on Chatterbox). The post page has a Listen card, a player that docks to the bottom with 15-second skips and 0.75× to 2× speed, and a highlight that follows the paragraph being read; click a paragraph to jump to it.
 - The site's download page has a new design: a full-width hero, the launch film in a frame that flattens as you scroll, live GitHub numbers and a card per installer.
 
 ### Fixed

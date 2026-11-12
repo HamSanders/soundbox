@@ -7,6 +7,7 @@ import { markdownDocs } from "./plugins/markdown";
 import { blogFeed } from "./plugins/blog-feed";
 import { sharedPublicFiles } from "./plugins/shared-public";
 import { notFoundPage } from "./plugins/not-found";
+import { writeCrawlerFiles } from "./plugins/crawlers";
 import { writeSitemap } from "./plugins/sitemap";
 import { sfxSampleFacts } from "./plugins/sfx-sample-facts";
 
@@ -15,7 +16,7 @@ import { sfxSampleFacts } from "./plugins/sfx-sample-facts";
  *
  * `SITE_BASE=/soundbox/` builds for a GitHub Pages project site
  * (`https://hamsanders.github.io/soundbox/`); unset, the site is built for a
- * domain root, which is also what `npm run site:dev` serves. The router's
+ * domain root, which is what Vercel (vercel.json) and `npm run site:dev` serve. The router's
  * `basename` (src/main.tsx) and every raw URL (`@/lib/asset-url`) follow
  * `import.meta.env.BASE_URL`, which Vite derives from this.
  */
@@ -26,9 +27,19 @@ const SITE_BASE = normalizeBase(process.env.SITE_BASE);
  * `VITE_SITE_ORIGIN`, the origin canonical/og:url/RSS links are built from.
  * Copied across before Vite loads its env so `import.meta.env` and the plugins
  * reading `config.env` (blog-feed) both see it.
+ *
+ * On Vercel, with neither set, the project's production domain is used
+ * (`VERCEL_PROJECT_PRODUCTION_URL`, a bare host). Preview deployments get it
+ * too, so their canonical links point at production rather than at a
+ * throwaway preview URL.
  */
-if (process.env.SITE_ORIGIN && !process.env.VITE_SITE_ORIGIN) {
-  process.env.VITE_SITE_ORIGIN = process.env.SITE_ORIGIN.replace(/\/+$/, "");
+const SITE_ORIGIN =
+  process.env.SITE_ORIGIN ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : undefined);
+if (SITE_ORIGIN && !process.env.VITE_SITE_ORIGIN) {
+  process.env.VITE_SITE_ORIGIN = SITE_ORIGIN.replace(/\/+$/, "");
 }
 
 /**
@@ -40,14 +51,18 @@ if (process.env.SITE_ORIGIN && !process.env.VITE_SITE_ORIGIN) {
  */
 function trailingSlashLinks(): Plugin {
   const shim = path.resolve(__dirname, "src/router-links.tsx");
-  const ours = [path.resolve(__dirname, "src"), path.resolve(__dirname, "../app/src")];
+  const ours = [
+    path.resolve(__dirname, "src"),
+    path.resolve(__dirname, "../app/src"),
+  ];
   return {
     name: "konchi:trailing-slash-links",
     enforce: "pre",
     resolveId(source, importer) {
       if (source !== "react-router-dom" || !importer) return null;
       const from = path.resolve(importer.split("?")[0]);
-      if (from === shim || !ours.some((dir) => from.startsWith(dir + path.sep))) return null;
+      if (from === shim || !ours.some((dir) => from.startsWith(dir + path.sep)))
+        return null;
       return shim;
     },
   };
@@ -89,7 +104,9 @@ export default defineConfig({
     // Duration and size per sfx sample, for the prerendered sample pages.
     sfxSampleFacts(path.resolve(__dirname, "public/sfx")),
     // Files both builds serve stay in app/public; see the plugin.
-    sharedPublicFiles(path.resolve(__dirname, "../app/public"), ["favicon.svg"]),
+    sharedPublicFiles(path.resolve(__dirname, "../app/public"), [
+      "favicon.svg",
+    ]),
     // 404.html for static hosts, with links that carry the base path.
     notFoundPage(),
   ],
@@ -114,7 +131,10 @@ export default defineConfig({
       // Site-specific override: the app's SeoHead writes tags via a
       // useEffect, which produces nothing during SSR. This must be listed
       // before the general "@" alias below so it wins for this one path.
-      { find: "@/components/seo-head", replacement: path.resolve(__dirname, "./src/seo-head.tsx") },
+      {
+        find: "@/components/seo-head",
+        replacement: path.resolve(__dirname, "./src/seo-head.tsx"),
+      },
       // Escape hatch back to the real app source, used by the override above
       // to re-export the pure (non-head-writing) helpers unchanged.
       { find: "@sfx-app", replacement: path.resolve(__dirname, "../app/src") },
@@ -166,7 +186,7 @@ export default defineConfig({
   },
   ssgOptions: {
     // /sfx/8bit -> /sfx/8bit/index.html, not /sfx/8bit.html — plain static
-    // hosts (Cloudflare Pages, Netlify, GitHub Pages) all serve that shape
+    // hosts (Vercel, Cloudflare Pages, Netlify, GitHub Pages) all serve that shape
     // at the clean URL without extra rewrite rules.
     dirStyle: "nested",
     // Dynamic routes are prerendered only for the paths their
@@ -177,8 +197,13 @@ export default defineConfig({
     // Runs once every page is on disk, so the sitemap is exactly what was
     // prerendered. See plugins/sitemap.ts.
     onFinished(dir) {
-      const count = writeSitemap(dir, process.env.VITE_SITE_ORIGIN ?? "", SITE_BASE);
+      const count = writeSitemap(
+        dir,
+        process.env.VITE_SITE_ORIGIN ?? "",
+        SITE_BASE,
+      );
       if (count) console.log(`[sitemap] ${count} URLs -> sitemap.xml`);
+      writeCrawlerFiles(dir, process.env.VITE_SITE_ORIGIN ?? "", SITE_BASE);
     },
   },
 });

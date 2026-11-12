@@ -1,5 +1,5 @@
 /**
- * `404.html`, for static hosts that serve one on a miss (GitHub Pages,
+ * `404.html`, for static hosts that serve one on a miss (Vercel, GitHub Pages,
  * Cloudflare Pages, Netlify).
  *
  * The router has no catch-all route, and it should not: every real page is

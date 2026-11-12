@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
+import { Analytics } from "@vercel/analytics/react";
 
 import { SiteHeader } from "./components/site-header";
 
@@ -11,6 +12,7 @@ export function Layout() {
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
       <SiteHeader />
       <Outlet />
+      <Analytics />
     </ThemeProvider>
   );
 }

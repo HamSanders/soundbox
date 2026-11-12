@@ -7,6 +7,7 @@ author: Anthony Saviano
 tags: [mcp, agents]
 draft: false
 image: /blog/point-your-agent-at-soundbox.jpg
+audio: /blog/audio/point-your-agent-at-soundbox.mp3
 ---
 
 Say you're building a game, an app or a video that needs sound, and an agent is

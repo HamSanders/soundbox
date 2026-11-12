@@ -22,16 +22,25 @@ export interface AudioEndpoint {
   id: string;
   name: string;
   task: EndpointTask;
-  /** The full URL to POST to, path included. */
+  /** The full URL to POST to, path included. May hold `{{variable}}`
+   *  placeholders (ElevenLabs puts the voice in the path); each is filled
+   *  URL-encoded. */
   url: string;
-  /** Sent as `Authorization: Bearer …` when set. Never returned by the API. */
+  /** Sent in `api_key_header` when set. Never returned by the API. */
   api_key: string | null;
-  /** Extra request headers, for servers that want a key somewhere else. */
+  /** The header the key goes in, and what precedes it there. The defaults
+   *  are the OpenAI convention, `Authorization: Bearer <key>`; ElevenLabs wants
+   *  `xi-api-key: <key>` and fal `Authorization: Key <key>`. Kept apart from
+   *  `headers` because those are returned by the API and the key never is. */
+  api_key_header: string;
+  api_key_prefix: string;
+  /** Extra request headers. Returned by the API, so never a secret. */
   headers: Record<string, string>;
   /** JSON with `{{variable}}` placeholders — see `template.ts`. */
   body_template: string;
-  /** Dotted path to base64 audio in a JSON response; "" when the response
-   *  body is the audio itself (the usual case). */
+  /** Dotted path into a JSON response: to base64 audio, or to a link to the
+   *  audio file (fal and Replicate answer with a link), which is then fetched.
+   *  "" when the response body is the audio itself. */
   response_path: string;
   /** Rate to read a headerless `audio/pcm` response at. */
   pcm_sample_rate: number;
@@ -45,6 +54,25 @@ export interface AudioEndpoint {
 
 /** What the API returns: the key replaced by whether there is one. */
 export type PublicAudioEndpoint = Omit<AudioEndpoint, "api_key"> & { api_key_set: boolean };
+
+export const DEFAULT_KEY_HEADER = "Authorization";
+export const DEFAULT_KEY_PREFIX = "Bearer ";
+
+/**
+ * Fill fields added after an endpoint was saved.
+ *
+ * settings.json is read as-is, so an endpoint written by an older version has
+ * no `api_key_header`. Without this its key would go out under an `undefined`
+ * header name, which is no key at all.
+ */
+export function withEndpointDefaults(ep: AudioEndpoint): AudioEndpoint {
+  return {
+    ...ep,
+    api_key_header: ep.api_key_header || DEFAULT_KEY_HEADER,
+    api_key_prefix: ep.api_key_prefix ?? DEFAULT_KEY_PREFIX,
+    headers: ep.headers ?? {},
+  };
+}
 
 export const ENDPOINT_MODEL_PREFIX = "endpoint:";
 

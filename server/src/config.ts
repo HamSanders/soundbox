@@ -18,7 +18,7 @@ import {
   writeRegistry,
   type Registry,
 } from "./profiles.js";
-import type { AudioEndpoint } from "./endpoints/types.js";
+import { type AudioEndpoint, withEndpointDefaults } from "./endpoints/types.js";
 
 export const APP_NAME = "soundbox";
 /** From server/package.json, which sits one level above both src/ and dist/,
@@ -226,6 +226,9 @@ export class Settings {
     for (const key of SETTING_KEYS) {
       const value = data[key];
       if (value !== undefined) (this as Record<string, unknown>)[key] = value;
+    }
+    if (Array.isArray(this.audio_endpoints)) {
+      this.audio_endpoints = this.audio_endpoints.map(withEndpointDefaults);
     }
   }
 

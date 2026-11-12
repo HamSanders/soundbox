@@ -1,9 +1,11 @@
 # Custom endpoints
 
-A custom endpoint sends generation to a server you already run, instead of a
-model Soundbox downloads and runs itself. Use one when a machine on your
-network already serves the model (LocalAI, an OpenAI-compatible speech server,
-a gateway), or when the machine running Soundbox can't download weights.
+A custom endpoint sends generation to a server you already run, or to a
+hosted provider with your own key, instead of a model Soundbox downloads and
+runs itself. Use one when a machine on your network already serves the model
+(LocalAI, an OpenAI-compatible speech server, a gateway), when the machine
+running Soundbox can't download weights, or when it has no GPU and you would
+rather pay a provider such as ElevenLabs or fal for each render.
 
 Each endpoint appears as one model in the pickers. Its id is
 `endpoint:<id>`. Sounds made with it go into the library like any other, and
@@ -17,8 +19,8 @@ check four things:
 | Field | What it is |
 | --- | --- |
 | **Used for** | Sound effects, Music or Speech. This decides which picker the endpoint appears in. |
-| **URL** | The full URL to POST to, path included, e.g. `http://192.168.1.20:8080/v1/sound-generation`. |
-| **API key** | Optional. Sent as `Authorization: Bearer <key>`. Once saved it is never shown or returned again. Leave the field blank when editing to keep the saved key. |
+| **URL** | The full URL to POST to, path included, e.g. `http://192.168.1.20:8080/v1/sound-generation`. It may contain `{{voice}}` or `{{language}}`, filled URL-encoded. |
+| **API key** | Optional. Sent as `Authorization: Bearer <key>` unless you change **Key header** and **Before the key**: ElevenLabs takes `xi-api-key` with nothing before the key, fal takes `Authorization` with `Key ` before it. Once saved the key is never shown or returned again. Leave the field blank when editing to keep the saved key. |
 | **Body template** | The JSON request body, with `{{variables}}` for what Soundbox fills in. |
 
 Press **Test** before saving. It sends one short request with the form as it
@@ -33,9 +35,26 @@ server's error. Nothing is added to the library.
 | LocalAI sound effects | `POST /v1/sound-generation` | ElevenLabs-shaped: `model_id`, `text`, `duration_seconds`. |
 | OpenAI-compatible speech | `POST /v1/audio/speech` | Works with LocalAI, OpenAI-compatible servers and most proxies. Asks for `response_format: "wav"`, so ffmpeg is not needed. List your server's voices in **Voices**. |
 
-Presets cover servers you run yourself. Any other server, including hosted
-APIs, can be added by hand. Servers that expose the same path don't agree on
-the body: two `/v1/audio/music` implementations take `prompt` and
+### Hosted providers, with your own key
+
+These presets use your own account with the provider. The provider bills you
+for every render, including **Test**. Soundbox does not resell the service,
+takes no cut and never sees the bill. Each preset links to the provider's
+price page.
+
+| Preset | Endpoint | Notes |
+| --- | --- | --- |
+| ElevenLabs sound effects | `POST https://api.elevenlabs.io/v1/sound-generation` | Up to 30 seconds. Answers in MP3, so ffmpeg is needed. On a plan that allows it, change `output_format` in the URL to `wav_44100`. |
+| ElevenLabs music | `POST https://api.elevenlabs.io/v1/music` | 3 seconds to 10 minutes. MP3, so ffmpeg is needed. Sends no lyrics; describe vocals in the prompt. |
+| ElevenLabs speech | `POST https://api.elevenlabs.io/v1/text-to-speech/{{voice}}` | Voices are ElevenLabs voice IDs, which go in the URL. The preset holds the ID from ElevenLabs' own example; replace it with IDs from your Voices page. MP3, so ffmpeg is needed. |
+| fal ACE-Step music | `POST https://fal.run/fal-ai/ace-step/prompt-to-audio` | fal answers with JSON holding a link to a WAV. The response path `audio.url` points at it and Soundbox downloads it. fal writes the tags and lyrics from the prompt. |
+
+These were written from each provider's API reference in November 2026. A
+provider can rename a model or a field, and **Test** is the quickest way to
+see that.
+
+Any other server can be added by hand. Servers that expose the same path don't
+agree on the body: two `/v1/audio/music` implementations take `prompt` and
 `duration_seconds` and `input` and `duration` respectively. This is why the
 body is a template and not a fixed format.
 
@@ -96,6 +115,8 @@ prompt cannot break the request.
 | `language` | A language code, if one was chosen (speech). |
 
 An unknown variable is rejected when you save, with the list of valid names.
+Only `{{voice}}` and `{{language}}` may go in the URL. A prompt or a voice clip
+in a URL would end up in every proxy's access log, so those stay in the body.
 
 The composer shows only the controls the template uses. If the template has
 no `{{seed}}`, there is no seed control for that endpoint. If it uses
@@ -113,9 +134,15 @@ Soundbox expects the response body to be the audio:
   on your `PATH`. If it isn't, the error says so. Install ffmpeg, or ask for
   WAV in the template if the server offers it.
 
-If a server wraps the audio in JSON, set **Response path** to where the base64
-string is, e.g. `data.0.b64_json` or `audio`. A `data:audio/...;base64,`
-prefix is stripped.
+If a server wraps the audio in JSON, set **Response path** to where it is,
+e.g. `data.0.b64_json` or `audio`. What is there can be:
+
+- **base64 audio.** A `data:audio/...;base64,` prefix is stripped.
+- **A link to the audio file**, as fal and Replicate answer. Soundbox
+  downloads it and decodes it as above. The download carries no key, because
+  the link is usually on a CDN rather than the host the key is for.
+- **An object with a `url`**, such as fal's `{ "url": ..., "content_type": ... }`,
+  read as a link.
 
 Requests time out after 10 minutes. A long music render on a busy GPU can
 take several minutes, and an early timeout would discard a track the server

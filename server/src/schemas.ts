@@ -1198,6 +1198,15 @@ export const audioEndpointInputSchema = z.object({
     .url()
     .refine((u) => /^https?:\/\//i.test(u), "The URL must start with http:// or https://."),
   api_key: z.string().nullish(),
+  /** A header name: letters, digits and hyphens (an HTTP token, minus the
+   *  punctuation nobody uses in one). */
+  api_key_header: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9-]{1,64}$/, "The key header must be a header name, like Authorization or xi-api-key.")
+    .default("Authorization"),
+  /** Not trimmed: the space in "Bearer " is part of it. */
+  api_key_prefix: z.string().max(32).default("Bearer "),
   headers: z.record(z.string(), z.string()).default({}),
   body_template: z.string().min(2).max(20_000),
   response_path: z.string().trim().max(200).default(""),

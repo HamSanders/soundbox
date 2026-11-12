@@ -7,6 +7,7 @@ to follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- The home page's first screen has a Download button that names your system (Windows, Mac or Intel Mac) and links straight to that installer, with the version and size under it. A row of all three installers, with yours marked, sits in Getting started. A phone or Linux visitor gets a plain Download link to the download page.
 - A new look for the app and the site: warm paper by day and dark grey at dusk, with one accent, a beak yellow that marks where sound is playing. The mark and app icon are a one-line M (a sound wave that turns into the letter). Titles are Big Shoulders Display in capitals, labels and readouts are typewritten in Courier Prime, corners are soft and buttons are pills.
 - The site's download page has a new design: a full-width hero, the Soundbox film in a frame that flattens as you scroll, live GitHub numbers and a card per installer.
 

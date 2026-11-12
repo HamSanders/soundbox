@@ -16,8 +16,8 @@
  * in the star, fork and download counts. If either request fails or is rate
  * limited, the fallback links still work and the numbers show a dash.
  *
- * The visitor's OS is guessed after mount, so the prerendered HTML is the same
- * for everyone. Every moving part (the wave, the pen, the headline's entrance,
+ * The installer list, the release lookup and the guess at the visitor's OS
+ * live in `@/lib/installers`, shared with the home page. Every moving part (the wave, the pen, the headline's entrance,
  * the tilt, the counters, the ticker) is decoration and stops under reduced
  * motion, where the wave is drawn once and holds still.
  */
@@ -35,67 +35,20 @@ import { SiteVideo } from "@/components/site-video";
 import { SeoHead } from "@/components/seo-head";
 import { TimelineBanner } from "@/components/timeline-banner";
 import { MARK_WEIGHT, M_HEIGHT, M_PATH, M_WIDTH } from "@/lib/brand-geometry";
+import {
+  github,
+  LATEST_RELEASE_URL as LATEST_URL,
+  megabytes,
+  PLATFORMS,
+  useInstallers,
+} from "@/lib/installers";
 import { REPO_URL } from "@/lib/marketing-links";
 import { cn } from "@/lib/utils";
-
-const LATEST_URL = `${REPO_URL}/releases/latest`;
-const API_BASE = REPO_URL.replace(
-  "https://github.com/",
-  "https://api.github.com/repos/",
-);
-
-interface Asset {
-  name: string;
-  size: number;
-  download_count: number;
-  browser_download_url: string;
-}
-
-interface Release {
-  tag_name: string;
-  html_url: string;
-  published_at: string;
-  assets: Asset[];
-}
 
 interface Repo {
   stargazers_count: number;
   forks_count: number;
 }
-
-type PlatformId = "windows" | "mac-arm" | "mac-intel";
-
-interface Platform {
-  id: PlatformId;
-  label: string;
-  short: string;
-  detail: string;
-  match: (name: string) => boolean;
-}
-
-const PLATFORMS: Platform[] = [
-  {
-    id: "windows",
-    label: "Windows",
-    short: "Windows",
-    detail: "Windows 10 and 11, x64",
-    match: (n) => /x64-setup\.exe$/i.test(n),
-  },
-  {
-    id: "mac-arm",
-    label: "macOS",
-    short: "Mac",
-    detail: "Apple silicon, M1 and later",
-    match: (n) => /aarch64\.dmg$/i.test(n),
-  },
-  {
-    id: "mac-intel",
-    label: "macOS Intel",
-    short: "Intel Mac",
-    detail: "Older Macs, x64",
-    match: (n) => /x64\.dmg$/i.test(n),
-  },
-];
 
 /** The ticker: prompts in the material / action / space shape that works. */
 const PROMPTS = [
@@ -137,36 +90,6 @@ const STYLES = `
   }
 }
 `;
-
-function megabytes(bytes: number): number {
-  return Math.round(bytes / 1024 / 1024);
-}
-
-/** `GET` a GitHub API path and hand back the JSON, or null on any failure. */
-async function github<T>(path: string, signal: AbortSignal): Promise<T | null> {
-  try {
-    const res = await fetch(`${API_BASE}${path}`, {
-      signal,
-      headers: { Accept: "application/vnd.github+json" },
-    });
-    return res.ok ? ((await res.json()) as T) : null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * A best guess at the visitor's installer. Browsers on Apple silicon still
- * report "Intel" in the user agent, so a Mac defaults to the Apple silicon
- * build, which is what every Mac sold since 2020 needs.
- */
-function detectPlatform(): PlatformId | null {
-  const ua = navigator.userAgent;
-  if (/Windows/i.test(ua)) return "windows";
-  if (/Macintosh|Mac OS X/i.test(ua) && !/iPhone|iPad/i.test(ua))
-    return "mac-arm";
-  return null;
-}
 
 /** Counts up to `target` once it arrives. Jumps straight there under reduced motion. */
 function useCountUp(target: number | undefined): number | undefined {
@@ -475,24 +398,15 @@ function SectionHead({
 /* ------------------------------------------------------------------- page */
 
 export function DownloadPage() {
-  const [release, setRelease] = useState<Release | null>(null);
+  const { release, mine, primary, primaryAsset, assetFor } = useInstallers();
   const [repo, setRepo] = useState<Repo | null>(null);
-  const [mine, setMine] = useState<PlatformId | null>(null);
 
   useEffect(() => {
-    setMine(detectPlatform());
     const controller = new AbortController();
-    void github<Release>("/releases/latest", controller.signal).then(
-      (d) => d && setRelease(d),
-    );
     void github<Repo>("", controller.signal).then((d) => d && setRepo(d));
     return () => controller.abort();
   }, []);
 
-  const assetFor = (p: Platform) =>
-    release?.assets.find((a) => p.match(a.name));
-  const primary = PLATFORMS.find((p) => p.id === mine);
-  const primaryAsset = primary && assetFor(primary);
   const downloads = release?.assets.reduce(
     (sum, a) => sum + a.download_count,
     0,

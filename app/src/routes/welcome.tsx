@@ -52,6 +52,7 @@ import { RevealPromptToSample } from "@/components/reveal-prompt-to-sample";
 import { RevealPillars } from "@/components/reveal-pillars";
 import { ProductShots } from "@/components/product-shots";
 import { LicenseChip } from "@/components/license-badge";
+import { DownloadButton, PlatformPicker } from "@/components/download-cta";
 import type { LicenseInfo } from "@/lib/api";
 import { GENERATOR_HREF, MODELS_HUB_HREF, REPO_URL, repoFile } from "@/lib/marketing-links";
 import { cn } from "@/lib/utils";
@@ -397,6 +398,11 @@ function Hero() {
           offline.
         </p>
 
+        {/* Straight under the pitch, so it is on screen without scrolling. It
+            names the visitor's system and links to that installer; the picker
+            under "Getting started" has the rest. */}
+        <DownloadButton pickerHref="#install" className="mt-7" />
+
         {/* The product, under the pitch rather than above it. The banner led
             the page for a while; with the badge and headline stacked beneath
             it the top of the hero read as three things shouting at once, and
@@ -430,17 +436,11 @@ function Hero() {
           Each example names a material, an action and a space.
         </p>
 
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
-          {/* A real link rather than an onClick navigate: this page is
-              prerendered, and a crawler following the site needs an href. */}
-          <Button size="lg" asChild>
-            <Link to={MODELS_HUB_HREF}>Browse the models</Link>
-          </Button>
+        {/* A real link rather than an onClick navigate: this page is
+            prerendered, and a crawler following the site needs an href. */}
+        <div className="mt-8 flex justify-center">
           <Button size="lg" variant="outline" asChild>
-            <a href={GENERATOR_HREF} target="_blank" rel="noreferrer noopener">
-              Download
-              <ExternalLinkIcon aria-hidden="true" />
-            </a>
+            <Link to={MODELS_HUB_HREF}>Browse the models</Link>
           </Button>
         </div>
       </div>
@@ -878,7 +878,7 @@ const STEPS: { title: string; body: React.ReactNode }[] = [
 
 function GetStarted() {
   return (
-    <Section labelledBy="start-heading">
+    <Section id="install" className="scroll-mt-16" labelledBy="start-heading">
       <SectionHead
         id="start-heading"
         eyebrow="Getting started"
@@ -890,6 +890,8 @@ function GetStarted() {
         <code className="font-mono text-xs">npm run dev:mock</code> runs it
         against an in-browser fake.
       </SectionHead>
+
+      <PlatformPicker className="mt-8" />
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_1fr]">
         <ol className="space-y-5">

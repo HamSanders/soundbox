@@ -27,7 +27,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const INK = "#14130f";
 const PAPER = "#f1ece0";
-const DUSK = "#141824";
+const DUSK = "#181817";
 const BEAK = "#f2a40c";
 /** Where the pen stops: the last point of `M_PATH`. */
 const LANDING = { x: 62.8, y: 124.5, r: 7 };

@@ -69,7 +69,7 @@
     --color-border-strong: var(--border-strong);
     /* The dusk ground as a fixed colour, for what stays dark in both
        themes: a video's letterbox, the scrim under text on a picture. */
-    --color-dusk: #141824;
+    --color-dusk: #181817;
     --radius-sm: calc(var(--radius) * 0.6);
     --radius-md: calc(var(--radius) * 0.8);
     --radius-lg: var(--radius);
@@ -89,8 +89,8 @@
 
 /*
  * Palette: "dusk log". The blackbird sings at dusk, so the two themes are
- * the two ends of that hour: warm paper and pen ink by day, the slate blue
- * of the sky after sunset by night. Never pure black.
+ * the two ends of that hour: warm paper and pen ink by day, a warm dark
+ * grey by night: neutral, like a code editor, and never pure black.
  *
  * One colour is the brand's: `signal`, the yellow of the bird's beak. It
  * means "sound is happening here" (the playhead, a model that is running,
@@ -152,48 +152,48 @@
 }
 
 .dark {
-    --background: #141824;
+    --background: #181817;
     --foreground: #f1ece0;
-    /* Lighter lanes at dusk: at 0.55 a lane disappears into the slate. */
+    /* Lighter lanes at dusk: at 0.55 a lane disappears into the grey. */
     --lane-l: 0.75;
     --lane-c: 0.13;
-    --card: #1b2030;
+    --card: #20201e;
     --card-foreground: #f1ece0;
-    --popover: #202637;
+    --popover: #262624;
     --popover-foreground: #f1ece0;
-    /* Paper ink on slate. Its label is the ground, ~14:1. */
+    /* Paper ink on dark grey. Its label is the ground, ~14:1. */
     --primary: #f1ece0;
-    --primary-foreground: #141824;
+    --primary-foreground: #181817;
     --signal: #f2a40c;
-    --secondary: #222839;
+    --secondary: #272725;
     --secondary-foreground: #f1ece0;
-    --muted: #222839;
+    --muted: #272725;
     --muted-foreground: #a9a797;
-    --accent: #293044;
+    --accent: #30302d;
     --accent-foreground: #f1ece0;
     --destructive: #f08a80;
     --ok: #6fcf9f;
     --warn: #e08a52;
     --danger: #f08a80;
-    --border: #2c3347;
-    --border-strong: #767b8f;
-    --input: #363e54;
+    --border: #33332f;
+    --border-strong: #7c7b74;
+    --input: #3e3e3a;
     /* Inputs sit below the panel, a recessed well. */
-    --field: #0f121b;
-    --wave: #767b8f;
+    --field: #121211;
+    --wave: #7c7b74;
     --ring: #f1ece0;
     --chart-1: #f1ece0;
     --chart-2: #a9a797;
-    --chart-3: #767b8f;
-    --chart-4: #434b62;
-    --chart-5: #2c3347;
-    --sidebar: #10131d;
+    --chart-3: #7c7b74;
+    --chart-4: #4a4a45;
+    --chart-5: #33332f;
+    --sidebar: #141413;
     --sidebar-foreground: #f1ece0;
     --sidebar-primary: #f1ece0;
-    --sidebar-primary-foreground: #141824;
-    --sidebar-accent: #1e2434;
+    --sidebar-primary-foreground: #181817;
+    --sidebar-accent: #242422;
     --sidebar-accent-foreground: #f1ece0;
-    --sidebar-border: #252b3d;
+    --sidebar-border: #2b2b28;
     --sidebar-ring: #f1ece0;
 }
 
@@ -256,7 +256,7 @@ h1 {
 
 /*
  * Focus. Every shared component asks for `ring-ring/50` on focus, which is a
- * half-strength ink: fine on slate, faint on paper. Rather than chase the
+ * half-strength ink: fine on dark grey, faint on paper. Rather than chase the
  * class through every file, the colour is pinned here at full strength for
  * anything that is actually showing keyboard focus — so a ring, whatever
  * width or tint a component asked for, always clears 3:1 in both themes.

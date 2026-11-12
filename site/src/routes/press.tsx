@@ -301,12 +301,12 @@ const MARKS: { label: string; svg: string; png: string; tile: string }[] = [
     label: "Paper tile",
     svg: "/press/mirli-mark-light.svg",
     png: "/press/mirli-mark-light.png",
-    tile: "bg-[#141824]",
+    tile: "bg-[#181817]",
   },
 ];
 
 const COLOURS: { name: string; hex: string; use: string; light?: boolean }[] = [
-  { name: "Dusk", hex: "#141824", use: "The dark theme's background: the sky after sunset, never black." },
+  { name: "Dusk", hex: "#181817", use: "The dark theme's background: a warm dark grey, never pure black." },
   { name: "Paper", hex: "#F1ECE0", use: "The light theme's background, and text at dusk.", light: true },
   { name: "Ink", hex: "#14130F", use: "Text on paper, the mark and buttons." },
   { name: "Chalk", hex: "#A9A797", use: "Labels and secondary text at dusk." },

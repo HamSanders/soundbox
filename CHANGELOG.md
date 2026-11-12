@@ -6,11 +6,15 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **An optional access token.** Set `SOUNDBOX_API_TOKEN` and every API, MCP and file request needs it, so a Soundbox on a rented GPU or a LAN box is no longer open to anyone who can reach its port. The web UI asks for the token once and stays signed in for 30 days; scripts and MCP clients send it as a bearer header, and the stdio bridge and CLI pick it up from the environment. The health check stays open, and wrong tokens are rate limited per address. Off by default, so a desktop install is unchanged.
+
 ### Changed
 - Every blog post can be listened to, read by a new, softer Soundbox voice (Bea, on Chatterbox). The post page has a Listen card, a player that docks to the bottom with 15-second skips and 0.75× to 2× speed, and a highlight that follows the paragraph being read; click a paragraph to jump to it.
 - The site's download page has a new design: a full-width hero, the Soundbox film in a frame that flattens as you scroll, live GitHub numbers and a card per installer.
 
 ### Fixed
+- `soundbox ps` asked the server for `/models` instead of `/api/models`, so it always reported that no server was running.
 - Security: updated dependencies with open advisories: the system information library, the HTTP server adapter, and the desktop updater's zip support (Dependabot alerts).
 
 ## [0.4.1] - 2026-10-29

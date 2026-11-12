@@ -1493,6 +1493,11 @@ export interface AudioCppRuntimeStatus {
 
 export interface SoundboxApi {
   getHealth(): Promise<HealthStatus>;
+  /** Whether this server wants an access token, and whether we have it. */
+  getAuthStatus(): Promise<AuthStatus>;
+  /** Trade the access token for a session cookie. */
+  signIn(token: string): Promise<void>;
+  signOut(): Promise<void>;
   listModels(): Promise<Model[]>;
   listAudioCppCatalog(): Promise<AudioCppCatalogEntry[]>;
   getAudioCppRuntime(): Promise<AudioCppRuntimeStatus>;
@@ -1684,6 +1689,17 @@ export interface SoundboxApi {
   installSkills(req: SkillInstallRequest): Promise<SkillInstallResult>;
 }
 
+/** `GET /api/auth/status`. `required` is false when the server has no
+ *  access token set, which is the default on a desktop. */
+export interface AuthStatus {
+  required: boolean;
+  signed_in: boolean;
+}
+
+/** Fired on `window` when any request comes back 401: the session cookie has
+ *  expired, or the token was changed. The sign-in gate listens for it. */
+export const AUTH_REQUIRED_EVENT = "soundbox:auth-required";
+
 /* ------------------------------------------------------------- transport */
 
 export class ApiError extends Error {
@@ -1717,6 +1733,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       "Could not reach the Soundbox backend. Is the server running?",
       0,
     );
+  }
+  if (res.status === 401 && !path.startsWith("/api/auth/")) {
+    window.dispatchEvent(new Event(AUTH_REQUIRED_EVENT));
   }
   if (!res.ok) {
     let detail = `${res.status} ${res.statusText}`;
@@ -1760,6 +1779,10 @@ const POLL_INTERVAL_MS = 750;
 
 export const httpApi: SoundboxApi = {
   getHealth: () => request<HealthStatus>("/api/health"),
+  getAuthStatus: () => request<AuthStatus>("/api/auth/status"),
+  signIn: (token) =>
+    request<void>("/api/auth/login", { method: "POST", body: JSON.stringify({ token }) }),
+  signOut: () => request<void>("/api/auth/logout", { method: "POST" }),
 
   listModels: () => request<Model[]>("/api/models"),
 

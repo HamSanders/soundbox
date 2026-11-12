@@ -275,7 +275,7 @@ function TimelineRuler({
               className={cn("bg-border absolute top-0 w-px", tick.major ? "h-2" : "h-1.5 opacity-60")}
             />
             {tick.label !== null && (
-              <span className="ml-1 font-mono text-[10px] tabular-nums">{tick.label}</span>
+              <span className="ml-1 font-(family-name:--font-log) text-[10px] tabular-nums">{tick.label}</span>
             )}
           </div>
         ))}
@@ -1889,7 +1889,7 @@ export function StoryTimeline({
         >
           {playing ? <SquareIcon /> : <PlayIcon />}
         </Button>
-        <span className="text-muted-foreground ml-1 font-mono text-xs tabular-nums">
+        <span className="text-muted-foreground ml-1 font-(family-name:--font-log) text-xs tabular-nums">
           {formatDuration(playhead)} / {formatDuration(totalDuration)}
         </span>
 
@@ -1935,7 +1935,7 @@ export function StoryTimeline({
 
         {recorder.state === "recording" && (
           <span className="flex items-center gap-1.5">
-            <span className="text-destructive font-mono text-xs tabular-nums">
+            <span className="text-destructive font-(family-name:--font-log) text-xs tabular-nums">
               {formatDuration(recorder.seconds)}
             </span>
             {/* The input level, so you can see the microphone is live before
@@ -2362,7 +2362,7 @@ export function StoryTimeline({
           {/* Playhead, over everything and ignoring the pointer so it never
               swallows a click meant for a clip. */}
           <div
-            className="bg-primary pointer-events-none absolute top-0 bottom-0 z-30 w-px"
+            className="bg-signal pointer-events-none absolute top-0 bottom-0 z-30 w-0.5"
             style={{ left: GUTTER + playhead * pxPerSecond }}
           />
         </div>
@@ -2786,7 +2786,7 @@ function LaneMenu({
         className="bg-popover border-border absolute z-50 w-56 rounded-lg border p-1 shadow-lg"
         style={{ left: Math.max(8, at.x), top: Math.max(8, at.y) }}
       >
-        <p className="text-muted-foreground px-2 py-1 font-mono text-[11px] tabular-nums">
+        <p className="text-muted-foreground px-2 py-1 font-(family-name:--font-log) text-[11px] tabular-nums">
           {formatDuration(at.startS)} · track {at.track}
         </p>
         <div className="bg-border my-1 h-px" />
@@ -2873,7 +2873,7 @@ function InsertPopover({
         }}
       >
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-muted-foreground font-mono text-[11px] tabular-nums">
+          <span className="text-muted-foreground font-(family-name:--font-log) text-[11px] tabular-nums">
             {formatDuration(at.startS)} · track {at.track}
           </span>
           <Button variant="ghost" size="icon-sm" aria-label="Close" onClick={onClose}>
@@ -2961,7 +2961,7 @@ function TrackHead({
         {/* The lane's colour, on the one thing that is always in the gutter.
             Same hue the clips on it are drawn in, which is the whole point. */}
         <span
-          className="text-background flex size-4 shrink-0 items-center justify-center rounded font-mono text-[10px] font-semibold tabular-nums"
+          className="text-background flex size-4 shrink-0 items-center justify-center rounded font-(family-name:--font-log) text-[10px] font-semibold tabular-nums"
           style={{ background: laneColor(lane, 0.85) }}
         >
           {lane}

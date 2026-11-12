@@ -279,7 +279,7 @@ export function StemGroup({ sourceId, className }: StemGroupProps) {
         <span className="text-muted-foreground text-xs font-medium">
           {stems.length} stems
         </span>
-        <span className="text-muted-foreground ml-auto font-mono text-xs tabular-nums">
+        <span className="text-muted-foreground ml-auto font-(family-name:--font-log) text-xs tabular-nums">
           {formatDuration(currentTime)} / {formatDuration(stems[0]?.duration_s ?? 0)}
         </span>
       </div>

@@ -49,7 +49,7 @@ function DocBody({ page }: { page: DocPage }) {
             eyebrow, display title, one line of lede — so crossing from
             /welcome into /docs does not feel like leaving the site. */}
         <header className="mb-10">
-          <p className="text-primary text-xs font-semibold tracking-[0.14em] uppercase">
+          <p className="label-caps text-primary">
             {page.section}
           </p>
           <h1 className="font-heading mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">

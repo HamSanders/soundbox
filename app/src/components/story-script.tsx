@@ -569,7 +569,7 @@ function LineRow({
             />
           )}
           {segment.duration_s ? (
-            <span className="text-muted-foreground font-mono text-[10px] tabular-nums">
+            <span className="text-muted-foreground font-(family-name:--font-log) text-[10px] tabular-nums">
               {segment.duration_s.toFixed(1)}s
             </span>
           ) : null}
@@ -787,7 +787,7 @@ function PauseRow({
           e.stopPropagation();
           onCycle();
         }}
-        className="text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[10px] tabular-nums transition-colors"
+        className="text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-1 rounded px-1.5 py-0.5 font-(family-name:--font-log) text-[10px] tabular-nums transition-colors"
         title="Click to change the length"
       >
         <PauseIcon className="size-2.5" />

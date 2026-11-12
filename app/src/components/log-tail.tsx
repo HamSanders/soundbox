@@ -148,7 +148,7 @@ export function LogTail({
         <button
           type="button"
           onClick={() => setLevel("problems")}
-          className="flex items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-left text-sm ring-1 ring-red-600/25 ring-inset dark:ring-red-400/25"
+          className="flex items-center gap-2 rounded-lg bg-danger/10 px-3 py-2 text-left text-sm ring-1 ring-red-600/25 ring-inset dark:ring-red-400/25"
         >
           <AlertTriangleIcon className="size-4 shrink-0" aria-hidden="true" />
           {problems} error{problems === 1 ? "" : "s"} in the last {LOG_TAIL_LINES} lines — show
@@ -183,8 +183,8 @@ export function LogTail({
                 key={e.key}
                 className={cn(
                   "flex gap-3 px-3 py-1 leading-relaxed",
-                  (e.level === "ERROR" || e.level === "CRITICAL") && "bg-red-500/5",
-                  e.level === "WARNING" && "bg-amber-500/5",
+                  (e.level === "ERROR" || e.level === "CRITICAL") && "bg-danger/5",
+                  e.level === "WARNING" && "bg-warn/5",
                 )}
               >
                 <span className="text-muted-foreground/70 shrink-0 tabular-nums">{e.time}</span>

@@ -39,8 +39,8 @@ const CLIENT_JSON = `{"mcpServers":{"soundbox":{"type":"http","url":"${MCP_URL}"
    these weights, and it must not render as a permissive default. See
    app/src/content/models/types.ts. */
 const LICENSE_BADGE: Record<CommercialUse, string> = {
-  yes: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  conditional: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  yes: "bg-ok/10 text-ok",
+  conditional: "bg-warn/10 text-warn",
   no: "bg-muted text-muted-foreground",
   unknown: "bg-muted text-muted-foreground",
 };
@@ -224,7 +224,7 @@ export function McpPage() {
       <div className="mx-auto w-full max-w-3xl px-4">
         {/* ------------------------------------------------------------ hero */}
         <header className="py-12">
-          <p className="text-primary text-xs font-semibold tracking-[0.14em] uppercase">
+          <p className="label-caps text-primary">
             MCP Server
           </p>
           <h1 className="font-heading mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
@@ -372,7 +372,7 @@ export function McpPage() {
               if (tools.length === 0) return null;
               return (
                 <div key={group.id}>
-                  <h3 className="text-muted-foreground text-xs font-semibold tracking-[0.14em] uppercase">
+                  <h3 className="label-caps text-muted-foreground">
                     {group.title}
                   </h3>
                   <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-relaxed">
@@ -389,7 +389,7 @@ export function McpPage() {
                             {tool.name}
                           </code>
                           {tool.slow && (
-                            <span className="bg-amber-500/10 text-amber-600 shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium dark:text-amber-400">
+                            <span className="bg-warn/10 text-warn shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium">
                               slow
                             </span>
                           )}

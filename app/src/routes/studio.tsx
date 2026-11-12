@@ -3166,7 +3166,7 @@ function NowPlaying({
           long clip name cannot push the play button somewhere new. */}
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{label}</p>
-        <p className="text-muted-foreground truncate font-mono text-xs tabular-nums">
+        <p className="text-muted-foreground truncate font-(family-name:--font-log) text-xs tabular-nums">
           {subtitle}
         </p>
       </div>

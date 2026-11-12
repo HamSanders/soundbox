@@ -61,7 +61,7 @@ export function isProblem(entry: LogEntry): boolean {
 export const LEVEL_CLASS: Record<string, string> = {
   ERROR: "text-red-500",
   CRITICAL: "text-red-500",
-  WARNING: "text-amber-500",
+  WARNING: "text-warn",
   INFO: "text-muted-foreground",
   DEBUG: "text-muted-foreground/60",
 };

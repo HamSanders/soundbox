@@ -162,7 +162,7 @@ export function CommandPalette({
             matches.map((command, i) => (
               <div key={command.id} className="contents">
               {command.group && (i === 0 || matches[i - 1]?.group !== command.group) && (
-                <p className="text-muted-foreground px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wide uppercase">
+                <p className="label-caps text-muted-foreground px-3 pt-2 pb-1">
                   {command.group}
                 </p>
               )}

@@ -55,7 +55,7 @@ function BackendHealth() {
       <span
         className={cn(
           "size-2 shrink-0 rounded-full",
-          isLoading ? "bg-muted-foreground/40" : healthy ? "bg-emerald-500" : "bg-red-500",
+          isLoading ? "bg-muted-foreground/40" : healthy ? "bg-ok" : "bg-danger",
         )}
         aria-hidden="true"
       />

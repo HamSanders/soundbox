@@ -100,7 +100,7 @@ const LINKS = [
 ];
 
 const LINK_CLASS =
-  "text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 rounded-sm text-xs font-medium tracking-[0.14em] uppercase outline-none transition-colors focus-visible:ring-3";
+  "label-caps text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 rounded-sm outline-none transition-colors focus-visible:ring-3";
 
 /** True when the current path is `to` or a page under it. */
 function isUnder(path: string, to: string): boolean {
@@ -277,7 +277,7 @@ export function SiteHeader() {
             ))}
             <Link
               to="/download"
-              className="bg-foreground text-background hover:bg-foreground/85 focus-visible:ring-ring/50 inline-flex h-9 items-center rounded-sm px-4 text-xs font-semibold tracking-[0.14em] uppercase outline-none transition-colors focus-visible:ring-3"
+              className="label-caps bg-foreground text-background hover:bg-foreground/85 focus-visible:ring-ring/50 inline-flex h-9 items-center rounded-full px-4 outline-none transition-colors focus-visible:ring-3"
             >
               Download
             </Link>
@@ -286,7 +286,7 @@ export function SiteHeader() {
           <div className="flex items-center gap-2 md:hidden">
             <Link
               to="/download"
-              className="bg-foreground text-background inline-flex h-9 items-center rounded-sm px-3 text-xs font-semibold tracking-[0.14em] uppercase"
+              className="label-caps bg-foreground text-background inline-flex h-9 items-center rounded-full px-4"
             >
               Download
             </Link>

@@ -127,7 +127,7 @@ export function ScrollStage({
    */
   const words = (
     <div className={cn(centered && "mx-auto max-w-2xl text-center")}>
-      <p className="text-primary text-xs font-semibold tracking-[0.14em] uppercase">{eyebrow}</p>
+      <p className="label-caps text-primary">{eyebrow}</p>
 
       <div className="mt-2 grid">
         <div

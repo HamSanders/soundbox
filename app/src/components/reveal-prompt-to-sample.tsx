@@ -144,7 +144,7 @@ export function RevealPromptToSample() {
               {/* The prompt. Present from the first step, because it is the
                   thing everything else is downstream of. */}
               <div className="bg-background/60 ring-border/60 rounded-lg px-3 py-2.5 ring-1">
-                <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.14em] uppercase">
+                <p className="label-caps text-muted-foreground">
                   Prompt
                 </p>
                 <p className="mt-1 font-mono text-sm leading-relaxed">

@@ -230,7 +230,7 @@ function SectionHead({
 }) {
   return (
     <div className="max-w-2xl">
-      <p className="text-primary text-xs font-semibold tracking-[0.14em] uppercase">
+      <p className="label-caps text-primary">
         {eyebrow}
       </p>
       <h2
@@ -650,7 +650,7 @@ function Prompting() {
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         <div className="ring-border/70 bg-card rounded-2xl p-5 ring-1">
-          <p className="text-muted-foreground text-xs font-semibold tracking-[0.14em] uppercase">
+          <p className="label-caps text-muted-foreground">
             Too vague
           </p>
           <p className="mt-3 font-mono text-sm">scary sound</p>
@@ -659,7 +659,7 @@ function Prompting() {
           </p>
         </div>
         <div className="ring-primary/30 bg-card rounded-2xl p-5 ring-1">
-          <p className="text-primary text-xs font-semibold tracking-[0.14em] uppercase">
+          <p className="label-caps text-primary">
             Usable
           </p>
           <p className="mt-3 font-mono text-sm">

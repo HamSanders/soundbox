@@ -24,7 +24,7 @@ export function DocsIndexPage() {
       />
       <DocsShell current="index">
         <header className="mb-12">
-          <p className="text-primary text-xs font-semibold tracking-[0.14em] uppercase">
+          <p className="label-caps text-primary">
             Documentation
           </p>
           <h1 className="font-heading mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
@@ -40,7 +40,7 @@ export function DocsIndexPage() {
         <div className="space-y-12">
           {DOC_SECTIONS.map((section) => (
             <section key={section.name}>
-              <h2 className="text-muted-foreground text-xs font-semibold tracking-[0.14em] uppercase">
+              <h2 className="label-caps text-muted-foreground">
                 {section.name}
               </h2>
               <ul className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -65,7 +65,7 @@ export function DocsIndexPage() {
           ))}
 
           <section>
-            <h2 className="text-muted-foreground text-xs font-semibold tracking-[0.14em] uppercase">
+            <h2 className="label-caps text-muted-foreground">
               Generated
             </h2>
             <Link

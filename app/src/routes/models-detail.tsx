@@ -347,7 +347,7 @@ function ModelBody({ model }: { model: ModelContent }) {
         <Section id="related" title="Related models">
           {family.length > 0 && (
             <>
-              <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+              <h3 className="label-caps text-muted-foreground">
                 Same loader family ({model.spec.family})
               </h3>
               <ul className="mt-3 flex flex-wrap gap-2">
@@ -363,7 +363,7 @@ function ModelBody({ model }: { model: ModelContent }) {
           )}
           {sameCategory.length > 0 && (
             <>
-              <h3 className="text-muted-foreground mt-6 text-xs font-semibold tracking-wide uppercase">
+              <h3 className="label-caps text-muted-foreground mt-6">
                 Other {CATEGORY_LABEL[model.category].toLowerCase()} models
               </h3>
               <ul className="mt-3 flex flex-wrap gap-2">

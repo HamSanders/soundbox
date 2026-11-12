@@ -38,7 +38,7 @@ export function SiteVideo({
 }: SiteVideoProps) {
   return (
     <figure className={cn("min-w-0", className)}>
-      <div className="border-border/60 overflow-hidden rounded-xl border bg-black shadow-sm">
+      <div className="border-border/60 overflow-hidden rounded-xl border bg-dusk shadow-sm">
         <video
           controls
           playsInline
@@ -48,7 +48,7 @@ export function SiteVideo({
           width={aspect === "square" ? 1080 : 1920}
           height={1080}
           className={cn(
-            "block w-full bg-black object-cover",
+            "block w-full bg-dusk object-cover",
             aspect === "square" ? "aspect-square" : "aspect-video",
           )}
         >

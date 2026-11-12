@@ -80,7 +80,7 @@ export function BlogPostPage() {
               <span aria-hidden>·</span>
               <span>{post.author}</span>
               {post.draft && (
-                <span className="rounded bg-warn/15 px-1.5 py-0.5 font-semibold tracking-wide text-warn uppercase">
+                <span className="label-caps rounded bg-warn/15 px-1.5 py-0.5 text-warn">
                   Draft
                 </span>
               )}

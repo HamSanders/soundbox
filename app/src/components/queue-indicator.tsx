@@ -79,7 +79,7 @@ function QueueRow({ job }: { job: Job }) {
         {running ? (
           <Loader2Icon className="text-primary size-3.5 animate-spin" aria-hidden="true" />
         ) : (
-          <span className="text-muted-foreground font-mono text-[11px] tabular-nums">
+          <span className="text-muted-foreground font-(family-name:--font-log) text-[11px] tabular-nums">
             {job.queue_position ?? ""}
           </span>
         )}

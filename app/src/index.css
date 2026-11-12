@@ -67,6 +67,9 @@
     --color-warn: var(--warn);
     --color-danger: var(--danger);
     --color-border-strong: var(--border-strong);
+    /* The dusk ground as a fixed colour, for what stays dark in both
+       themes: a video's letterbox, the scrim under text on a picture. */
+    --color-dusk: #141824;
     --radius-sm: calc(var(--radius) * 0.6);
     --radius-md: calc(var(--radius) * 0.8);
     --radius-lg: var(--radius);
@@ -149,48 +152,48 @@
 }
 
 .dark {
-    --background: #1b1f2c;
+    --background: #141824;
     --foreground: #f1ece0;
     /* Lighter lanes at dusk: at 0.55 a lane disappears into the slate. */
     --lane-l: 0.75;
     --lane-c: 0.13;
-    --card: #232838;
+    --card: #1b2030;
     --card-foreground: #f1ece0;
-    --popover: #282e40;
+    --popover: #202637;
     --popover-foreground: #f1ece0;
     /* Paper ink on slate. Its label is the ground, ~14:1. */
     --primary: #f1ece0;
-    --primary-foreground: #1b1f2c;
+    --primary-foreground: #141824;
     --signal: #f2a40c;
-    --secondary: #2a3042;
+    --secondary: #222839;
     --secondary-foreground: #f1ece0;
-    --muted: #2a3042;
+    --muted: #222839;
     --muted-foreground: #a9a797;
-    --accent: #30374b;
+    --accent: #293044;
     --accent-foreground: #f1ece0;
     --destructive: #f08a80;
     --ok: #6fcf9f;
     --warn: #e08a52;
     --danger: #f08a80;
-    --border: #343b4f;
-    --border-strong: #7d8194;
-    --input: #3d455b;
+    --border: #2c3347;
+    --border-strong: #767b8f;
+    --input: #363e54;
     /* Inputs sit below the panel, a recessed well. */
-    --field: #161925;
-    --wave: #7d8194;
+    --field: #0f121b;
+    --wave: #767b8f;
     --ring: #f1ece0;
     --chart-1: #f1ece0;
     --chart-2: #a9a797;
-    --chart-3: #7d8194;
-    --chart-4: #4a5269;
-    --chart-5: #343b4f;
-    --sidebar: #181c28;
+    --chart-3: #767b8f;
+    --chart-4: #434b62;
+    --chart-5: #2c3347;
+    --sidebar: #10131d;
     --sidebar-foreground: #f1ece0;
     --sidebar-primary: #f1ece0;
-    --sidebar-primary-foreground: #1b1f2c;
-    --sidebar-accent: #262c3d;
+    --sidebar-primary-foreground: #141824;
+    --sidebar-accent: #1e2434;
     --sidebar-accent-foreground: #f1ece0;
-    --sidebar-border: #2c3245;
+    --sidebar-border: #252b3d;
     --sidebar-ring: #f1ece0;
 }
 
@@ -247,7 +250,8 @@
 h1 {
   font-family: var(--font-display);
   font-weight: 800;
-  letter-spacing: 0.005em;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
 }
 
 /*

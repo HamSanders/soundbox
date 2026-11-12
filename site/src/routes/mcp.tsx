@@ -224,7 +224,7 @@ export function McpPage() {
       <div className="mx-auto w-full max-w-3xl px-4">
         {/* ------------------------------------------------------------ hero */}
         <header className="py-12">
-          <p className="text-primary text-xs font-semibold tracking-[0.14em] uppercase">
+          <p className="label-caps text-primary">
             MCP Server
           </p>
           <h1 className="font-heading mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
@@ -372,7 +372,7 @@ export function McpPage() {
               if (tools.length === 0) return null;
               return (
                 <div key={group.id}>
-                  <h3 className="text-muted-foreground text-xs font-semibold tracking-[0.14em] uppercase">
+                  <h3 className="label-caps text-muted-foreground">
                     {group.title}
                   </h3>
                   <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-relaxed">

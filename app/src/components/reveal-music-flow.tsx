@@ -210,7 +210,7 @@ function Field({
 }) {
   return (
     <div>
-      <p className="text-muted-foreground text-[10px] font-medium tracking-[0.12em] uppercase">
+      <p className="label-caps text-muted-foreground">
         {label}
       </p>
       <p

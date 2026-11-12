@@ -47,7 +47,7 @@ export function OnThisPage({ headings }: { headings: DocHeading[] }) {
 
   return (
     <nav aria-label="On this page" className="text-sm">
-      <p className="text-muted-foreground mb-2 text-xs font-semibold tracking-[0.14em] uppercase">
+      <p className="label-caps text-muted-foreground mb-2">
         On this page
       </p>
       <ul className="space-y-1">

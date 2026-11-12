@@ -89,7 +89,7 @@ export function ProfileManagerDialog({
                   <div className="flex items-center gap-2">
                     <span className="truncate text-sm font-medium">{profile.name}</span>
                     {profile.active && (
-                      <span className="text-muted-foreground border-border rounded border px-1.5 py-0.5 text-[10px] uppercase">
+                      <span className="label-caps text-muted-foreground border-border rounded border px-1.5 py-0.5">
                         Open
                       </span>
                     )}

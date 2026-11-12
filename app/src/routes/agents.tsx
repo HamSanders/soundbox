@@ -67,7 +67,7 @@ function StatTile({ label, value, hint }: { label: string; value: string; hint?:
     // A meter, not a KPI card: caps label, a mono readout, the context under it.
     <div className="bg-card rounded-lg border px-3 py-2.5">
       <p className="text-muted-foreground label-caps">{label}</p>
-      <p className="mt-1 font-mono text-2xl font-medium tabular-nums">{value}</p>
+      <p className="mt-1 font-(family-name:--font-log) text-2xl font-medium tabular-nums">{value}</p>
       {hint && <p className="text-muted-foreground mt-0.5 text-xs">{hint}</p>}
     </div>
   );

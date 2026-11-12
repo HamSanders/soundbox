@@ -220,13 +220,13 @@ export function RevealStudio() {
 
                 {playing && (
                   <div
-                    className="pointer-events-none absolute inset-y-0 z-10 w-px"
-                    style={{ left: `${scrub * 100}%`, backgroundColor: "var(--primary)" }}
+                    className="pointer-events-none absolute inset-y-0 z-10 w-0.5"
+                    style={{ left: `${scrub * 100}%`, backgroundColor: "var(--signal)" }}
                     aria-hidden="true"
                   >
                     <span
-                      className="absolute -top-px -left-[3px] size-[7px] rounded-full"
-                      style={{ backgroundColor: "var(--primary)" }}
+                      className="absolute -top-px -left-[2.5px] size-[7px] rounded-full"
+                      style={{ backgroundColor: "var(--signal)" }}
                     />
                   </div>
                 )}

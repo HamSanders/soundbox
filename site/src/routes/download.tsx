@@ -750,9 +750,7 @@ export function DownloadPage() {
           </SectionHead>
 
           <div className="bg-border border-border mt-10 grid gap-px border lg:grid-cols-3">
-            {/* The film predates the noir look; in greyscale it sits in the
-                page until it is re-cut. */}
-            <div className="bg-background p-2 grayscale lg:col-span-2">
+            <div className="bg-background p-2 lg:col-span-2">
               <SiteVideo
                 src="/media/soundbox-vibe.mp4"
                 poster="/media/posters/vibe.jpg"

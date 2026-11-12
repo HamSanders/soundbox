@@ -496,7 +496,7 @@ export function AddVoiceDialog({
                     aria-hidden
                     className="bg-destructive size-2 animate-pulse rounded-full"
                   />
-                  <span className="font-mono tabular-nums">
+                  <span className="font-(family-name:--font-log) tabular-nums">
                     {formatClock(recorder.seconds)}
                   </span>
                   {/* A meter that never moves is the difference between "this

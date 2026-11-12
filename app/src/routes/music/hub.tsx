@@ -904,7 +904,7 @@ export function MusicHubPage() {
                 className="absolute inset-0 -z-10 size-full object-cover"
               />
               <div
-                className="absolute inset-0 -z-10 bg-gradient-to-t from-black via-black/75 to-black/30"
+                className="absolute inset-0 -z-10 bg-gradient-to-t from-dusk via-dusk/75 to-dusk/30"
                 aria-hidden="true"
               />
               <div className="flex flex-col gap-6 px-5 pt-24 pb-6 sm:px-8 sm:pt-36 sm:pb-8 md:flex-row md:items-end">
@@ -931,7 +931,7 @@ export function MusicHubPage() {
                   </p>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-3 bg-black/60 px-5 py-4 backdrop-blur-sm sm:px-8">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-3 bg-dusk/70 px-5 py-4 backdrop-blur-sm sm:px-8">
                 {featured ? (
                   <>
                     <PlayButton

@@ -301,12 +301,12 @@ const MARKS: { label: string; svg: string; png: string; tile: string }[] = [
     label: "Paper tile",
     svg: "/press/mirli-mark-light.svg",
     png: "/press/mirli-mark-light.png",
-    tile: "bg-[#1b1f2c]",
+    tile: "bg-[#141824]",
   },
 ];
 
 const COLOURS: { name: string; hex: string; use: string; light?: boolean }[] = [
-  { name: "Dusk", hex: "#1B1F2C", use: "The dark theme's background: the sky after sunset, never black." },
+  { name: "Dusk", hex: "#141824", use: "The dark theme's background: the sky after sunset, never black." },
   { name: "Paper", hex: "#F1ECE0", use: "The light theme's background, and text at dusk.", light: true },
   { name: "Ink", hex: "#14130F", use: "Text on paper, the mark and buttons." },
   { name: "Chalk", hex: "#A9A797", use: "Labels and secondary text at dusk." },
@@ -356,7 +356,7 @@ function Quotable({ label, text }: { label: string; text: string }) {
   return (
     <figure className="border-border/70 bg-card/40 rounded-xl border p-4 sm:p-5">
       <div className="flex items-center justify-between gap-2">
-        <figcaption className="text-muted-foreground text-xs font-semibold tracking-[0.14em] uppercase">
+        <figcaption className="label-caps text-muted-foreground">
           {label}
         </figcaption>
         <CopyButton value={text} label={`Copy the ${label.toLowerCase()}`}>
@@ -394,8 +394,8 @@ function VideoCard({ video }: { video: Video }) {
         poster={assetUrl(video.poster)}
         className={
           video.vertical
-            ? "aspect-[9/16] w-full bg-black object-contain"
-            : "aspect-video w-full bg-black object-contain"
+            ? "aspect-[9/16] w-full bg-dusk object-contain"
+            : "aspect-video w-full bg-dusk object-contain"
         }
         aria-label={video.title}
       >
@@ -458,7 +458,7 @@ export function PressPage() {
       <div className="mx-auto w-full max-w-4xl px-4">
         {/* ------------------------------------------------------------ hero */}
         <header className="py-12">
-          <p className="text-primary text-xs font-semibold tracking-[0.14em] uppercase">
+          <p className="label-caps text-primary">
             Press kit
           </p>
           <h1 className="font-heading mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">

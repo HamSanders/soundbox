@@ -167,7 +167,7 @@ export function MidiMappingPanel({
 
               <span
                 className={cn(
-                  "shrink-0 font-mono text-[0.7rem] tabular-nums",
+                  "shrink-0 font-(family-name:--font-log) text-[0.7rem] tabular-nums",
                   binding ? "text-foreground" : "text-muted-foreground/60",
                 )}
               >

@@ -140,7 +140,7 @@ function OnThisPage({ activeId, onJump }: { activeId: string; onJump: (id: strin
         "xl:sticky xl:top-16 xl:max-h-[calc(100vh-5rem)] xl:overflow-y-auto xl:border-0 xl:p-0",
       )}
     >
-      <p className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">
+      <p className="label-caps text-muted-foreground mb-2">
         On this page
       </p>
       <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-1 xl:gap-y-4">

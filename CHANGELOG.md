@@ -7,7 +7,7 @@ to follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
-- A new look for the app and the site: black and white, with a one-line M for the mark and app icon (a sound wave that turns into the letter), Big Shoulders Display for the wordmark and page titles, square-cut corners and a film grain on the site. The studio keeps its colour where it carries meaning: track lanes, status, the live signal and charts.
+- A new look for the app and the site: warm paper by day and slate blue at dusk, with one accent, a beak yellow that marks where sound is playing. The mark and app icon are a one-line M (a sound wave that turns into the letter). Titles are Big Shoulders Display in capitals, labels and readouts are typewritten in Courier Prime, corners are soft and buttons are pills.
 - The site's download page has a new design: a full-width hero, the Soundbox film in a frame that flattens as you scroll, live GitHub numbers and a card per installer.
 
 ### Fixed

@@ -42,12 +42,12 @@ import { registerProfiles } from "./routes/profiles.js";
 import { registerSettings } from "./routes/settings.js";
 import { registerSounds } from "./routes/sounds.js";
 import { registerVoices } from "./routes/voices.js";
-import { SoundboxService } from "./service.js";
+import { KonchiService } from "./service.js";
 
 declare module "fastify" {
   interface FastifyInstance {
     /** The one service instance every route and the MCP layer share. */
-    soundbox: SoundboxService;
+    konchi: KonchiService;
   }
 }
 
@@ -66,7 +66,7 @@ export interface BuildAppOptions {
   /**
    * Extra hostnames the Host header may carry besides the loopback names — the
    * CLI passes its `--host` here when bound to a specific non-loopback address.
-   * SOUNDBOX_ALLOWED_HOSTS is accepted on top of these either way.
+   * KONCHI_ALLOWED_HOSTS is accepted on top of these either way.
    * `"any"` disables the check (wildcard binds like 0.0.0.0).
    */
   allowedHosts?: string[] | "any";
@@ -85,7 +85,7 @@ const SIMPLE_CONTENT_TYPES = new Set([
 /** Custom header marking a request as a deliberate API call. Any custom
  *  header forces a preflight, which the CORS policy then refuses for
  *  foreign origins. */
-export const CSRF_HEADER = "x-soundbox";
+export const CSRF_HEADER = "x-konchi";
 
 export { hostnameOf };
 
@@ -120,14 +120,14 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
     bodyLimit: MAX_UPLOAD_BYTES,
     forceCloseConnections: true,
   });
-  const svc = new SoundboxService(config);
+  const svc = new KonchiService(config);
   svc.start();
-  app.decorate("soundbox", svc);
+  app.decorate("konchi", svc);
 
   // DNS-rebinding defence: a hostile page whose domain re-resolves to
   // 127.0.0.1 reaches this server same-origin, but its Host header still
   // names the hostile domain. Only loopback names (any port), a host the user
-  // deliberately bound to, and the names in SOUNDBOX_ALLOWED_HOSTS (what a
+  // deliberately bound to, and the names in KONCHI_ALLOWED_HOSTS (what a
   // reverse proxy forwards as Host) are served.
   const extraHosts = new Set(
     allowedHosts === "any" ? [] : allowedHosts.map((h) => hostnameOf(h)),
@@ -135,7 +135,7 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
   // CSRF defence: a cross-site form or no-cors fetch can POST to localhost
   // without a preflight only with no body or a "simple" content type. Mutating
   // /api requests must therefore carry a non-simple Content-Type (JSON, the
-  // raw audio upload types) or the X-Soundbox header.
+  // raw audio upload types) or the X-Konchi header.
   const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
   app.addHook("onRequest", async (request, reply) => {
     if (allowedHosts !== "any") {
@@ -152,7 +152,7 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
         return reply.code(403).send({
           detail:
             "Mutating API requests need Content-Type: application/json (or an audio upload type) " +
-            "or an X-Soundbox header",
+            "or an X-Konchi header",
         });
       }
     }
@@ -219,7 +219,7 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
   // separate from registerMcp above, which only serves the JSON status/calls
   // routes under /api/mcp/* — easy to conflate since both files are named
   // "mcp", but they are the transport and the telemetry dashboard respectively.
-  const mcpEndpoint = mountMcp(app, () => app.soundbox);
+  const mcpEndpoint = mountMcp(app, () => app.konchi);
 
   app.setErrorHandler((error, _request, reply) => {
     // Any ModelError that reaches the boundary is something the user can act
@@ -266,7 +266,7 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
       void app.register(fastifyStatic, { root: dir, prefix: "/", index: ["index.html"] });
     } else {
       app.get("/", async () => ({
-        name: "Soundbox",
+        name: "Konchi",
         version: VERSION,
         ui: "not bundled — run `npm run dev` in app/ and open http://localhost:5174",
         docs: "/docs",
@@ -299,7 +299,7 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
     // not, so a model on this disk belongs in this profile's list.
     await svc.adoptDownloadedModels();
     console.info(
-      `Soundbox ${VERSION} ready — profile ${config.profile}, data dir ${config.paths.root}`,
+      `Konchi ${VERSION} ready — profile ${config.profile}, data dir ${config.paths.root}`,
     );
   });
   app.addHook("onClose", async () => {

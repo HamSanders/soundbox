@@ -24,8 +24,11 @@ import { fileURLToPath } from "node:url";
 
 import { wavToMp3 } from "./encode-mp3.mjs";
 
+/** `KONCHI_<name>`, or its pre-rename spelling `SOUNDBOX_<name>`. */
+const env = (name) => process.env[`KONCHI_${name}`] ?? process.env[`SOUNDBOX_${name}`];
+
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const API = process.env.SOUNDBOX_API ?? "http://127.0.0.1:17494";
+const API = env("API") ?? "http://127.0.0.1:17494";
 
 const MUSIC = "audiocpp-stable-audio-3-small-music";
 const ACE = "audiocpp-ace-step";

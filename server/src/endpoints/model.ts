@@ -1,5 +1,5 @@
 /**
- * A custom audio endpoint, presented to the rest of Soundbox as a model.
+ * A custom audio endpoint, presented to the rest of Konchi as a model.
  *
  * The mirror of `AudioCppModel` across `models/types.ts`'s `GenerationModel`.
  * Everything after `generate()` — loudness, peaks, the Sound row, artwork, the

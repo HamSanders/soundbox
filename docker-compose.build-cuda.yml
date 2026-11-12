@@ -2,7 +2,7 @@
 # see the header there.
 
 services:
-  soundbox:
+  konchi:
     build:
       args:
         AUDIOCPP_TAG: full-cuda12

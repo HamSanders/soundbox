@@ -24,7 +24,7 @@ import { ModelError } from "../errors.js";
 import type { ImageApiKind } from "../config.js";
 import { getLogger } from "../logging.js";
 
-const log = getLogger("soundbox.image");
+const log = getLogger("konchi.image");
 
 /** Generous: a cold managed engine loads the checkpoint on the first request,
  *  and a CPU-only machine rendering four steps is slow but not broken. */
@@ -137,7 +137,7 @@ export async function generateImage(
     const gotUrl = req.kind === "openai" && typeof data.data?.[0]?.url === "string";
     throw new ModelError(
       gotUrl
-        ? `The image endpoint returned a URL rather than image data. Soundbox only ` +
+        ? `The image endpoint returned a URL rather than image data. Konchi only ` +
           `accepts inline base64 (\`response_format: "b64_json"\`), so it never fetches ` +
           `from a host it wasn't pointed at.`
         : `The image endpoint returned an unexpected response shape. Check that ` +

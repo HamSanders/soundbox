@@ -25,7 +25,7 @@ export { faqJsonLd, breadcrumbJsonLd, softwareAppJsonLd } from "@sfx-app/compone
  */
 export const DEFAULT_OG_IMAGE = "/og/default.jpg";
 const DEFAULT_OG_IMAGE_ALT =
-  "Soundbox: the free local alternative to ElevenLabs and Suno, for sound effects, music and voices";
+  "Konchi: the free local alternative to ElevenLabs and Suno, for sound effects, music and voices";
 
 export interface SeoHeadProps {
   title: string;
@@ -77,7 +77,7 @@ export function SeoHead({
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:type" content={type} />
-      <meta property="og:site_name" content="Soundbox" />
+      <meta property="og:site_name" content="Konchi" />
       <meta name="twitter:card" content="summary_large_image" />
       {url && <meta property="og:url" content={url} />}
       {url && <link rel="canonical" href={url} />}

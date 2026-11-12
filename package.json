@@ -1,5 +1,5 @@
 {
-  "name": "soundbox-monorepo",
+  "name": "konchi-monorepo",
   "version": "0.4.1",
   "private": true,
   "description": "Open-source AI sound effects, music and text-to-speech that run on your own machine, with an MCP server for coding agents",

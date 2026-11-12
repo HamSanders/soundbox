@@ -112,7 +112,7 @@ const RULES: Rule[] = [
     title: "The disk is full",
     hint:
       "There was no room to write the file, so the partial file was removed. Free " +
-      "space on the drive that holds the Soundbox data directory, or move the models " +
+      "space on the drive that holds the Konchi data directory, or move the models " +
       "folder to another drive, then try again.",
     fixes: [FIX.storage],
     terminal: true,

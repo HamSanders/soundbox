@@ -14,11 +14,9 @@
  * "Queued" and a zero-width bar rather than showing nothing.
  */
 
-import { LoaderCircleIcon } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { LoadingVerb } from "@/components/loading-verb";
-import { Progress } from "@/components/ui/progress";
+import { SwellProgress } from "@/components/swell-progress";
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/format";
 import { isBusyPhase } from "@/lib/loading-verbs";
@@ -77,10 +75,11 @@ export function PendingSoundRow({
       aria-busy="true"
     >
       <div className="flex items-center gap-3">
-        <LoaderCircleIcon
-          className="text-muted-foreground size-4 shrink-0 animate-spin"
-          aria-hidden="true"
-        />
+        {/* The Generate key's record dot, riding the swell: the same mark
+            for "this is being made" wherever a render is waiting. */}
+        <span className="flex size-4 shrink-0 items-center justify-center" aria-hidden="true">
+          <span className="bg-primary konchi-swell-dot size-2 rounded-full" />
+        </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm">{label}</p>
           {sublabel && (
@@ -102,7 +101,12 @@ export function PendingSoundRow({
           </Button>
         )}
       </div>
-      <Progress value={percent} className="mt-2 h-1" />
+      <SwellProgress
+        value={job && job.progress > 0 ? percent : null}
+        label={`${label}: ${phase}`}
+        valueText={job && job.progress > 0 ? `${phase}, ${percent}%` : phase}
+        className="mt-1.5"
+      />
       {job?.status === "queued" && job.queue_position != null && (
         <p className="text-muted-foreground mt-1.5 text-xs">
           {ordinal(job.queue_position)} in queue

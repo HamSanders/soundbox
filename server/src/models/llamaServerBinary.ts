@@ -34,6 +34,7 @@ import {
   type Release,
   type ReleaseAsset,
 } from "./releaseInstall.js";
+import { envVar } from "../env.js";
 
 export const GITHUB_REPO = "ggml-org/llama.cpp";
 export const BINARY_NAME = process.platform === "win32" ? "llama-server.exe" : "llama-server";
@@ -43,8 +44,8 @@ export const DEFAULT_VERSION = "latest";
 
 const HTTP_TIMEOUT_MS = 30_000;
 
-export const BIN_ENV = "SOUNDBOX_LLAMA_SERVER_BIN";
-export const BACKEND_ENV = "SOUNDBOX_LLAMA_SERVER_BACKEND";
+export const BIN_ENV = "KONCHI_LLAMA_SERVER_BIN";
+export const BACKEND_ENV = "KONCHI_LLAMA_SERVER_BACKEND";
 
 /** Raised for anything the user could plausibly fix (no matching asset,
  *  checksum mismatch, network). Message is written for a human. */
@@ -136,7 +137,7 @@ export async function installedVersions(): Promise<string[]> {
  * Whether *a* usable llama-server exists, managed or not.
  *
  * Resolves through the same `findBinary()` order the runtime launches with,
- * so a user who set `SOUNDBOX_LLAMA_SERVER_BIN` or has llama.cpp on PATH is
+ * so a user who set `KONCHI_LLAMA_SERVER_BIN` or has llama.cpp on PATH is
  * not told the engine is missing and pushed into downloading a second copy.
  * Only a managed install carries a version — an external binary's release tag
  * isn't ours to know, and guessing it from a directory name would be a lie.
@@ -152,7 +153,7 @@ export async function status(): Promise<InstallStatus> {
     version: managed ? basename(join(binary, "..")) : null,
     path: binary,
     backend: backend(),
-    source: managed ? "managed" : (process.env[BIN_ENV] ?? "").trim() ? "env" : "path",
+    source: managed ? "managed" : (envVar(BIN_ENV) ?? "").trim() ? "env" : "path",
   };
 }
 
@@ -167,11 +168,11 @@ function isManagedPath(path: string): boolean {
 
 /**
  * Env override, then the managed install, then PATH — same order
- * `audiocpp.ts`'s `findBinary()` uses, so an install via `soundbox model
+ * `audiocpp.ts`'s `findBinary()` uses, so an install via `konchi model
  * install llm` or a hand-set env var both work without restarting.
  */
 export async function findBinary(): Promise<string | null> {
-  const override = (process.env[BIN_ENV] ?? "").trim();
+  const override = (envVar(BIN_ENV) ?? "").trim();
   if (override) return (await isFile(override)) ? override : null;
 
   const managed = await findManagedBinary();
@@ -246,7 +247,7 @@ export function detectBackend(): string {
 /** The backend actually in force: env override, else the same detection
  *  `install()` uses to pick a release asset. */
 export function backend(): string {
-  const override = (process.env[BACKEND_ENV] ?? "").trim();
+  const override = (envVar(BACKEND_ENV) ?? "").trim();
   if (override) return override;
   return detectBackend();
 }
@@ -331,7 +332,7 @@ async function getRelease(version: string): Promise<Release> {
   try {
     const resp = await fetchWithTimeout(url, {
       Accept: "application/vnd.github+json",
-      "User-Agent": "soundbox",
+      "User-Agent": "konchi",
     });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     release = (await resp.json()) as Release;
@@ -385,7 +386,7 @@ async function download(
 ): Promise<string> {
   try {
     const { sha256 } = await downloadToFile(url, dest, {
-      headers: { "User-Agent": "soundbox" },
+      headers: { "User-Agent": "konchi" },
       onProgress: (done, total) => {
         if (progress && total) {
           progress(Math.min(0.9, done / total), `Downloading llama-server — ${Math.floor(done / 1024)} KB`);
@@ -405,7 +406,7 @@ async function download(
  *  `digest` is what verifies these (see `releaseInstall.verifyAsset`). */
 async function fetchManifest(sums: ReleaseAsset | null): Promise<string | null> {
   if (sums === null) return null;
-  const resp = await fetchWithTimeout(sums.browser_download_url, { "User-Agent": "soundbox" });
+  const resp = await fetchWithTimeout(sums.browser_download_url, { "User-Agent": "konchi" });
   if (!resp.ok) {
     throw new InstallError(
       `Could not fetch ${sums.name} to verify the download (HTTP ${resp.status}). Try again.`,
@@ -512,7 +513,7 @@ export async function install(
   const companion = companionAsset(release, asset);
   const sums = checksumAsset(release);
 
-  const tmp = await mkdtemp(join(tmpdir(), "soundbox-llama-install-"));
+  const tmp = await mkdtemp(join(tmpdir(), "konchi-llama-install-"));
   try {
     const checksumText = await fetchManifest(sums);
 

@@ -25,7 +25,7 @@ function page(base: string): string {
     <meta name="color-scheme" content="dark light" />
     <meta name="robots" content="noindex" />
     <link rel="icon" type="image/svg+xml" href="${base}favicon.svg" />
-    <title>Page not found | Soundbox</title>
+    <title>Page not found | Konchi</title>
     <style>
       :root { color-scheme: light dark; --bg: #fafafa; --fg: #18181b; --muted: #71717a; --line: #e4e4e7; }
       @media (prefers-color-scheme: dark) { :root { --bg: #09090b; --fg: #fafafa; --muted: #a1a1aa; --line: #27272a; } }
@@ -61,7 +61,7 @@ export function notFoundPage(): Plugin {
   let base = "/";
 
   return {
-    name: "soundbox:not-found",
+    name: "konchi:not-found",
 
     configResolved(config) {
       isSsrBuild = Boolean(config.build.ssr);

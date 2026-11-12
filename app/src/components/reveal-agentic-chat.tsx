@@ -25,7 +25,6 @@ import {
   MicIcon,
   PencilIcon,
   SlidersHorizontalIcon,
-  SparklesIcon,
   type LucideIcon,
 } from "lucide-react";
 
@@ -48,7 +47,7 @@ const EXCHANGES: Exchange[] = [
   {
     said: "put rain under the whole scene",
     intent: "generate_clip",
-    icon: SparklesIcon,
+    icon: AudioLinesIcon,
     actions: ['Generate “rain on a tin roof” onto track 0 at 0.00s'],
     title: "Ask for a sound",
     detail:

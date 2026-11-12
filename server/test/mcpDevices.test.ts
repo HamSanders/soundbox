@@ -22,10 +22,10 @@ import { buildApp } from "../src/app.js";
 import { Config } from "../src/config.js";
 import { defaultParams } from "../src/devices.js";
 import { buildMcp } from "../src/mcp/server.js";
-import type { SoundboxService } from "../src/service.js";
+import type { KonchiService } from "../src/service.js";
 
 let app: FastifyInstance;
-let svc: SoundboxService;
+let svc: KonchiService;
 let client: Client;
 let dataDir: string;
 
@@ -46,14 +46,14 @@ async function tracks(storyId: string): Promise<any[]> {
 }
 
 async function newStory(): Promise<string> {
-  return (await call("soundbox.create_story", { title: "Devices" })).story_id;
+  return (await call("konchi.create_story", { title: "Devices" })).story_id;
 }
 
 beforeAll(async () => {
-  dataDir = await mkdtemp(join(tmpdir(), "soundbox-mcp-devices-"));
+  dataDir = await mkdtemp(join(tmpdir(), "konchi-mcp-devices-"));
   app = buildApp(new Config(dataDir), { serveUi: false });
   await app.ready();
-  svc = (app as unknown as { soundbox: SoundboxService }).soundbox;
+  svc = (app as unknown as { konchi: KonchiService }).konchi;
   const server = buildMcp(() => svc);
   client = new Client({ name: "test", version: "0" });
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
@@ -70,20 +70,20 @@ describe("the tools are listed", () => {
   it("advertises add, set and remove", async () => {
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name);
-    for (const n of ["soundbox.add_device", "soundbox.set_device", "soundbox.remove_device"]) {
+    for (const n of ["konchi.add_device", "konchi.set_device", "konchi.remove_device"]) {
       expect(names).toContain(n);
     }
-    const add = tools.find((t) => t.name === "soundbox.add_device")!;
+    const add = tools.find((t) => t.name === "konchi.add_device")!;
     // The ranges travel with the schema, so an agent never has to guess a key.
     expect(JSON.stringify(add.inputSchema)).toContain("highFrequency");
   });
 });
 
-describe("soundbox.add_device", () => {
+describe("konchi.add_device", () => {
   it("adds at its defaults, persists, and the studio reads it back", async () => {
     const id = await newStory();
     const changed = vi.spyOn(svc.stories, "changed");
-    const res = await call("soundbox.add_device", { story_id: id, track_index: 0, kind: "eq" });
+    const res = await call("konchi.add_device", { story_id: id, track_index: 0, kind: "eq" });
 
     expect(res.devices).toHaveLength(1);
     expect(res.devices[0]).toMatchObject({ kind: "eq", bypassed: false, params: defaultParams("eq") });
@@ -98,7 +98,7 @@ describe("soundbox.add_device", () => {
 
   it("sets knobs as it goes on, clamping and reporting over-reach", async () => {
     const id = await newStory();
-    const res = await call("soundbox.add_device", {
+    const res = await call("konchi.add_device", {
       story_id: id,
       track_index: 1,
       kind: "reverb",
@@ -110,9 +110,9 @@ describe("soundbox.add_device", () => {
 
   it("inserts at a position", async () => {
     const id = await newStory();
-    await call("soundbox.add_device", { story_id: id, track_index: 0, kind: "compressor" });
-    await call("soundbox.add_device", { story_id: id, track_index: 0, kind: "limiter" });
-    const res = await call("soundbox.add_device", {
+    await call("konchi.add_device", { story_id: id, track_index: 0, kind: "compressor" });
+    await call("konchi.add_device", { story_id: id, track_index: 0, kind: "limiter" });
+    const res = await call("konchi.add_device", {
       story_id: id,
       track_index: 0,
       kind: "eq",
@@ -124,7 +124,7 @@ describe("soundbox.add_device", () => {
   it("rejects a knob the device does not have", async () => {
     const id = await newStory();
     await expect(
-      call("soundbox.add_device", { story_id: id, track_index: 0, kind: "eq", params: { treble: 2 } }),
+      call("konchi.add_device", { story_id: id, track_index: 0, kind: "eq", params: { treble: 2 } }),
     ).rejects.toThrow(/no knob "treble".*low, mid, high/);
     expect((await tracks(id)).length).toBe(0);
   });
@@ -132,28 +132,28 @@ describe("soundbox.add_device", () => {
   it("rejects an unknown kind and an unknown story", async () => {
     const id = await newStory();
     await expect(
-      call("soundbox.add_device", { story_id: id, track_index: 0, kind: "flanger" }),
+      call("konchi.add_device", { story_id: id, track_index: 0, kind: "flanger" }),
     ).rejects.toThrow();
     await expect(
-      call("soundbox.add_device", { story_id: "nope", track_index: 0, kind: "eq" }),
+      call("konchi.add_device", { story_id: "nope", track_index: 0, kind: "eq" }),
     ).rejects.toThrow(/No story/);
   });
 
   it("leaves the rest of the track alone", async () => {
     const id = await newStory();
-    await call("soundbox.mix_track", { story_id: id, track_index: 0, name: "Narrator", gain_db: -3 });
-    await call("soundbox.add_device", { story_id: id, track_index: 0, kind: "gate" });
+    await call("konchi.mix_track", { story_id: id, track_index: 0, name: "Narrator", gain_db: -3 });
+    await call("konchi.add_device", { story_id: id, track_index: 0, kind: "gate" });
     const [row] = await tracks(id);
     expect(row).toMatchObject({ name: "Narrator", gain_db: -3 });
     expect(row.devices).toHaveLength(1);
   });
 });
 
-describe("soundbox.set_device", () => {
+describe("konchi.set_device", () => {
   it("turns knobs by kind, keeping the others", async () => {
     const id = await newStory();
-    await call("soundbox.add_device", { story_id: id, track_index: 0, kind: "eq" });
-    const res = await call("soundbox.set_device", {
+    await call("konchi.add_device", { story_id: id, track_index: 0, kind: "eq" });
+    const res = await call("konchi.set_device", {
       story_id: id,
       track_index: 0,
       device: "eq",
@@ -165,20 +165,20 @@ describe("soundbox.set_device", () => {
 
   it("bypasses and re-enables without losing settings", async () => {
     const id = await newStory();
-    const added = await call("soundbox.add_device", {
+    const added = await call("konchi.add_device", {
       story_id: id,
       track_index: 0,
       kind: "compressor",
       params: { ratio: 6 },
     });
-    const off = await call("soundbox.set_device", {
+    const off = await call("konchi.set_device", {
       story_id: id,
       track_index: 0,
       device: added.device,
       bypassed: true,
     });
     expect(off.devices[0]).toMatchObject({ bypassed: true, params: { ratio: 6 } });
-    const on = await call("soundbox.set_device", {
+    const on = await call("konchi.set_device", {
       story_id: id,
       track_index: 0,
       device: added.device,
@@ -189,12 +189,12 @@ describe("soundbox.set_device", () => {
 
   it("asks for an id when the kind is ambiguous", async () => {
     const id = await newStory();
-    const a = await call("soundbox.add_device", { story_id: id, track_index: 0, kind: "eq" });
-    await call("soundbox.add_device", { story_id: id, track_index: 0, kind: "eq" });
+    const a = await call("konchi.add_device", { story_id: id, track_index: 0, kind: "eq" });
+    await call("konchi.add_device", { story_id: id, track_index: 0, kind: "eq" });
     await expect(
-      call("soundbox.set_device", { story_id: id, track_index: 0, device: "eq", params: { low: 1 } }),
+      call("konchi.set_device", { story_id: id, track_index: 0, device: "eq", params: { low: 1 } }),
     ).rejects.toThrow(/2 eq devices; pass one id/);
-    const res = await call("soundbox.set_device", {
+    const res = await call("konchi.set_device", {
       story_id: id,
       track_index: 0,
       device: a.device,
@@ -206,29 +206,29 @@ describe("soundbox.set_device", () => {
 
   it("says what is on the track when the device is not", async () => {
     const id = await newStory();
-    await call("soundbox.add_device", { story_id: id, track_index: 0, kind: "gate" });
+    await call("konchi.add_device", { story_id: id, track_index: 0, kind: "gate" });
     await expect(
-      call("soundbox.set_device", { story_id: id, track_index: 0, device: "reverb", params: { wet: 1 } }),
+      call("konchi.set_device", { story_id: id, track_index: 0, device: "reverb", params: { wet: 1 } }),
     ).rejects.toThrow(/no device "reverb".*\(gate\)/);
   });
 
   it("needs something to change", async () => {
     const id = await newStory();
-    await call("soundbox.add_device", { story_id: id, track_index: 0, kind: "gate" });
+    await call("konchi.add_device", { story_id: id, track_index: 0, kind: "gate" });
     await expect(
-      call("soundbox.set_device", { story_id: id, track_index: 0, device: "gate" }),
+      call("konchi.set_device", { story_id: id, track_index: 0, device: "gate" }),
     ).rejects.toThrow(/Nothing to change/);
   });
 });
 
-describe("soundbox.remove_device", () => {
+describe("konchi.remove_device", () => {
   it("removes one device and empties the stored chain at the end", async () => {
     const id = await newStory();
-    await call("soundbox.add_device", { story_id: id, track_index: 0, kind: "eq" });
-    await call("soundbox.add_device", { story_id: id, track_index: 0, kind: "reverb" });
-    const res = await call("soundbox.remove_device", { story_id: id, track_index: 0, device: "eq" });
+    await call("konchi.add_device", { story_id: id, track_index: 0, kind: "eq" });
+    await call("konchi.add_device", { story_id: id, track_index: 0, kind: "reverb" });
+    const res = await call("konchi.remove_device", { story_id: id, track_index: 0, device: "eq" });
     expect(res.devices.map((d: any) => d.kind)).toEqual(["reverb"]);
-    const empty = await call("soundbox.remove_device", {
+    const empty = await call("konchi.remove_device", {
       story_id: id,
       track_index: 0,
       device: "reverb",
@@ -238,11 +238,11 @@ describe("soundbox.remove_device", () => {
   });
 });
 
-describe("soundbox.get_story", () => {
+describe("konchi.get_story", () => {
   it("returns each touched track with its chain", async () => {
     const id = await newStory();
-    await call("soundbox.add_device", { story_id: id, track_index: 2, kind: "delay" });
-    const story = await call("soundbox.get_story", { story_id: id });
+    await call("konchi.add_device", { story_id: id, track_index: 2, kind: "delay" });
+    const story = await call("konchi.get_story", { story_id: id });
     expect(story.tracks).toHaveLength(1);
     expect(story.tracks[0]).toMatchObject({ track_index: 2, devices: [{ kind: "delay" }] });
   });
@@ -274,7 +274,7 @@ describe("the studio's PATCH", () => {
 
   it("leaves the chain alone when a patch does not mention it", async () => {
     const id = await newStory();
-    await call("soundbox.add_device", { story_id: id, track_index: 0, kind: "eq" });
+    await call("konchi.add_device", { story_id: id, track_index: 0, kind: "eq" });
     await app.inject({
       method: "PATCH",
       url: `/api/stories/${id}/tracks/0`,
@@ -289,9 +289,9 @@ describe("the studio's PATCH", () => {
 describe("removing a lane", () => {
   it("moves the chains above it down with their lanes", async () => {
     const id = await newStory();
-    await call("soundbox.add_device", { story_id: id, track_index: 1, kind: "gate" });
-    await call("soundbox.add_device", { story_id: id, track_index: 2, kind: "reverb" });
-    await call("soundbox.remove_track", { story_id: id, track_index: 1 });
+    await call("konchi.add_device", { story_id: id, track_index: 1, kind: "gate" });
+    await call("konchi.add_device", { story_id: id, track_index: 2, kind: "reverb" });
+    await call("konchi.remove_track", { story_id: id, track_index: 1 });
     const rows = await tracks(id);
     expect(rows.map((r) => [r.track_index, r.devices.map((d: any) => d.kind)])).toEqual([
       [1, ["reverb"]],

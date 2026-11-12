@@ -98,15 +98,15 @@ def main() -> None:
         "default.jpg": card(
             "studio.png",
             "Open source · MIT",
-            "Soundbox",
+            "Konchi",
             "Sound effects, music and voices,\ngenerated on your own machine.",
         ),
         "mcp.jpg": card(
             None,
             "MCP server",
-            "Soundbox for agents",
+            "Konchi for agents",
             "Sound effects, music and speech,\ngenerated locally for your coding agent.",
-            command="claude mcp add --transport http soundbox http://127.0.0.1:17494/mcp",
+            command="claude mcp add --transport http konchi http://127.0.0.1:17494/mcp",
         ),
     }
     for name, im in cards.items():

@@ -15,6 +15,15 @@
  */
 
 @import "@/index.css";
+/* Fraunces, for the site's display lines and the wordmark only (see
+   docs/konchi-brand.md). The app stays on Inter: it is a working tool, and
+   the site is where the brand is introduced. The opsz axis lets one file
+   cover the 18px wordmark and the hero headline. */
+@import "@fontsource-variable/fraunces/opsz.css";
+
+@theme {
+  --font-display: "Fraunces Variable", "Iowan Old Style", Georgia, serif;
+}
 
 /* The components this site renders are the app's. */
 @source "../../app/src";

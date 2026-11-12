@@ -13,7 +13,7 @@ let app: FastifyInstance;
 let dataDir: string;
 
 beforeAll(async () => {
-  dataDir = await mkdtemp(join(tmpdir(), "soundbox-guards-test-"));
+  dataDir = await mkdtemp(join(tmpdir(), "konchi-guards-test-"));
   app = buildApp(new Config(dataDir), { serveUi: false });
   await app.ready();
 });
@@ -65,7 +65,7 @@ describe("Host header allowlist (DNS rebinding)", () => {
   });
 });
 
-describe("Host header allowlist: SOUNDBOX_ALLOWED_HOSTS", () => {
+describe("Host header allowlist: KONCHI_ALLOWED_HOSTS", () => {
   // Bound to loopback behind Caddy or nginx, which forward the name the
   // browser used as Host. Before, only --host fed this check and the env var
   // was read for CORS and /mcp alone, so every request here was a 403.
@@ -73,32 +73,32 @@ describe("Host header allowlist: SOUNDBOX_ALLOWED_HOSTS", () => {
     app.inject({ method: "GET", url: "/api/health", headers: { host } });
 
   afterEach(() => {
-    delete process.env.SOUNDBOX_ALLOWED_HOSTS;
+    delete process.env.KONCHI_ALLOWED_HOSTS;
   });
 
   it("serves a host listed without a port, on any port", async () => {
-    process.env.SOUNDBOX_ALLOWED_HOSTS = "Soundbox.Example.lan, other.lan";
-    expect((await health("soundbox.example.lan")).statusCode).not.toBe(403);
-    expect((await health("soundbox.example.lan:8443")).statusCode).not.toBe(403);
+    process.env.KONCHI_ALLOWED_HOSTS = "Konchi.Example.lan, other.lan";
+    expect((await health("konchi.example.lan")).statusCode).not.toBe(403);
+    expect((await health("konchi.example.lan:8443")).statusCode).not.toBe(403);
     expect((await health("other.lan")).statusCode).not.toBe(403);
   });
 
   it("serves a host:port entry only on that port", async () => {
-    process.env.SOUNDBOX_ALLOWED_HOSTS = "192.168.1.20:17494";
+    process.env.KONCHI_ALLOWED_HOSTS = "192.168.1.20:17494";
     expect((await health("192.168.1.20:17494")).statusCode).not.toBe(403);
     expect((await health("192.168.1.20:8080")).statusCode).toBe(403);
     expect((await health("192.168.1.20")).statusCode).toBe(403);
   });
 
   it("still refuses names that are not listed, or only resemble one", async () => {
-    process.env.SOUNDBOX_ALLOWED_HOSTS = "soundbox.example.lan";
-    for (const host of ["evil.example", "evil-soundbox.example.lan", "soundbox.example.lan.evil.net"]) {
+    process.env.KONCHI_ALLOWED_HOSTS = "konchi.example.lan";
+    for (const host of ["evil.example", "evil-konchi.example.lan", "konchi.example.lan.evil.net"]) {
       expect((await health(host)).statusCode).toBe(403);
     }
   });
 
   it("refuses everything but loopback when unset", async () => {
-    expect((await health("soundbox.example.lan")).statusCode).toBe(403);
+    expect((await health("konchi.example.lan")).statusCode).toBe(403);
   });
 
   it("lets the same name through to /mcp", async () => {
@@ -110,19 +110,19 @@ describe("Host header allowlist: SOUNDBOX_ALLOWED_HOSTS", () => {
         headers: { host, "content-type": "application/json", accept: "application/json, text/event-stream" },
         payload: "{}",
       });
-    expect((await mcp("soundbox.example.lan")).statusCode).toBe(403);
-    process.env.SOUNDBOX_ALLOWED_HOSTS = "soundbox.example.lan";
-    expect((await mcp("soundbox.example.lan")).statusCode).toBe(400);
+    expect((await mcp("konchi.example.lan")).statusCode).toBe(403);
+    process.env.KONCHI_ALLOWED_HOSTS = "konchi.example.lan";
+    expect((await mcp("konchi.example.lan")).statusCode).toBe(400);
   });
 });
 
 describe("isListedHost", () => {
   afterEach(() => {
-    delete process.env.SOUNDBOX_ALLOWED_HOSTS;
+    delete process.env.KONCHI_ALLOWED_HOSTS;
   });
 
   it("parses the list the same way for every check", () => {
-    process.env.SOUNDBOX_ALLOWED_HOSTS = " a.lan ,B.LAN:8080,,[fd00::1]";
+    process.env.KONCHI_ALLOWED_HOSTS = " a.lan ,B.LAN:8080,,[fd00::1]";
     expect(isListedHost("a.lan")).toBe(true);
     expect(isListedHost("A.lan:443")).toBe(true);
     expect(isListedHost("b.lan:8080")).toBe(true);
@@ -170,11 +170,11 @@ describe("CSRF: mutating /api requests", () => {
     expect(res.statusCode).not.toBe(403);
   });
 
-  it("accepts a body-less POST carrying X-Soundbox", async () => {
+  it("accepts a body-less POST carrying X-Konchi", async () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/sessions",
-      headers: { "x-soundbox": "1" },
+      headers: { "x-konchi": "1" },
     });
     expect(res.statusCode).not.toBe(403);
   });

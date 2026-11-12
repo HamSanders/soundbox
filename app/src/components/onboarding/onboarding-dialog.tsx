@@ -216,7 +216,7 @@ export function OnboardingDialog() {
     >
       <DialogContent className="sm:max-w-2xl" showCloseButton={false}>
         <DialogHeader>
-          <DialogTitle>Set up Soundbox</DialogTitle>
+          <DialogTitle>Set up Konchi</DialogTitle>
           <DialogDescription>
             Four questions, then it downloads in the background.
           </DialogDescription>

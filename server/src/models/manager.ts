@@ -384,7 +384,7 @@ export class ModelManager {
    * caches populated by an older install.
    *
    * The weights directory itself is *not* safe to delete wholesale any more:
-   * since Soundbox adopted audio.cpp's layout, several catalog entries can
+   * since Konchi adopted audio.cpp's layout, several catalog entries can
    * share one package directory — removing ACE-Step turbo by deleting
    * `ACE-Step1.5-GGUF` would take the base build with it. So when the runtime
    * can do it, deletion goes through audio.cpp, which removes one package

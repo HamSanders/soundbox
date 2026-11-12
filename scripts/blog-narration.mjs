@@ -1,23 +1,23 @@
 #!/usr/bin/env node
 /**
- * Narrate a blog post with Soundbox, and keep the timings the player follows.
+ * Narrate a blog post with Konchi, and keep the timings the player follows.
  *
  *   node scripts/blog-narration.mjs plan   <slug>               > lines.json
  *   node scripts/blog-narration.mjs finish <slug> <story-id>
  *
- * `plan` turns a post into the lines of a Soundbox story: one spoken block per
+ * `plan` turns a post into the lines of a Konchi story: one spoken block per
  * paragraph or list item, in the order the page renders them, with headings
  * turned into pauses and code, tables and images left out. Feed its output to
- * `soundbox.add_lines` (or POST it as segments), then `soundbox.speak_story`
- * and `soundbox.export_story`.
+ * `konchi.add_lines` (or POST it as segments), then `konchi.speak_story`
+ * and `konchi.export_story`.
  *
- * `finish` reads the voiced story back from the running Soundbox server, finds
+ * `finish` reads the voiced story back from the running Konchi server, finds
  * its export, encodes it to the site's audio format and writes the per-block
  * start times to `site/content/blog/narration/<slug>.json`, which the post
  * page imports at build time.
  *
  * A block is what the page highlights. Its number is its position among the
- * `.soundbox-doc` elements that `blogReadableBlocks()` in
+ * `.konchi-doc` elements that `blogReadableBlocks()` in
  * `site/src/blog/narration.ts` selects, so the two walks have to agree: a
  * paragraph is a `<p>` with text, a tight list item is its `<li>`, a loose
  * list item is each `<p>` inside it. The number travels through the story in
@@ -34,7 +34,7 @@ import { marked } from "marked";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const BLOG = join(ROOT, "site/content/blog");
-const SERVER = process.env.SOUNDBOX_URL ?? "http://127.0.0.1:17494";
+const SERVER = process.env.KONCHI_URL ?? process.env.SOUNDBOX_URL ?? "http://127.0.0.1:17494";
 
 /** The narrator. Chatterbox clone from the shared library (Nightfall's Bea). */
 export const NARRATOR = {
@@ -226,7 +226,7 @@ export function blocksOf(markdown) {
   return items;
 }
 
-/** Story lines for `soundbox.add_lines`. */
+/** Story lines for `konchi.add_lines`. */
 function storyLines(items) {
   const lines = [];
   for (const item of items) {
@@ -256,7 +256,7 @@ async function api(path, init) {
 
 /**
  * Append the post's lines to a story, one segment each, in order.
- * The same `createSegment` call `soundbox.add_lines` makes, without pasting a
+ * The same `createSegment` call `konchi.add_lines` makes, without pasting a
  * few thousand words of script through a tool call.
  */
 async function load(slug, storyId) {
@@ -287,7 +287,7 @@ async function layout(storyId) {
   let prev = null;
   for (const seg of segments) {
     if (seg.kind !== "pause" && !seg.sound_id) throw new Error(`line ${seg.position} has not been voiced`);
-    // Soundbox trims each take's trailing silence, so two halves of one
+    // Konchi trims each take's trailing silence, so two halves of one
     // paragraph would otherwise run together without a breath.
     if (seg.kind !== "pause" && prev && prev.kind !== "pause") cursor += SENTENCE_GAP_S;
     prev = seg;

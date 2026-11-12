@@ -6,12 +6,12 @@ import type { FastifyInstance } from "fastify";
 
 import { ModelError } from "../errors.js";
 import { engineInstallRequestSchema } from "../models/releaseInstall.js";
-import type { SoundboxService } from "../service.js";
+import type { KonchiService } from "../service.js";
 import { HttpError } from "./helpers.js";
 
 type IdParams = { Params: { model_id: string } };
 
-export function registerModels(app: FastifyInstance, svc: SoundboxService): void {
+export function registerModels(app: FastifyInstance, svc: KonchiService): void {
   app.get("/api/health", async () => svc.health());
 
   app.get("/api/models", async () => svc.listModels());

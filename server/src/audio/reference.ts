@@ -12,7 +12,7 @@
  * so they are joined into one file: each clip levelled to the group's
  * median loudness, then laid end to end with a short pause between. Voicebox
  * does the same. Averaging embeddings would be the cleverer version, but the
- * families Soundbox drives have no embedding to average — they take a WAV.
+ * families Konchi drives have no embedding to average — they take a WAV.
  */
 
 import { ModelError } from "../errors.js";

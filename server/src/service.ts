@@ -58,6 +58,7 @@ import type {
 } from "./llm/assistant.js";
 import { ImageService, type ImageStatus } from "./image/service.js";
 import { EndpointService } from "./endpoints/service.js";
+import { envVar } from "./env.js";
 
 /**
  * What `GET /api/models/audiocpp/runtime` answers. Shaped like `LlmStatus`'s
@@ -122,7 +123,7 @@ import {
 import { StoryHub } from "./story-hub.js";
 import { McpTelemetry } from "./telemetry.js";
 
-const log = getLogger("soundbox.service");
+const log = getLogger("konchi.service");
 
 /** `replace(/\/+$/, "")` backtracks quadratically on a long run of slashes. */
 function trimTrailingSlashes(value: string): string {
@@ -219,7 +220,7 @@ function openDatabase(path: string, prune: boolean): Database {
   return db;
 }
 
-export class SoundboxService {
+export class KonchiService {
   readonly config: Config;
   /** Not `readonly`: switching profile closes this and opens the next
    *  profile's file. Everything else reaches the database through `svc.db` at
@@ -419,7 +420,7 @@ export class SoundboxService {
             ? await model.generate("a single short wooden click", 1, {
                 steps: info.defaults.steps ?? null,
               })
-            : await model.speak("Soundbox self test.", {});
+            : await model.speak("Konchi self test.", {});
         const samples = rendered.audio[0]?.length ?? 0;
         settle({
           model: modelId,
@@ -554,7 +555,7 @@ export class SoundboxService {
       let inputPath = sourcePath;
       const { audio: sourceAudio, sampleRate: sourceRate } = dsp.readWav(sourcePath);
       if (sourceRate !== info.sample_rate) {
-        editTmp = await mkdtemp(join(tmpdir(), "soundbox-edit-resample-"));
+        editTmp = await mkdtemp(join(tmpdir(), "konchi-edit-resample-"));
         inputPath = join(editTmp, "resampled.wav");
         dsp.writeWav(
           inputPath,
@@ -1225,7 +1226,7 @@ export class SoundboxService {
       // The tail, written where the CLI can read it. A fresh directory per
       // pass rather than one file rewritten, so a crashed pass cannot leave a
       // half-written clip for the next one to read.
-      const tmp = await mkdtemp(join(tmpdir(), "soundbox-extend-"));
+      const tmp = await mkdtemp(join(tmpdir(), "konchi-extend-"));
       try {
         const tailPath = join(tmp, "tail.wav");
         const tail = dsp.trimRange(take, rate, haveS - window, haveS);
@@ -1805,7 +1806,7 @@ export class SoundboxService {
     let tmpDir: string | null = null;
     const { audio: sourceAudio, sampleRate: sourceRate } = dsp.readWav(sourcePath);
     if (sourceRate !== info.sample_rate) {
-      tmpDir = await mkdtemp(join(tmpdir(), "soundbox-sep-resample-"));
+      tmpDir = await mkdtemp(join(tmpdir(), "konchi-sep-resample-"));
       sepInputPath = join(tmpDir, "resampled.wav");
       dsp.writeWav(
         sepInputPath,
@@ -2308,7 +2309,7 @@ export class SoundboxService {
       duration_s: voice.samples?.[i]?.duration_s ?? null,
     }));
     return {
-      format: "soundbox-voice",
+      format: "konchi-voice",
       version: 1,
       exported_at: now(),
       voice: {
@@ -2328,7 +2329,7 @@ export class SoundboxService {
    * A name already in the library gets " (2)", " (3)"… rather than replacing
    * the existing voice: an import is a copy, and two voices called "Narrator"
    * would make every voice picker ambiguous. A model this library does not
-   * know (an export from a newer Soundbox, or a custom entry) is dropped
+   * know (an export from a newer Konchi, or a custom entry) is dropped
    * rather than failing the import — the clips still work with any model
    * that clones, and the voice can be pointed at one afterwards. A built-in
    * whose model is unknown has nothing left to speak with, so that one fails.
@@ -2351,7 +2352,7 @@ export class SoundboxService {
       if (modelId === null) {
         throw new ModelError(
           `'${file.voice.name}' is a built-in voice of ${file.voice.model_id ?? "an unnamed model"}, ` +
-            "which this Soundbox doesn't have.",
+            "which this Konchi doesn't have.",
         );
       }
       return this.createVoice({
@@ -2629,7 +2630,7 @@ export class SoundboxService {
     let tmpDir: string | null = null;
     const { audio: sourceAudio, sampleRate: sourceRate } = dsp.readWav(sourcePath);
     if (sourceRate !== info.sample_rate) {
-      tmpDir = await mkdtemp(join(tmpdir(), "soundbox-vc-resample-"));
+      tmpDir = await mkdtemp(join(tmpdir(), "konchi-vc-resample-"));
       inputPath = join(tmpDir, "resampled.wav");
       dsp.writeWav(
         inputPath,
@@ -3401,8 +3402,8 @@ export class SoundboxService {
   /**
    * Which audio.cpp binary is in force, and where its weights live.
    *
-   * The information existed only in `soundbox model status audiocpp` before
-   * this — so a user whose binary resolved via SOUNDBOX_AUDIOCPP_BIN or PATH
+   * The information existed only in `konchi model status audiocpp` before
+   * this — so a user whose binary resolved via KONCHI_AUDIOCPP_BIN or PATH
    * had no way to see in the app which one won, or what backend it picked.
    */
   async audiocppRuntime(): Promise<AudioCppRuntimeStatus> {
@@ -3445,10 +3446,10 @@ export class SoundboxService {
       endpoint: `${trimTrailingSlashes(baseUrl)}/mcp`,
       // The absolute path to this install's own bridge, not a name.
       //
-      // `npx soundbox-mcp` cannot work: the package is private and named
-      // @soundbox/server, so nothing resolves from the registry. npm does link
+      // `npx konchi-mcp` cannot work: the package is private and named
+      // @konchi/server, so nothing resolves from the registry. npm does link
       // the bin, but only into the checkout's own node_modules/.bin, which is
-      // not on the PATH an MCP client spawns with — so a bare `soundbox-mcp`
+      // not on the PATH an MCP client spawns with — so a bare `konchi-mcp`
       // fails too, and fails as "command not found" with nothing to go on.
       // Printing the resolved path means the copy button yields a line that
       // works on the machine reading it.
@@ -3457,7 +3458,7 @@ export class SoundboxService {
       // src through tsx, but the bridge a client spawns is plain node, which
       // cannot execute the TypeScript sitting next to it.
       stdio_command: `node ${resolve(import.meta.dirname, "..", "dist", "mcp", "stdio.js")}`,
-      server_name: "soundbox",
+      server_name: "konchi",
       server_version: VERSION,
       tools,
       clients,
@@ -3485,8 +3486,8 @@ export class SoundboxService {
   tailLog(lines = 200): string[] {
     // The entry point records the file it actually opened; each server instance
     // has its own so a sidecar's lines don't interleave with ours.
-    const envPath = process.env.SOUNDBOX_LOG_FILE;
-    const path = envPath ? envPath : join(this.config.paths.root, "soundbox.log");
+    const envPath = envVar("KONCHI_LOG_FILE");
+    const path = envPath ? envPath : join(this.config.paths.root, "konchi.log");
     let text: string;
     try {
       text = readFileSync(path, "utf-8");

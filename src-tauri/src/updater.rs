@@ -39,8 +39,8 @@ async fn run(app: &AppHandle) -> Result<(), String> {
     let install = app
         .dialog()
         .message(format!(
-            "Soundbox {} is available. You have {}.\n\n\
-             Install it now? Soundbox will close, update and restart. \
+            "Konchi {} is available. You have {}.\n\n\
+             Install it now? Konchi will close, update and restart. \
              Your models and projects are kept.",
             update.version, update.current_version
         ))

@@ -142,8 +142,8 @@ export type StudioAction =
    * line append after the last, which is what writing a script means and what
    * `SegmentCreate` already does.
    *
-   * The same shape MCP's `soundbox.add_lines` takes, deliberately: an agent
-   * driving Soundbox from outside and the assistant inside it should not have
+   * The same shape MCP's `konchi.add_lines` takes, deliberately: an agent
+   * driving Konchi from outside and the assistant inside it should not have
    * two different ideas of what a script is.
    */
   | {

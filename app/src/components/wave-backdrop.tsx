@@ -101,7 +101,7 @@ function Drift({
 }) {
   return (
     <div
-      className="soundbox-wave-drift absolute flex w-[200%]"
+      className="konchi-wave-drift absolute flex w-[200%]"
       style={{
         top: `${top * 100}%`,
         height: `${height * 100}%`,
@@ -182,7 +182,7 @@ function EqTexture({ seed, lane }: { seed: string; lane: number }) {
               the parent owns the seeded resting level, the child owns only the
               transform, so the animation never has to know about layout. */}
           <div
-            className="soundbox-eq-pulse h-full w-full rounded-[1px]"
+            className="konchi-eq-pulse h-full w-full rounded-[1px]"
             style={{
               background: `linear-gradient(to top, ${laneColor(lane, 1)}, ${laneColor(lane + 2, 0.15)})`,
               ["--eq-duration" as string]: `${col.duration}s`,
@@ -209,7 +209,7 @@ function RingsTexture({ lane }: { lane: number }) {
       {Array.from({ length: RINGS }, (_, i) => (
         <div
           key={i}
-          className="soundbox-ring-pulse absolute inset-0 rounded-full border"
+          className="konchi-ring-pulse absolute inset-0 rounded-full border"
           style={{
             borderColor: laneColor(lane + (i % 2) * 2, 1),
             ["--ring-duration" as string]: `${period}s`,

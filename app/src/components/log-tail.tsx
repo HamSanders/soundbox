@@ -223,7 +223,7 @@ export function LogTail({
       {!compact && (
         <p className="text-muted-foreground text-xs">
           Showing {filtered.length} of {entries.length} lines. The full log lives in your data
-          directory as <code>soundbox.log</code> and survives restarts.
+          directory as <code>konchi.log</code> and survives restarts.
         </p>
       )}
     </div>

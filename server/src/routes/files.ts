@@ -37,7 +37,7 @@ export function registerFiles(app: FastifyInstance, config: Config): void {
         return send(reply, dst, "audio/mpeg", basename(dst));
       }
       // ffmpeg missing (or the transcode itself failed) is common enough —
-      // Soundbox doesn't bundle ffmpeg — that erroring here would make "set
+      // Konchi doesn't bundle ffmpeg — that erroring here would make "set
       // output format to mp3" break downloads outright. Falling back to the
       // WAV is the friendlier outcome, but doing that silently is its own bug:
       // a user who asked for mp3 and always gets a .wav with no explanation has

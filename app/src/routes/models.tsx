@@ -610,7 +610,7 @@ function ModelListItem({
                             )
                           </>
                         )}
-                        . Click Install below and Soundbox will handle it.
+                        . Click Install below and Konchi will handle it.
                       </p>
                     </Notice>
                   ) : (
@@ -622,7 +622,7 @@ function ModelListItem({
                       <div className="space-y-2 leading-relaxed">
                         <p>
                           {model.manual_install_reason ??
-                            `${model.name} needs its own virtualenv, so Soundbox can't install it automatically.`}
+                            `${model.name} needs its own virtualenv, so Konchi can't install it automatically.`}
                         </p>
                         {model.install_command && (
                           <code className="block overflow-x-auto rounded bg-muted/60 px-2 py-1 text-[11px] text-foreground/80">
@@ -785,7 +785,7 @@ function AudioCppCatalogRow({
           {!entry.verified && (
             <span
               className="label-caps bg-warn/10 text-warn ring-warn/35 shrink-0 rounded-sm px-1.5 py-0.5 ring-1 ring-inset"
-              title="Nobody has generated a sound with this model through Soundbox yet — defaults and even the licence may be unconfirmed."
+              title="Nobody has generated a sound with this model through Konchi yet — defaults and even the licence may be unconfirmed."
             >
               Unverified
             </span>

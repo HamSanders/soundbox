@@ -1,5 +1,5 @@
 /**
- * Soundbox HTTP API client.
+ * Konchi HTTP API client.
  *
  * Types mirror docs/API.md exactly. Every network call in the app goes through
  * this module, so swapping in the in-memory mock (VITE_MOCK=1) is a one-line
@@ -139,7 +139,7 @@ export interface Model {
   /** Whether the engine that runs this model is installed. False with
    *  weights present is exactly the "needs_runtime" case. */
   installed_deps: boolean;
-  /** Whether Soundbox can install this model's engine itself. */
+  /** Whether Konchi can install this model's engine itself. */
   auto_installable?: boolean;
   /** Plain-language explanation shown when auto_installable is false. */
   manual_install_reason?: string | null;
@@ -240,11 +240,11 @@ export interface VoiceSample {
   created_at: string;
 }
 
-/** A voice as a portable file (`.soundbox-voice.json`): its fields plus its
+/** A voice as a portable file (`.konchi-voice.json`): its fields plus its
  *  clips as base64 WAV. Opaque to the app — it is downloaded and uploaded
  *  whole, never edited. */
 export interface VoiceExportFile {
-  format: "soundbox-voice";
+  format: "konchi-voice";
   version: number;
   voice: { name: string; kind: "clone" | "builtin" };
   [key: string]: unknown;
@@ -377,7 +377,7 @@ export interface LlmStatus {
 }
 
 /** One entry of GET /api/image/status's `catalog` — an artwork checkpoint
- *  Soundbox can install for you, and whether it already is. */
+ *  Konchi can install for you, and whether it already is. */
 /** One weight file and the sd-server flag it loads under. A turbo checkpoint
  *  is one of these; SD 3.5 is four (`-m`, `--clip_l`, `--clip_g`, `--t5xxl`). */
 export interface ImageWeightFile {
@@ -496,7 +496,7 @@ export interface EnhanceRequest {
 
 export interface EnhanceResponse {
   variations: string[];
-  /** Short suggested keywords for Soundbox's own Tags field — a separate
+  /** Short suggested keywords for Konchi's own Tags field — a separate
    *  thing from `variations`, which stays a natural-phrase prompt. Apply
    *  these to `ComposerSettings.tags`, never into the prompt text. */
   tags: string[];
@@ -1348,7 +1348,7 @@ export interface JobRef {
   job_id: string;
 }
 
-/** Unsubscribe function returned by {@link SoundboxApi.subscribeJob}. */
+/** Unsubscribe function returned by {@link KonchiApi.subscribeJob}. */
 export type Unsubscribe = () => void;
 
 /* ------------------------------------------------------------------- mcp */
@@ -1400,7 +1400,7 @@ export interface McpCall {
 
 export interface OtelStatus {
   enabled: boolean;
-  /** Whether the `soundbox[otel]` extra is importable on the server. */
+  /** Whether the `konchi[otel]` extra is importable on the server. */
   installed: boolean;
   endpoint?: string | null;
   /** Where `endpoint` came from — "env" wins over the settings value. */
@@ -1472,9 +1472,9 @@ export interface SkillInstallResult {
 /**
  * Which audio.cpp binary won, and where its weights live.
  *
- * Until this existed the answer was only available from `soundbox model status
+ * Until this existed the answer was only available from `konchi model status
  * audiocpp` on the command line, so someone whose binary resolved from
- * SOUNDBOX_AUDIOCPP_BIN or PATH had no way to see it in the app.
+ * KONCHI_AUDIOCPP_BIN or PATH had no way to see it in the app.
  */
 export interface AudioCppRuntimeStatus {
   mode: "managed" | "external";
@@ -1483,7 +1483,7 @@ export interface AudioCppRuntimeStatus {
     version: string | null;
     path: string | null;
     backend: string | null;
-    /** "managed" is Soundbox's own install; "env" and "path" are the user's. */
+    /** "managed" is Konchi's own install; "env" and "path" are the user's. */
     source: "managed" | "env" | "path" | null;
   };
   models_dir: string;
@@ -1491,7 +1491,7 @@ export interface AudioCppRuntimeStatus {
   models_dir_default: string;
 }
 
-export interface SoundboxApi {
+export interface KonchiApi {
   getHealth(): Promise<HealthStatus>;
   listModels(): Promise<Model[]>;
   listAudioCppCatalog(): Promise<AudioCppCatalogEntry[]>;
@@ -1707,14 +1707,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
         Accept: "application/json",
         // The server refuses mutating /api requests that a cross-site page
         // could send without a preflight; this header proves we're not one.
-        "X-Soundbox": "1",
+        "X-Konchi": "1",
         ...(init?.body ? { "Content-Type": "application/json" } : {}),
         ...init?.headers,
       },
     });
   } catch {
     throw new ApiError(
-      "Could not reach the Soundbox backend. Is the server running?",
+      "Could not reach the Konchi backend. Is the server running?",
       0,
     );
   }
@@ -1758,7 +1758,7 @@ function qs(query: object | undefined): string {
 
 const POLL_INTERVAL_MS = 750;
 
-export const httpApi: SoundboxApi = {
+export const httpApi: KonchiApi = {
   getHealth: () => request<HealthStatus>("/api/health"),
 
   listModels: () => request<Model[]>("/api/models"),
@@ -1891,7 +1891,7 @@ export const httpApi: SoundboxApi = {
 
   /** Reveal the sound's WAV on disk — Explorer, Finder, or the Linux
    *  desktop's default file manager. Only makes sense locally, which is the
-   *  only way Soundbox runs. */
+   *  only way Konchi runs. */
   revealSound: (id) =>
     request<void>(`/api/sounds/${encodeURIComponent(id)}/reveal`, { method: "POST" }),
 
@@ -2255,7 +2255,7 @@ export const IS_MOCK = import.meta.env.VITE_MOCK === "1";
 
 import { mockApi } from "./mock";
 
-export const api: SoundboxApi = IS_MOCK ? mockApi : httpApi;
+export const api: KonchiApi = IS_MOCK ? mockApi : httpApi;
 
 /** Human-readable message for anything thrown by the API layer. */
 export function errorMessage(err: unknown): string {

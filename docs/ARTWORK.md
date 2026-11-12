@@ -24,10 +24,10 @@ prompt assistant has):
 | Mode | What it does |
 | --- | --- |
 | **Off** (default) | No artwork anywhere. |
-| **Local** | Soundbox installs [stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp)'s `sd-server` and a small checkpoint, and runs them for you. |
-| **External** | Soundbox talks to an image server you already run. |
+| **Local** | Konchi installs [stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp)'s `sd-server` and a small checkpoint, and runs them for you. |
+| **External** | Konchi talks to an image server you already run. |
 
-If Automatic1111 or a compatible server is already listening, Soundbox finds
+If Automatic1111 or a compatible server is already listening, Konchi finds
 it and offers a one-click switch to External. It probes 127.0.0.1 on 7860,
 1234 and 8080 on every status fetch, with a 400 ms timeout.
 
@@ -36,7 +36,7 @@ it and offers a one-click switch to External. It probes 127.0.0.1 on 7860,
 The engine is one native binary, fetched from stable-diffusion.cpp's GitHub
 releases and cached under `<data dir>/bin/sd/<version>/`. It uses the same
 managed-binary system as `audiocpp_cli` and `llama-server`, including the
-`SOUNDBOX_SD_SERVER_BIN` override for your own build. See
+`KONCHI_SD_SERVER_BIN` override for your own build. See
 [INSTALL.md](INSTALL.md).
 
 Three models are offered:
@@ -107,7 +107,7 @@ Add entries to the same file the audio side uses,
 ```
 
 - An **absolute** `path` is a file already on your disk. Nothing is
-  downloaded, and Soundbox never deletes weights it did not fetch. A relative
+  downloaded, and Konchi never deletes weights it did not fetch. A relative
   path needs an `hf_repo` to resolve against.
 - `flag` is passed to sd-server verbatim, so anything it accepts works,
   including `--vae` and `--diffusion-model`.
@@ -135,15 +135,15 @@ explicitly:
 - **OpenAI-compatible:** `POST /v1/images/generations`. OpenAI, LocalAI, most
   proxies.
 
-Soundbox adds that path to the base URL without doubling it, so
+Konchi adds that path to the base URL without doubling it, so
 `http://ai.lan:8080` and `http://ai.lan:8080/v1` (or `…/sdapi/v1` for
 Automatic1111) all work. An error names the full URL it tried.
 
 An API key is optional and write-only, like the Hugging Face token. The server
 never returns it.
 
-Soundbox always requests the image inline as base64 (`response_format:
-"b64_json"`). An endpoint that answers with a URL is refused, so Soundbox
+Konchi always requests the image inline as base64 (`response_format:
+"b64_json"`). An endpoint that answers with a URL is refused, so Konchi
 never fetches from a second host.
 
 ## What gets drawn

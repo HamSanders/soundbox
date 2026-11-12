@@ -512,7 +512,7 @@ function LineRow({
             height="calc(100% - 2px)"
             rx="5"
             fill="none"
-            className="stroke-primary/60 soundbox-crawl"
+            className="stroke-primary/60 konchi-crawl"
             strokeWidth="1.5"
             strokeDasharray="8 4"
           />

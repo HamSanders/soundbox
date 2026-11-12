@@ -68,7 +68,7 @@ function audioJsonLd(
     ...(facts
       ? { duration: `PT${facts[0].toFixed(2)}S`, contentSize: formatSize(facts[1]) }
       : {}),
-    ...(modelName ? { creditText: `Generated with ${modelName} in Soundbox` } : {}),
+    ...(modelName ? { creditText: `Generated with ${modelName} in Konchi` } : {}),
   };
 }
 
@@ -102,13 +102,13 @@ function SampleBody({
   return (
     <>
       <SeoHead
-        title={`${sample.title} sound effect | Soundbox`}
+        title={`${sample.title} sound effect | Konchi`}
         description={`${sample.title} sound effect: "${excerpt(sample.prompt, 90)}"${modelName ? `. Generated with ${modelName}` : ""}. Download the MP3 or make a variation on your own machine.`}
         path={`/sfx/${category.slug}/${sample.slug}`}
         {...(category.coverImage
           ? {
               image: coverCard(category.coverImage),
-              imageAlt: `Cover art for Soundbox's ${category.name.toLowerCase()} sound effects`,
+              imageAlt: `Cover art for Konchi's ${category.name.toLowerCase()} sound effects`,
             }
           : {})}
         jsonLd={[

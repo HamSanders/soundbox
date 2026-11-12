@@ -90,7 +90,7 @@ function TrackBody({ track }: { track: MusicTrack }) {
   return (
     <>
       <SeoHead
-        title={`${track.title} (${track.genre}) | Soundbox`}
+        title={`${track.title} (${track.genre}) | Konchi`}
         description={`Listen to "${track.title}", a ${track.genre.toLowerCase()} ${kind} track generated on one desktop GPU with ${MUSIC_MODEL_NAMES[track.model]}, and copy the exact prompt that made it.`}
         path={`/music/${track.slug}`}
         jsonLd={[
@@ -253,7 +253,7 @@ function TrackBody({ track }: { track: MusicTrack }) {
             />
           </dl>
           <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
-            {licence.note} Soundbox itself is MIT and imposes no terms of its own on what you
+            {licence.note} Konchi itself is MIT and imposes no terms of its own on what you
             generate.
           </p>
         </section>

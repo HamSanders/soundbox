@@ -90,22 +90,22 @@ describe("companionAsset", () => {
  */
 describe("status with a user-supplied binary", () => {
   let tmp: string;
-  const previous = process.env.SOUNDBOX_LLAMA_SERVER_BIN;
+  const previous = process.env.KONCHI_LLAMA_SERVER_BIN;
 
   beforeAll(async () => {
-    tmp = await mkdtemp(join(tmpdir(), "soundbox-llama-bin-"));
+    tmp = await mkdtemp(join(tmpdir(), "konchi-llama-bin-"));
   });
 
   afterAll(async () => {
-    if (previous === undefined) delete process.env.SOUNDBOX_LLAMA_SERVER_BIN;
-    else process.env.SOUNDBOX_LLAMA_SERVER_BIN = previous;
+    if (previous === undefined) delete process.env.KONCHI_LLAMA_SERVER_BIN;
+    else process.env.KONCHI_LLAMA_SERVER_BIN = previous;
     await rm(tmp, { recursive: true, force: true });
   });
 
   it("reports an env-supplied binary as installed, with no invented version", async () => {
     const fake = join(tmp, BINARY_NAME);
     await writeFile(fake, "");
-    process.env.SOUNDBOX_LLAMA_SERVER_BIN = fake;
+    process.env.KONCHI_LLAMA_SERVER_BIN = fake;
 
     const s = await status();
     expect(s.installed).toBe(true);
@@ -115,7 +115,7 @@ describe("status with a user-supplied binary", () => {
   });
 
   it("reports nothing installed when the override points at a missing file", async () => {
-    process.env.SOUNDBOX_LLAMA_SERVER_BIN = join(tmp, "not-there");
+    process.env.KONCHI_LLAMA_SERVER_BIN = join(tmp, "not-there");
     const s = await status();
     expect(s.installed).toBe(false);
     expect(s.source).toBeNull();

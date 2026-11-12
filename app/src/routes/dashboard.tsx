@@ -8,7 +8,7 @@ import {
   AudioLinesIcon,
   MessageSquareIcon,
   MusicIcon,
-  SparklesIcon,
+  AudioWaveformIcon,
   TriangleAlertIcon,
 } from "lucide-react";
 
@@ -31,7 +31,7 @@ const RECENT_LIMIT = 5;
 const QUICK_LINKS = [
   {
     to: "/studio",
-    icon: SparklesIcon,
+    icon: AudioWaveformIcon,
     label: "Studio",
     hint: "Everything you have started",
   },
@@ -93,7 +93,7 @@ export function DashboardPage() {
             <div>
               <p className="text-sm font-medium">No models installed yet</p>
               <p className="text-muted-foreground text-xs">
-                Soundbox cannot make anything until one is on your disk.
+                Konchi cannot make anything until one is on your disk.
               </p>
             </div>
           </div>

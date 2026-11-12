@@ -90,9 +90,9 @@ export function writeCrawlerFiles(
   const line = (p: Page) =>
     `- [${p.title || p.rel}](${root}/${p.rel})${p.description ? `: ${p.description}` : ""}`;
   const body = [
-    `# ${home?.title || "Soundbox"}`,
+    `# ${home?.title || "Konchi"}`,
     "",
-    `> ${home?.description || "Soundbox makes sound effects, music and voices locally from open-weight models."}`,
+    `> ${home?.description || "Konchi makes sound effects, music and voices locally from open-weight models."}`,
     "",
     "Source code: https://github.com/HamSanders/soundbox",
     "",

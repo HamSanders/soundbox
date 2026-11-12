@@ -1,7 +1,7 @@
 /**
  * The studio floor — shared by both builders, and by neither exclusively.
  *
- * Soundbox has two tools that make sounds, and this file is the half they
+ * Konchi has two tools that make sounds, and this file is the half they
  * have in common: a timeline, a library, a chat, a device rack, and the
  * plumbing that keeps a story's clips and its script in step. What the two
  * builders disagree about is small enough to be a prop.
@@ -57,7 +57,7 @@ import {
   PlayIcon,
   ScrollTextIcon,
   SlidersHorizontalIcon,
-  SparklesIcon,
+  TextCursorInputIcon,
   SquareIcon,
   MoreHorizontalIcon,
   PanelRightOpenIcon,
@@ -250,7 +250,7 @@ const PANELS: {
   // still there beside the thing it changed.
   { id: "chat", label: "Chat", key: "t", icon: MessageSquareIcon },
   { id: "script", label: "Script", key: "r", icon: ScrollTextIcon, builders: ["script"] },
-  { id: "insert", label: "Prompt", key: "p", icon: SparklesIcon },
+  { id: "insert", label: "Prompt", key: "p", icon: TextCursorInputIcon },
   { id: "library", label: "Library", key: "b", icon: LibraryBigIcon },
   { id: "history", label: "History", key: "i", icon: HistoryIcon },
   { id: "sample", label: "Sample", key: "e", icon: AudioWaveformIcon },
@@ -279,10 +279,10 @@ const PANELS: {
 ];
 
 /** The glyph for a panel id. One table, so the header, the menu and the tab
- *  agree; `SparklesIcon` is the fallback only so a panel added to an
+ *  agree; `TextCursorInputIcon` is the fallback only so a panel added to an
  *  `ArtifactStack` and forgotten in `PANELS` still draws something. */
 const panelIcon = (id: string): LucideIcon =>
-  PANELS.find((p) => p.id === id)?.icon ?? SparklesIcon;
+  PANELS.find((p) => p.id === id)?.icon ?? TextCursorInputIcon;
 
 /**
  * Keys the timeline has already claimed, which a panel may not take.
@@ -571,7 +571,7 @@ export function StudioEditor({
   const popOut = (id: string, at: PopOutAt): void => {
     const win = openPopoutWindow(id, at);
     if (win === null) {
-      toast.error("The browser blocked the new window. Allow pop-ups for Soundbox and try again.");
+      toast.error("The browser blocked the new window. Allow pop-ups for Konchi and try again.");
       return;
     }
     win.focus();
@@ -2973,7 +2973,7 @@ export function StudioEditor({
           <PopoutWindow
             key={id}
             win={win}
-            title={`${artifact.label} · ${story.data.title} · Soundbox`}
+            title={`${artifact.label} · ${story.data.title} · Konchi`}
             onClosed={() => dock(id)}
           >
             <PopoutPanelFrame

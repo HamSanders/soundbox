@@ -24,7 +24,7 @@ let storyId: string;
 let segmentId: string;
 
 beforeAll(async () => {
-  dataDir = await mkdtemp(join(tmpdir(), "soundbox-delivery-test-"));
+  dataDir = await mkdtemp(join(tmpdir(), "konchi-delivery-test-"));
   app = buildApp(new Config(dataDir), { serveUi: false });
   await app.ready();
 

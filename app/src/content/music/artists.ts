@@ -1,5 +1,5 @@
 /**
- * Soundbox Records — the mock label on `/music`, and its twenty-act roster.
+ * Konchi Records — the mock label on `/music`, and its twenty-act roster.
  *
  * The rest of the page is strict about invention (every track credits the
  * model that rendered it), so a label of fictional artists only works if it
@@ -22,7 +22,7 @@
  */
 
 export const LABEL = {
-  name: "Soundbox Records",
+  name: "Konchi Records",
   tagline: "A fictional label where every artist is a prompt.",
   /** Catalog prefix — each act's number is SBX- plus its roster position. */
   catalogPrefix: "SBX",

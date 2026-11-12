@@ -14,13 +14,13 @@
 import type { FastifyInstance } from "fastify";
 
 import { engineInstallRequestSchema } from "../models/releaseInstall.js";
-import type { SoundboxService } from "../service.js";
+import type { KonchiService } from "../service.js";
 
 type ModelParams = { Params: { model_id: string } };
 type SoundParams = { Params: { sound_id: string } };
 type VoiceParams = { Params: { voice_id: string } };
 
-export function registerImage(app: FastifyInstance, svc: SoundboxService): void {
+export function registerImage(app: FastifyInstance, svc: KonchiService): void {
   app.get("/api/image/status", async () => svc.imageStatus());
 
   app.post("/api/image/engine/install", async (request, reply) => {

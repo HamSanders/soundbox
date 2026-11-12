@@ -26,7 +26,7 @@ import {
   MinusIcon,
   PlusIcon,
   SlidersHorizontalIcon,
-  SparklesIcon,
+  PenLineIcon,
   SquareIcon,
 } from "lucide-react";
 
@@ -446,7 +446,7 @@ export function MusicRequestForm({
                   disabled={enhancing || !settings.prompt.trim()}
                   onClick={() => enhance()}
                 >
-                  {enhancing ? <LoaderCircleIcon className="animate-spin" /> : <SparklesIcon />}
+                  {enhancing ? <LoaderCircleIcon className="animate-spin" /> : <PenLineIcon />}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>

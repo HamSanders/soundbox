@@ -41,7 +41,7 @@ const GROUPS: { id: ModelParam["group"]; label: string; hint: string }[] = [
   { id: "sampling", label: "Variation", hint: "How far the model may wander from its safest read." },
   { id: "phrasing", label: "Phrasing", hint: "Where it breaks and breathes." },
   { id: "quality", label: "Quality", hint: "Time spent against fidelity." },
-  { id: "voice", label: "Voice", hint: "Mostly superseded by Soundbox's own voice library." },
+  { id: "voice", label: "Voice", hint: "Mostly superseded by Konchi's own voice library." },
   { id: "advanced", label: "Advanced", hint: "Everything else this family accepts." },
 ];
 

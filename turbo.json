@@ -15,7 +15,7 @@
     },
     "lint": {},
     "test": {
-      "env": ["SOUNDBOX_TEST_REPORT"],
+      "env": ["KONCHI_TEST_REPORT"],
       "outputs": ["test-results/**"]
     }
   }

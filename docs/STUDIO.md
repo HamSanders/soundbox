@@ -88,7 +88,7 @@ window. Popped-out panels are marked ↗ in the Panels menu.
 Pop-out windows do not survive a reload. Browsers only open windows in
 response to a click or a drag, so when the studio reloads every panel comes
 back into the page. In a browser, a pop-up blocker can refuse the window. If
-it does, the studio says so: allow pop-ups for Soundbox and try again. The
+it does, the studio says so: allow pop-ups for Konchi and try again. The
 desktop app opens them as native windows.
 
 ## The panels
@@ -348,7 +348,7 @@ The lane right-click menu has the same action as **New recording**. The take
 still goes onto a new lane of its own.
 
 The browser picks the container (WebM/Opus on Chrome and Firefox, MP4/AAC on
-Safari). Soundbox decodes it, converts it to WAV, uploads it to your library as
+Safari). Konchi decodes it, converts it to WAV, uploads it to your library as
 `Take HH:MM`, and then places the clip. Takes must be library sounds because the
 timeline references clips by id and the export reads them from disk.
 
@@ -513,8 +513,8 @@ arrow by ten, `Home` and `End` jump to the ends. Wet/dry is a horizontal slider.
 >
 Racks are stored with the story, on each track next to its name, mute, solo
 and volume, so they reach every window and every machine that opens the story,
-and an agent can change them over MCP (`soundbox.add_device`,
-`soundbox.set_device`, `soundbox.remove_device`). An open studio shows an
+and an agent can change them over MCP (`konchi.add_device`,
+`konchi.set_device`, `konchi.remove_device`). An open studio shows an
 agent's change as it lands. When a lane is removed, the racks above it move
 down with their lanes. A rack saved in the browser by 0.4 is moved to the
 story the first time the story is opened.
@@ -753,21 +753,21 @@ The studio-relevant tools:
 
 | Tool                      | What it does                                                       |
 | ------------------------- | ------------------------------------------------------------------ |
-| `soundbox.create_story`   | Start a story. Sets the default delivery for every line            |
-| `soundbox.list_stories`   | Stories, most recently worked on first                             |
-| `soundbox.get_story`      | Every line: text, voice, timing, and whether it has been voiced    |
-| `soundbox.add_lines`      | Append lines: spoken lines, pauses, or existing library sounds     |
-| `soundbox.update_line`    | Words, voice, delivery, start, track, gain, mute, and trim         |
-| `soundbox.delete_line`    | Remove one line. Its audio stays in the library                    |
-| `soundbox.split_line`     | Cut a voiced line at a point in its own audio                      |
-| `soundbox.speak_story`    | Read every line that has no audio yet. This is the slow one        |
-| `soundbox.open_in_studio` | Put a library sound on a timeline, split into stems where possible |
-| `soundbox.mix_track`      | Name, mute, solo or set the level of one lane                      |
-| `soundbox.add_device`     | Put a device on a lane's rack, optionally with its knobs set        |
-| `soundbox.set_device`     | Turn a device's knobs, or bypass it                                |
-| `soundbox.remove_device`  | Take a device off a lane's rack                                    |
-| `soundbox.remove_track`   | Delete a lane and the clips on it. Lanes above slide down          |
-| `soundbox.export_story`   | Mix the arrangement down to one sound                              |
+| `konchi.create_story`   | Start a story. Sets the default delivery for every line            |
+| `konchi.list_stories`   | Stories, most recently worked on first                             |
+| `konchi.get_story`      | Every line: text, voice, timing, and whether it has been voiced    |
+| `konchi.add_lines`      | Append lines: spoken lines, pauses, or existing library sounds     |
+| `konchi.update_line`    | Words, voice, delivery, start, track, gain, mute, and trim         |
+| `konchi.delete_line`    | Remove one line. Its audio stays in the library                    |
+| `konchi.split_line`     | Cut a voiced line at a point in its own audio                      |
+| `konchi.speak_story`    | Read every line that has no audio yet. This is the slow one        |
+| `konchi.open_in_studio` | Put a library sound on a timeline, split into stems where possible |
+| `konchi.mix_track`      | Name, mute, solo or set the level of one lane                      |
+| `konchi.add_device`     | Put a device on a lane's rack, optionally with its knobs set        |
+| `konchi.set_device`     | Turn a device's knobs, or bypass it                                |
+| `konchi.remove_device`  | Take a device off a lane's rack                                    |
+| `konchi.remove_track`   | Delete a lane and the clips on it. Lanes above slide down          |
+| `konchi.export_story`   | Mix the arrangement down to one sound                              |
 
 Changing a line's words or delivery does not re-read it. Voice the line again to
 hear the change.

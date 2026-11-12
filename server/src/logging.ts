@@ -13,6 +13,7 @@
 
 import { closeSync, existsSync, mkdirSync, openSync, renameSync, rmSync, statSync, writeSync } from "node:fs";
 import { dirname } from "node:path";
+import { envVar } from "./env.js";
 
 /**
  * Kept small on purpose — a job's progress lines are throttled, so even a long
@@ -53,7 +54,7 @@ function parseLevel(name: string): number {
 export const LOG_LEVELS = Object.keys(LEVELS) as LogLevel[];
 
 /**
- * The level to run at: `--log-level` if given, else `SOUNDBOX_LOG_LEVEL`, else
+ * The level to run at: `--log-level` if given, else `KONCHI_LOG_LEVEL`, else
  * info.
  *
  * The environment variable exists because nothing that starts the server
@@ -65,7 +66,7 @@ export const LOG_LEVELS = Object.keys(LEVELS) as LogLevel[];
  */
 export function resolveLogLevel(
   flag: string | undefined,
-  env: string | undefined = process.env.SOUNDBOX_LOG_LEVEL,
+  env: string | undefined = envVar("KONCHI_LOG_LEVEL"),
 ): { level: LogLevel; source: "flag" | "env" | "default"; invalid: string | null } {
   const pick = (raw: string | undefined): LogLevel | null => {
     const v = raw?.trim().toLowerCase();
@@ -99,7 +100,7 @@ function openSink(path: string): FileSink | null {
   } catch (exc) {
     // Logging setup must not crash the server.
     console.warn(
-      `${stamp()} WARNING soundbox: could not open log file ${path} ` +
+      `${stamp()} WARNING konchi: could not open log file ${path} ` +
         `(${String(exc)}); logging to console only`,
     );
     return null;
@@ -185,5 +186,5 @@ export function configureLogging(logLevel: string, logPath: string): void {
   }
   sink = openSink(logPath);
   // service.tailLog() reads this to show the log in the app.
-  process.env.SOUNDBOX_LOG_FILE = logPath;
+  process.env.KONCHI_LOG_FILE = logPath;
 }

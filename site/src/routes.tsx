@@ -107,7 +107,7 @@ export const routes: RouteRecord[] = [
         entry: "../app/src/routes/voices.tsx",
       },
       {
-        // Marketing content about the five models Soundbox runs locally.
+        // Marketing content about the five models Konchi runs locally.
         // Not to be confused with the app's own /models route (the
         // download/load-into-VRAM management screen) — see models-hub.tsx.
         path: "models",

@@ -32,7 +32,7 @@ const MCP_URL = "http://127.0.0.1:17494/mcp";
 
 const CLIENTS = ["Claude Code", "Claude Desktop", "Cursor", "Any MCP client"];
 
-const CLIENT_JSON = `{"mcpServers":{"soundbox":{"type":"http","url":"${MCP_URL}"}}}`;
+const CLIENT_JSON = `{"mcpServers":{"konchi":{"type":"http","url":"${MCP_URL}"}}}`;
 
 /* Keyed by `CommercialUse`, which carries a fourth value the app's own
    `LicenseInfo` does not: "unknown" means nobody here has read a licence for
@@ -61,7 +61,7 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: "What is MCP?",
     answer:
-      "The Model Context Protocol is an open standard for giving an AI agent tools it can call. Soundbox runs an MCP server inside its own process, so an agent connected to it can generate sound effects, music and speech, and arrange them, without you leaving the conversation you are already in.",
+      "The Model Context Protocol is an open standard for giving an AI agent tools it can call. Konchi runs an MCP server inside its own process, so an agent connected to it can generate sound effects, music and speech, and arrange them, without you leaving the conversation you are already in.",
   },
   {
     question: "Which clients work with it?",
@@ -76,7 +76,7 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: "What does it cost per generation?",
     answer:
-      "Nothing. Generation runs on your own GPU from open-weight models you have downloaded, so there is no per-second billing and no subscription for model access. Soundbox itself is MIT-licensed.",
+      "Nothing. Generation runs on your own GPU from open-weight models you have downloaded, so there is no per-second billing and no subscription for model access. Konchi itself is MIT-licensed.",
   },
   {
     question: "How long does a generation take?",
@@ -101,7 +101,7 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: "Do I need to keep the app open?",
     answer:
-      "Yes. The MCP server runs inside the main Soundbox process, so there is no separate daemon to start. If the app is running, the tools are available. If it is not, the tools return an actionable error; they do not start a second copy that would compete for the GPU.",
+      "Yes. The MCP server runs inside the main Konchi process, so there is no separate daemon to start. If the app is running, the tools are available. If it is not, the tools return an actionable error; they do not start a second copy that would compete for the GPU.",
   },
 ];
 
@@ -145,9 +145,9 @@ function Step({
 function ExampleTranscript() {
   const calls: { tool: string; args?: string; result: string }[] = [
     {
-      tool: "soundbox.generate",
+      tool: "konchi.generate",
       args: 'prompt: "heavy wooden door slamming in a stone corridor", duration_s: 3',
-      result: "C:\\Users\\you\\.soundbox\\sounds\\9f1c2ae4….wav",
+      result: "C:\\Users\\you\\.konchi\\sounds\\9f1c2ae4….wav",
     },
   ];
   return (
@@ -187,7 +187,7 @@ function ExampleTranscript() {
             ))}
             <div className="border-border/70 bg-muted/40 rounded-xl border px-3 py-2">
               <p className="text-muted-foreground font-mono text-xs [overflow-wrap:anywhere]">
-                cp C:\Users\you\.soundbox\sounds\9f1c2ae4….wav assets/audio/vault-door.wav
+                cp C:\Users\you\.konchi\sounds\9f1c2ae4….wav assets/audio/vault-door.wav
               </p>
             </div>
           </div>
@@ -213,11 +213,11 @@ export function McpPage() {
   return (
     <div className="bg-background text-foreground min-h-svh">
       <SeoHead
-        title="MCP server for local sound generation | Soundbox"
-        description="Connect Claude Code, Claude Desktop, Cursor or any MCP client to Soundbox in one line. Sound effects, music and speech are generated on your own GPU and returned as absolute file paths. No API key, no account, no per-generation billing."
+        title="MCP server for local sound generation | Konchi"
+        description="Connect Claude Code, Claude Desktop, Cursor or any MCP client to Konchi in one line. Sound effects, music and speech are generated on your own GPU and returned as absolute file paths. No API key, no account, no per-generation billing."
         path="/mcp"
         image="/og/mcp.jpg"
-        imageAlt="The one command that connects Claude Code to Soundbox's MCP server"
+        imageAlt="The one command that connects Claude Code to Konchi's MCP server"
         jsonLd={[faqJsonLd(FAQS)]}
       />
 
@@ -231,7 +231,7 @@ export function McpPage() {
             A local sound studio your agent can call
           </h1>
           <p className="text-muted-foreground mt-4 max-w-2xl leading-relaxed text-pretty sm:text-lg">
-            Soundbox runs an MCP server inside its own process, so the agent writing your code can
+            Konchi runs an MCP server inside its own process, so the agent writing your code can
             also generate the sound effects, music and speech that go with it. Generation runs on
             your GPU from open-weight models, and the tools return absolute paths to WAVs on your
             disk. No cloud service is involved, so there is no key, no account and no
@@ -260,14 +260,14 @@ export function McpPage() {
             Connect it in one line
           </h2>
           <p className="text-muted-foreground mt-3 max-w-2xl leading-relaxed">
-            The MCP server runs inside the main Soundbox process. There is no separate daemon to
+            The MCP server runs inside the main Konchi process. There is no separate daemon to
             start: if the app is running, the server is up.
           </p>
 
           <ol className="mt-8 space-y-8">
             <Step
               n={1}
-              title="Start Soundbox"
+              title="Start Konchi"
             >
               <p className="text-muted-foreground text-sm leading-relaxed">
                 Install and run it. The full walkthrough, including downloading model weights, is
@@ -281,7 +281,7 @@ export function McpPage() {
                 In Claude Code, that is one command:
               </p>
               <CopyBlock
-                code={`claude mcp add --transport http soundbox ${MCP_URL}`}
+                code={`claude mcp add --transport http konchi ${MCP_URL}`}
                 label="Copy the claude mcp add command"
               />
               <p className="text-muted-foreground text-sm leading-relaxed">
@@ -294,7 +294,7 @@ export function McpPage() {
                 label="Copy the MCP client config"
               />
               <Note>
-                The URL has no trailing slash. Soundbox rewrites <C>/mcp</C> onto the mounted path
+                The URL has no trailing slash. Konchi rewrites <C>/mcp</C> onto the mounted path
                 internally and does not answer a POST with a redirect, so the URL works as pasted.
               </Note>
             </Step>
@@ -325,18 +325,18 @@ export function McpPage() {
             What comes back is a path
           </h2>
           <p className="text-muted-foreground mt-3 leading-relaxed">
-            Every result from <C>soundbox.generate</C> carries an absolute filesystem path to a WAV
+            Every result from <C>konchi.generate</C> carries an absolute filesystem path to a WAV
             on your disk. The agent has no base64 to decode, no signed URL that expires, and no id
             to exchange for bytes in a second call. Its next step is ordinary shell work:
           </p>
           <div className="mt-4">
             <CopyBlock
-              code={`ffmpeg -i /home/you/.soundbox/sounds/9f1c2ae4….wav assets/audio/vault-door.ogg`}
+              code={`ffmpeg -i /home/you/.konchi/sounds/9f1c2ae4….wav assets/audio/vault-door.ogg`}
               label="Copy the ffmpeg example"
             />
           </div>
           <p className="text-muted-foreground mt-4 leading-relaxed">
-            This works because the agent and Soundbox run on the same machine and share a
+            This works because the agent and Konchi run on the same machine and share a
             filesystem.
           </p>
         </section>
@@ -417,7 +417,7 @@ export function McpPage() {
             The models it reaches
           </h2>
           <p className="text-muted-foreground mt-3 max-w-2xl leading-relaxed">
-            Soundbox runs open-weight models locally and does not train its own. Each model's
+            Konchi runs open-weight models locally and does not train its own. Each model's
             licence is shown before you download it. The output is yours, and the model's terms
             govern what you may do with it. <C>list_models</C> reports the same thing as{" "}
             <C>commercial_use</C>, so an agent can check before it generates.

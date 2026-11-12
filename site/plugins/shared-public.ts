@@ -29,7 +29,7 @@ export function sharedPublicFiles(dir: string, files: string[]): Plugin {
   let base = "/";
 
   return {
-    name: "soundbox:shared-public",
+    name: "konchi:shared-public",
 
     configResolved(config) {
       isSsrBuild = Boolean(config.build.ssr);

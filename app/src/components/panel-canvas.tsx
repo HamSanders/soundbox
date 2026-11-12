@@ -54,7 +54,7 @@ interface Layout {
 const snap = (n: number, free: boolean): number => (free ? Math.round(n) : Math.round(n / GRID) * GRID);
 
 function storageKey(key: string): string {
-  return `soundbox.studio-canvas.${key}`;
+  return `konchi.studio-canvas.${key}`;
 }
 
 function loadLayout(key: string): Layout {

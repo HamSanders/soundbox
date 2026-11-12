@@ -32,17 +32,16 @@ import { Link } from "react-router-dom";
 import {
   ArrowRightIcon,
   ArrowUpIcon,
-  BotIcon,
   CheckIcon,
   ChevronRightIcon,
   Loader2Icon,
   RotateCcwIcon,
-  SparklesIcon,
   Trash2Icon,
   TriangleAlertIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { KonchiMark } from "@/components/konchi-mark";
 import { LoadingVerb } from "@/components/loading-verb";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
@@ -298,7 +297,7 @@ export function AssistantChat({
       {empty ? (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-5 overflow-y-auto py-10 text-center">
           <div className="bg-muted flex size-12 items-center justify-center rounded-2xl">
-            <BotIcon className="text-muted-foreground size-5" aria-hidden="true" />
+            <KonchiMark variant="icon" className="text-shell h-6" />
           </div>
           <div className="space-y-1.5">
             <h1 className="font-heading text-2xl font-semibold tracking-tight">
@@ -459,7 +458,7 @@ function AssistantOff({ className }: { className?: string }) {
       )}
     >
       <div className="bg-muted flex size-12 items-center justify-center rounded-2xl">
-        <BotIcon className="text-muted-foreground size-5" aria-hidden="true" />
+        <KonchiMark variant="icon" className="text-shell h-6" />
       </div>
       <div className="space-y-1.5">
         <h1 className="font-heading text-2xl font-semibold tracking-tight">
@@ -504,7 +503,7 @@ function AssistantBubble({
   return (
     <div className="flex items-start gap-3">
       <div className="bg-muted mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full">
-        <SparklesIcon className="text-muted-foreground size-3.5" aria-hidden="true" />
+        <KonchiMark variant="icon" className="text-shell h-4" />
       </div>
       <div className="min-w-0 flex-1 space-y-3">
         {thinking ? (

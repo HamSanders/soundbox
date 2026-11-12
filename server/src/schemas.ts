@@ -783,7 +783,7 @@ export const voiceSampleCreateSchema = z.object({
 });
 
 /**
- * A voice as a file you can carry to another machine: `.soundbox-voice.json`.
+ * A voice as a file you can carry to another machine: `.konchi-voice.json`.
  *
  * JSON with the clips inlined as base64 WAV rather than a zip, because the
  * server has no zip dependency and a voice is at most a few megabytes of
@@ -791,7 +791,7 @@ export const voiceSampleCreateSchema = z.object({
  * on import — and nor is the avatar, which is redrawn from the notes.
  */
 export const voiceExportSchema = z.object({
-  format: z.literal("soundbox-voice"),
+  format: z.literal("konchi-voice"),
   version: z.literal(1),
   exported_at: z.string().nullish(),
   voice: z.object({

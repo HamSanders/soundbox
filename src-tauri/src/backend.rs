@@ -1,4 +1,4 @@
-//! Starting, waiting on, and shutting down the Soundbox Node server.
+//! Starting, waiting on, and shutting down the Konchi Node server.
 //!
 //! The desktop app is a thin shell: the server already serves the built
 //! frontend at `/` (see `scripts/build.mjs`, which stages `app/dist` into
@@ -100,7 +100,7 @@ pub fn base_url(port: u16) -> String {
     format!("http://127.0.0.1:{port}")
 }
 
-/// Is a Soundbox server already answering on this port?
+/// Is a Konchi server already answering on this port?
 ///
 /// A plain TCP connect is not enough — it would be satisfied by any process
 /// holding the port, including a half-started one. We do a real request and
@@ -146,6 +146,11 @@ pub fn wait_until_healthy(port: u16, timeout: Duration) -> bool {
     false
 }
 
+/// `KONCHI_<name>`, or its pre-rename spelling `SOUNDBOX_<name>`.
+pub fn env_var(name: &str) -> Result<String, std::env::VarError> {
+    std::env::var(format!("KONCHI_{name}")).or_else(|_| std::env::var(format!("SOUNDBOX_{name}")))
+}
+
 /// Locate the Node interpreter to run the server with.
 ///
 /// Order matters: an explicit override wins; then, for the installed server,
@@ -153,7 +158,7 @@ pub fn wait_until_healthy(port: u16, timeout: Duration) -> bool {
 /// there, named without its target triple); then whatever is on PATH, which
 /// is what a checkout's dependencies were built against.
 pub fn find_node(bundled: bool) -> Option<PathBuf> {
-    if let Ok(explicit) = std::env::var("SOUNDBOX_NODE") {
+    if let Ok(explicit) = env_var("NODE") {
         let p = PathBuf::from(explicit);
         if p.is_file() {
             return Some(p);
@@ -216,7 +221,7 @@ fn find_server_entry(project_root: &Path) -> Result<ServerEntry, String> {
     }
 
     Err(format!(
-        "Could not find a Soundbox server to run.\n\n\
+        "Could not find a Konchi server to run.\n\n\
          Expected server/dist/cli.js (run `npm run build`) or tsx installed \
          at the workspace root (run `npm install`). See docs/INSTALL.md."
     ))
@@ -232,7 +237,7 @@ fn spawn_server(home: &ServerHome, port: u16, env: &[(&str, String)]) -> Result<
         ServerEntry::Built(js) => {
             let node = find_node(home.bundled).ok_or_else(|| {
                 "Could not find a Node.js interpreter.\n\n\
-                 Node 22.12+ is required; set SOUNDBOX_NODE to an interpreter that has \
+                 Node 22.12+ is required; set KONCHI_NODE to an interpreter that has \
                  it if it is not on PATH. See docs/INSTALL.md."
                     .to_string()
             })?;
@@ -262,7 +267,7 @@ fn spawn_server(home: &ServerHome, port: u16, env: &[(&str, String)]) -> Result<
 
     let child = cmd
         .spawn()
-        .map_err(|e| format!("Failed to launch the Soundbox server: {e}"))?;
+        .map_err(|e| format!("Failed to launch the Konchi server: {e}"))?;
 
     #[cfg(windows)]
     if let Err(e) = kill_on_close::adopt(&child) {

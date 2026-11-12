@@ -279,18 +279,18 @@ describe("verifyDigest", () => {
   });
 
   it("refuses to install when no digest is published", () => {
-    expect(() => verifyDigest("x.zip", bytes, null)).toThrow(/SOUNDBOX_ALLOW_UNVERIFIED_BINARIES/);
+    expect(() => verifyDigest("x.zip", bytes, null)).toThrow(/KONCHI_ALLOW_UNVERIFIED_BINARIES/);
   });
 
   it("installs unverified, with a warning, only when explicitly opted in", () => {
-    process.env.SOUNDBOX_ALLOW_UNVERIFIED_BINARIES = "1";
+    process.env.KONCHI_ALLOW_UNVERIFIED_BINARIES = "1";
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       expect(() => verifyDigest("x.zip", bytes, null)).not.toThrow();
       expect(warn).toHaveBeenCalled();
     } finally {
       warn.mockRestore();
-      delete process.env.SOUNDBOX_ALLOW_UNVERIFIED_BINARIES;
+      delete process.env.KONCHI_ALLOW_UNVERIFIED_BINARIES;
     }
   });
 });

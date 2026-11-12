@@ -14,11 +14,11 @@ import * as dsp from "../audio/dsp.js";
 import { UNSET, type UpdateSoundPatch } from "../db.js";
 import type { Source } from "../schemas.js";
 import { soundEditRequestSchema, soundPatchSchema } from "../schemas.js";
-import type { SoundboxService } from "../service.js";
+import type { KonchiService } from "../service.js";
 import { HttpError, boolQuery, enumQuery, intQuery, listQuery, strQuery } from "./helpers.js";
 
 /** Open the OS file manager with `path` selected, one spawn per platform.
- *  Soundbox is local-only by design — the server and the browser hitting it
+ *  Konchi is local-only by design — the server and the browser hitting it
  *  always share a machine — so shelling out here is the same trust boundary
  *  as reading the file off disk in the first place. */
 function revealInFileManager(path: string): void {
@@ -50,7 +50,7 @@ const uploadSourceSchema = z.enum(["recording", "import", "midi"]).default("reco
 
 const SOURCES: readonly Source[] = ["app", "api", "mcp"];
 
-export function registerSounds(app: FastifyInstance, svc: SoundboxService): void {
+export function registerSounds(app: FastifyInstance, svc: KonchiService): void {
   app.get("/api/sounds", async (request) => {
     const q = request.query as Record<string, string | string[] | undefined>;
     return svc.listSounds({
@@ -128,7 +128,7 @@ export function registerSounds(app: FastifyInstance, svc: SoundboxService): void
 
     // `readWav` takes a path, so the bytes land in a temp file first and only
     // reach the library once they have decoded cleanly.
-    const tmp = await mkdtemp(join(tmpdir(), "soundbox-upload-"));
+    const tmp = await mkdtemp(join(tmpdir(), "konchi-upload-"));
     try {
       const path = join(tmp, "upload.wav");
       await writeFile(path, body);
@@ -158,7 +158,7 @@ export function registerSounds(app: FastifyInstance, svc: SoundboxService): void
 
   /** Reveal the WAV on disk in the OS file manager — Explorer, Finder, or
    *  whatever the desktop's default is on Linux. Only meaningful because
-   *  Soundbox never leaves the machine it runs on. */
+   *  Konchi never leaves the machine it runs on. */
   app.post<IdParams>("/api/sounds/:sound_id/reveal", async (request, reply) => {
     const path = svc.absolutePath(request.params.sound_id);
     if (path === null) throw new HttpError(404, "Sound not found");

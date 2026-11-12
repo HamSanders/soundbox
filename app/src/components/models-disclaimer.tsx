@@ -2,7 +2,7 @@
  * The disclaimer that appears on every `/models` page, and the short
  * explainer of what audio.cpp is.
  *
- * These two live in one file because they are one argument. Soundbox is a
+ * These two live in one file because they are one argument. Konchi is a
  * *sourcing* layer: it points audio.cpp at weights on Hugging Face that you
  * download, under your own account, from people we have nothing to do with.
  * Everything on these pages — the specs, the licences, the "verified" marks —
@@ -31,7 +31,7 @@ import { REPO_URL } from "@/lib/marketing-links";
 
 export const AUDIOCPP_REPO = "https://github.com/0xShug0/audio.cpp";
 export const AUDIOCPP_GGUF_REPO = "https://huggingface.co/audio-cpp/audio.cpp-gguf";
-const SOUNDBOX_REPO = REPO_URL;
+const KONCHI_REPO = REPO_URL;
 
 /**
  * Where these pages' facts come from, as a date. Licences change; a page that
@@ -65,7 +65,7 @@ export function ModelsEngineNote() {
         </a>{" "}
         is a ggml-based C++ inference engine — the audio equivalent of llama.cpp — with CUDA,
         HIP/ROCm, Metal, Vulkan and CPU backends. It is Apache-2.0 licensed, an independent
-        project that Soundbox builds on.
+        project that Konchi builds on.
       </p>
       <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
         The practical consequence is the whole reason this list looks the way it does:{" "}
@@ -100,12 +100,12 @@ export function ModelsEngineNote() {
         </li>
         <li>
           <a
-            href={`${SOUNDBOX_REPO}/blob/main/docs/AUDIOCPP.md`}
+            href={`${KONCHI_REPO}/blob/main/docs/AUDIOCPP.md`}
             target="_blank"
             rel="noreferrer noopener"
             className="hover:text-foreground inline-flex items-center gap-1 underline underline-offset-4"
           >
-            How Soundbox drives it
+            How Konchi drives it
             <ExternalLinkIcon className="size-3 shrink-0" aria-hidden="true" />
           </a>
         </li>
@@ -126,7 +126,7 @@ export function ModelsLicenceNote() {
   return (
     <p className="text-muted-foreground text-xs leading-relaxed">
       Licence details on these pages are summaries of the linked source documents, last checked{" "}
-      {RESEARCH_DATE}. They are not legal advice, and Soundbox is not affiliated with any model's
+      {RESEARCH_DATE}. They are not legal advice, and Konchi is not affiliated with any model's
       authors — weights download from Hugging Face under the user's own account and terms.
       Company and model names identify whose work it is, and belong to their owners. The linked
       licence text is authoritative; commercial use should be checked against it, per model,

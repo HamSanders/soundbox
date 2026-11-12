@@ -1,9 +1,9 @@
 # Custom endpoints
 
 A custom endpoint sends generation to a server you already run, instead of a
-model Soundbox downloads and runs itself. Use one when a machine on your
+model Konchi downloads and runs itself. Use one when a machine on your
 network already serves the model (LocalAI, an OpenAI-compatible speech server,
-a gateway), or when the machine running Soundbox can't download weights.
+a gateway), or when the machine running Konchi can't download weights.
 
 Each endpoint appears as one model in the pickers. Its id is
 `endpoint:<id>`. Sounds made with it go into the library like any other, and
@@ -19,7 +19,7 @@ check four things:
 | **Used for** | Sound effects, Music or Speech. This decides which picker the endpoint appears in. |
 | **URL** | The full URL to POST to, path included, e.g. `http://192.168.1.20:8080/v1/sound-generation`. |
 | **API key** | Optional. Sent as `Authorization: Bearer <key>`. Once saved it is never shown or returned again. Leave the field blank when editing to keep the saved key. |
-| **Body template** | The JSON request body, with `{{variables}}` for what Soundbox fills in. |
+| **Body template** | The JSON request body, with `{{variables}}` for what Konchi fills in. |
 
 Press **Test** before saving. It sends one short request with the form as it
 stands and reports the length and format of the audio that came back, or the
@@ -41,7 +41,7 @@ body is a template and not a fixed format.
 
 ## Where requests go
 
-Soundbox is local-first, and an endpoint is the one setting that can send a
+Konchi is local-first, and an endpoint is the one setting that can send a
 prompt somewhere else. If an endpoint's URL is not on this machine or your
 local network, the form and the model's description say so, and the
 endpoint is marked **Off-network** in the list. Prompts, lyrics and any voice
@@ -103,7 +103,7 @@ no `{{seed}}`, there is no seed control for that endpoint. If it uses
 
 ## What comes back
 
-Soundbox expects the response body to be the audio:
+Konchi expects the response body to be the audio:
 
 - **WAV** is decoded directly, detected by its header, whatever the
   `Content-Type` says.

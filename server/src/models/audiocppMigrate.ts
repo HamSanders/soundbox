@@ -1,7 +1,7 @@
 /**
- * One-time move from Soundbox's old weights layout to audio.cpp's.
+ * One-time move from Konchi's old weights layout to audio.cpp's.
  *
- * Soundbox used to install packages under its own model id:
+ * Konchi used to install packages under its own model id:
  *
  *     <root>/audiocpp-ace-step/ACE-Step1.5-GGUF/turbo/…gguf
  *

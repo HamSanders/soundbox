@@ -1,6 +1,6 @@
 ---
-title: Point your agent at Soundbox
-description: Soundbox's MCP tools hand your agent a file path on your own disk, and connecting one takes a single line of config.
+title: Point your agent at Konchi
+description: Konchi's MCP tools hand your agent a file path on your own disk, and connecting one takes a single line of config.
 date: 2026-08-25
 updated: 2026-11-04
 author: Anthony Saviano
@@ -13,7 +13,7 @@ audio: /blog/audio/point-your-agent-at-soundbox.mp3
 Say you're building a game, an app or a video that needs sound, and an agent is
 already writing the code. Getting the sound usually means a browser tab, an
 account and a downloads folder. This post shows how to let the agent get it
-from Soundbox instead, with one line of config.
+from Konchi instead, with one line of config.
 
 It covers connecting a client, what the tools return, and why the stdio bridge
 works the way it does. It doesn't cover the HTTP API in detail (see
@@ -21,12 +21,12 @@ works the way it does. It doesn't cover the HTTP API in detail (see
 
 ## The one line
 
-The MCP server runs inside the main Soundbox process at
+The MCP server runs inside the main Konchi process at
 `http://127.0.0.1:17494/mcp`. There's no separate daemon. If the app is
 running, the server is up. In Claude Code it's one command:
 
 ```bash
-claude mcp add --transport http soundbox http://127.0.0.1:17494/mcp
+claude mcp add --transport http konchi http://127.0.0.1:17494/mcp
 ```
 
 In anything that takes a JSON config file:
@@ -34,12 +34,12 @@ In anything that takes a JSON config file:
 ```json
 {
   "mcpServers": {
-    "soundbox": { "type": "http", "url": "http://127.0.0.1:17494/mcp" }
+    "konchi": { "type": "http", "url": "http://127.0.0.1:17494/mcp" }
   }
 }
 ```
 
-There's no trailing slash. Soundbox maps `/mcp` to the mounted path internally
+There's no trailing slash. Konchi maps `/mcp` to the mounted path internally
 instead of replying with a 307, because many clients drop a redirect on a POST
 without saying so. The URL above works as pasted.
 
@@ -50,7 +50,7 @@ there.
 
 ## What comes back is a path
 
-Every result from `soundbox.generate` includes an **absolute path** to a WAV on
+Every result from `konchi.generate` includes an **absolute path** to a WAV on
 your disk. It isn't a base64 blob to decode, a signed URL that expires, or an
 id the agent has to swap for bytes in a second call.
 
@@ -74,10 +74,10 @@ model, a subscription, and your audio stored on someone else's servers under
 their terms. That works. It also means a billing account, a model someone else
 chose, and nothing when you're offline.
 
-Soundbox runs several models behind one interface on your own machine. It works
+Konchi runs several models behind one interface on your own machine. It works
 offline once the weights are downloaded, with no account, no API key and no
 per-generation billing. Each model's licence is on its card before you download
-it, and Soundbox itself is MIT.
+it, and Konchi itself is MIT.
 
 Because the audio, the model and the agent are all on your machine, the tool
 can return a file path. A hosted service can't do that.
@@ -85,29 +85,29 @@ can return a file path. A hosted service can't do that.
 ## The bridge doesn't load models
 
 Some clients only speak stdio. The easy way to serve them would be a bridge
-that loads models itself. Soundbox doesn't do that, and the header of
+that loads models itself. Konchi doesn't do that, and the header of
 `server/src/mcp/stdio.ts` says why:
 
-> This does NOT load models. It is a thin proxy onto a running Soundbox server —
+> This does NOT load models. It is a thin proxy onto a running Konchi server —
 > one GPU, one process holding the weights. If the server isn't running, tools
 > return an actionable error rather than silently starting a second copy.
 
 A bridge that loaded models would put two copies of a diffusion model on one
 GPU: one in the app you have open and one in the bridge your editor started.
 Each thinks it owns the VRAM. The result is an out-of-memory error, and the
-agent only sees that its request for a sound failed. Soundbox keeps
+agent only sees that its request for a sound failed. Konchi keeps
 [one model at a time](/blog/one-model-at-a-time) on purpose, and a second
 process is the one way to break that from outside the app.
 
 So the bridge proxies. When it can't reach the server, it tells the agent what
-to do: start the server, or set `SOUNDBOX_URL`. It also reports its own calls
+to do: start the server, or set `KONCHI_URL`. It also reports its own calls
 to the server, marked `transport: stdio`. Without that, the server would see
 the bridge's HTTP requests but not the client behind them.
 
 ```json
 {
   "mcpServers": {
-    "soundbox": {
+    "konchi": {
       "command": "node",
       "args": ["/absolute/path/to/soundbox/server/dist/mcp/stdio.js"]
     }
@@ -115,7 +115,7 @@ the bridge's HTTP requests but not the client behind them.
 }
 ```
 
-Use the absolute path. The shorter names don't resolve: `soundbox-mcp` is a
+Use the absolute path. The shorter names don't resolve: `konchi-mcp` is a
 private package, so `npx` returns a 404, and the bare command is only linked
 into the checkout's own `node_modules/.bin`, which isn't on the `PATH` an
 editor uses to start an MCP server. Until recently, five places in this repo
@@ -131,20 +131,20 @@ the call worked, how long it took, and the sounds it made. Attribution needs no
 setup. MCP's `clientInfo` handshake carries the agent's name and version, so
 its sounds are tagged with it and the Library can filter by it.
 
-![The Soundbox Agents page: connected clients listed with their names and versions, their call counts and error rates, above the three connect commands with the stdio path already resolved for the running install](/blog/agents-page.png)
+![The Konchi Agents page: connected clients listed with their names and versions, their call counts and error rates, above the three connect commands with the stdio path already resolved for the running install](/blog/agents-page.png)
 
 The page also prints the stdio config with the path filled in for the running
 install, so you can copy it from there and know it's current.
 
-Skills ship in `server/skills/`. `soundbox-sfx` covers prompting and tool use.
-`soundbox-sound-pass` lists every sound event a project needs and generates
+Skills ship in `server/skills/`. `konchi-sfx` covers prompting and tool use.
+`konchi-sound-pass` lists every sound event a project needs and generates
 them. They exist because these models respond to material, action and space,
 like "low metallic groan of a ship's hull under pressure", rather than mood
 words. Without the skill, an agent learns that by trial and error on your GPU.
 
 ```bash
-soundbox skills install                  # -> ~/.claude/skills/
-soundbox skills install --target cursor  # -> ~/.cursor/skills/
+konchi skills install                  # -> ~/.claude/skills/
+konchi skills install --target cursor  # -> ~/.cursor/skills/
 ```
 
 You can also install them with one click on the Agents page.

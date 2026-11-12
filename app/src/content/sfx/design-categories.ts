@@ -27,12 +27,12 @@ function faqs(specific: SfxFaq): SfxFaq[] {
     {
       question: "Can I use these sounds in a commercial video or game?",
       answer:
-        "It depends on the model that made them. Soundbox shows each model's licence before you download its weights. The clips on this page were rendered with Stable Audio 3.0 Small SFX, which uses the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. Soundbox itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+        "It depends on the model that made them. Konchi shows each model's licence before you download its weights. The clips on this page were rendered with Stable Audio 3.0 Small SFX, which uses the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. Konchi itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
     },
     {
       question: "Does this work offline?",
       answer:
-        "Yes, once the weights are on disk. Generation, the library and the HTTP API all run locally against one SQLite file and one folder of WAVs under ~/.soundbox. There is no account and no API key, and nothing is uploaded. The only step that uses the network is the initial model download.",
+        "Yes, once the weights are on disk. Generation, the library and the HTTP API all run locally against one SQLite file and one folder of WAVs under ~/.konchi. There is no account and no API key, and nothing is uploaded. The only step that uses the network is the initial model download.",
     },
     {
       question: "What hardware does it need?",
@@ -42,7 +42,7 @@ function faqs(specific: SfxFaq): SfxFaq[] {
     {
       question: "Can an agent generate these for me?",
       answer:
-        "Yes. While the app is open, Soundbox runs an MCP server at http://127.0.0.1:17494/mcp with tools for generating, listing and mixing sounds. Every generated file comes back as an absolute path, so a coding agent can render the sound a scene needs and put it straight into the project. The several hundred clips across these pages were made this way.",
+        "Yes. While the app is open, Konchi runs an MCP server at http://127.0.0.1:17494/mcp with tools for generating, listing and mixing sounds. Every generated file comes back as an absolute path, so a coding agent can render the sound a scene needs and put it straight into the project. The several hundred clips across these pages were made this way.",
     },
   ];
 }
@@ -56,7 +56,7 @@ const APPLAUSE: SfxCategory = {
   intent:
     "Editors who need clapping at a specific size and warmth — two people, a conference room, a " +
     "stadium — and keep getting a canned laugh-track crowd that dates the whole piece.",
-  metaTitle: "Applause sound effects: clapping and cheers | Soundbox",
+  metaTitle: "Applause sound effects: clapping and cheers | Konchi",
   metaDescription:
     "Generate applause, clapping and ovations locally at any crowd size. Prompts for small rooms, theatres, stadiums and single claps.",
   h1: "Applause sound effects you generate yourself",
@@ -130,7 +130,7 @@ const SCREAM: SfxCategory = {
   intent:
     "Game developers and horror editors needing human vocal reactions — screams, grunts, gasps, " +
     "pain and effort — which are the hardest thing to source cleanly and the most obvious when wrong.",
-  metaTitle: "Scream sound effects: horror, pain, effort | Soundbox",
+  metaTitle: "Scream sound effects: horror, pain, effort | Konchi",
   metaDescription:
     "Generate screams, gasps, grunts and vocal effort sounds locally. Prompts for horror reactions, combat effort and pain, with the room built in.",
   h1: "Scream and vocal effort sound effects you generate yourself",
@@ -177,7 +177,7 @@ const SCREAM: SfxCategory = {
     craft: [
       {
         heading: "Prompt what the body does",
-        body: "\"Scared scream\" gives the model an abstraction; \"sharp full-throated cry breaking at the top\" gives it a physical event. These models respond better to descriptions of what the body is doing (air forced out, throat tightening, voice cracking, breath held) than to the feeling behind it. The same rule runs through all of Soundbox's prompting advice, and it makes the biggest difference with vocals.",
+        body: "\"Scared scream\" gives the model an abstraction; \"sharp full-throated cry breaking at the top\" gives it a physical event. These models respond better to descriptions of what the body is doing (air forced out, throat tightening, voice cracking, breath held) than to the feeling behind it. The same rule runs through all of Konchi's prompting advice, and it makes the biggest difference with vocals.",
       },
       {
         heading: "Place the voice in a room",
@@ -191,7 +191,7 @@ const SCREAM: SfxCategory = {
     faqs: faqs({
       question: "Can I generate actual dialogue this way?",
       answer:
-        "No. The sound-effect models render vocal noise without words, and asking them for a line produces something that sounds like speech but is not. Soundbox has a separate path for spoken audio: the speech models and the story tools, which cast lines to real voices and keep them as an arrangement you can re-read line by line. Use this collection for effort and reaction, and the speech path for anything with words.",
+        "No. The sound-effect models render vocal noise without words, and asking them for a line produces something that sounds like speech but is not. Konchi has a separate path for spoken audio: the speech models and the story tools, which cast lines to real voices and keep them as an arrangement you can re-read line by line. Use this collection for effort and reaction, and the speech path for anything with words.",
     }),
     related: ["horror", "crowd", "applause", "heartbeat", "creature", "impact"],
   },
@@ -204,7 +204,7 @@ const HEARTBEAT: SfxCategory = {
   intent:
     "Editors building subjective tension — heartbeat beds, breathing, tinnitus, the inside-the-head " +
     "perspective that puts an audience inside a character rather than beside them.",
-  metaTitle: "Heartbeat sound effects: pulse, breath, tension | Soundbox",
+  metaTitle: "Heartbeat sound effects: pulse, breath, tension | Konchi",
   metaDescription:
     "Generate heartbeats, breathing, tinnitus tones and body sounds locally. Loopable tension beds and one-shot beats for subjective sequences.",
   h1: "Heartbeat and body sound effects you generate yourself",
@@ -280,7 +280,7 @@ const RISER: SfxCategory = {
   intent:
     "Video editors and trailer cutters who need tension builds of an exact length that land " +
     "precisely on a cut — the single most common request in the whole transition family.",
-  metaTitle: "Riser sound effects: tension builds and uplifters | Soundbox",
+  metaTitle: "Riser sound effects: tension builds and uplifters | Konchi",
   metaDescription:
     "Generate risers, uplifters and tension builds locally at exactly the length your cut needs. Prompts for tonal, noise, metallic and orchestral builds.",
   h1: "Riser sound effects you generate yourself",
@@ -355,7 +355,7 @@ const BRAAM: SfxCategory = {
   intent:
     "Trailer editors after the specific brass-and-sub blast the form is built on, plus the impacts, " +
     "stingers and boom hits that punctuate a cut.",
-  metaTitle: "Braam and trailer hit sound effects | Soundbox",
+  metaTitle: "Braam and trailer hit sound effects | Konchi",
   metaDescription:
     "Generate braams, trailer hits, boom impacts and stingers locally. Prompts for the brass blast, the sub drop and the tail that follows.",
   h1: "Braam and trailer hit sound effects you generate yourself",
@@ -429,7 +429,7 @@ const DRONE: SfxCategory = {
   intent:
     "Editors and game developers who need a sustained tonal bed to sit under a scene — dread, awe, " +
     "unease, machinery — for minutes rather than seconds, and seamlessly.",
-  metaTitle: "Drone sound effects: dark ambient beds | Soundbox",
+  metaTitle: "Drone sound effects: dark ambient beds | Konchi",
   metaDescription:
     "Generate dark drones, tension beds and evolving soundscapes locally. Loopable atmospheres for horror, sci-fi and cinematic scenes.",
   h1: "Drone and soundscape sound effects you generate yourself",
@@ -490,7 +490,7 @@ const DRONE: SfxCategory = {
     faqs: faqs({
       question: "How long can a single drone render be?",
       answer:
-        "Up to two minutes on the Stable Audio SFX model, which is the per-generation limit Soundbox reports for it. The clips on this page are twelve seconds to keep the page practical. For real work, render the full length of the scene and skip looping. Longer renders take proportionally longer, so a two-minute bed is a coffee-break wait.",
+        "Up to two minutes on the Stable Audio SFX model, which is the per-generation limit Konchi reports for it. The clips on this page are twelve seconds to keep the page practical. For real work, render the full length of the scene and skip looping. Longer renders take proportionally longer, so a two-minute bed is a coffee-break wait.",
     }),
     related: ["ambience", "horror", "cinematic", "sci-fi", "heartbeat", "braam"],
   },
@@ -503,7 +503,7 @@ const GUNSHOT: SfxCategory = {
   intent:
     "Game developers and film editors who need firearms specifically — the report, the mechanism, " +
     "the distance and the environment — rather than the generic weapon category.",
-  metaTitle: "Gunshot sound effects: pistol, rifle, shotgun | Soundbox",
+  metaTitle: "Gunshot sound effects: pistol, rifle, shotgun | Konchi",
   metaDescription:
     "Generate gunshots, reloads, ricochets and distant gunfire locally. Prompts that control calibre, mechanism, distance and the environment's tail.",
   h1: "Gunshot sound effects you generate yourself",
@@ -578,7 +578,7 @@ const ALARM: SfxCategory = {
   intent:
     "Editors and game developers needing warnings — sirens, klaxons, fire alarms, reversing beepers " +
     "— which have to be recognisable in half a second and loopable for as long as the scene lasts.",
-  metaTitle: "Alarm sound effects: siren, klaxon, warning | Soundbox",
+  metaTitle: "Alarm sound effects: siren, klaxon, warning | Konchi",
   metaDescription:
     "Generate alarms, sirens, klaxons and warning beeps locally. Loopable emergency beds and one-shot alerts for games, film and interfaces.",
   h1: "Alarm and siren sound effects you generate yourself",
@@ -652,7 +652,7 @@ const ELECTRICITY: SfxCategory = {
   intent:
     "Sound designers who need arcs, sparks, buzzes and surges — for sci-fi weapons, faulty " +
     "lighting, storms and anything that should feel dangerous to touch.",
-  metaTitle: "Electricity sound effects: sparks, arcs, buzz | Soundbox",
+  metaTitle: "Electricity sound effects: sparks, arcs, buzz | Konchi",
   metaDescription:
     "Generate electrical arcs, sparks, mains buzz, surges and tesla discharges locally. Prompts that separate clean hum from violent discharge.",
   h1: "Electricity sound effects you generate yourself",
@@ -728,7 +728,7 @@ const CARTOON: SfxCategory = {
   intent:
     "Animators, meme editors and casual game developers after the comedy vocabulary — boings, pops, " +
     "slide whistles, splats — a top-tier tag on every free library and almost absent from serious ones.",
-  metaTitle: "Cartoon sound effects: boing, pop, splat | Soundbox",
+  metaTitle: "Cartoon sound effects: boing, pop, splat | Konchi",
   metaDescription:
     "Generate cartoon boings, pops, slide whistles, splats and comedy stings locally. Prompts for classic animation and modern meme editing.",
   h1: "Cartoon sound effects you generate yourself",
@@ -802,7 +802,7 @@ const ROBOT: SfxCategory = {
   intent:
     "Game developers and sci-fi editors building machines with bodies — servos, actuators, mech " +
     "footsteps, transformations and synthetic voices without words.",
-  metaTitle: "Robot sound effects: servos, mechs, machines | Soundbox",
+  metaTitle: "Robot sound effects: servos, mechs, machines | Konchi",
   metaDescription:
     "Generate robot servos, mech movement, transformations and synthetic vocalisations locally. Prompts for small drones through to walking machines.",
   h1: "Robot and mech sound effects you generate yourself",
@@ -863,7 +863,7 @@ const ROBOT: SfxCategory = {
     faqs: faqs({
       question: "Can I get a talking robot voice?",
       answer:
-        "For expressive non-verbal chatter (beeps, warbles, curious rising tones), yes; this collection covers it. For a robot speaking words, use Soundbox's speech path: the text-to-speech models render real words, and processing that output with the glitch and electricity collections adds the synthetic character. A sound-effect model asked for words produces something speech-like but unintelligible.",
+        "For expressive non-verbal chatter (beeps, warbles, curious rising tones), yes; this collection covers it. For a robot speaking words, use Konchi's speech path: the text-to-speech models render real words, and processing that output with the glitch and electricity collections adds the synthetic character. A sound-effect model asked for words produces something speech-like but unintelligible.",
     }),
     related: ["sci-fi", "machinery", "electricity", "glitch", "laser", "creature"],
   },
@@ -876,7 +876,7 @@ const CREATURE: SfxCategory = {
   intent:
     "Game developers and horror editors who need creatures — growls, roars, shrieks, chittering — " +
     "that are not simply pitched-down animals, and that can be varied per enemy type.",
-  metaTitle: "Monster sound effects: growls, roars, creatures | Soundbox",
+  metaTitle: "Monster sound effects: growls, roars, creatures | Konchi",
   metaDescription:
     "Generate monster growls, roars, shrieks and creature vocalisations locally. Prompts for size, anatomy and wetness rather than vague menace.",
   h1: "Creature and monster sound effects you generate yourself",

@@ -120,7 +120,7 @@ function escapeAttr(value: string): string {
 export function markdownDocs(): Plugin {
   let base = "/";
   return {
-    name: "soundbox:markdown-docs",
+    name: "konchi:markdown-docs",
     configResolved(config) {
       base = config.base || "/";
     },

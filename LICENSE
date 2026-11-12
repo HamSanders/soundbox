@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 Soundbox contributors
+Copyright (c) 2026 Konchi contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,12 +24,12 @@ SOFTWARE.
 
 NOTE ON MODEL WEIGHTS
 
-This MIT licence covers the Soundbox application code only. It does not cover
-the machine-learning model weights that Soundbox can download and run. Those
+This MIT licence covers the Konchi application code only. It does not cover
+the machine-learning model weights that Konchi can download and run. Those
 are distributed by third parties under their own licences, several of which
 prohibit commercial use.
 
-Soundbox does not redistribute any model weights. It downloads them from
+Konchi does not redistribute any model weights. It downloads them from
 Hugging Face at the user's direction, using the user's own account and access
 token where the repository is gated.
 

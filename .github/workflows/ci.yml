@@ -36,7 +36,7 @@ jobs:
       # two steps publish them even when a test fails.
       - run: npm test
         env:
-          SOUNDBOX_TEST_REPORT: ${{ matrix.node == 24 && '1' || '' }}
+          KONCHI_TEST_REPORT: ${{ matrix.node == 24 && '1' || '' }}
       - name: Test summary
         if: ${{ !cancelled() && matrix.node == 24 }}
         run: node scripts/test-summary.mjs server/test-results/results.json "Server tests (Node 24)"

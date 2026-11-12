@@ -23,7 +23,7 @@ afterEach(() => {
 
 describe("legacy voice_samples table", () => {
   it("opens, keeps the old rows aside, and backfills clone samples", () => {
-    dir = mkdtempSync(join(tmpdir(), "soundbox-legacy-vs-"));
+    dir = mkdtempSync(join(tmpdir(), "konchi-legacy-vs-"));
     const path = join(dir, "soundbox.db");
 
     const old = new BetterSqlite3(path);

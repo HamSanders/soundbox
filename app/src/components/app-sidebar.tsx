@@ -66,6 +66,7 @@ import { useUiPrefs, wantsRail } from "@/lib/ui-prefs";
 import { formatMb, formatRelative } from "@/lib/format";
 import { SITE_URL } from "@/lib/marketing-links";
 import { useNewStudioPicker } from "@/components/new-studio-dialog";
+import { KonchiMark } from "@/components/konchi-mark";
 import { useSessionStore } from "@/lib/session-store";
 import { api, IS_MOCK, type Session } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -552,7 +553,7 @@ function DeviceStatus() {
           <div className="space-y-1 text-sm">
             <p className="font-medium">Backend offline</p>
             <p className="text-muted-foreground text-xs leading-relaxed">
-              The app cannot reach the Soundbox server. Start it (or the desktop app) and this
+              The app cannot reach the Konchi server. Start it (or the desktop app) and this
               row turns green on its own; nothing in the library is affected.
             </p>
           </div>
@@ -562,7 +563,7 @@ function DeviceStatus() {
               <p className="text-sm font-medium">{data.gpu_name ?? data.device}</p>
               <p className="text-muted-foreground text-xs">
                 {data.gpu_name ? `Running on ${data.device}` : "No discrete GPU reported"}
-                {" · "}Soundbox {data.version}
+                {" · "}Konchi {data.version}
               </p>
             </div>
             {used !== null && data.vram_total_mb ? (
@@ -682,11 +683,13 @@ export function AppSidebar() {
                     is now one conversation among many; `/` lands on the
                     dashboard through the catch-all. */}
                 <NavLink to="/" end onClick={() => setOpenMobile(false)}>
-                  <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                    <AudioLinesIcon className="size-4" />
+                  {/* The spiral alone (no wave tail): this tile is all that
+                      shows when the sidebar collapses to icons. */}
+                  <div className="bg-card ring-border text-shell flex aspect-square size-8 items-center justify-center rounded-lg ring-1 ring-inset">
+                    <KonchiMark variant="icon" className="h-5" />
                   </div>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">Soundbox</span>
+                    <span className="truncate font-semibold">Konchi</span>
                     <span className="text-muted-foreground truncate text-xs">
                       {IS_MOCK ? "mock backend" : "local sound effects"}
                     </span>
@@ -736,10 +739,10 @@ export function AppSidebar() {
                 so this leaves the app rather than routing inside it — the
                 app has no /welcome route any more. */}
             <SidebarMenuItem>
-              <SidebarMenuButton tooltip="About Soundbox" asChild>
+              <SidebarMenuButton tooltip="About Konchi" asChild>
                 <a href={SITE_URL} target="_blank" rel="noreferrer noopener">
                   <InfoIcon />
-                  <span>About Soundbox</span>
+                  <span>About Konchi</span>
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>

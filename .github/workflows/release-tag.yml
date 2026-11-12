@@ -39,7 +39,7 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "$tag" -m "Soundbox $version" "$GITHUB_SHA"
+          git tag -a "$tag" -m "Konchi $version" "$GITHUB_SHA"
           git push -q origin "$tag"
           gh workflow run release.yml --ref "$tag"
           latest=true

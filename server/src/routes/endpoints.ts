@@ -8,11 +8,11 @@
 
 import type { FastifyInstance } from "fastify";
 
-import type { SoundboxService } from "../service.js";
+import type { KonchiService } from "../service.js";
 
 type EndpointParams = { Params: { id: string } };
 
-export function registerEndpoints(app: FastifyInstance, svc: SoundboxService): void {
+export function registerEndpoints(app: FastifyInstance, svc: KonchiService): void {
   app.get("/api/endpoints", async () => svc.endpoints.list());
 
   app.put<EndpointParams>("/api/endpoints/:id", async (request) => {

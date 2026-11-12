@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * CLI entry point: the `soundbox` binary.
+ * CLI entry point: the `konchi` binary.
  *
  * Subcommand names, output text and exit codes are stable so docs and muscle
  * memory keep working.
@@ -27,7 +27,7 @@ import {
 import * as skills from "./skills.js";
 import { writeWav } from "./audio/dsp.js";
 
-const log = getLogger("soundbox.cli");
+const log = getLogger("konchi.cli");
 
 /** `str(exc)` equivalent: the Python printed the exception message alone, and
  *  ModelError/InstallError messages are already written for a human. */
@@ -72,7 +72,7 @@ async function skillsMain(argv: string[]): Promise<number> {
     return 0;
   }
   if (cmd !== "install") {
-    return fail("error: soundbox skills: expected one of list, path, install");
+    return fail("error: konchi skills: expected one of list, path, install");
   }
   const { values, positionals } = parseArgs({
     args: argv.slice(1),
@@ -96,7 +96,7 @@ async function skillsMain(argv: string[]): Promise<number> {
 async function modelMain(argv: string[]): Promise<number> {
   const cmd = argv[0];
   if (cmd !== "install" && cmd !== "status") {
-    return fail("error: soundbox model: expected one of install, status");
+    return fail("error: konchi model: expected one of install, status");
   }
   const { values, positionals } = parseArgs({
     args: argv.slice(1),
@@ -111,7 +111,7 @@ async function modelMain(argv: string[]): Promise<number> {
   const target = positionals[0];
   if (target === "audiocpp") return await audiocppModelMain(cmd, values);
   if (target === "llm") return await llmModelMain(cmd, values);
-  return fail("error: soundbox model: expected one of 'audiocpp', 'llm'");
+  return fail("error: konchi model: expected one of 'audiocpp', 'llm'");
 }
 
 /** How a resolved binary is described in `status` output. A managed install
@@ -130,7 +130,7 @@ async function audiocppModelMain(
   if (cmd === "status") {
     const s = await audiocppBinary.status();
     if (!s.installed) {
-      console.log("audio.cpp: not installed. Run `soundbox model install audiocpp`.");
+      console.log("audio.cpp: not installed. Run `konchi model install audiocpp`.");
       return 1;
     }
     console.log(`audio.cpp: ${binaryLabel(s)} (${s.backend}) -> ${s.path}`);
@@ -150,10 +150,10 @@ async function audiocppModelMain(
   }
 }
 
-/** `soundbox model install llm` installs the engine AND the default catalog
+/** `konchi model install llm` installs the engine AND the default catalog
  *  model in one command — a working prompt assistant, not just a binary. Pass
  *  `--engine-only` to skip the weights (e.g. to pick a different model with
- *  `soundbox model download llm:<id>` afterwards). */
+ *  `konchi model download llm:<id>` afterwards). */
 async function llmModelMain(
   cmd: "install" | "status",
   values: { version?: string; backend?: string; "engine-only"?: boolean; model?: string },
@@ -163,7 +163,7 @@ async function llmModelMain(
   if (cmd === "status") {
     const s = await llamaServerBinary.status();
     if (!s.installed) {
-      console.log("llm engine: not installed. Run `soundbox model install llm`.");
+      console.log("llm engine: not installed. Run `konchi model install llm`.");
     } else {
       console.log(`llm engine: ${binaryLabel(s)} (${s.backend}) -> ${s.path}`);
     }
@@ -221,7 +221,7 @@ function modelModel(modelId: string): audiocpp.AudioCppModel {
   const spec = audiocpp.catalogById().get(modelId);
   if (spec === undefined) {
     process.stderr.write(
-      `error: unknown model '${modelId}'. Run \`soundbox list\` to see the catalog.\n`,
+      `error: unknown model '${modelId}'. Run \`konchi list\` to see the catalog.\n`,
     );
     throw new ExitCode(1);
   }
@@ -252,7 +252,7 @@ async function listMain(): Promise<number> {
 
 async function pullMain(argv: string[]): Promise<number> {
   const modelId = argv[0];
-  if (!modelId) return fail("error: soundbox pull: model_id is required");
+  if (!modelId) return fail("error: konchi pull: model_id is required");
   const eng = modelModel(modelId);
   if (await eng.isDownloaded()) {
     console.log(`${modelId} is already downloaded.`);
@@ -269,7 +269,7 @@ async function pullMain(argv: string[]): Promise<number> {
 
 async function rmMain(argv: string[]): Promise<number> {
   const modelId = argv[0];
-  if (!modelId) return fail("error: soundbox rm: model_id is required");
+  if (!modelId) return fail("error: konchi rm: model_id is required");
   const eng = modelModel(modelId);
   const weightsDir = eng.weightsDir();
   if (!existsSync(weightsDir)) {
@@ -306,7 +306,7 @@ async function runMain(argv: string[]): Promise<number> {
   });
   const [modelId, prompt] = positionals;
   if (!modelId || prompt === undefined) {
-    return fail("error: soundbox run: model_id and prompt are required");
+    return fail("error: konchi run: model_id and prompt are required");
   }
   // parseArgs has no numeric types, so the conversions argparse did for us
   // happen here; NaN would silently become a bad flag value downstream.
@@ -381,7 +381,7 @@ async function psMain(argv: string[]): Promise<number> {
     models = (await resp.json()) as typeof models;
   } catch (exc) {
     return fail(
-      `error: could not reach a running soundbox server at ${values.host}:${values.port} ` +
+      `error: could not reach a running konchi server at ${values.host}:${values.port} ` +
         `(${message(exc)})`,
     );
   }
@@ -411,7 +411,7 @@ async function enhanceMain(argv: string[]): Promise<number> {
     allowPositionals: true,
   });
   const prompt = positionals.join(" ");
-  if (!prompt) return fail("error: soundbox enhance: a prompt is required");
+  if (!prompt) return fail("error: konchi enhance: a prompt is required");
   const n = Number(values.n);
   if (!Number.isInteger(n) || n < 1 || n > 5) return fail("error: --n must be an integer 1-5");
 
@@ -419,7 +419,7 @@ async function enhanceMain(argv: string[]): Promise<number> {
   try {
     const resp = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Soundbox": "1" },
+      headers: { "Content-Type": "application/json", "X-Konchi": "1" },
       body: JSON.stringify({ prompt, n, category: values.category }),
       signal: AbortSignal.timeout(60_000),
     });
@@ -429,7 +429,7 @@ async function enhanceMain(argv: string[]): Promise<number> {
     return 0;
   } catch (exc) {
     return fail(
-      `error: could not reach a running soundbox server at ${values.host}:${values.port} ` +
+      `error: could not reach a running konchi server at ${values.host}:${values.port} ` +
         `(${message(exc)})`,
     );
   }
@@ -437,25 +437,25 @@ async function enhanceMain(argv: string[]): Promise<number> {
 
 /* ------------------------------------------------------------------ server */
 
-const USAGE = `usage: soundbox [--host HOST] [--port PORT] [--data-dir DIR] [--no-ui]
+const USAGE = `usage: konchi [--host HOST] [--port PORT] [--data-dir DIR] [--no-ui]
                 [--profile NAME] [--log-level LEVEL] [--version]
 
 Local sound-effects generation server (HTTP + MCP).
 
   --host       default ${DEFAULT_HOST}
   --port       default ${DEFAULT_PORT}
-  --data-dir   default ~/.soundbox
+  --data-dir   default ~/.konchi
   --profile    library to open (default: whichever was last active)
   --no-ui      serve the API only
-  --log-level  debug|info|warning|error|critical (default: SOUNDBOX_LOG_LEVEL,
+  --log-level  debug|info|warning|error|critical (default: KONCHI_LOG_LEVEL,
                else info)
 
-Also: \`soundbox model install audiocpp\` to install the audio.cpp runtime,
-\`soundbox pull|list|rm|run|ps\` to manage audio.cpp models without the server
-or app running, \`soundbox model install llm\` to install the local prompt
-assistant (engine + default model), \`soundbox enhance "prompt" [--n N]
+Also: \`konchi model install audiocpp\` to install the audio.cpp runtime,
+\`konchi pull|list|rm|run|ps\` to manage audio.cpp models without the server
+or app running, \`konchi model install llm\` to install the local prompt
+assistant (engine + default model), \`konchi enhance "prompt" [--n N]
 [--category sfx|music]\` to rewrite a prompt via a running server, and
-\`soundbox skills list|install|path\` for bundled agent skills.`;
+\`konchi skills list|install|path\` for bundled agent skills.`;
 
 async function serveMain(argv: string[]): Promise<number> {
   const { values } = parseArgs({
@@ -472,7 +472,7 @@ async function serveMain(argv: string[]): Promise<number> {
     },
   });
   if (values.version) {
-    console.log(`soundbox ${VERSION}`);
+    console.log(`konchi ${VERSION}`);
     return 0;
   }
   if (values.help) {
@@ -486,17 +486,17 @@ async function serveMain(argv: string[]): Promise<number> {
   const config = new Config(values["data-dir"], values.profile);
   setConfig(config);
 
-  // One file per instance, not per data directory. Two Soundbox processes
+  // One file per instance, not per data directory. Two Konchi processes
   // sharing a data dir would interleave their lines into one file — which looks
   // like duplicate output — while both trying to rotate it at 10MB, which is a
   // genuine race over the rename.
-  const logPath = resolve(config.paths.root, `soundbox-${port}.log`);
+  const logPath = resolve(config.paths.root, `konchi-${port}.log`);
   const logLevel = resolveLogLevel(values["log-level"]);
   configureLogging(logLevel.level, logPath);
   if (logLevel.invalid !== null) {
     log.warning(
       `Unknown log level "${logLevel.invalid}" from ` +
-        `${logLevel.source === "flag" ? "--log-level" : "SOUNDBOX_LOG_LEVEL"}; using info. ` +
+        `${logLevel.source === "flag" ? "--log-level" : "KONCHI_LOG_LEVEL"}; using info. ` +
         `Valid levels: ${LOG_LEVELS.join(", ")}.`,
     );
   }
@@ -506,7 +506,7 @@ async function serveMain(argv: string[]): Promise<number> {
 
   if (!["127.0.0.1", "localhost", "::1"].includes(host)) {
     log.warning(
-      `Binding ${host} exposes Soundbox beyond this machine. There is no authentication; ` +
+      `Binding ${host} exposes Konchi beyond this machine. There is no authentication; ` +
         `anyone who can reach this port can generate audio and read your library.`,
     );
   }
@@ -519,14 +519,14 @@ async function serveMain(argv: string[]): Promise<number> {
     serveUi: !values["no-ui"],
     allowedHosts: wildcard ? "any" : [host],
   });
-  console.log(`\n  Soundbox ${VERSION}  ->  http://${host}:${port}`);
+  console.log(`\n  Konchi ${VERSION}  ->  http://${host}:${port}`);
   console.log(`  MCP endpoint       ->  http://${host}:${port}/mcp`);
   console.log(`  Profile            ->  ${config.profile}`);
   console.log(`  Data directory     ->  ${config.paths.root}`);
   console.log(`  Log file           ->  ${logPath}`);
   console.log(
     `  Log level          ->  ${logLevel.level}` +
-      (logLevel.source === "env" && !logLevel.invalid ? " (SOUNDBOX_LOG_LEVEL)" : "") +
+      (logLevel.source === "env" && !logLevel.invalid ? " (KONCHI_LOG_LEVEL)" : "") +
       "\n",
   );
   await app.listen({ host, port });

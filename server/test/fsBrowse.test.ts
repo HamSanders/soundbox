@@ -26,8 +26,8 @@ async function browse(path?: string) {
 }
 
 beforeAll(async () => {
-  dataDir = await mkdtemp(join(tmpdir(), "soundbox-fs-test-"));
-  playground = await mkdtemp(join(tmpdir(), "soundbox-fs-walk-"));
+  dataDir = await mkdtemp(join(tmpdir(), "konchi-fs-test-"));
+  playground = await mkdtemp(join(tmpdir(), "konchi-fs-walk-"));
   await mkdir(join(playground, "renders"));
   await mkdir(join(playground, "Ambience"));
   await writeFile(join(playground, "notes.txt"), "not a folder", "utf-8");

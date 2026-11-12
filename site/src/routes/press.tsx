@@ -2,7 +2,7 @@
  * `/press` — the press kit.
  *
  * One link to hand a YouTuber, a journalist or a newsletter writer: what
- * Soundbox is in words they can quote, the facts they would otherwise have to
+ * Konchi is in words they can quote, the facts they would otherwise have to
  * dig out of the README, and every video, screenshot and mark with a direct
  * download. It argues for nothing; the other pages do that.
  *
@@ -56,9 +56,9 @@ const RELEASES_URL = `${REPO_URL}/releases/latest`;
 /* ------------------------------------------------------------------ words */
 
 const ONE_LINE =
-  "Soundbox is a free, open-source app that generates sound effects, music and speech on your own computer from open-weight AI models, with no account and nothing uploaded.";
+  "Konchi is a free, open-source app that generates sound effects, music and speech on your own computer from open-weight AI models, with no account and nothing uploaded.";
 
-const ONE_PARAGRAPH = `Soundbox is a free, MIT-licensed app for Windows and macOS that generates sound effects, music, songs with lyrics and speech on your own computer. It runs open-weight models through audio.cpp, a C++ runtime, so there is no Python to install. Nothing is uploaded and there is no account. Four models are verified end to end and on by default; another ${OPT_IN_MODELS}, most of them text-to-speech, can be switched on, and each shows its licence before it downloads. On an RTX 5080 a five-second sound effect takes 1.3 seconds once the model is loaded. Clips can be arranged on a multi-track timeline, and a built-in MCP server lets coding agents such as Claude Code and Cursor make sounds and save them into a project.`;
+const ONE_PARAGRAPH = `Konchi is a free, MIT-licensed app for Windows and macOS that generates sound effects, music, songs with lyrics and speech on your own computer. It runs open-weight models through audio.cpp, a C++ runtime, so there is no Python to install. Nothing is uploaded and there is no account. Four models are verified end to end and on by default; another ${OPT_IN_MODELS}, most of them text-to-speech, can be switched on, and each shows its licence before it downloads. On an RTX 5080 a five-second sound effect takes 1.3 seconds once the model is loaded. Clips can be arranged on a multi-track timeline, and a built-in MCP server lets coding agents such as Claude Code and Cursor make sounds and save them into a project.`;
 
 const FACTS: { term: string; detail: ReactNode }[] = [
   { term: "Price", detail: "Free, with no subscription, credits or account." },
@@ -66,7 +66,7 @@ const FACTS: { term: string; detail: ReactNode }[] = [
     term: "Licence",
     detail: (
       <>
-        Soundbox itself is MIT. Each model's weights carry their own licence, shown before
+        Konchi itself is MIT. Each model's weights carry their own licence, shown before
         download, and that licence decides what you may do with the output.
       </>
     ),
@@ -105,7 +105,7 @@ const FACTS: { term: string; detail: ReactNode }[] = [
   },
   {
     term: "Data",
-    detail: "Audio is saved as WAV files under ~/.soundbox, and the library is one SQLite file beside them. Nothing is sent anywhere.",
+    detail: "Audio is saved as WAV files under ~/.konchi, and the library is one SQLite file beside them. Nothing is sent anywhere.",
   },
 ];
 
@@ -138,7 +138,7 @@ const VIDEOS: Video[] = [
     poster: "/press/poster-vibe.jpg",
     seconds: 29.6,
     bytes: 4_131_653,
-    goodFor: "What Soundbox makes and who it is for, cut to a song that was generated in it.",
+    goodFor: "What Konchi makes and who it is for, cut to a song that was generated in it.",
   },
   {
     title: "Under the hood",
@@ -221,7 +221,7 @@ interface Still {
 const SCREENSHOTS: Still[] = [
   {
     src: "/product/studio.png",
-    alt: "The Soundbox studio: a script cast across three speakers above a multi-track timeline holding spoken lines, a music bed and sound effects",
+    alt: "The Konchi studio: a script cast across three speakers above a multi-track timeline holding spoken lines, a music bed and sound effects",
     caption: "The studio, with a script cast across three voices above the timeline.",
     size: "1600 × 1000",
   },
@@ -251,7 +251,7 @@ const SCREENSHOTS: Still[] = [
   },
   {
     src: "/product/library.png",
-    alt: "The Soundbox library: generated sounds with waveforms, prompts, models and seeds",
+    alt: "The Konchi library: generated sounds with waveforms, prompts, models and seeds",
     caption: "Sound effects, music and speech in one library.",
     size: "1600 × 1000",
   },
@@ -272,13 +272,13 @@ const GIFS: Still[] = [
   },
   {
     src: "/press/tech-timings.gif",
-    alt: "Render times for Soundbox's verified models, measured on an RTX 5080",
+    alt: "Render times for Konchi's verified models, measured on an RTX 5080",
     caption: "Render times measured on an RTX 5080.",
     size: "640 × 360",
   },
   {
     src: "/press/tech-swap-models.gif",
-    alt: "Switching the model behind a prompt in Soundbox",
+    alt: "Switching the model behind a prompt in Konchi",
     caption: "Swapping the model behind a prompt.",
     size: "640 × 360",
   },
@@ -444,10 +444,10 @@ export function PressPage() {
   return (
     <div className="bg-background text-foreground min-h-svh overflow-x-clip">
       <SeoHead
-        title="Press kit | Soundbox"
-        description="Descriptions to quote, a fact sheet and downloadable films, screenshots and logos for anyone covering Soundbox, the free app that generates sound effects, music and speech on your own computer."
+        title="Press kit | Konchi"
+        description="Descriptions to quote, a fact sheet and downloadable films, screenshots and logos for anyone covering Konchi, the free app that generates sound effects, music and speech on your own computer."
         path="/press"
-        imageAlt="Soundbox press kit"
+        imageAlt="Konchi press kit"
       />
 
       <div className="mx-auto w-full max-w-4xl px-4">
@@ -457,10 +457,10 @@ export function PressPage() {
             Press kit
           </p>
           <h1 className="font-heading mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-            Soundbox, for anyone writing or filming about it
+            Konchi, for anyone writing or filming about it
           </h1>
           <p className="text-muted-foreground mt-4 max-w-2xl leading-relaxed text-pretty sm:text-lg">
-            Everything on this page is free to use in coverage of Soundbox, and a credit is
+            Everything on this page is free to use in coverage of Konchi, and a credit is
             appreciated. The numbers come from the README, the model catalog and runs measured on
             one machine, and each file below downloads directly.
           </p>
@@ -478,7 +478,7 @@ export function PressPage() {
         <section id="describe" className="scroll-mt-20 border-t pt-12">
           <h2 className="font-heading text-2xl font-semibold tracking-tight">In a sentence</h2>
           <p className="text-muted-foreground mt-3 max-w-2xl leading-relaxed">
-            Quote either of these as written. Soundbox is one word, with a capital S.
+            Quote either of these as written. Konchi is one word, with a capital S.
           </p>
           <div className="mt-6 space-y-4">
             <Quotable label="One sentence" text={ONE_LINE} />
@@ -529,9 +529,9 @@ export function PressPage() {
         {/* ---------------------------------------------------------- videos */}
         <Section id="videos" title="Videos">
           <p className="text-muted-foreground mt-3 max-w-2xl leading-relaxed">
-            Use them whole or cut down in coverage of Soundbox, and a credit is appreciated. Each
+            Use them whole or cut down in coverage of Konchi, and a credit is appreciated. Each
             is an H.264 MP4 under 10 MB, which X accepts as it is. In the "Bring your ___ to life"
-            films, every sound was generated in Soundbox from the prompt shown on screen.
+            films, every sound was generated in Konchi from the prompt shown on screen.
           </p>
           <ul className="mt-6 grid gap-5 sm:grid-cols-2">
             {landscape.map((video) => (
@@ -586,7 +586,7 @@ export function PressPage() {
                 <div className={`flex items-center justify-center py-8 ${mark.tile}`}>
                   <img
                     src={assetUrl(mark.svg)}
-                    alt={`The Soundbox mark, ${mark.label.toLowerCase()}`}
+                    alt={`The Konchi mark, ${mark.label.toLowerCase()}`}
                     width={96}
                     height={96}
                   />

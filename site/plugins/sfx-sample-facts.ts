@@ -21,7 +21,7 @@ const RESOLVED = `\0${ID}`;
 
 export function sfxSampleFacts(sfxDir: string): Plugin {
   return {
-    name: "soundbox:sfx-sample-facts",
+    name: "konchi:sfx-sample-facts",
     resolveId(source) {
       return source === ID ? RESOLVED : null;
     },

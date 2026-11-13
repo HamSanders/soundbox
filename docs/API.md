@@ -94,13 +94,13 @@ route answers `202 { "job_id": "..." }` and the work is followed through
 
 | Method | Path | What it does |
 |---|---|---|
-| GET | `/api/voices` | Saved voices. Each carries `read_count` and, for a clone, `samples: [{ id, file, duration_s, created_at }]` |
+| GET | `/api/voices` | Saved voices. Each carries `read_count` and, for a clone, `samples: [{ id, file, duration_s, created_at, reference_text }]` |
 | GET | `/api/voices/{id}` | One voice |
-| POST | `/api/voices` | Body `{ name, kind: "clone" \| "builtin", voice_id?, model_id?, notes?, source_sound_id?, tidy? }` |
-| POST | `/api/voices/upload` | Clone from a WAV. Body is the file; `?name, notes, model_id, tidy` |
-| PATCH | `/api/voices/{id}` | Body `{ name?, notes? }` |
+| POST | `/api/voices` | Body `{ name, kind: "clone" \| "builtin", voice_id?, model_id?, notes?, source_sound_id?, tidy?, reference_text? }` |
+| POST | `/api/voices/upload` | Clone from a WAV. Body is the file; `?name, notes, model_id, tidy, reference_text` (URL-encode values) |
+| PATCH | `/api/voices/{id}` | Body `{ name?, notes?, samples?: [{ id, reference_text }] }` |
 | DELETE | `/api/voices/{id}` | Delete the voice and every clip file |
-| POST | `/api/voices/{id}/samples` | Add a clip to a clone. Body is a WAV (`?tidy`), or JSON `{ source_sound_id, tidy? }` |
+| POST | `/api/voices/{id}/samples` | Add a clip to a clone. Body is a WAV (`?tidy&reference_text=...`), or JSON `{ source_sound_id, tidy?, reference_text? }` |
 | DELETE | `/api/voices/{id}/samples/{sample_id}` | Remove a clip. Refused for a voice's last one |
 | GET | `/api/voices/{id}/export` | The voice as a `.soundbox-voice.json` download |
 | POST | `/api/voices/import` | Body is an exported file. Makes a copy under a new id |
@@ -113,13 +113,27 @@ is under 1 s, over 60 s or almost silent, and a voice's clips together stay
 under 90 s — past that, models read the start of the reference and ignore the
 rest.
 
+Each clip's nullable `reference_text` is its exact spoken transcript (up to
+20,000 characters), editable in Voice Lab under **Reference Transcript**.
+For Fish Audio, every clip must have a non-blank transcript: `/api/speak` and
+segment generation return HTTP 400 before queueing if any is missing, naming
+the voice and clips to fix. Existing voices remain readable with null
+transcripts; other models do not require them.
+
+Soundbox derives `request_options.reference_text` from the selected voice's
+samples in the same `created_at, id` order used to join their audio, separated
+by spaces. This overrides any story, line, request or catalog transcript.
+The HTTP and MCP speech paths share this behavior. At the audio.cpp transport
+boundary, Soundbox's `request_options` map becomes the runtime's JSON `options`
+map; the CLI fallback uses `--request-option reference_text=...`.
+
 `tidy` (off by default over the API, on by default in the app) takes out DC
 offset, cuts near-silence off both ends with a little padding left on, and pulls
 a peak above full scale back under it. It never makes a clip louder or changes
 its tone, because that is the voice.
 
 An export is JSON: `{ format: "soundbox-voice", version: 1, voice: { name, kind,
-voice_id, model_id, notes }, samples: [{ wav_base64, duration_s }] }`. The clips
+voice_id, model_id, notes }, samples: [{ wav_base64, duration_s, reference_text }] }`. The clips
 travel and the joined file does not; import rebuilds it. The avatar is not
 included and can be redrawn from the notes. On import, a name already in the
 library gets " (2)", and a `model_id` this Soundbox does not know is dropped

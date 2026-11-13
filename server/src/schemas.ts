@@ -257,6 +257,8 @@ export interface Voice {
 /** One clip a clone voice was made from. */
 export interface VoiceSample {
   id: string;
+  /** Exact speech in this clip; null for older voices or an unknown transcript. */
+  reference_text?: string | null;
   /** Served path, `/files/<name>`. */
   file: string;
   /** Null for the clip of a voice saved before voices held several. */
@@ -755,6 +757,8 @@ export const convertRequestSchema = z.object({
 
 export type ConvertRequest = z.infer<typeof convertRequestSchema>;
 
+const referenceTextSchema = z.string().max(20000).nullish();
+
 export const voiceCreateSchema = z.object({
   name: z.string().min(1).max(120),
   kind: z.enum(["clone", "builtin"]).default("clone"),
@@ -767,6 +771,7 @@ export const voiceCreateSchema = z.object({
   /** clone only: id of a library sound to use as the reference clip, as an
    *  alternative to uploading one. Lets a generated read become a voice. */
   source_sound_id: z.string().nullish(),
+  reference_text: referenceTextSchema,
   /** clone only: clean the clip up before saving — DC offset out, silence cut
    *  off both ends, an over-full-scale peak pulled back. Never boosts or
    *  re-tones it. Off by default so an API caller gets their bytes verbatim. */
@@ -779,6 +784,7 @@ export type VoiceCreate = z.input<typeof voiceCreateSchema>;
  *  from disk is a raw WAV body on the same route instead.) */
 export const voiceSampleCreateSchema = z.object({
   source_sound_id: z.string(),
+  reference_text: referenceTextSchema,
   tidy: z.boolean().default(false),
 });
 
@@ -802,7 +808,11 @@ export const voiceExportSchema = z.object({
     notes: z.string().max(2000).nullish(),
   }),
   samples: z
-    .array(z.object({ wav_base64: z.string().min(1), duration_s: z.number().nullish() }))
+    .array(z.object({
+      wav_base64: z.string().min(1),
+      duration_s: z.number().nullish(),
+      reference_text: referenceTextSchema,
+    }))
     .max(5)
     .default([]),
 });
@@ -812,6 +822,9 @@ export type VoiceExport = z.infer<typeof voiceExportSchema>;
 export const voicePatchSchema = z.object({
   name: z.string().min(1).max(120).optional(),
   notes: z.string().max(2000).nullish(),
+  /** Update transcripts by sample id, without changing the audio or its order. */
+  samples: z.array(z.object({ id: z.string(), reference_text: referenceTextSchema }))
+    .max(5).optional(),
 });
 
 export type VoicePatch = z.infer<typeof voicePatchSchema>;

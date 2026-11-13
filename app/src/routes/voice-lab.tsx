@@ -97,6 +97,7 @@ import {
   qk,
 } from "@/lib/queries";
 import type { Job, Model, Voice } from "@/lib/api";
+import { voiceReferenceError } from "@/lib/voice-reference";
 
 /** Below this many voices the search box is pure chrome — you can see them all
  *  at once, so filtering costs a row of UI and saves nothing. */
@@ -190,9 +191,10 @@ function TryItPanel({
   // the first ready model reads it.
   const pinned = voice.model_id ?? null;
   const model = pinned ? models.find((m) => m.id === pinned) : models[0];
+  const referenceError = voiceReferenceError(voice, model);
 
   const submit = () => {
-    if (!model || !line.trim()) return;
+    if (!model || !line.trim() || referenceError) return;
     speak.mutate(
       { model: model.id, lines: [{ text: line.trim(), voice_id: voice.id }] },
       { onSuccess: (ref) => setJobId(ref.job_id) },
@@ -237,13 +239,14 @@ function TryItPanel({
           <Button
             size="sm"
             className="w-full"
-            disabled={!line.trim() || speak.isPending}
+            disabled={!line.trim() || speak.isPending || Boolean(referenceError)}
             onClick={submit}
           >
             <MicIcon />
             {speak.isPending ? "Starting…" : "Read it"}
           </Button>
 
+          {referenceError && <p role="alert" className="text-destructive text-xs">{referenceError}</p>}
           <JobResult job={job} />
         </>
       )}
@@ -436,7 +439,7 @@ function ComparePanel({
     setTakes(
       chosen.flatMap((voice) => {
         const model = modelFor(voice, models);
-        return model ? [{ voice, model, jobId: null, skipped: null }] : [];
+        return model ? [{ voice, model, jobId: null, skipped: voiceReferenceError(voice, model) }] : [];
       }),
     );
     setScript({ text: line.trim(), seed: Math.floor(Math.random() * 2 ** 31) });
@@ -713,6 +716,7 @@ export function VoiceLabPage() {
   const [editing, setEditing] = useState<Voice | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [notesDraft, setNotesDraft] = useState("");
+  const [transcriptDrafts, setTranscriptDrafts] = useState<Record<string, string>>({});
   const [deleting, setDeleting] = useState<Voice | null>(null);
   /** By id rather than by object, so the dialog follows the voice as its
    *  clip list refetches after an add or remove. */
@@ -750,6 +754,9 @@ export function VoiceLabPage() {
   const openEdit = (voice: Voice) => {
     setNameDraft(voice.name);
     setNotesDraft(voice.notes ?? "");
+    setTranscriptDrafts(Object.fromEntries(
+      (voice.samples ?? []).map((s) => [s.id, s.reference_text ?? ""]),
+    ));
     setEditing(voice);
   };
 
@@ -1005,13 +1012,9 @@ export function VoiceLabPage() {
         onOpenChange={(open) => !open && setHistoryFor(null)}
       />
 
-      {/* ------------------------------------------- rename + notes, one dialog */}
-      {/* Rename and notes were separate concerns in the old aside (only rename
-          was reachable at all). They are one form here because they are the
-          only editable fields a voice has, and a dialog per field is two trips
-          for one thought. */}
+      {/* ------------------------------------------- voice details */}
       <Dialog open={editing !== null} onOpenChange={(open) => !open && setEditing(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Edit voice</DialogTitle>
             <DialogDescription>
@@ -1038,6 +1041,26 @@ export function VoiceLabPage() {
                 onChange={(e) => setNotesDraft(e.target.value)}
               />
             </div>
+            {editing?.kind === "clone" && (editing.samples ?? []).map((sample, i) => (
+              <div key={sample.id} className="space-y-1.5">
+                <Label htmlFor={`transcript-${sample.id}`}>
+                  Reference Transcript{(editing.samples?.length ?? 0) > 1 ? ` — clip ${i + 1}` : ""}
+                </Label>
+                <audio controls preload="none" src={sample.file} className="h-8 w-full" />
+                <Textarea
+                  id={`transcript-${sample.id}`}
+                  value={transcriptDrafts[sample.id] ?? ""}
+                  maxLength={20000}
+                  placeholder="The exact words spoken in this clip"
+                  onChange={(e) => setTranscriptDrafts((drafts) => ({
+                    ...drafts, [sample.id]: e.target.value,
+                  }))}
+                />
+                <p className="text-muted-foreground text-xs">
+                  Required for Fish Audio. Clips are read in the order shown here.
+                </p>
+              </div>
+            ))}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditing(null)}>
@@ -1053,6 +1076,9 @@ export function VoiceLabPage() {
                     patch: {
                       name: nameDraft.trim(),
                       notes: notesDraft.trim() || null,
+                      samples: editing.kind === "clone" ? (editing.samples ?? []).map((s) => ({
+                        id: s.id, reference_text: transcriptDrafts[s.id]?.trim() || null,
+                      })) : undefined,
                     },
                   },
                   { onSuccess: () => setEditing(null) },

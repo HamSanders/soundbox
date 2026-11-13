@@ -155,6 +155,7 @@ import { MusicRequestForm } from "@/components/music-request-form";
 import { clampDuration, preferredModel, useSessionStore } from "@/lib/session-store";
 import type { ComposerSettings, TurnInsert } from "@/lib/session-store";
 import { usePrefillStore } from "@/lib/generate-store";
+import { voiceReferenceError } from "@/lib/voice-reference";
 import { useTransportStore } from "@/lib/transport-store";
 import { usePlayerStore } from "@/lib/player-store";
 import type {
@@ -1492,6 +1493,11 @@ export function StudioEditor({
     // line still gets read, on another, and the clone may not sound like
     // itself. Say so rather than let the take be quietly wrong.
     const cast = voiceId ? voices.data?.find((v) => v.id === voiceId) : undefined;
+    const referenceError = voiceReferenceError(cast, models.data?.find((m) => m.id === model));
+    if (referenceError) {
+      toast.error(referenceError);
+      return;
+    }
     if (cast?.model_id && cast.model_id !== model) {
       toast.warning(
         `${cast.name} was made on ${modelLabel(cast.model_id)}, which is not installed — ` +

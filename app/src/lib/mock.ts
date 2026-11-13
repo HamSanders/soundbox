@@ -3041,6 +3041,11 @@ export const mockApi: SoundboxApi = {
       model_id: req.model_id ?? null,
       notes: req.notes ?? null,
     };
+    if (voice.kind === "clone" && voice.reference_file) {
+      voice.samples = [{ id: nextId("sample"), file: voice.reference_file,
+        duration_s: sounds.find((s) => s.id === req.source_sound_id)?.duration_s ?? null,
+        created_at: voice.created_at, reference_text: req.reference_text ?? null }];
+    }
     voices.unshift(voice);
     return { ...voice };
   },
@@ -3065,7 +3070,7 @@ export const mockApi: SoundboxApi = {
     return sound;
   },
 
-  async uploadVoice(name, file, notes, modelId): Promise<Voice> {
+  async uploadVoice(name, file, notes, modelId, _tidy, referenceText): Promise<Voice> {
     await wait(140);
     // Real uploaded bytes, so playback works exactly as it would live.
     const url = URL.createObjectURL(file);
@@ -3079,13 +3084,14 @@ export const mockApi: SoundboxApi = {
       voice_id: null,
       model_id: modelId ?? null,
       notes: notes ?? null,
-      samples: [{ id: nextId("sample"), file: url, duration_s: await mockDuration(file), created_at: created }],
+      samples: [{ id: nextId("sample"), file: url, duration_s: await mockDuration(file),
+        created_at: created, reference_text: referenceText ?? null }],
     };
     voices.unshift(voice);
     return withVoiceCounts(voice);
   },
 
-  async addVoiceSample(voiceId, source): Promise<Voice> {
+  async addVoiceSample(voiceId, source, _tidy, referenceText): Promise<Voice> {
     await wait(140);
     const voice = voices.find((v) => v.id === voiceId);
     if (!voice) throw new Error(`Unknown voice ${voiceId}`);
@@ -3105,7 +3111,8 @@ export const mockApi: SoundboxApi = {
       file = sound.file;
       duration = sound.duration_s;
     }
-    samples.push({ id: nextId("sample"), file, duration_s: duration, created_at: new Date().toISOString() });
+    samples.push({ id: nextId("sample"), file, duration_s: duration,
+      created_at: new Date().toISOString(), reference_text: referenceText ?? null });
     voice.samples = samples;
     // The mock cannot join WAVs; the first clip stands in for the joined
     // reference so the card still has something to play.
@@ -3177,6 +3184,10 @@ export const mockApi: SoundboxApi = {
     if (!voice) throw new Error(`Unknown voice ${id}`);
     if (patch.name !== undefined) voice.name = patch.name;
     if (patch.notes !== undefined) voice.notes = patch.notes ?? null;
+    for (const sample of patch.samples ?? []) {
+      const stored = voice.samples?.find((s) => s.id === sample.id);
+      if (stored && sample.reference_text !== undefined) stored.reference_text = sample.reference_text;
+    }
     return { ...voice };
   },
 

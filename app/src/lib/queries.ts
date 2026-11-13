@@ -676,10 +676,11 @@ export function useUploadVoice() {
       notes?: string | null;
       modelId?: string | null;
       tidy?: boolean;
+      referenceText?: string | null;
     }
   >({
-    mutationFn: ({ name, file, notes, modelId, tidy }) =>
-      api.uploadVoice(name, file, notes, modelId, tidy),
+    mutationFn: ({ name, file, notes, modelId, tidy, referenceText }) =>
+      api.uploadVoice(name, file, notes, modelId, tidy, referenceText),
     onError: fail("Could not upload the reference clip"),
     onSuccess: (voice) => {
       toast.success(`Saved “${voice.name}”`);
@@ -720,9 +721,11 @@ export function useAddVoiceSample() {
       voiceId: string;
       source: { file: Blob } | { sourceSoundId: string };
       tidy?: boolean;
+      referenceText?: string | null;
     }
   >({
-    mutationFn: ({ voiceId, source, tidy }) => api.addVoiceSample(voiceId, source, tidy),
+    mutationFn: ({ voiceId, source, tidy, referenceText }) =>
+      api.addVoiceSample(voiceId, source, tidy, referenceText),
     onError: fail("Could not add the clip"),
     onSuccess: () => void qc.invalidateQueries({ queryKey: qk.voices }),
   });

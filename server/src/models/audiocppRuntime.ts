@@ -642,10 +642,17 @@ export class AudioCppRuntime {
       : null;
 
     try {
+      // Soundbox calls these request_options (matching --request-option).
+      // audio.cpp's generic task JSON parser reads them from `options`.
+      // Sending request_options on the wire silently drops every family knob,
+      // including Fish's required reference_text. Keep the translation here
+      // so the HTTP API, MCP and CLI adapter share the Soundbox contract.
+      const { request_options, ...request } = body;
+      if (request_options !== undefined) request["options"] = request_options;
       const resp = await fetch(`${baseUrl}/v1/tasks/run`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(request),
         signal: abort.signal,
       });
       if (!resp.ok) {

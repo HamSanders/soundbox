@@ -235,6 +235,35 @@ describe("generate", () => {
   });
 });
 
+describe("speak reference transcripts", () => {
+  it("sends Fish reference_text inside request_options alongside voice_ref", async () => {
+    const host = stubHost(true);
+    const m = model("audiocpp-fish-audio", host);
+    await m.speak("New speech.", { voiceRefPath: "/tmp/reference.wav",
+      requestOptions: { reference_text: "Exact reference speech.", temperature: "0.8" } });
+    expect(host.runs[0]).toMatchObject({ voice_ref: "/tmp/reference.wav",
+      request_options: { reference_text: "Exact reference speech.", temperature: "0.8" } });
+    expect(host.runs[0]).not.toHaveProperty("reference_text");
+  });
+
+  it("rejects Fish reference audio without a caller's transcript before loading", async () => {
+    const host = stubHost(true);
+    const m = model("audiocpp-fish-audio", host);
+    await expect(m.speak("Hello", { voiceRefPath: "/tmp/reference.wav" }))
+      .rejects.toThrow(/Reference Transcript/);
+    expect(host.loads).toHaveLength(0);
+    expect(host.runs).toHaveLength(0);
+  });
+
+  it("does not require or inject transcripts for other cloning models", async () => {
+    const host = stubHost(true);
+    const m = model("audiocpp-chatterbox", host);
+    await m.speak("Hello", { voiceRefPath: "/tmp/reference.wav" });
+    expect(host.runs[0]).toHaveProperty("voice_ref", "/tmp/reference.wav");
+    expect(host.runs[0]?.["request_options"] ?? {}).not.toHaveProperty("reference_text");
+  });
+});
+
 describe("catalog", () => {
   const specs = [...catalogById().values()];
 

@@ -40,6 +40,7 @@ describe("legacy voice_samples table", () => {
     const db = new Database(path);
     try {
       expect(db.listVoiceSamples("v1").map((s) => s.file)).toEqual(["/files/v1.wav"]);
+      expect(db.listVoiceSamples("v1")[0]?.reference_text).toBeNull();
     } finally {
       db.close();
     }

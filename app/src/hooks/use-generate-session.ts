@@ -26,6 +26,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { voiceReferenceError } from "@/lib/voice-reference";
 
 import { useJobStreams } from "@/hooks/use-job-stream";
 import { ApiError,
@@ -379,7 +381,7 @@ export function useGenerateSession({ hotkey = true }: GenerateSessionOptions = {
 
   // The server refuses an extend that wouldn't add anything, and a model
   // that can't run the edit at all — fail here, with the reason, instead.
-  const blocker = useMemo(
+  const composerError = useMemo(
     () =>
       composerBlocker({
         prompt: settings.prompt,
@@ -400,6 +402,14 @@ export function useGenerateSession({ hotkey = true }: GenerateSessionOptions = {
       modelsLoading,
     ],
   );
+
+  const referenceError = voiceReferenceError(
+    voices.find((v) => v.id === effectiveVoiceId), model,
+  );
+  const blocker = composerError ?? (referenceError ? {
+    sentence: referenceError,
+    link: { to: "/voice/lab", label: "Edit transcript in Voice Lab" },
+  } : null);
 
   /* Pick a sensible default model once the list arrives. */
   useEffect(() => {
@@ -520,6 +530,13 @@ export function useGenerateSession({ hotkey = true }: GenerateSessionOptions = {
       // one this render was looking at.
       const model = models?.find((m) => m.id === settings.modelId);
       const isTts = model?.task === "tts";
+      const referenceError = voiceReferenceError(
+        voices.find((v) => v.id === effectiveVoiceId), model,
+      );
+      if (isTts && referenceError) {
+        toast.error(referenceError);
+        return;
+      }
 
       const speakReq = isTts
         ? buildSpeakRequest(settings, model, effectiveVoiceId, sessionId, projectId)
@@ -609,6 +626,7 @@ export function useGenerateSession({ hotkey = true }: GenerateSessionOptions = {
     [
       models,
       effectiveVoiceId,
+      voices,
       generate,
       speak,
       addTurn,

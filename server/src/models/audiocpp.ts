@@ -1670,6 +1670,13 @@ export class AudioCppModel {
           `to. Attach a reference audio clip (or pick a voice id, if it has one) before generating.`,
       );
     }
+    if (this.spec.family === "fish_audio" && options.voiceRefPath &&
+        !options.requestOptions?.reference_text?.trim()) {
+      throw new ModelError(
+        "Fish Audio needs a Reference Transcript for the reference audio. " +
+        "Open Voice Lab → Edit voice and enter the exact words spoken in each clip.",
+      );
+    }
     if (!this.loaded) await this.load();
     const weights = this.model!;
     const { progress } = options;

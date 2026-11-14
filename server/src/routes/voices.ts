@@ -101,6 +101,7 @@ export function registerVoices(app: FastifyInstance, svc: SoundboxService): void
         voice_id: null,
         model_id: strQuery(query.model_id) ?? null,
         source_sound_id: null,
+        reference_text: voiceCreateSchema.shape.reference_text.parse(strQuery(query.reference_text)),
         tidy: boolQuery(query.tidy, "tidy") ?? false,
       },
       decoded,
@@ -125,6 +126,7 @@ export function registerVoices(app: FastifyInstance, svc: SoundboxService): void
         request.params.voice_id,
         decoded,
         boolQuery(query.tidy, "tidy") ?? false,
+        voiceSampleCreateSchema.shape.reference_text.parse(strQuery(query.reference_text)),
       );
     } else {
       const req = voiceSampleCreateSchema.parse(request.body);
@@ -132,6 +134,7 @@ export function registerVoices(app: FastifyInstance, svc: SoundboxService): void
         request.params.voice_id,
         { source_sound_id: req.source_sound_id },
         req.tidy,
+        req.reference_text,
       );
     }
     return reply.code(201).send(voice);

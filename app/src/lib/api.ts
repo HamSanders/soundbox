@@ -233,6 +233,7 @@ export interface Voice {
 /** One clip a clone voice is made from. */
 export interface VoiceSample {
   id: string;
+  reference_text?: string | null;
   /** Served URL, playable directly. */
   file: string;
   /** Null for the clip of a voice saved before voices held several. */
@@ -252,6 +253,7 @@ export interface VoiceExportFile {
 
 export interface VoiceCreate {
   name: string;
+  reference_text?: string | null;
   kind?: "clone" | "builtin";
   voice_id?: string | null;
   model_id?: string | null;
@@ -266,6 +268,7 @@ export interface VoiceCreate {
 export interface VoicePatch {
   name?: string;
   notes?: string | null;
+  samples?: { id: string; reference_text?: string | null }[];
 }
 
 /** One speaker's turn. `voice_id` is a saved Voice's id, or null for the
@@ -1607,6 +1610,7 @@ export interface SoundboxApi {
     notes?: string | null,
     modelId?: string | null,
     tidy?: boolean,
+    referenceText?: string | null,
   ): Promise<Voice>;
   /** Add a clip to a clone voice: a WAV from disk or the mic, or a library
    *  sound by id. Returns the voice with its new clip list. */
@@ -1614,6 +1618,7 @@ export interface SoundboxApi {
     voiceId: string,
     source: { file: Blob } | { sourceSoundId: string },
     tidy?: boolean,
+    referenceText?: string | null,
   ): Promise<Voice>;
   /** Remove one clip. The server refuses to remove a voice's last one. */
   deleteVoiceSample(voiceId: string, sampleId: string): Promise<Voice>;
@@ -2080,12 +2085,13 @@ export const httpApi: SoundboxApi = {
 
   // The WAV is the whole body, so the name/notes ride as query params and the
   // Content-Type override stops `request` from labelling the bytes as JSON.
-  uploadVoice: (name, file, notes, modelId, tidy) =>
+  uploadVoice: (name, file, notes, modelId, tidy, referenceText) =>
     request<Voice>(
       `/api/voices/upload${qs({
         name,
         notes: notes ?? undefined,
         model_id: modelId ?? undefined,
+        reference_text: referenceText ?? undefined,
         tidy: tidy ? "true" : undefined,
       })}`,
       {
@@ -2115,10 +2121,11 @@ export const httpApi: SoundboxApi = {
     request<void>(`/api/voices/${encodeURIComponent(id)}`, { method: "DELETE" }),
 
   // One route, two bodies: raw WAV like uploadVoice, or JSON naming a sound.
-  addVoiceSample: (voiceId, source, tidy) => {
+  addVoiceSample: (voiceId, source, tidy, referenceText) => {
     const path = `/api/voices/${encodeURIComponent(voiceId)}/samples`;
     if ("file" in source) {
-      return request<Voice>(`${path}${qs({ tidy: tidy ? "true" : undefined })}`, {
+      return request<Voice>(`${path}${qs({ tidy: tidy ? "true" : undefined,
+        reference_text: referenceText ?? undefined })}`, {
         method: "POST",
         body: source.file,
         headers: { "Content-Type": "audio/wav" },
@@ -2126,7 +2133,8 @@ export const httpApi: SoundboxApi = {
     }
     return request<Voice>(path, {
       method: "POST",
-      body: JSON.stringify({ source_sound_id: source.sourceSoundId, tidy: tidy ?? false }),
+      body: JSON.stringify({ source_sound_id: source.sourceSoundId, tidy: tidy ?? false,
+        reference_text: referenceText }),
     });
   },
 

@@ -40,6 +40,7 @@ import { AUDIO_ACCEPT, toWav } from "@/lib/audio-file";
 import { formatDuration } from "@/lib/format";
 import { useAddVoiceSample, useDeleteVoiceSample, useSounds } from "@/lib/queries";
 import type { Voice } from "@/lib/api";
+import { Textarea } from "@/components/ui/textarea";
 
 /** Mirrors the server's MAX_SAMPLES (server/src/audio/reference.ts). Only
  *  used to stop offering "add" — the server is the one that refuses. */
@@ -99,6 +100,7 @@ export function VoiceClipsDialog({
   const recorder = useRecorder();
   const fileInput = useRef<HTMLInputElement>(null);
   const [tidy, setTidy] = useState(true);
+  const [referenceText, setReferenceText] = useState("");
   const [preparing, setPreparing] = useState(false);
 
   const samples = voice?.samples ?? [];
@@ -107,6 +109,7 @@ export function VoiceClipsDialog({
 
   const close = () => {
     recorder.reset();
+    setReferenceText("");
     onOpenChange(false);
   };
 
@@ -116,8 +119,9 @@ export function VoiceClipsDialog({
     try {
       const wav = await toWav(clip, filename);
       add.mutate(
-        { voiceId: voice.id, source: { file: wav }, tidy },
-        { onSuccess: () => recorder.reset() },
+        { voiceId: voice.id, source: { file: wav }, tidy,
+          referenceText: referenceText.trim() || null },
+        { onSuccess: () => { recorder.reset(); setReferenceText(""); } },
       );
     } catch (exc) {
       toast.error(exc instanceof Error ? exc.message : "Could not read that audio.");
@@ -128,7 +132,7 @@ export function VoiceClipsDialog({
 
   return (
     <Dialog open={voice !== null} onOpenChange={(open) => (open ? null : close())}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Clips for “{voice?.name}”</DialogTitle>
           <DialogDescription>
@@ -182,6 +186,19 @@ export function VoiceClipsDialog({
           </p>
         ) : (
           <div className="bg-muted/25 ring-border space-y-3 rounded-lg p-3 ring-1 ring-inset">
+            <div className="space-y-1.5">
+              <Label htmlFor="new-clip-transcript">Reference Transcript</Label>
+              <Textarea
+                id="new-clip-transcript"
+                value={referenceText}
+                maxLength={20000}
+                onChange={(e) => setReferenceText(e.target.value)}
+                placeholder="The exact words spoken in the clip you are adding"
+              />
+              <p className="text-muted-foreground text-xs">
+                Required for Fish Audio. To change existing transcripts, use Edit voice.
+              </p>
+            </div>
             <input
               ref={fileInput}
               type="file"

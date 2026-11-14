@@ -956,6 +956,10 @@ export class SoundboxService {
     if (info.task !== "tts") {
       throw new ModelError(`${info.name} is not a text-to-speech model.`);
     }
+    const { refPath, builtinId, requestOptions } = this.resolveVoice(
+      segment.voice_id ?? null, info.family,
+      this.deliveryFor(segment, info.family, req.request_options),
+    );
     if (!model.loaded) {
       handle?.phase("loading", `Loading ${info.name}`);
       await this.models.load(req.model, (f, m) => handle?.progress(f * 0.2, m, "loading"));
@@ -963,7 +967,6 @@ export class SoundboxService {
     this.models.touch();
 
     handle?.phase("generating", "Speaking");
-    const { refPath, builtinId } = this.resolveVoice(segment.voice_id ?? null);
     const clip = await model.speak(segment.text, {
       voiceRefPath: refPath,
       voiceId: builtinId,
@@ -971,7 +974,7 @@ export class SoundboxService {
       steps: req.steps ?? null,
       cfg: req.cfg ?? null,
       loadOptions: req.load_options,
-      requestOptions: this.deliveryFor(segment, info.family, req.request_options),
+      requestOptions,
       progress: handle ? reporter(handle, 0.2, 0.7, "Speaking") : undefined,
     });
 
@@ -1045,10 +1048,12 @@ export class SoundboxService {
    *  other generation does: it takes real time, and the UI already knows how
    *  to show a job's progress. */
   submitSegmentGenerate(segmentId: string, request: SegmentGenerate): Job {
-    if (this.db.getSegment(segmentId) === null) {
+    const segment = this.db.getSegment(segmentId);
+    if (segment === null) {
       throw new ModelError("Line not found.");
     }
-    this.models.get(request.model); // throws ModelError on unknown id, before queueing
+    const info = this.models.get(request.model).describe();
+    this.resolveVoice(segment.voice_id ?? null, info.family);
     return this.jobs.submit("segment", { ...request, segment_id: segmentId }, async (handle) => {
       const segment = await this.generateSegment(segmentId, request, handle);
       return { sounds: segment?.sound_id ? [segment.sound_id] : [], segment_id: segmentId };
@@ -1409,19 +1414,41 @@ export class SoundboxService {
    * synthesising anything) and by single-segment generation, so a stale voice
    * id fails the same way in both.
    */
-  private resolveVoice(voiceId: string | null): {
+  private resolveVoice(
+    voiceId: string | null,
+    family: string,
+    options: Record<string, string> = {},
+  ): {
     refPath: string | null;
     builtinId: string | null;
+    requestOptions: Record<string, string>;
   } {
-    if (!voiceId) return { refPath: null, builtinId: null };
+    const requestOptions = { ...options };
+    if (!voiceId) return { refPath: null, builtinId: null, requestOptions };
     const voice = this.db.getVoice(voiceId);
     if (voice === null) throw new ModelError(`Voice '${voiceId}' not found.`);
-    if (voice.kind === "builtin") return { refPath: null, builtinId: voice.voice_id ?? null };
+    if (voice.kind === "builtin") {
+      return { refPath: null, builtinId: voice.voice_id ?? null, requestOptions };
+    }
     const refPath = this.voiceRefPath(voice.id);
     if (refPath === null) {
       throw new ModelError(`Voice '${voice.name}' has no reference clip on disk.`);
     }
-    return { refPath, builtinId: null };
+    if (family === "fish_audio") {
+      // listVoiceSamples and voiceSampleFilenames use the same ORDER BY.
+      // Never skip an untranscribed clip: its speech is still in voice_ref.
+      const samples = voice.samples ?? [];
+      const missing = samples.flatMap((s, i) => s.reference_text?.trim() ? [] : [i + 1]);
+      if (!samples.length || missing.length) {
+        throw new ModelError(
+          `Fish Audio: voice “${voice.name}” needs a Reference Transcript` +
+          (missing.length ? ` for clip(s) ${missing.join(", ")}` : "") +
+          ". Open Voice Lab → Edit voice and enter the exact words spoken in each reference clip.",
+        );
+      }
+      requestOptions.reference_text = samples.map((s) => s.reference_text!.trim()).join(" ");
+    }
+    return { refPath, builtinId: null, requestOptions };
   }
 
   /**
@@ -2157,6 +2184,7 @@ export class SoundboxService {
       filename,
       duration_s: dsp.frameCount(clip.audio) / clip.sampleRate,
       created_at: created,
+      reference_text: req.reference_text,
     });
     return this.db.getVoice(id)!;
   }
@@ -2201,6 +2229,7 @@ export class SoundboxService {
     voiceId: string,
     source: { audio: dsp.Audio; sampleRate: number } | { source_sound_id: string },
     tidy = false,
+    referenceText?: string | null,
   ): Voice {
     const voice = this.db.getVoice(voiceId);
     if (voice === null) throw new ModelError(`Voice '${voiceId}' not found.`);
@@ -2236,7 +2265,10 @@ export class SoundboxService {
       voice_id: voiceId,
       filename,
       duration_s: seconds,
-      created_at: now(),
+      // Preserve append order even when imports add several clips in one ms.
+      created_at: new Date(Math.max(Date.now(),
+        Date.parse(existing[existing.length - 1]!.created_at) + 1)).toISOString(),
+      reference_text: referenceText,
     });
     this.rebuildVoiceReference(voiceId);
     return this.db.getVoice(voiceId)!;
@@ -2306,6 +2338,7 @@ export class SoundboxService {
     const samples = this.db.voiceSampleFilenames(voiceId).map((filename, i) => ({
       wav_base64: readFileSync(join(dir, filename)).toString("base64"),
       duration_s: voice.samples?.[i]?.duration_s ?? null,
+      reference_text: voice.samples?.[i]?.reference_text ?? null,
     }));
     return {
       format: "soundbox-voice",
@@ -2374,11 +2407,14 @@ export class SoundboxService {
       }
     });
     const voice = this.createVoice(
-      { name, kind: "clone", model_id: modelId, notes: file.voice.notes ?? null },
+      { name, kind: "clone", model_id: modelId, notes: file.voice.notes ?? null,
+        reference_text: file.samples[0]?.reference_text },
       clips[0],
     );
     try {
-      for (const clip of clips.slice(1)) this.addVoiceSample(voice.id, clip);
+      for (let i = 1; i < clips.length; i++) {
+        this.addVoiceSample(voice.id, clips[i]!, false, file.samples[i]?.reference_text);
+      }
     } catch (err) {
       // All or nothing: a half-imported voice would look complete and sound
       // like a fraction of the speaker.
@@ -2389,6 +2425,14 @@ export class SoundboxService {
   }
 
   updateVoice(voiceId: string, patch: VoicePatch): Voice | null {
+    const voice = this.db.getVoice(voiceId);
+    if (voice === null) return null;
+    if (patch.samples) {
+      const ids = new Set(voice.samples?.map((s) => s.id));
+      if (patch.samples.some((s) => !ids.has(s.id))) {
+        throw new ModelError("A transcript can only be changed for this voice's own clips.");
+      }
+    }
     return this.db.updateVoice(voiceId, patch);
   }
 
@@ -2421,6 +2465,9 @@ export class SoundboxService {
       if (info.task !== "tts") {
         throw new ModelError(`${info.name} is not a text-to-speech model.`);
       }
+    }
+    for (const line of request.lines) {
+      this.resolveVoice(line.voice_id ?? null, this.models.get(line.model ?? request.model).describe().family);
     }
 
     // Same session handling as generate, for the same reason: a read started
@@ -2470,16 +2517,17 @@ export class SoundboxService {
     // Resolve every voice before synthesising anything: failing on line 40 of
     // a 60-line script after five minutes of work, because one voice id was
     // stale, is the worst possible time to find out.
-    const resolved = req.lines.map((line) => ({
-      line,
-      ...this.resolveVoice(line.voice_id ?? null),
-    }));
+    const resolved = req.lines.map((line) => {
+      const family = this.models.get(line.model ?? req.model).describe().family;
+      return { line, ...this.resolveVoice(line.voice_id ?? null, family,
+        withRequirements(family, req.request_options)) };
+    });
 
     const clips: { audio: dsp.Audio; sampleRate: number }[] = [];
     const n = resolved.length;
     for (let i = 0; i < n; i++) {
       handle.checkCancelled();
-      const { line, refPath, builtinId } = resolved[i]!;
+      const { line, refPath, builtinId, requestOptions } = resolved[i]!;
       const base = 0.2 + (i / n) * 0.7;
       const span = 0.7 / n;
       const label = n > 1 ? `Line ${i + 1}/${n}` : "Speaking";
@@ -2505,7 +2553,7 @@ export class SoundboxService {
           voiceId: builtinId,
           // One delivery for the whole read: `speak` is the one-off path with
           // no story behind it, so there is nothing per-line to merge.
-          requestOptions: withRequirements(lineInfo.family, req.request_options),
+          requestOptions,
           // One seed for the whole read, not one per line: varying it between
           // turns makes the same character drift audibly mid-conversation.
           seed: req.seed ?? null,

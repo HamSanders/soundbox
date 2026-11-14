@@ -41,6 +41,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -248,6 +249,7 @@ export function AddVoiceDialog({
   const [file, setFile] = useState<File | null>(null);
   const [uploadName, setUploadName] = useState("");
   const [notes, setNotes] = useState("");
+  const [referenceText, setReferenceText] = useState("");
   /** The model a cloned voice is tied to. Chosen here, once, because that is
    *  what lets every surface that speaks offer a voice picker and nothing
    *  else: the model is not a second decision made at read time, it is part
@@ -299,6 +301,7 @@ export function AddVoiceDialog({
     setFile(null);
     setUploadName("");
     setNotes("");
+    setReferenceText("");
     setCloneModelId("");
     setTidy(true);
     setBuiltinKey("");
@@ -317,6 +320,7 @@ export function AddVoiceDialog({
           file: wav,
           notes: notes.trim() || null,
           modelId: cloneModelId || null,
+          referenceText: referenceText.trim() || null,
           tidy,
         },
         { onSuccess: close },
@@ -382,6 +386,20 @@ export function AddVoiceDialog({
           placeholder="optional — accent, tone, where it came from"
         />
       </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="voice-reference-text">Reference Transcript</Label>
+        <Textarea
+          id="voice-reference-text"
+          value={referenceText}
+          maxLength={20000}
+          onChange={(e) => setReferenceText(e.target.value)}
+          placeholder="The exact words spoken in this reference clip"
+        />
+        <p className="text-muted-foreground text-xs">
+          Required to generate with Fish Audio. Transcribe this audio exactly;
+          this is separate from the new text you want the voice to say.
+        </p>
+      </div>
       <TidySwitch id="voice-upload-tidy" checked={tidy} onCheckedChange={setTidy} />
       <p className="text-muted-foreground text-xs">
         A few seconds of clean, single-speaker speech clones best. Music and
@@ -421,6 +439,7 @@ export function AddVoiceDialog({
                       model_id: cloneModelId,
                       notes: notes.trim() || null,
                       source_sound_id: sourceSound.id,
+                      reference_text: referenceText.trim() || null,
                       tidy,
                     },
                     { onSuccess: close },

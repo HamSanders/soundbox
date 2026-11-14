@@ -11,6 +11,7 @@ to follow [Semantic Versioning](https://semver.org/).
 - The site's download page has a new design: a full-width hero, the Soundbox film in a frame that flattens as you scroll, live GitHub numbers and a card per installer.
 
 ### Fixed
+- Fish Audio S2 Pro cloning: save a Reference Transcript for each voice clip, pass the selected voice's transcripts in combined-audio order in Speak and Script Builder, and report missing transcripts before synthesis. Translate request options to audio.cpp's HTTP `options` map so the runtime receives them.
 - Security: updated dependencies with open advisories: the system information library, the HTTP server adapter, and the desktop updater's zip support (Dependabot alerts).
 
 ## [0.4.1] - 2026-10-29

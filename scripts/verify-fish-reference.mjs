@@ -18,7 +18,7 @@ assert.equal(references.length, 2, "Supply two reference clips with their exact 
 for (const ref of references) {
   assert.ok(typeof ref.file === "string" && ref.reference_text?.trim(), "Each clip needs file and reference_text.");
 }
-process.env.SOUNDBOX_AUDIOCPP_BIN = resolve(binary);
+process.env.KONCHI_AUDIOCPP_BIN = resolve(binary);
 const { buildApp } = await import("../server/dist/app.js");
 const { Config } = await import("../server/dist/config.js");
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -31,7 +31,7 @@ config.updateSettings({ audiocpp_mode: "external", audiocpp_models_dir: resolve(
 const app = buildApp(config, { serveUi: false });
 const model = "audiocpp-fish-audio";
 const requests = [];
-const runtime = app.soundbox.models.runtime;
+const runtime = app.konchi.models.runtime;
 const runTask = runtime.runTask.bind(runtime);
 runtime.runTask = async (body, ...args) => {
   requests.push(body);
@@ -47,11 +47,11 @@ async function json(method, url, payload, headers) {
 async function wait(jobId) {
   const deadline = Date.now() + 15 * 60_000;
   while (Date.now() < deadline) {
-    const job = app.soundbox.jobs.get(jobId);
+    const job = app.konchi.jobs.get(jobId);
     if (job?.status === "error" || job?.status === "cancelled") throw new Error(job.error ?? job.status);
     if (job?.status === "done") {
       for (const id of job.result?.sounds ?? []) {
-        const sound = app.soundbox.getSound(id);
+        const sound = app.konchi.getSound(id);
         assert.ok(sound?.duration_s > 0);
         report.sounds.push({ id, duration_s: sound.duration_s,
           file: resolve(config.paths.sounds, sound.file.replace("/files/", "")) });

@@ -120,11 +120,11 @@ segment generation return HTTP 400 before queueing if any is missing, naming
 the voice and clips to fix. Existing voices remain readable with null
 transcripts; other models do not require them.
 
-Soundbox derives `request_options.reference_text` from the selected voice's
+Konchi derives `request_options.reference_text` from the selected voice's
 samples in the same `created_at, id` order used to join their audio, separated
 by spaces. This overrides any story, line, request or catalog transcript.
 The HTTP and MCP speech paths share this behavior. At the audio.cpp transport
-boundary, Soundbox's `request_options` map becomes the runtime's JSON `options`
+boundary, Konchi's `request_options` map becomes the runtime's JSON `options`
 map; the CLI fallback uses `--request-option reference_text=...`.
 
 `tidy` (off by default over the API, on by default in the app) takes out DC

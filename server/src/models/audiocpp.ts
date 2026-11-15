@@ -1738,6 +1738,13 @@ export class AudioCppModel {
     if (this.spec.requires_voice_reference && !options.voiceRefPath && !options.voiceId) {
       throw new ModelError(`${this.spec.name} is a cloning-only voice — pick a voice to stream with.`);
     }
+    if (this.spec.family === "fish_audio" && options.voiceRefPath &&
+        !options.requestOptions?.reference_text?.trim()) {
+      throw new ModelError(
+        "Fish Audio needs a Reference Transcript for the reference audio. " +
+        "Open Voice Lab → Edit voice and enter the exact words spoken in each clip.",
+      );
+    }
     if (Object.keys(options.loadOptions ?? {}).length) {
       throw new StreamUnsupported(
         `Streaming can't use load options (they pick a weights variant at load time).`,

@@ -2654,7 +2654,13 @@ export class SoundboxService {
     if (typeof model.speakStream !== "function") {
       throw new StreamUnsupported(`${info.name} can't stream. Use /api/speak instead.`);
     }
-    const { refPath, builtinId } = this.resolveVoice(req.voice_id ?? null);
+    // Same voice resolution as /api/speak, so a Fish clone gets its clips'
+    // reference transcripts (and fails early, before the GPU, without them).
+    const { refPath, builtinId, requestOptions } = this.resolveVoice(
+      req.voice_id ?? null,
+      info.family,
+      withRequirements(info.family, req.request_options),
+    );
 
     const release = this.jobs.acquireExclusive();
     const startedAt = Date.now();
@@ -2673,7 +2679,7 @@ export class SoundboxService {
         seed: req.seed ?? null,
         steps: req.steps ?? null,
         cfg: req.cfg ?? null,
-        requestOptions: withRequirements(info.family, req.request_options),
+        requestOptions,
         signal,
       });
       for await (const chunk of chunks) {

@@ -36,23 +36,21 @@ import {
   CheckIcon,
   CircleDashedIcon,
   ExternalLinkIcon,
-  FolderIcon,
   RadarIcon,
-  ScaleIcon,
   SparklesIcon,
   TerminalIcon,
-  WifiOffIcon,
 } from "lucide-react";
 
-import { SeoHead, softwareAppJsonLd } from "@/components/seo-head";
+import { SeoHead, faqJsonLd, softwareAppJsonLd } from "@/components/seo-head";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TimelineBanner } from "@/components/timeline-banner";
 import { RevealPromptToSample } from "@/components/reveal-prompt-to-sample";
-import { RevealPillars } from "@/components/reveal-pillars";
 import { ProductShots } from "@/components/product-shots";
 import { LicenseChip } from "@/components/license-badge";
 import { DownloadButton, PlatformPicker } from "@/components/download-cta";
+import { COMPARISON, COMPARISON_HEAD } from "@/content/comparison";
+import { AGENT_FAQ, COMMERCIAL, FREE, GPU, MAC, MODELS_FAQ, OFFLINE } from "@/content/faq";
 import { SamplePlay } from "@/components/sample-play";
 import { exampleForModel, type ExampleId } from "@/content/examples";
 import type { LicenseInfo } from "@/lib/api";
@@ -604,124 +602,6 @@ function Models() {
   );
 }
 
-/* ----------------------------------------------------------------- local */
-
-function Local() {
-  return (
-    <Section labelledBy="local-heading">
-      <SectionHead
-        id="local-heading"
-        eyebrow="Local and offline"
-        title="Nothing is uploaded"
-      >
-        Soundbox is a server on your loopback interface and a folder on your
-        disk. Weights download from Hugging Face when you ask for them. After
-        that it works offline. The one request it makes on its own is a daily
-        check for a newer version, which sends the version and the platform and
-        nothing else, and which you can turn off in Settings.
-      </SectionHead>
-
-      <div className="mt-8 grid gap-4 lg:grid-cols-[1.15fr_1fr]">
-        <div className="grid min-w-0 gap-4 sm:grid-cols-2">
-          <Feature icon={WifiOffIcon} title="No account or credits">
-            There is no sign-up and no usage meter. Audio models download
-            without an account.
-          </Feature>
-          <Feature icon={FolderIcon} title="Your library is files on disk">
-            One SQLite file and one folder of WAVs under <code>~/.soundbox</code>.
-            Back it up, sync it or delete it like any other folder.
-          </Feature>
-          <Feature icon={ScaleIcon} title="Licences before downloads">
-            Every model card states its terms and colour-codes commercial use.
-            Non-commercial weights need an explicit confirmation that names the
-            restriction.
-          </Feature>
-          <Feature icon={AudioLinesIcon} title="Prompt, seed and settings kept">
-            Everything you generate is saved with what produced it, so you can
-            search it, tag it, favourite it and regenerate from it.
-          </Feature>
-        </div>
-
-        <div className="bg-muted/50 ring-border min-w-0 rounded-2xl p-5 ring-1 ring-inset">
-          <h3 className="text-sm font-semibold tracking-tight">Where things live</h3>
-          <pre className="text-muted-foreground mt-3 overflow-x-auto text-xs leading-relaxed">
-            <code className="font-mono">{`~/.soundbox/
-├── soundbox.db      SQLite: prompts, seeds, tags
-├── sounds/          the WAVs, one per generation
-└── models/          weights you chose to download`}</code>
-          </pre>
-          <p className="text-muted-foreground mt-4 text-xs leading-relaxed">
-            The backend binds <code className="font-mono">127.0.0.1:17494</code>.
-            The UI talks to that and to nothing else.
-          </p>
-        </div>
-      </div>
-    </Section>
-  );
-}
-
-/* -------------------------------------------------------------- prompting */
-
-function Prompting() {
-  return (
-    <Section labelledBy="prompting-heading">
-      <SectionHead
-        id="prompting-heading"
-        eyebrow="Writing prompts that work"
-        title="Name the material, the action and the space"
-      >
-        These models were trained on captions of recordings, so they respond to
-        descriptions of what is making the sound and where. Mood words produce
-        noise.
-      </SectionHead>
-
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
-        <div className="ring-border/70 bg-card rounded-2xl p-5 ring-1">
-          <p className="label-caps text-muted-foreground">
-            Too vague
-          </p>
-          <p className="mt-3 font-mono text-sm">scary sound</p>
-          <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
-            It names no material and no action, so the model returns noise.
-          </p>
-        </div>
-        <div className="ring-primary/30 bg-card rounded-2xl p-5 ring-1">
-          <p className="label-caps text-primary">
-            Usable
-          </p>
-          <p className="mt-3 font-mono text-sm">
-            low metallic groan of a ship&rsquo;s hull under pressure, distant,
-            reverberant
-          </p>
-          <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
-            Material (metal hull), action (groaning under pressure), space
-            (distant, reverberant).
-          </p>
-        </div>
-      </div>
-
-      <p className="text-muted-foreground mt-6 max-w-2xl text-sm leading-relaxed">
-        Keep clips short and layer them in your editor. A three-second clip is
-        easier to place than a twenty-second one.
-      </p>
-    </Section>
-  );
-}
-
-/* ---------------------------------------------------------------- studio */
-
-/**
- * The studio, in one screen instead of four.
- *
- * This is a signpost, not a demonstration. The reveals it replaces are worth
- * the scrolling they cost, but only to someone who has already decided the
- * generator is interesting — so the argument moved to /studio and what stays
- * here is the shortest honest description of it plus a link. Deliberately a
- * `<Link>`: this page is prerendered, and /studio only gets crawled if there
- * is an href pointing at it.
- */
-/* ---------------------------------------------------------------- agents */
-
 /**
  * The companion-app pitch. Soundbox is built to be driven by AI agents, not
  * just clicked through — this section leads with that rather than burying it
@@ -866,94 +746,186 @@ function Developers() {
 
 /* --------------------------------------------------------------- started */
 
-const STEPS: { title: string; body: React.ReactNode }[] = [
+/* ------------------------------------------------------------ five things */
+
+const THINGS: {
+  title: string;
+  body: string;
+  href: string;
+  cta: string;
+  sample?: ExampleId;
+}[] = [
   {
-    title: "Install the app",
-    body: (
-      <>
-        Download the installer for Windows 10 or 11, or macOS on Apple silicon
-        or Intel. It carries its own runtime, so nothing else needs installing.
-        The builds are not signed yet, so the first launch asks you to confirm.
-      </>
-    ),
+    title: "Sound effects from a description",
+    body: "Name the material, the action and the space and get a WAV. Each take keeps its prompt, model and seed.",
+    href: "/sfx",
+    cta: "Hear hundreds of examples",
+    sample: "impact-wood-crate-smash",
   },
   {
-    title: "Download a model",
-    body: (
-      <>
-        The first run walks you through picking models for your GPU, and each
-        model downloads from inside the app the first time you use it. Start
-        with Stable Audio 3.0 SFX to check your setup, then pick the model
-        whose licence suits what you are making.
-      </>
-    ),
+    title: "Music, with or without lyrics",
+    body: "A style prompt gives an instrumental. Add a lyric sheet and a model that sings does the rest.",
+    href: "/music",
+    cta: "Listen to the tracks",
+    sample: "victory-lap",
   },
   {
-    title: "Or run from source",
-    body: (
-      <>
-        Requires Node 22.12 or later, with no Python and no CUDA toolkit.{" "}
-        <code className="font-mono text-xs">npm run dev</code> starts the server
-        on port 17494 and the UI on 5174. Inference runs in{" "}
-        <code className="font-mono text-xs">audiocpp_cli</code>, a native binary
-        that picks CUDA, HIP, Metal, Vulkan or CPU automatically and is cached
-        under <code className="font-mono text-xs">~/.soundbox/bin/</code>.
-      </>
-    ),
+    title: "Speech and voice cloning",
+    body: "Read a script aloud, or clone a voice from a short clip and cast it onto the lines of a script.",
+    href: "/voices",
+    cta: "How voices work",
+    sample: "narration-intro",
+  },
+  {
+    title: "One timeline for all of it",
+    body: "Arrange sounds, music and spoken lines on a multi-track timeline, with effects, MIDI and a mixdown.",
+    href: "/studio",
+    cta: "See the studio",
+  },
+  {
+    title: "Your agent can do it for you",
+    body: "An MCP server with 24 tools lets Claude Code, Cursor or any MCP client make the audio and place it.",
+    href: "/mcp",
+    cta: "Connect an agent",
+    sample: "door-heavy-vault",
   },
 ];
 
-function GetStarted() {
+function FiveThings() {
   return (
-    <Section id="install" className="scroll-mt-16" labelledBy="start-heading">
-      <SectionHead
-        id="start-heading"
-        eyebrow="Getting started"
-        title="Install, pick a model, generate"
-      >
-        A GPU is not required, but CPU generation is slow. A few GB of VRAM
-        covers the verified models, and each model card shows its footprint. To
-        try the UI with no GPU or server,{" "}
-        <code className="font-mono text-xs">npm run dev:mock</code> runs it
-        against an in-browser fake.
+    <Section id="what" labelledBy="what-heading">
+      <SectionHead id="what-heading" eyebrow="What it does" title="Five things, all on your machine">
+        The same box that makes a sound effect makes music and speech, and all
+        of it lands in one studio.
+      </SectionHead>
+      <ol className="border-border mt-8 grid border-t border-l sm:grid-cols-2 lg:grid-cols-3">
+        {THINGS.map((t, i) => (
+          <li key={t.title} className="border-border flex flex-col gap-3 border-r border-b p-5">
+            <span className="readout text-muted-foreground text-xs" aria-hidden="true">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <h3 className="text-base font-semibold tracking-tight">{t.title}</h3>
+            <p className="text-muted-foreground text-sm leading-relaxed">{t.body}</p>
+            {t.sample ? <SamplePlay id={t.sample} className="pt-1" /> : null}
+            <Link
+              to={t.href}
+              className="text-muted-foreground hover:text-foreground mt-auto pt-2 text-sm underline underline-offset-4"
+            >
+              {t.cta}
+            </Link>
+          </li>
+        ))}
+      </ol>
+    </Section>
+  );
+}
+
+/* ----------------------------------------------------------------- compare */
+
+function Compare() {
+  return (
+    <Section id="compare" labelledBy="compare-heading">
+      <SectionHead id="compare-heading" eyebrow="Is it for you?" title="Soundbox next to a hosted service">
+        Open models trade consistency for ownership. This is the whole trade, row
+        by row.
+      </SectionHead>
+      <div className="border-border mt-8 overflow-x-auto rounded-md border">
+        <table className="w-full min-w-[32rem] text-left text-sm">
+          <thead>
+            <tr className="border-border border-b">
+              <th scope="col" className="p-3" />
+              <th scope="col" className="label-caps text-muted-foreground p-3 font-normal">
+                {COMPARISON_HEAD[0]}
+              </th>
+              <th scope="col" className="label-caps p-3 font-normal">
+                {COMPARISON_HEAD[1]}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {COMPARISON.map(([row, hosted, ours]) => (
+              <tr key={row} className="border-border border-b last:border-b-0">
+                <th scope="row" className="text-muted-foreground p-3 font-normal">
+                  {row}
+                </th>
+                <td className="text-muted-foreground p-3">{hosted}</td>
+                <td className="p-3">{ours}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-muted-foreground mt-3 max-w-2xl text-xs leading-relaxed">
+        Hosted services differ from one another and change their terms; this
+        describes them in general, not any one product&apos;s current plan. It
+        is not for you if you want one consistent, tuned voice with no setup:
+        you pick models, and quality varies between them.
+      </p>
+    </Section>
+  );
+}
+
+/* --------------------------------------------------------------- questions */
+
+const HOME_FAQ = [FREE, GPU, OFFLINE, COMMERCIAL, MAC, MODELS_FAQ, AGENT_FAQ];
+
+function Questions() {
+  return (
+    <Section id="questions" labelledBy="questions-heading">
+      <SectionHead id="questions-heading" eyebrow="Questions" title="What people ask first" />
+      <dl className="mt-8 grid max-w-5xl gap-x-12 gap-y-7 md:grid-cols-2">
+        {HOME_FAQ.map((f) => (
+          <div key={f.question}>
+            <dt className="font-semibold tracking-tight">{f.question}</dt>
+            <dd className="text-muted-foreground mt-1.5 text-sm leading-relaxed">{f.answer}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="text-muted-foreground mt-8 text-sm">
+        More in the{" "}
+        <Link to="/docs" className="text-foreground underline underline-offset-4">
+          docs
+        </Link>{" "}
+        and on the{" "}
+        <Link to={MODELS_HUB_HREF} className="text-foreground underline underline-offset-4">
+          models page
+        </Link>
+        .
+      </p>
+    </Section>
+  );
+}
+
+/* ---------------------------------------------------------------- download */
+
+const AGENT_INSTALL = `Install Soundbox on this machine and confirm it works, following
+${repoFile("docs/INSTALL-AGENT.md")}`;
+
+function Download() {
+  return (
+    <Section id="install" className="scroll-mt-16" labelledBy="install-heading">
+      <SectionHead id="install-heading" eyebrow="Download" title="Free, and on your machine">
+        One installer with its own runtime. The builds are not signed yet, so the
+        first launch asks you to confirm. The first model downloads when you pick
+        it, with its licence shown first.
       </SectionHead>
 
       <PlatformPicker className="mt-8" />
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_1fr]">
-        <ol className="space-y-5">
-          {STEPS.map((step, i) => (
-            <li key={step.title} className="flex gap-3.5">
-              <span
-                className="bg-primary/10 text-primary flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums"
-                aria-hidden="true"
-              >
-                {i + 1}
-              </span>
-              <div className="min-w-0">
-                <h3 className="text-sm font-semibold tracking-tight">{step.title}</h3>
-                <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
-                  {step.body}
-                </p>
-              </div>
-            </li>
-          ))}
-        </ol>
-
-        <div className="min-w-0 space-y-4">
-          <Code label="Quick start">{INSTALL}</Code>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild>
-              <a href={REPO_URL} target="_blank" rel="noreferrer noopener">
-                <BookOpenIcon aria-hidden="true" />
-                Read the README
-              </a>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link to="/docs/install">Install guide</Link>
-            </Button>
-          </div>
-        </div>
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <Code label="Or run from source">{INSTALL}</Code>
+        <Code label="Or let your agent install it">{AGENT_INSTALL}</Code>
+      </div>
+      <div className="mt-6 flex flex-wrap gap-2">
+        <Button asChild>
+          <a href={REPO_URL} target="_blank" rel="noreferrer noopener">
+            <BookOpenIcon aria-hidden="true" />
+            Read the README
+          </a>
+        </Button>
+        <Button variant="outline" asChild>
+          <Link to="/docs/install">Install guide</Link>
+        </Button>
       </div>
     </Section>
   );
@@ -1090,7 +1062,10 @@ export function WelcomePage() {
         title="Soundbox: free local ElevenLabs and Suno alternative for AI sound effects, music and voices"
         description="Free, open-source alternative to ElevenLabs and Suno that runs on your own GPU: AI sound effects, music with lyrics, text-to-speech and voice cloning. No account, no credits, works offline, with an MCP server for Claude Code and Cursor."
         path="/"
-        jsonLd={[softwareAppJsonLd()]}
+        jsonLd={[
+          softwareAppJsonLd(),
+          faqJsonLd(HOME_FAQ.map((f) => ({ question: f.question, answer: f.answer }))),
+        ]}
       />
       <a
         href="#main"
@@ -1110,16 +1085,7 @@ export function WelcomePage() {
             the flow below hands off to. */}
         <RevealPromptToSample />
 
-        {/* Then the shape of the whole product, as one flow rather than four
-            adjacent features: the same box that made that sound effect makes
-            music and speech, and all three land in one studio. Each beat links
-            to its own page, so this doubles as the route into them.
-
-            It replaces a separate `StudioTeaser` that sat here. Two teasers
-            pointing at overlapping places is one more than the page needs, and
-            the studio reads better as the destination of the flow than as a
-            card beside it. */}
-        <RevealPillars />
+        <FiveThings />
 
         {/* And then the unglamorous version of the same thing. Everything above
             this point is a drawing of Soundbox — animated and interactive,
@@ -1141,12 +1107,12 @@ export function WelcomePage() {
           </div>
         </Section>
 
-        <Agents />
+        <Compare />
         <Models />
-        <Local />
-        <Prompting />
+        <Agents />
         <Developers />
-        <GetStarted />
+        <Questions />
+        <Download />
       </main>
       <Footer />
     </div>

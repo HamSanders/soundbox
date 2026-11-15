@@ -14,25 +14,10 @@ import { Link } from "react-router-dom";
 import { DownloadButton, PlatformPicker } from "@/components/download-cta";
 import { SamplePlay } from "@/components/sample-play";
 import { faqJsonLd, breadcrumbJsonLd, SeoHead } from "@/components/seo-head";
+import { COMPARISON, COMPARISON_HEAD } from "@/content/comparison";
 import { assetUrl } from "@/lib/asset-url";
 import { REPO_URL } from "@/lib/marketing-links";
 import { getLander, LANDERS, type Lander } from "../landers/content";
-
-/** README, "Compared with a hosted service", row for row. */
-const COMPARISON: [string, string, string][] = [
-  ["Runs on", "Their GPUs", "Your machine"],
-  ["Cost", "Subscription or credits", "Your electricity"],
-  ["Account", "Required", "None"],
-  ["Models", "Closed, tuned, consistent", "Open weights; quality varies by model"],
-  [
-    "Output rights",
-    "Their terms of service",
-    "The licence of the model that made it, shown up front",
-  ],
-  ["Offline", "No", "Yes, once the weights are downloaded"],
-  ["Agents", "HTTP API", "HTTP API and an MCP server"],
-  ["Source", "Closed", "MIT"],
-];
 
 function Block({
   id,
@@ -146,10 +131,10 @@ function LanderPage({ lander }: { lander: Lander }) {
                 <tr className="border-border border-b">
                   <th scope="col" className="p-3" />
                   <th scope="col" className="label-caps text-muted-foreground p-3 font-normal">
-                    Hosted (ElevenLabs, Suno and similar)
+                    {COMPARISON_HEAD[0]}
                   </th>
                   <th scope="col" className="label-caps p-3 font-normal">
-                    Soundbox
+                    {COMPARISON_HEAD[1]}
                   </th>
                 </tr>
               </thead>

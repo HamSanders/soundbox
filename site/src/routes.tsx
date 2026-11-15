@@ -9,6 +9,7 @@ import { BlogPostPage } from "./routes/blog-post";
 import { McpPage } from "./routes/mcp";
 import { PressPage } from "./routes/press";
 import { DownloadPage } from "./routes/download";
+import { landerComponent, LANDER_PATHS } from "./routes/lander";
 import { DOC_PAGES } from "./docs/pages";
 import { BLOG_POSTS } from "./blog/posts";
 import { SfxHubPage } from "@/routes/sfx/hub";
@@ -142,6 +143,13 @@ export const routes: RouteRecord[] = [
         Component: DownloadPage,
         entry: "src/routes/download.tsx",
       },
+      // Search landing pages (see landers/content.ts). In the sitemap and
+      // linked from each other and the home page footer, not from the nav.
+      ...LANDER_PATHS.map((path) => ({
+        path,
+        Component: landerComponent(path),
+        entry: "src/routes/lander.tsx",
+      })),
       {
         path: "blog/:slug",
         Component: BlogPostPage,

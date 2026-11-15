@@ -54,6 +54,8 @@ export interface ModelSupports {
   /** Can regenerate a time window inside an existing sound — the editor's
    *  Repaint tool, over whatever range is highlighted. */
   repaint: boolean;
+  /** Can speak a line as it is generated — `POST /api/speak/stream`. */
+  streaming?: boolean;
 }
 
 /** The audio-to-audio edits a generation model can run on a library sound. */

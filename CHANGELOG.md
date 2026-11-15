@@ -8,6 +8,7 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 - **Hosted providers with your own key.** Custom endpoints have presets for ElevenLabs sound effects, music and speech, and for ACE-Step on fal, used with your own account. The provider bills you directly, and Soundbox takes no cut. Endpoints can send the key in any header with any prefix, download audio from a link in a JSON answer, and put `{{voice}}` or `{{language}}` in the URL.
+- **An optional access token.** Set `SOUNDBOX_API_TOKEN` and every API, MCP and file request needs it, so a Soundbox on a rented GPU or a LAN box is no longer open to anyone who can reach its port. The web UI asks for the token once and stays signed in for 30 days; scripts and MCP clients send it as a bearer header, and the stdio bridge and CLI pick it up from the environment. The health check stays open, and wrong tokens are rate limited per address. Off by default, so a desktop install is unchanged.
 
 ### Changed
 - Every blog post can be listened to, read by a new, softer Soundbox voice (Bea, on Chatterbox). The post page has a Listen card, a player that docks to the bottom with 15-second skips and 0.75× to 2× speed, and a highlight that follows the paragraph being read; click a paragraph to jump to it.
@@ -16,6 +17,7 @@ to follow [Semantic Versioning](https://semver.org/).
 ### Fixed
 - The site opens each new page at the top instead of keeping the scroll position of the page you came from. A link with a `#section` still goes to that section, and the back button returns you to where you were.
 - Fish Audio S2 Pro cloning: save a Reference Transcript for each voice clip, pass the selected voice's transcripts in combined-audio order in Speak and Script Builder, and report missing transcripts before synthesis. Translate request options to audio.cpp's HTTP `options` map so the runtime receives them.
+- `soundbox ps` asked the server for `/models` instead of `/api/models`, so it always reported that no server was running.
 - Security: updated dependencies with open advisories: the system information library, the HTTP server adapter, and the desktop updater's zip support (Dependabot alerts).
 
 ## [0.4.1] - 2026-10-29

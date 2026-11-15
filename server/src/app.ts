@@ -12,6 +12,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import fastifyCors from "@fastify/cors";
+import fastifyRateLimit from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
 import Fastify, { type FastifyInstance } from "fastify";
 import { ZodError } from "zod";
@@ -32,6 +33,7 @@ import { registerJobs } from "./routes/jobs.js";
 import { registerLlm } from "./routes/llm.js";
 import { registerImage } from "./routes/image.js";
 import { registerEndpoints } from "./routes/endpoints.js";
+import { AccessGuard, FAILURE_WINDOW_MS, MAX_FAILURES, registerAuth } from "./auth.js";
 import { mountMcp, toolInfos } from "./mcp/server.js";
 import { hostnameOf, isListedHost } from "./origins.js";
 import { registerMcp, type McpToolsProvider } from "./routes/mcp.js";
@@ -70,6 +72,11 @@ export interface BuildAppOptions {
    * `"any"` disables the check (wildcard binds like 0.0.0.0).
    */
   allowedHosts?: string[] | "any";
+  /**
+   * The access token every API, MCP and file request must carry, or null for
+   * none (the default, and right for loopback). See `auth.ts`.
+   */
+  apiToken?: string | null;
 }
 
 /** Loopback names that are always accepted in the Host header. */
@@ -103,7 +110,8 @@ function uiDir(): string | null {
 }
 
 export function buildApp(config: Config, options: BuildAppOptions = {}): FastifyInstance {
-  const { serveUi = true, mcpTools, allowedHosts = [] } = options;
+  const { serveUi = true, mcpTools, allowedHosts = [], apiToken = null } = options;
+  const guard = apiToken ? new AccessGuard(apiToken) : null;
   // bodyLimit, not Fastify's 1 MB default: the audio upload routes take the
   // file as the raw request body, and anything longer than a few seconds of
   // speech is past 1 MB. Over the limit Fastify tears down the connection at
@@ -137,6 +145,18 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
   // /api requests must therefore carry a non-simple Content-Type (JSON, the
   // raw audio upload types) or the X-Soundbox header.
   const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+  // Wrong access tokens are rate limited per address (see auth.ts). Not
+  // global: the UI polls job state and keeps event streams open, and a limit
+  // on every request would throttle a signed-in user. The guard counts only
+  // failures, through a limiter made here once the plugin has loaded.
+  void app.register(fastifyRateLimit, { global: false });
+  if (guard) {
+    app.after(() => {
+      guard.limitWith(app.createRateLimit({ max: MAX_FAILURES, timeWindow: FAILURE_WINDOW_MS }));
+    });
+  }
+
   app.addHook("onRequest", async (request, reply) => {
     if (allowedHosts !== "any") {
       const host = request.headers.host ?? "";
@@ -144,6 +164,12 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
       if (!LOOPBACK_HOSTS.has(name) && !extraHosts.has(name) && !isListedHost(host)) {
         return reply.code(403).send({ detail: "Forbidden host" });
       }
+    }
+    // After the Host check, so a rebinding page is still told "forbidden
+    // host" rather than learning that a token would get it in.
+    if (guard) {
+      const refused = await guard.check(request, reply);
+      if (refused) return refused;
     }
     if (MUTATING.has(request.method) && request.url.startsWith("/api/")) {
       if (request.headers[CSRF_HEADER] !== undefined) return;
@@ -195,6 +221,7 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
     },
   });
 
+  registerAuth(app, guard);
   registerModels(app, svc);
   registerJobs(app, svc);
   registerSounds(app, svc);

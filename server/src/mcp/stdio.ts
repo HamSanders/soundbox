@@ -28,6 +28,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
+import { bearerHeaders } from "../auth.js";
 import { DEFAULT_HOST, DEFAULT_PORT, VERSION } from "../config.js";
 import { ProgressReporter } from "./progress.js";
 import { MCP_INSTRUCTIONS } from "./server.js";
@@ -55,10 +56,12 @@ async function request(
       method,
       // X-Soundbox marks this as a deliberate API call — the server refuses
       // body-less mutating requests without it (CSRF defence, see app.ts).
+      // The bearer token too, when SOUNDBOX_API_TOKEN is set for a server
+      // that requires one (auth.ts).
       headers:
         opts.json === undefined
-          ? { "x-soundbox": "1" }
-          : { "content-type": "application/json", "x-soundbox": "1" },
+          ? { "x-soundbox": "1", ...bearerHeaders() }
+          : { "content-type": "application/json", "x-soundbox": "1", ...bearerHeaders() },
       body: opts.json === undefined ? undefined : JSON.stringify(opts.json),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });

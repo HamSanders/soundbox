@@ -7,7 +7,7 @@ relative URLs.
 ## Request rules
 
 Two checks run before any route, so a web page open in your browser cannot
-drive the server:
+drive the server, and a third when an access token is set:
 
 - **Host header.** Requests are served only when the `Host` header names
   `localhost`, `127.0.0.1` or `[::1]` (any port), or the specific host passed
@@ -23,6 +23,17 @@ drive the server:
 
   ```sh
   curl -X POST -H 'X-Soundbox: 1' http://127.0.0.1:17494/api/sessions
+  ```
+
+- **Access token.** When the server runs with `SOUNDBOX_API_TOKEN`, every
+  `/api/*`, `/mcp`, `/files/*` and `/artwork/*` request needs
+  `Authorization: Bearer <token>` or the session cookie that
+  `POST /api/auth/login` sets, or it gets `401`. `GET /api/health`,
+  `GET /api/auth/status`, `POST /api/auth/login` and `POST /api/auth/logout`
+  stay open. See [Access token](INSTALL.md#access-token).
+
+  ```sh
+  curl -H "Authorization: Bearer $SOUNDBOX_API_TOKEN" https://gpu-box.example/api/models
   ```
 
 ## Endpoint index

@@ -18,7 +18,7 @@ import {
 } from "../schemas.js";
 import { EndpointModel } from "./model.js";
 import { ENDPOINT_PRESETS, type EndpointPreset } from "./presets.js";
-import { TEMPLATE_VARIABLES, validateTemplate } from "./template.js";
+import { TEMPLATE_VARIABLES, validateTemplate, validateUrlTemplate } from "./template.js";
 import { type AudioEndpoint, type PublicAudioEndpoint, toPublicEndpoint } from "./types.js";
 
 export interface EndpointList {
@@ -68,6 +68,7 @@ export class EndpointService {
     }
     const input = audioEndpointInputSchema.parse(raw);
     validateTemplate(input.body_template);
+    validateUrlTemplate(input.url);
     const previous = this.stored.find((e) => e.id === id) ?? null;
     const endpoint = this.build(id, input, previous);
     const next = previous
@@ -90,6 +91,7 @@ export class EndpointService {
   async test(raw: unknown): Promise<EndpointTestResult> {
     const req = audioEndpointTestSchema.parse(raw);
     validateTemplate(req.body_template);
+    validateUrlTemplate(req.url);
     const saved = req.id ? (this.stored.find((e) => e.id === req.id) ?? null) : null;
     const endpoint = this.build(req.id || "test", req, saved);
     const model = new EndpointModel(endpoint);
@@ -114,16 +116,20 @@ export class EndpointService {
 
   private build(id: string, input: AudioEndpointInput, previous: AudioEndpoint | null): AudioEndpoint {
     // Omitted keeps the stored key; "" clears it — the `hf_token` convention.
+    // A kept key stays with the host it was given for: pointing a saved
+    // endpoint at another origin without typing the key again drops it, so a
+    // paid provider's key is never sent somewhere the user did not send it.
+    const keep = previous && sameOrigin(previous.url, input.url) ? previous.api_key : null;
     const apiKey =
-      input.api_key === undefined || input.api_key === null
-        ? (previous?.api_key ?? null)
-        : input.api_key.trim() || null;
+      input.api_key === undefined || input.api_key === null ? keep : input.api_key.trim() || null;
     return {
       id,
       name: input.name,
       task: input.task,
       url: input.url,
       api_key: apiKey,
+      api_key_header: input.api_key_header,
+      api_key_prefix: input.api_key_prefix,
       headers: input.headers,
       body_template: input.body_template,
       response_path: input.response_path,
@@ -137,5 +143,14 @@ export class EndpointService {
   private async persist(next: AudioEndpoint[]): Promise<void> {
     this.config.updateSettings({ audio_endpoints: next });
     await this.models.setEndpoints(next);
+  }
+}
+
+/** Whether two endpoint URLs (placeholders and all) point at the same origin. */
+function sameOrigin(a: string, b: string): boolean {
+  try {
+    return new URL(a).origin === new URL(b).origin;
+  } catch {
+    return a === b;
   }
 }

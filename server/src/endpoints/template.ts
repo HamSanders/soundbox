@@ -104,6 +104,33 @@ export function validateTemplate(template: string): void {
   }
 }
 
+/** The variables a URL may hold. Short identifiers only: a prompt or a voice
+ *  clip in a URL would end up in every proxy's access log. */
+export const URL_VARIABLES = ["voice", "language"] as const;
+
+/** Reject a URL placeholder that is unknown or not allowed in a URL. */
+export function validateUrlTemplate(url: string): void {
+  const bad = templateVariables(url).filter((v) => !(URL_VARIABLES as readonly string[]).includes(v));
+  if (bad.length) {
+    throw new ModelError(
+      `The URL can't use ${bad.map((v) => `{{${v}}}`).join(", ")}. ` +
+        `Only ${URL_VARIABLES.map((v) => `{{${v}}}`).join(" and ")} can go in a URL; put the rest in the body.`,
+    );
+  }
+}
+
+/**
+ * Fill a URL's placeholders, each URL-encoded. A null value fills as nothing,
+ * which leaves a URL the server will reject with a 404 that names the path —
+ * clearer than a guess.
+ */
+export function renderUrl(url: string, vars: TemplateVars): string {
+  return url.replace(PLACEHOLDER, (_m, name: string) => {
+    const v = name in vars ? vars[name] : null;
+    return v === null || v === undefined ? "" : encodeURIComponent(String(v));
+  });
+}
+
 /**
  * Text substitution that knows whether it is inside a JSON string.
  *

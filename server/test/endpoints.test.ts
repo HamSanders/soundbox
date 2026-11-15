@@ -468,6 +468,23 @@ describe("custom endpoints through the API", () => {
     expect(resp.json().detail).toMatch(/can't use/);
   });
 
+  it("drops the stored key when an edit moves the endpoint to another host", async () => {
+    const { api_key: _omit, ...rest } = musicEndpoint();
+    await app.inject({
+      method: "PUT",
+      url: "/api/endpoints/moved",
+      payload: musicEndpoint(),
+    });
+    await app.inject({
+      method: "PUT",
+      url: "/api/endpoints/moved",
+      payload: { ...rest, url: "https://elsewhere.invalid/v1/sound-generation" },
+    });
+    const list = (await app.inject({ method: "GET", url: "/api/endpoints" })).json();
+    const moved = list.endpoints.find((e: { id: string }) => e.id === "moved");
+    expect(moved.api_key_set).toBe(false);
+  });
+
   it("removes it from the models list on delete", async () => {
     const del = await app.inject({
       method: "DELETE",

@@ -236,13 +236,13 @@ describe("generate", () => {
 });
 
 describe("speak reference transcripts", () => {
-  it("sends Fish reference_text inside request_options alongside voice_ref", async () => {
+  it("sends Fish reference_text inside options alongside voice_ref", async () => {
     const host = stubHost(true);
     const m = model("audiocpp-fish-audio", host);
     await m.speak("New speech.", { voiceRefPath: "/tmp/reference.wav",
       requestOptions: { reference_text: "Exact reference speech.", temperature: "0.8" } });
     expect(host.runs[0]).toMatchObject({ voice_ref: "/tmp/reference.wav",
-      request_options: { reference_text: "Exact reference speech.", temperature: "0.8" } });
+      options: { reference_text: "Exact reference speech.", temperature: "0.8" } });
     expect(host.runs[0]).not.toHaveProperty("reference_text");
   });
 
@@ -260,7 +260,7 @@ describe("speak reference transcripts", () => {
     const m = model("audiocpp-chatterbox", host);
     await m.speak("Hello", { voiceRefPath: "/tmp/reference.wav" });
     expect(host.runs[0]).toHaveProperty("voice_ref", "/tmp/reference.wav");
-    expect(host.runs[0]?.["request_options"] ?? {}).not.toHaveProperty("reference_text");
+    expect(host.runs[0]?.["options"] ?? {}).not.toHaveProperty("reference_text");
   });
 });
 

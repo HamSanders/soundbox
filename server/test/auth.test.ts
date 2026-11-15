@@ -35,6 +35,10 @@ describe("isProtectedPath", () => {
     for (const p of ["/api/settings", "/api/jobs/1/events?x=1", "/mcp", "/mcp/", "/files/a.wav", "/artwork/a.png"]) {
       expect(isProtectedPath(p)).toBe(true);
     }
+    // Percent-encoded spellings the router decodes to a protected route.
+    for (const p of ["/%61pi/models", "/%6dcp", "/%E0%A4%A"]) {
+      expect(isProtectedPath(p)).toBe(true);
+    }
     for (const p of ["/", "/index.html", "/assets/app.js", "/mcpx", "/apiary"]) {
       expect(isProtectedPath(p)).toBe(false);
     }

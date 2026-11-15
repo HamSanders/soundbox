@@ -82,9 +82,24 @@ export function tokenFromEnv(env: NodeJS.ProcessEnv = process.env): string | nul
   return raw;
 }
 
+/**
+ * The path the router will match, not the raw one: find-my-way percent-decodes
+ * before routing, so `/%61pi/models` reaches `/api/models`. Checking the raw
+ * string would let that walk past the guard. A path that does not decode is
+ * returned as the sentinel "/api/", so it is treated as protected.
+ */
+function routedPath(url: string): string {
+  const raw = url.split("?")[0]!.split("#")[0]!;
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return "/api/";
+  }
+}
+
 /** Paths that need the token when one is set. */
 export function isProtectedPath(url: string): boolean {
-  const path = url.split("?")[0]!;
+  const path = routedPath(url);
   return (
     path.startsWith("/api/") ||
     path === "/mcp" ||
@@ -168,7 +183,7 @@ export class AccessGuard {
   async check(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply | undefined> {
     if (!isProtectedPath(request.url)) return undefined;
     // The open routes do their own counting (status, login) or need none.
-    if (isOpenRoute(request.method, request.url.split("?")[0]!)) return undefined;
+    if (isOpenRoute(request.method, routedPath(request.url))) return undefined;
     const locked = await this.lockedOut(request, reply);
     if (locked) return locked;
     const credential = this.credential(request);

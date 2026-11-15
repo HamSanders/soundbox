@@ -291,3 +291,22 @@ describe("one Soundbox rendering through another", () => {
     expect((await gpu.inject({ method: "GET", url: "/api/sounds" })).json().total).toBe(0);
   });
 });
+
+describe("POST /api/render rate limit", () => {
+  it("answers 429 once one client sends too many renders in a minute", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "soundbox-render-limit-"));
+    const app = buildApp(new Config(dir), { serveUi: false });
+    await app.ready();
+    try {
+      // Bad input is cheap and still counts against the limit.
+      const send = () => app.inject({ method: "POST", url: "/api/render", payload: { task: "nope" } });
+      for (let i = 0; i < 60; i++) expect((await send()).statusCode).toBe(422);
+      expect((await send()).statusCode).toBe(429);
+      // Other routes are not limited.
+      expect((await app.inject({ method: "GET", url: "/api/jobs" })).statusCode).toBe(200);
+    } finally {
+      await app.close();
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});

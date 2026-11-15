@@ -227,7 +227,12 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
   registerModels(app, svc);
   registerJobs(app, svc);
   registerSpeakStream(app, svc);
-  registerRender(app, svc);
+  // The rate limiter (registered above) only sees routes added after it has
+  // loaded, so /api/render, the route meant to be reached from other
+  // machines, goes in its own plugin, which loads after it.
+  void app.register(async (scope) => {
+    registerRender(scope, svc);
+  });
   registerSounds(app, svc);
   registerVoices(app, svc);
   registerSessions(app, svc);

@@ -53,7 +53,10 @@ const speakShorthandSchema = z.object({
 });
 
 export function registerRender(app: FastifyInstance, svc: SoundboxService): void {
-  app.post("/api/render", async (request, reply) => {
+  // This route is the one meant to face other machines, and each call holds
+  // a GPU job and a whole WAV in memory, so it is rate-limited per client.
+  // Generous enough for a render farm; the queue's own cap (429) still holds.
+  app.post("/api/render", { config: { rateLimit: { max: 60, timeWindow: "1 minute" } } }, async (request, reply) => {
     const body = (request.body ?? {}) as Record<string, unknown>;
     if (typeof body !== "object" || Array.isArray(body)) {
       throw new HttpError(400, "Expected a JSON object");

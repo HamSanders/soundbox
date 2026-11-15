@@ -372,7 +372,7 @@ export function VoicesPage() {
             lede="The opening of a post from this site's blog, read by a voice on Chatterbox."
           >
             <div className="border-border max-w-xl rounded-md border p-4">
-              <SamplePlay id="narration-intro" />
+              <SamplePlay id="voice-intro" />
             </div>
           </Section>
 

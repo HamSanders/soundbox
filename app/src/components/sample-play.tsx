@@ -116,10 +116,18 @@ export function SamplePlay({
             example.title
           )}
         </p>
-        {!compact && example.prompt ? (
+        {!compact && (example.prompt ?? example.text) ? (
           <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
-            &ldquo;{example.prompt}&rdquo;
+            &ldquo;{example.prompt ?? example.text}&rdquo;
           </p>
+        ) : null}
+        {!compact && example.lyrics ? (
+          <details className="text-muted-foreground mt-1 text-xs">
+            <summary className="hover:text-foreground cursor-pointer">Lyrics</summary>
+            <p className="mt-1 leading-relaxed whitespace-pre-line">
+              {example.lyrics.replace(/^\[[a-z ]+\]$/gim, "").replace(/\n{3,}/g, "\n\n").trim()}
+            </p>
+          </details>
         ) : null}
         {!compact ? <p className="label-caps text-muted-foreground mt-1">{credit}</p> : null}
         {failed ? (

@@ -41,6 +41,8 @@ import {
   megabytes,
   PLATFORMS,
   useInstallers,
+  type Release,
+  type ReleaseAsset,
 } from "@/lib/installers";
 import { REPO_URL } from "@/lib/marketing-links";
 import { cn } from "@/lib/utils";
@@ -307,8 +309,21 @@ function Lit({
   );
 }
 
+/** GitHub's download count for every file on a release, as its API reports it. */
+function installCount(assets: ReleaseAsset[]): number {
+  return assets.reduce((sum, a) => sum + a.download_count, 0);
+}
+
 /** A meter readout: a mono caps label over a big display-face number. */
-function Stat({ value, label }: { value: number | undefined; label: string }) {
+function Stat({
+  value,
+  label,
+  note,
+}: {
+  value: number | undefined;
+  label: string;
+  note?: string;
+}) {
   const shown = useCountUp(value);
   return (
     <Lit className="bg-background flex-1 p-6">
@@ -316,6 +331,9 @@ function Stat({ value, label }: { value: number | undefined; label: string }) {
       <span className="font-display mt-auto pt-4 text-6xl leading-[0.85] font-extrabold tabular-nums lg:text-7xl">
         {shown === undefined ? "–" : shown.toLocaleString("en")}
       </span>
+      {note ? (
+        <span className="readout text-muted-foreground mt-3">{note}</span>
+      ) : null}
     </Lit>
   );
 }
@@ -400,17 +418,24 @@ function SectionHead({
 export function DownloadPage() {
   const { release, mine, primary, primaryAsset, assetFor } = useInstallers();
   const [repo, setRepo] = useState<Repo | null>(null);
+  const [releases, setReleases] = useState<Release[] | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
     void github<Repo>("", controller.signal).then((d) => d && setRepo(d));
+    void github<Release[]>("/releases?per_page=100", controller.signal).then(
+      (d) => d && setReleases(d),
+    );
     return () => controller.abort();
   }, []);
 
-  const downloads = release?.assets.reduce(
-    (sum, a) => sum + a.download_count,
+  // Every version counts toward the headline, so a release published an hour
+  // ago doesn't read as nobody using the app.
+  const downloads = releases?.reduce(
+    (sum, r) => sum + installCount(r.assets),
     0,
   );
+  const thisRelease = release ? installCount(release.assets) : 0;
   // Your system first, so on a phone the top card is the one you want.
   const ordered = [...PLATFORMS].sort(
     (a, b) => Number(b.id === mine) - Number(a.id === mine),
@@ -676,8 +701,11 @@ export function DownloadPage() {
               <Stat value={repo?.stargazers_count} label="GitHub stars" />
               <Stat
                 value={downloads}
-                label={
-                  release ? `Downloads of ${release.tag_name}` : "Downloads"
+                label="Downloads, all versions"
+                note={
+                  thisRelease > 0
+                    ? `${thisRelease.toLocaleString("en")} of the latest release`
+                    : undefined
                 }
               />
               <Stat value={repo?.forks_count} label="Forks" />

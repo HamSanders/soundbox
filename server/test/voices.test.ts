@@ -200,7 +200,9 @@ describe("voice routes", () => {
     expect(res.json().detail).toMatch(/only clip/);
   });
 
-  it(`stops at ${MAX_SAMPLES} clips`, async () => {
+  // Six requests, each re-mixing the voice's clips through the real DSP: about
+  // 3 s locally, but over vitest's 5 s default on a slow CI runner.
+  it(`stops at ${MAX_SAMPLES} clips`, { timeout: 30_000 }, async () => {
     const voice = await upload("Dee", tone(2));
     for (let i = 1; i < MAX_SAMPLES; i++) {
       expect((await addSample(voice.id, tone(2))).statusCode).toBe(201);

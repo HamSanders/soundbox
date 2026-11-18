@@ -6,6 +6,9 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Linux desktop packages.** Releases now include an AppImage and a `.deb` for x64 Linux, built on Ubuntu 22.04, so they run on glibc 2.35 and newer. The in-app updater covers the AppImage. A `.deb` install updates by installing the newer `.deb`. They have not been tested on a real Linux desktop yet, so reports are welcome. `docs/DESKTOP.md` covers installing and the NVIDIA blank-window workarounds.
+
 ### Changed
 - **Soundbox is now Mirli.** The site, page titles, share cards, press kit, blog, README, docs and issue templates use the new name, and the README and docs link to https://mirli.app. Nothing you rely on moves: the `soundbox` command, the `soundbox.*` MCP tools, the `SOUNDBOX_*` environment variables, `~/.soundbox`, the Docker image, the GitHub repository and the installer file names keep the old name for now, and existing installs carry on as they were. The home page, the download page, the press kit and the README each say once that Mirli was formerly Soundbox.
 

@@ -63,6 +63,7 @@ The [download page](https://mirli.app/download/) picks the installer for your sy
 | **Windows** 10 and 11 (x64) | [`Soundbox_x.y.z_x64-setup.exe`](https://mirli.app/download/) |
 | **macOS**, Apple silicon | [`Soundbox_x.y.z_aarch64.dmg`](https://mirli.app/download/) |
 | **macOS**, Intel | [`Soundbox_x.y.z_x64.dmg`](https://mirli.app/download/) |
+| **Linux** x64 (glibc 2.35+) | [`Soundbox_x.y.z_amd64.AppImage` or `.deb`](https://github.com/HamSanders/soundbox/releases/latest) |
 
 The installer carries its own runtime. The builds are not signed yet, so the
 first launch asks you to confirm ([where](docs/DESKTOP.md#installing)). Open
@@ -76,7 +77,7 @@ model downloads when you pick it, with its licence shown first.
 | Apple silicon | Metal. Installers exist; none of the verified models has been confirmed on a Mac yet. |
 | No dedicated GPU | Works, slowly. A clip that takes seconds on a GPU takes minutes on the CPU. |
 
-Linux, Docker and running from source are under [Run from source](#run-from-source).
+Docker and running from source (Linux arm64 included) are under [Run from source](#run-from-source).
 
 ### Install with a prompt
 

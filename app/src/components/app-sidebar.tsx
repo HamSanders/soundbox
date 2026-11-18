@@ -525,6 +525,7 @@ function DeviceStatus() {
         size="lg"
         aria-label={`Device: ${title}, ${subtitle}. Show details.`}
         aria-expanded={open}
+        className="group-data-[collapsible=icon]:justify-center"
       >
         {dot}
         {/* Hidden on the icon rail — otherwise the labels clip to a letter. */}
@@ -689,7 +690,7 @@ export function AppSidebar() {
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <Wordmark className="truncate text-lg leading-none font-extrabold" />
                     <span className="text-muted-foreground truncate text-xs">
-                      {IS_MOCK ? "mock backend" : "local sound effects"}
+                      {IS_MOCK ? "mock backend" : "sound, music and voice"}
                     </span>
                   </div>
                 </NavLink>

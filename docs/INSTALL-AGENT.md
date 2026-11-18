@@ -45,7 +45,7 @@ HTTP API, which is documented in full in [API.md](API.md).
 
 2. **Install.**
    - **Windows or macOS:** download the installer for this machine from
-     [the latest release](https://github.com/HamSanders/soundbox/releases/latest)
+     [the download page](https://mirli.app/download/)
      (`Soundbox_<version>_x64-setup.exe`, or the `.dmg` for Apple silicon or
      Intel) and run it. The app carries its own Node and server. The builds are
      not signed yet, so the first launch asks the user to confirm; the exact

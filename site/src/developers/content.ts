@@ -13,9 +13,10 @@
  * page and the Markdown take them as an argument.
  *
  * Naming: the product is Mirli. The identifiers that kept the old name are
- * written as code everywhere: the `soundbox.*` tools, the `SOUNDBOX_*`
- * variables, the `soundbox` CLI, the `X-Soundbox` header and the
- * `ghcr.io/hamsanders/soundbox` image. They are what an agent has to type.
+ * written as code everywhere: the `soundbox.*` tools, the `soundbox` CLI,
+ * the `X-Soundbox` header and the `ghcr.io/hamsanders/soundbox` image. They
+ * are what an agent has to type. Environment variables are written `MIRLI_*`;
+ * the server still reads the old `SOUNDBOX_*` names, which the page says once.
  *
  * Every claim is taken from docs/ (INSTALL.md, INSTALL-AGENT.md, API.md,
  * MCP.md, STREAMING.md) or README.md. Nothing here is new information.
@@ -45,7 +46,7 @@ export const FACTS: { label: string; value: string; code?: boolean }[] = [
   {
     label: "Auth",
     value:
-      "None by default; the server binds to loopback. Set `SOUNDBOX_API_TOKEN` to require `Authorization: Bearer <token>`.",
+      "None by default; the server binds to loopback. Set `MIRLI_API_TOKEN` to require `Authorization: Bearer <token>`.",
   },
   { label: "Output", value: "WAV files on local disk, returned as absolute paths" },
   { label: "Licence", value: "MIT (the app). Each model has its own licence." },
@@ -104,7 +105,7 @@ export const INSTALL: InstallPath[] = [
         lang: "bash",
       },
       {
-        text: "Each release is also tagged by version (`:vX.Y.Z`, `:vX.Y.Z-cuda`). There is no authentication unless `SOUNDBOX_API_TOKEN` is set, so never publish `0.0.0.0:17494` without a token or an authenticating proxy. Reaching `/mcp` by any name other than localhost needs that name in `SOUNDBOX_ALLOWED_HOSTS`.",
+        text: "Each release is also tagged by version (`:vX.Y.Z`, `:vX.Y.Z-cuda`). There is no authentication unless `MIRLI_API_TOKEN` is set, so never publish `0.0.0.0:17494` without a token or an authenticating proxy. Reaching `/mcp` by any name other than localhost needs that name in `MIRLI_ALLOWED_HOSTS`.",
       },
     ],
   },
@@ -135,7 +136,7 @@ export const AGENT_RULES: string[] = [
   "Check the hardware first. `GET /api/health` reports `device` (`cuda`, `metal` or `cpu`), `gpu_name`, `vram_total_mb` and `vram_free_mb`.",
   "Say what each model costs before downloading it: `GET /api/models` gives `vram_estimate_mb`, `license.name` and `license.commercial` (`yes`, `conditional` or `no`). Wait for a yes.",
   "Never accept a model licence on the person's behalf.",
-  "Reuse weights that are already installed; they live under `~/.soundbox/models` and are shared by every profile.",
+  "Reuse weights that are already installed; they live under `~/.mirli/models` and are shared by every profile.",
   "Do not change network or firewall settings. The server binds to loopback and needs nothing opened.",
 ];
 
@@ -245,7 +246,7 @@ url = "${MCP_URL}"`, lang: "toml" },
       },
     }),
     lang: "json",
-    note: "Claude Desktop's config file takes stdio servers, and its custom connectors connect from Anthropic's cloud, which cannot reach 127.0.0.1. The stdio bridge proxies onto the running server and loads no models. It needs a source checkout after `npm run build` and an absolute path, and covers six tools: `generate`, `enhance_prompt`, `list_models`, `list_sounds`, `get_sound` and `delete_sound`. Use HTTP for the rest. `SOUNDBOX_URL` and `SOUNDBOX_API_TOKEN` point it at another server.",
+    note: "Claude Desktop's config file takes stdio servers, and its custom connectors connect from Anthropic's cloud, which cannot reach 127.0.0.1. The stdio bridge proxies onto the running server and loads no models. It needs a source checkout after `npm run build` and an absolute path, and covers six tools: `generate`, `enhance_prompt`, `list_models`, `list_sounds`, `get_sound` and `delete_sound`. Use HTTP for the rest. `MIRLI_URL` and `MIRLI_API_TOKEN` point it at another server.",
     source: "https://modelcontextprotocol.io/docs/develop/connect-local-servers",
   },
 ];
@@ -317,9 +318,9 @@ curl ${BASE_URL}/api/sounds/<sound_id>`,
 
 export const API_RULES: string[] = [
   "Base URL `http://127.0.0.1:17494`, JSON in and out.",
-  "The `Host` header must be `localhost`, `127.0.0.1` or `[::1]` (or a name in `SOUNDBOX_ALLOWED_HOSTS`); anything else is `403`. This blocks DNS rebinding.",
+  "The `Host` header must be `localhost`, `127.0.0.1` or `[::1]` (or a name in `MIRLI_ALLOWED_HOSTS`); anything else is `403`. This blocks DNS rebinding.",
   "`POST`, `PUT`, `PATCH` and `DELETE` under `/api/` need `Content-Type: application/json` (or a raw audio type on uploads) or an `X-Soundbox` header, or they get `403`.",
-  "With `SOUNDBOX_API_TOKEN` set, `/api/*`, `/mcp`, `/files` and `/artwork` need `Authorization: Bearer <token>`; `GET /api/health` stays open.",
+  "With `MIRLI_API_TOKEN` set, `/api/*`, `/mcp`, `/files` and `/artwork` need `Authorization: Bearer <token>`; `GET /api/health` stays open.",
 ];
 
 export const LIMITS: { label: string; value: string }[] = [
@@ -327,10 +328,10 @@ export const LIMITS: { label: string; value: string }[] = [
   { label: "Apple silicon", value: "Metal. Installers exist; none of the verified models has been confirmed on a Mac yet." },
   {
     label: "AMD or Intel GPU",
-    value: "Runs on the CPU unless `SOUNDBOX_AUDIOCPP_BACKEND=vulkan` is set. Vulkan is not yet confirmed on the verified models.",
+    value: "Runs on the CPU unless `MIRLI_AUDIOCPP_BACKEND=vulkan` is set. Vulkan is not yet confirmed on the verified models.",
   },
   { label: "No GPU", value: "Works, slowly: a clip that takes seconds on a GPU takes minutes on the CPU." },
-  { label: "Disk", value: "Model weights are one to ten gigabytes each, under `~/.soundbox/models`." },
+  { label: "Disk", value: "Model weights are one to ten gigabytes each, under `~/.mirli/models`." },
   { label: "Clip length", value: "`duration_s` 0.5–300, clamped to each model's own `max_duration_s` (see `soundbox.list_models`)." },
   { label: "Concurrency", value: "One job at a time on one GPU; the rest queue. Streams never queue and answer `409` when the GPU is busy." },
   { label: "Long renders", value: "`/api/render` holds the request open. Behind a proxy with a ~100 s timeout, use `/api/generate` and follow the job." },
@@ -388,9 +389,9 @@ export function developersMarkdown(facts: DeveloperFacts, origin: string): strin
   out.push(
     `Version ${facts.version}. Canonical page: ${abs(origin, PAGE.path)}. Source: ${REPO}.`,
     "",
-    "Kept identifiers: the product is Mirli, but the MCP tools are `soundbox.*`, the environment variables are `SOUNDBOX_*`, the CLI is `soundbox` and the Docker image is `" +
+    "Kept identifiers: the product is Mirli, but the MCP tools are `soundbox.*`, the CLI is `soundbox` and the Docker image is `" +
       IMAGE +
-      "`.",
+      "`. The environment variables are `MIRLI_*`; the old `SOUNDBOX_*` names still work, and are the only ones 0.5.0 and earlier read.",
     "",
   );
 

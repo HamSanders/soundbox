@@ -24,10 +24,10 @@ Once a day, at most, a running Mirli asks whether a newer version exists.
   Mirli shows "an update is available" and links to the page. It does not
   download or install anything by itself.
 - **Turning it off.** Settings → Updates → **Check for updates**, or set
-  `SOUNDBOX_UPDATE_CHECK=0` in the server's environment (Docker, services; the
+  `MIRLI_UPDATE_CHECK=0` in the server's environment (Docker, services; the
   variable wins over the setting). Off means no request at all. `npm run dev`
   starts with it off.
-- **A fork or your own host.** `SOUNDBOX_UPDATE_URL` points the check somewhere
+- **A fork or your own host.** `MIRLI_UPDATE_URL` points the check somewhere
   else.
 
 The desktop app also has its own installer prompt. It reads the newest GitHub

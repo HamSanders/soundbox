@@ -25,7 +25,7 @@ drive the server, and a third when an access token is set:
   curl -X POST -H 'X-Soundbox: 1' http://127.0.0.1:17494/api/sessions
   ```
 
-- **Access token.** When the server runs with `SOUNDBOX_API_TOKEN`, every
+- **Access token.** When the server runs with `MIRLI_API_TOKEN`, every
   `/api/*`, `/mcp`, `/files/*` and `/artwork/*` request needs
   `Authorization: Bearer <token>` or the session cookie that
   `POST /api/auth/login` sets, or it gets `401`. `GET /api/health`,
@@ -33,7 +33,7 @@ drive the server, and a third when an access token is set:
   stay open. See [Access token](INSTALL.md#access-token).
 
   ```sh
-  curl -H "Authorization: Bearer $SOUNDBOX_API_TOKEN" https://gpu-box.example/api/models
+  curl -H "Authorization: Bearer $MIRLI_API_TOKEN" https://gpu-box.example/api/models
   ```
 
 ## Endpoint index
@@ -504,9 +504,9 @@ To read one session's thread, filter the library: `GET /api/sounds?session_id={i
 
 `GET /api/settings` / `PATCH /api/settings`
 ```json
-{ "data_dir": "C:\\Users\\x\\.soundbox", "hf_token_set": true, "output_format": "wav" | "mp3",
+{ "data_dir": "C:\\Users\\x\\.mirli", "hf_token_set": true, "output_format": "wav" | "mp3",
   "normalize_lufs": -16.0 | null, "trim_silence": true, "auto_unload_minutes": 10,
-  "sounds_dir": "C:\\Users\\x\\.soundbox\\sounds",
+  "sounds_dir": "C:\\Users\\x\\.mirli\\sounds",
   "llm_mode": "off" | "managed" | "external", "llm_model": "qwen3-1.7b",
   "llm_external_base_url": "", "llm_external_model": "", "llm_external_api_key_set": false }
 ```
@@ -539,18 +539,18 @@ changes everything the library endpoints return. Model weights (`models/`) and
 the runtime binaries (`bin/`) live at the install root and are shared by every
 profile.
 
-The `default` profile is the data directory itself (`~/.soundbox`). An install
+The `default` profile is the data directory itself (`~/.mirli`). An install
 that predates profiles is therefore the default profile. Named profiles live in
-`~/.soundbox/profiles/{id}`.
+`~/.mirli/profiles/{id}`.
 
 `GET /api/profiles`
 ```json
 { "active": "default",
   "profiles": [
     { "id": "default", "name": "Default", "created_at": "",
-      "data_dir": "C:\\Users\\x\\.soundbox", "active": true },
+      "data_dir": "C:\\Users\\x\\.mirli", "active": true },
     { "id": "demo", "name": "Demo", "created_at": "2026-02-01T10:00:00Z",
-      "data_dir": "C:\\Users\\x\\.soundbox\\profiles\\demo", "active": false }
+      "data_dir": "C:\\Users\\x\\.mirli\\profiles\\demo", "active": false }
   ] }
 ```
 

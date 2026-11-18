@@ -49,7 +49,7 @@ soundbox model install audiocpp
 
 This downloads and verifies a prebuilt `audiocpp_cli` for your platform. Check
 what was installed with `soundbox model status audiocpp`. To use a binary you
-built or downloaded yourself, set `SOUNDBOX_AUDIOCPP_BIN`.
+built or downloaded yourself, set `MIRLI_AUDIOCPP_BIN`.
 
 Verify with `GET /api/health`. Its `device` field shows the backend the binary
 picked.
@@ -83,15 +83,15 @@ are running.
 Downloads are checksum-verified before anything is unpacked: against GitHub's
 SHA-256 digest for the asset, and against the release's checksum manifest when
 it publishes one. An asset covered by neither is refused. To install such a
-release anyway, set `SOUNDBOX_ALLOW_UNVERIFIED_BINARIES=1` for that run, or
+release anyway, set `MIRLI_ALLOW_UNVERIFIED_BINARIES=1` for that run, or
 download the binary yourself and point the environment override below at it.
 
 ### Resolution order
 
 When Mirli needs one of these binaries it checks, in order:
 
-1. the environment override (`SOUNDBOX_AUDIOCPP_BIN`,
-   `SOUNDBOX_LLAMA_SERVER_BIN` or `SOUNDBOX_SD_SERVER_BIN`), an absolute path
+1. the environment override (`MIRLI_AUDIOCPP_BIN`,
+   `MIRLI_LLAMA_SERVER_BIN` or `MIRLI_SD_SERVER_BIN`), an absolute path
    to a binary of yours;
 2. the managed install under `<data dir>/bin/`;
 3. `PATH`;
@@ -104,8 +104,8 @@ through Mirli wins over a stray system-wide copy.
 
 The backend is detected per machine (Metal on Apple silicon, CUDA where
 `nvidia-smi` answers, Vulkan or CPU otherwise) and decides which release asset
-is downloaded. Override the detection with `SOUNDBOX_AUDIOCPP_BACKEND`,
-`SOUNDBOX_LLAMA_SERVER_BACKEND` or `SOUNDBOX_SD_SERVER_BACKEND`, or pin the
+is downloaded. Override the detection with `MIRLI_AUDIOCPP_BACKEND`,
+`MIRLI_LLAMA_SERVER_BACKEND` or `MIRLI_SD_SERVER_BACKEND`, or pin the
 download with `--backend` and `--version` on `install`. See
 [AUDIOCPP.md](AUDIOCPP.md#choosing-a-backend).
 
@@ -167,7 +167,7 @@ accept the terms for you.
 2. Create a **read** token at <https://huggingface.co/settings/tokens>.
 3. Paste it into Settings in the app (or set `HF_TOKEN` in your environment).
 
-The token is stored in `~/.soundbox/settings.json` and is never returned by
+The token is stored in `~/.mirli/settings.json` and is never returned by
 the API. `GET /api/settings` reports only the boolean `hf_token_set`.
 
 ## Optional extras
@@ -183,7 +183,7 @@ returns 501 and WAV still works.
 ## Where things go
 
 ```
-~/.soundbox/
+~/.mirli/
   soundbox.db     library index
   sounds/         generated WAVs (move this one on its own from Settings)
   cache/          mp3 transcodes
@@ -195,10 +195,11 @@ returns 501 and WAV still works.
   settings.json   settings, including the HF token
 ```
 
-To uninstall, delete that folder. Override the location with
-`SOUNDBOX_DATA_DIR` or `soundbox --data-dir`. You can move the folder safely:
-downloaded weights are picked up in the new place, and an interrupted download
-resumes.
+An install from before the rename keeps using `~/.soundbox` as long as there
+is no `~/.mirli`; nothing is moved. To uninstall, delete that folder.
+Override the location with `MIRLI_DATA_DIR` or `soundbox --data-dir`. You can
+move the folder safely: downloaded weights are picked up in the new place, and
+an interrupted download resumes.
 
 The sounds folder can move on its own. Settings → Storage → **Sounds folder**
 points new and existing audio at any path, so the library can live on a large
@@ -246,13 +247,13 @@ place of the image name.
 login of any kind. Anyone who can reach the port can generate audio, read and
 delete your library, change settings (including the stored Hugging Face token)
 and drive every MCP tool. The examples publish the port on `127.0.0.1` only.
-To use it from other machines, set `SOUNDBOX_API_TOKEN` (see
+To use it from other machines, set `MIRLI_API_TOKEN` (see
 [Access token](#access-token)) and serve it over HTTPS, or put it behind a
 reverse proxy that does authentication — Caddy or nginx with basic auth,
 Authelia, Authentik, a Tailscale/WireGuard-only listener. Do not publish
 `0.0.0.0:17494` without either on a network you do not control.
 
-**Volumes.** The container's `/data` is the whole of `~/.soundbox` (see
+**Volumes.** The container's `/data` is the whole of `~/.mirli` (see
 [Where things go](#where-things-go)); `/data/models` is the weights, mounted
 separately so tens of gigabytes can live on another disk. The container runs
 as uid 1000. Named volumes just work; with host folders, create them first and
@@ -262,18 +263,18 @@ and the server cannot write to it.
 **Binding.** Inside the container the server listens on `0.0.0.0` (`--host
 0.0.0.0`, the image default) — loopback inside a container is unreachable
 from the published port. It logs a warning about binding beyond loopback on
-every start unless `SOUNDBOX_API_TOKEN` is set; that is expected here, and is
+every start unless `MIRLI_API_TOKEN` is set; that is expected here, and is
 the reason for the paragraph above.
 
-**`SOUNDBOX_ALLOWED_HOSTS` and the MCP endpoint.** `/mcp` checks the `Host`
+**`MIRLI_ALLOWED_HOSTS` and the MCP endpoint.** `/mcp` checks the `Host`
 header (and `Origin`, when a browser sends one) against loopback and answers
 **403** to anything else, so a web page cannot reach your server through DNS
 rebinding. `http://localhost:17494/mcp` from the Docker host passes as is.
 Reach it by any other name — a LAN IP, a proxy hostname — and that name has
-to be listed in `SOUNDBOX_ALLOWED_HOSTS`:
+to be listed in `MIRLI_ALLOWED_HOSTS`:
 
 ```bash
--e SOUNDBOX_ALLOWED_HOSTS=soundbox.example.lan,192.168.1.20:17494
+-e MIRLI_ALLOWED_HOSTS=soundbox.example.lan,192.168.1.20:17494
 ```
 
 A bare `host` matches that name on any port; `host:port` matches only that
@@ -290,11 +291,11 @@ To reach Mirli from another machine (a rented GPU, a box on your LAN, Docker
 on a public address), give it an access token:
 
 ```bash
-export SOUNDBOX_API_TOKEN="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+export MIRLI_API_TOKEN="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
 soundbox --host 0.0.0.0
 ```
 
-or `-e SOUNDBOX_API_TOKEN=...` for Docker. The token must be at least 16
+or `-e MIRLI_API_TOKEN=...` for Docker. The token must be at least 16
 characters; a shorter one stops the server at startup. The banner shows
 `Access token -> required` when one is in force.
 
@@ -309,11 +310,11 @@ With a token set, every request to `/api/*`, `/mcp`, `/files/*` and
   `Authorization: Bearer <token>`. For Claude Code:
 
   ```bash
-  claude mcp add --transport http soundbox https://gpu-box.example/mcp --header "Authorization: Bearer $SOUNDBOX_API_TOKEN"
+  claude mcp add --transport http soundbox https://gpu-box.example/mcp --header "Authorization: Bearer $MIRLI_API_TOKEN"
   ```
 
 - **The stdio MCP bridge** and the `soundbox ps` and `soundbox enhance`
-  commands send the token when `SOUNDBOX_API_TOKEN` is set in their own
+  commands send the token when `MIRLI_API_TOKEN` is set in their own
   environment.
 
 Three things stay open: `GET /api/health`, which the Docker health check and
@@ -334,7 +335,7 @@ the cookie is marked `Secure` when the proxy sends `X-Forwarded-Proto: https`.
 
 The token does not replace the `Host` check. Behind a proxy or on a specific
 `--host`, still list the name you reach the server by in
-`SOUNDBOX_ALLOWED_HOSTS`, as described below.
+`MIRLI_ALLOWED_HOSTS`, as described below.
 
 ## Reverse proxy or another machine
 
@@ -348,7 +349,7 @@ some, or both.
 server on `127.0.0.1` and list the name the proxy forwards as `Host`:
 
 ```bash
-SOUNDBOX_ALLOWED_HOSTS=soundbox.example.lan soundbox
+MIRLI_ALLOWED_HOSTS=soundbox.example.lan soundbox
 ```
 
 That one list feeds every check: the `Host` allowlist for the UI and
@@ -423,8 +424,8 @@ CUDA runtime; the CPU image is about 3.5 GB. `full-vulkan` with
 [audio.cpp's own published images](https://github.com/0xShug0/audio.cpp/blob/main/docs/docker.md)
 (`ghcr.io/0xshug0/audio.cpp:full-<backend>`), which carry `audiocpp_cli`, its
 backend libraries and ffmpeg, and adds Node and Mirli on top.
-`SOUNDBOX_AUDIOCPP_BIN` points at that binary, so `soundbox model install
-audiocpp` is never needed — and `SOUNDBOX_AUDIOCPP_BACKEND` is set from the
+`MIRLI_AUDIOCPP_BIN` points at that binary, so `soundbox model install
+audiocpp` is never needed — and `MIRLI_AUDIOCPP_BACKEND` is set from the
 build arg rather than detected, so a CPU image given `--gpus` does not ask its
 binary for a CUDA backend it lacks. Upstream's tags move daily; pass a dated
 one (`--build-arg AUDIOCPP_TAG=full-cuda12-<date>-<sha>`) for a reproducible
@@ -434,13 +435,13 @@ point the assistant at an external OpenAI-compatible endpoint instead.
 ## Windows notes
 
 **Keep the data directory path short.** The Hugging Face cache layout adds
-about 130 characters to `SOUNDBOX_DATA_DIR`, and Windows caps paths at 260
+about 130 characters to `MIRLI_DATA_DIR`, and Windows caps paths at 260
 unless long paths are enabled. Past that limit a download fails partway
 through with *"The system cannot find the path specified"*, even though the
 directory exists. Mirli detects this and tells you. To fix it, do one of:
 
-- use a short data dir: `set SOUNDBOX_DATA_DIR=C:\soundbox` (the default
-  `%USERPROFILE%\.soundbox` is short enough for a normal username), or
+- use a short data dir: `set MIRLI_DATA_DIR=C:\mirli` (the default
+  `%USERPROFILE%\.mirli` is short enough for a normal username), or
 - enable long paths once, in an **admin** PowerShell, then reboot:
 
   ```powershell
@@ -454,7 +455,7 @@ Files already downloaded are kept. Move the folder and the download completes.
 
 **Where the logs are.** Every run writes a rotating log file to
 `<data_dir>/soundbox-<port>.log` (3 x 10MB, so `.1`/`.2` may exist too)
-alongside the console output. `soundbox --data-dir` or `SOUNDBOX_DATA_DIR`
+alongside the console output. `soundbox --data-dir` or `MIRLI_DATA_DIR`
 sets the location, and the server prints the exact path at startup. Every
 job-related line is tagged with its job id, so
 `grep <job-id> soundbox-17494.log` shows everything that happened in one
@@ -481,7 +482,7 @@ is not running. Vite is serving the frontend on 5174 but its proxy target on
 Vite alone (`npm run dev:ui`), start the backend separately.
 
 **`soundbox model status audiocpp` says not installed.** Run
-`soundbox model install audiocpp`, or set `SOUNDBOX_AUDIOCPP_BIN` to a binary
+`soundbox model install audiocpp`, or set `MIRLI_AUDIOCPP_BIN` to a binary
 you built or downloaded yourself.
 
 **A model says Installed but Load fails.** The download was interrupted and
@@ -497,11 +498,11 @@ its terms, or the token is missing. See step 3.
 
 **MCP client can't connect.** The endpoint is `http://127.0.0.1:17494/mcp`
 with no trailing slash. If you bound a non-loopback host with `--host`, also
-set `SOUNDBOX_ALLOWED_HOSTS=your.host` (or `your.host:port` to accept only that
+set `MIRLI_ALLOWED_HOSTS=your.host` (or `your.host:port` to accept only that
 port), or the MCP endpoint's DNS-rebinding check answers 403.
 
 **403 "Forbidden host" through a reverse proxy.** The proxy forwards a `Host`
-the server does not know. List it in `SOUNDBOX_ALLOWED_HOSTS`; see
+the server does not know. List it in `MIRLI_ALLOWED_HOSTS`; see
 [Reverse proxy or another machine](#reverse-proxy-or-another-machine).
 
 ## Environment variables
@@ -509,27 +510,34 @@ the server does not know. List it in `SOUNDBOX_ALLOWED_HOSTS`; see
 Server-side variables are read by the process running `soundbox` (or
 `npm run dev`, or the desktop shell, which passes its environment through).
 
+The server reads each variable as `MIRLI_*` first, then by its name from
+before the rename, `SOUNDBOX_*`, so existing Docker, service and MCP client
+configs keep working; if both are set, `MIRLI_*` wins. Releases up to 0.5.0
+read only the `SOUNDBOX_*` names, so use those on an older install. The few variables that
+only `npm run dev`, Vite or the desktop shell read still use the `SOUNDBOX_*`
+name, as the table shows.
+
 | Variable | Read by | What it does |
 |---|---|---|
-| `SOUNDBOX_DATA_DIR` | server | Install root. Default `~/.soundbox`; `--data-dir` does the same per run. |
-| `SOUNDBOX_AUDIOCPP_BIN` | server | Absolute path to an `audiocpp_cli` of yours; nothing is downloaded. |
-| `SOUNDBOX_LLAMA_SERVER_BIN` | server | Same, for `llama-server`. |
-| `SOUNDBOX_SD_SERVER_BIN` | server | Same, for `sd-server`. |
-| `SOUNDBOX_AUDIOCPP_BACKEND` | server | Force the audio.cpp backend instead of auto-detecting (`cuda`, `hip`, `metal`, `vulkan`, `cpu`). |
-| `SOUNDBOX_LLAMA_SERVER_BACKEND` | server | Same, for the `llama-server` download. |
-| `SOUNDBOX_SD_SERVER_BACKEND` | server | Same, for the `sd-server` download. |
-| `SOUNDBOX_ALLOW_UNVERIFIED_BINARIES` | server | `1` installs an engine archive that no published SHA-256 covers. Off by default; a checksum *mismatch* is refused regardless. |
-| `SOUNDBOX_API_TOKEN` | server, stdio MCP bridge, CLI | An access token of at least 16 characters. Set on the server, every `/api/*`, `/mcp`, `/files` and `/artwork` request needs it as `Authorization: Bearer <token>` or a session cookie from the UI's sign-in screen; `GET /api/health` stays open. Set for the stdio bridge, `soundbox ps` or `soundbox enhance`, it is sent to the server. See [Access token](#access-token). |
-| `SOUNDBOX_ALLOWED_HOSTS` | server, Vite | Comma-separated `host` (any port) or `host:port` (that port only). Adds `Host` values the server accepts (UI, `/api/*` and `/mcp`) and trusted browser origins (CORS and the MCP `Origin` check); under `npm run dev` also Vite's `server.allowedHosts`. See [Reverse proxy or another machine](#reverse-proxy-or-another-machine) and [SECURITY.md](https://github.com/HamSanders/soundbox/blob/main/SECURITY.md). |
+| `MIRLI_DATA_DIR` | server | Install root. Default `~/.mirli`, or `~/.soundbox` when that exists and `~/.mirli` doesn't (an install from before the rename); `--data-dir` does the same per run. |
+| `MIRLI_AUDIOCPP_BIN` | server | Absolute path to an `audiocpp_cli` of yours; nothing is downloaded. |
+| `MIRLI_LLAMA_SERVER_BIN` | server | Same, for `llama-server`. |
+| `MIRLI_SD_SERVER_BIN` | server | Same, for `sd-server`. |
+| `MIRLI_AUDIOCPP_BACKEND` | server | Force the audio.cpp backend instead of auto-detecting (`cuda`, `hip`, `metal`, `vulkan`, `cpu`). |
+| `MIRLI_LLAMA_SERVER_BACKEND` | server | Same, for the `llama-server` download. |
+| `MIRLI_SD_SERVER_BACKEND` | server | Same, for the `sd-server` download. |
+| `MIRLI_ALLOW_UNVERIFIED_BINARIES` | server | `1` installs an engine archive that no published SHA-256 covers. Off by default; a checksum *mismatch* is refused regardless. |
+| `MIRLI_API_TOKEN` | server, stdio MCP bridge, CLI | An access token of at least 16 characters. Set on the server, every `/api/*`, `/mcp`, `/files` and `/artwork` request needs it as `Authorization: Bearer <token>` or a session cookie from the UI's sign-in screen; `GET /api/health` stays open. Set for the stdio bridge, `soundbox ps` or `soundbox enhance`, it is sent to the server. See [Access token](#access-token). |
+| `MIRLI_ALLOWED_HOSTS` | server, Vite | Comma-separated `host` (any port) or `host:port` (that port only). Adds `Host` values the server accepts (UI, `/api/*` and `/mcp`) and trusted browser origins (CORS and the MCP `Origin` check); under `npm run dev` also Vite's `server.allowedHosts`, which reads it only as `SOUNDBOX_ALLOWED_HOSTS`. See [Reverse proxy or another machine](#reverse-proxy-or-another-machine) and [SECURITY.md](https://github.com/HamSanders/soundbox/blob/main/SECURITY.md). |
 | `SOUNDBOX_DEV_HOST` | `npm run dev`, Vite | Address the Vite dev server listens on (`0.0.0.0`, a LAN IP). Default localhost. The server stays on `127.0.0.1`. No authentication, so open it up only on a network you trust or behind a proxy that has some. |
-| `SOUNDBOX_UPDATE_CHECK` | server | `0` (or `false`, `off`, `no`) turns off the daily "is there a newer version?" request, whatever Settings says; Settings shows the switch as locked. `npm run dev` sets it to `0`. See [PRIVACY.md](./PRIVACY.md). |
-| `SOUNDBOX_UPDATE_URL` | server | Where the update check asks. Default `https://mirli.app/api/update`. |
-| `SOUNDBOX_LOG_LEVEL` | server | `debug`, `info` (default), `warning`, `error` or `critical`; `warn` works too. Used when `--log-level` isn't given, so it reaches `npm run dev`, Docker and the desktop app, none of which pass the flag. The startup banner shows the level in force; an unknown value logs a warning and runs at `info`. At `debug`, every request to the prompt assistant, artwork and custom endpoints is logged with its full URL, HTTP status and timing. Custom endpoints also log the body's field names. Keys, headers, prompts and lyrics are never logged. For the desktop app, set it as a user environment variable (Windows) or with `launchctl setenv` (macOS), then restart the app. |
+| `MIRLI_UPDATE_CHECK` | server | `0` (or `false`, `off`, `no`) turns off the daily "is there a newer version?" request, whatever Settings says; Settings shows the switch as locked. `npm run dev` sets it to `0`. See [PRIVACY.md](./PRIVACY.md). |
+| `MIRLI_UPDATE_URL` | server | Where the update check asks. Default `https://mirli.app/api/update`. |
+| `MIRLI_LOG_LEVEL` | server | `debug`, `info` (default), `warning`, `error` or `critical`; `warn` works too. Used when `--log-level` isn't given, so it reaches `npm run dev`, Docker and the desktop app, none of which pass the flag. The startup banner shows the level in force; an unknown value logs a warning and runs at `info`. At `debug`, every request to the prompt assistant, artwork and custom endpoints is logged with its full URL, HTTP status and timing. Custom endpoints also log the body's field names. Keys, headers, prompts and lyrics are never logged. For the desktop app, set it as a user environment variable (Windows) or with `launchctl setenv` (macOS), then restart the app. |
 | `PORT` | server, Vite | The Vite dev server's port (default 5174); the server also trusts it as a dev origin. |
 | `HF_TOKEN` / `HUGGING_FACE_HUB_TOKEN` | server | Hugging Face token for gated models, used when none is saved in Settings. |
 | `HF_HOME` | server | Hugging Face cache location. Left alone if set; otherwise Mirli points it at `<data dir>/models`. |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | server | OpenTelemetry collector for MCP call traces and metrics. Wins over the Settings value. |
-| `SOUNDBOX_URL` | stdio MCP bridge | Where the running server is. Default `http://127.0.0.1:17494`. Set `SOUNDBOX_API_TOKEN` too if that server requires one. |
+| `MIRLI_URL` | stdio MCP bridge | Where the running server is. Default `http://127.0.0.1:17494`. Set `MIRLI_API_TOKEN` too if that server requires one. |
 | `SOUNDBOX_PORT` | `npm run dev`, Vite | Port `scripts/dev.mjs` starts the server on, and the port Vite proxies `/api`, `/mcp`, `/files` and `/artwork` to. Default 17494. The `soundbox` CLI itself takes `--port`. |
 | `SOUNDBOX_NODE` | desktop shell | Node interpreter to run the built server with, if `node` is not on `PATH`. |
 | `SOUNDBOX_PROJECT_ROOT` | desktop shell | Path to the checkout, if the shell cannot find it from its own location. |
@@ -537,4 +545,4 @@ Server-side variables are read by the process running `soundbox` (or
 | `VITE_REPO_URL` | app build | Repository URL used in the app's links. Default `https://github.com/HamSanders/soundbox`. |
 | `VITE_SITE_ORIGIN` | app and site builds | Absolute origin for canonical URLs and the site's RSS feed. |
 
-The server sets `SOUNDBOX_LOG_FILE` for its own use; you do not need to.
+The server sets `MIRLI_LOG_FILE` for its own use; you do not need to.

@@ -135,7 +135,7 @@ screen, as in the web app.
 |---|---|
 | `SOUNDBOX_NODE` | Node interpreter to run the server with. Overrides both the bundled Node and the `PATH` lookup. |
 | `SOUNDBOX_PROJECT_ROOT` | Run a checkout instead of the installed server, or point at one the shell cannot find by walking up. |
-| `SOUNDBOX_DATA_DIR` | Inherited by the server: library, weights, logs. |
+| `MIRLI_DATA_DIR` | Inherited by the server: library, weights, logs. |
 
 The port is fixed at 17494 in the shell. Every other server variable in
 [INSTALL.md](./INSTALL.md#environment-variables) is inherited the same way.

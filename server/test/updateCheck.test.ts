@@ -33,6 +33,12 @@ afterEach(async () => {
   await rm(dataDir, { recursive: true, force: true });
 });
 
+/** The host of a URL, compared whole: a substring match on the text would also
+ *  accept "https://redis.example.evil.test". */
+function hostOf(url: string): string {
+  return new URL(url).host;
+}
+
 function answer(latest: string | null, url = "https://github.com/HamSanders/soundbox/releases/tag/v9.9.9") {
   return vi.fn(async () => new Response(JSON.stringify({ latest, url }), { status: 200 }));
 }
@@ -176,7 +182,7 @@ describe("the endpoint", () => {
     const f = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       calls.push({ url, init });
-      if (url.startsWith("https://github.com/")) {
+      if (hostOf(url) === "github.com") {
         return new Response(null, {
           status: 302,
           headers: { location: "https://github.com/HamSanders/soundbox/releases/tag/v0.5.1" },
@@ -205,7 +211,7 @@ describe("the endpoint", () => {
       url: "https://github.com/HamSanders/soundbox/releases/tag/v0.5.1",
     });
     expect(res.headers.get("cache-control")).toBe("no-store");
-    const store = calls.find((c) => c.url.startsWith("https://redis.example"))!;
+    const store = calls.find((c) => hostOf(c.url) === "redis.example")!;
     expect(JSON.parse(String(store.init!.body))[0]).toEqual([
       "HINCRBY",
       "installs:2026-11-17",
@@ -233,13 +239,13 @@ describe("the endpoint", () => {
   it("still answers when no counter is configured or the counter is down", async () => {
     const none = deps({ env: {} });
     expect((await handle(new Request("https://mirli.app/api/update?v=0.4.1&p=darwin-arm64"), none.deps)).status).toBe(200);
-    expect(none.calls.some((c) => c.url.includes("redis"))).toBe(false);
+    expect(none.calls.some((c) => hostOf(c.url) === "redis.example")).toBe(false);
 
     resetCache();
     const down = deps();
     const base = down.deps.fetch;
     down.deps.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-      if (String(input).includes("redis")) throw new Error("down");
+      if (hostOf(String(input)) === "redis.example") throw new Error("down");
       return base(input, init);
     }) as typeof fetch;
     const res = await handle(new Request("https://mirli.app/api/update?v=0.4.1&p=darwin-arm64"), down.deps);

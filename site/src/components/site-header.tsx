@@ -20,6 +20,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   AudioLinesIcon,
   BookOpenIcon,
+  BotIcon,
   BoxesIcon,
   ChevronDownIcon,
   MenuIcon,
@@ -72,6 +73,12 @@ const GROUPS: NavGroup[] = [
   {
     label: "Developers",
     items: [
+      {
+        to: "/developers",
+        label: "For AI agents",
+        blurb: "Install, MCP config, every tool and the API on one page.",
+        icon: BotIcon,
+      },
       {
         to: "/models",
         label: "Models",

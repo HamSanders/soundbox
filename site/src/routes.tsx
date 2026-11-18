@@ -9,6 +9,7 @@ import { BlogPostPage } from "./routes/blog-post";
 import { McpPage } from "./routes/mcp";
 import { PressPage } from "./routes/press";
 import { DownloadPage } from "./routes/download";
+import { DevelopersPage } from "./routes/developers";
 import { landerComponent, LANDER_PATHS } from "./routes/lander";
 import { DOC_PAGES } from "./docs/pages";
 import { BLOG_POSTS } from "./blog/posts";
@@ -137,6 +138,13 @@ export const routes: RouteRecord[] = [
         path: "press",
         Component: PressPage,
         entry: "src/routes/press.tsx",
+      },
+      {
+        // Everything an AI agent needs on one page; its Markdown twin,
+        // /developers/index.md, is written by plugins/crawlers.ts.
+        path: "developers",
+        Component: DevelopersPage,
+        entry: "src/routes/developers.tsx",
       },
       {
         path: "download",

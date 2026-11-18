@@ -99,6 +99,11 @@ ENV SOUNDBOX_DATA_DIR=/data \
 # must be writable by that uid.
 USER ubuntu
 VOLUME ["/data"]
+
+# Proves to the MCP Registry that this image is the package server.json
+# declares; the value must equal server.json's "name". See
+# docs/agents-discovery.md.
+LABEL io.modelcontextprotocol.server.name="io.github.HamSanders/mirli"
 EXPOSE 17494
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \

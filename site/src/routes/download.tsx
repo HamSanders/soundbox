@@ -309,15 +309,9 @@ function Lit({
   );
 }
 
-/**
- * Installs and app updates only. `latest.json` is fetched by every desktop
- * app's update check and each `.sig` alongside an update, so counting them
- * would count launches, not downloads.
- */
+/** GitHub's download count for every file on a release, as its API reports it. */
 function installCount(assets: ReleaseAsset[]): number {
-  return assets
-    .filter((a) => !/\.(sig|json)$/.test(a.name))
-    .reduce((sum, a) => sum + a.download_count, 0);
+  return assets.reduce((sum, a) => sum + a.download_count, 0);
 }
 
 /** A meter readout: a mono caps label over a big display-face number. */

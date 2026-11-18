@@ -68,32 +68,32 @@ import { cn } from "@/lib/utils";
 const EXAMPLES: { label: string; prompt: string; sample: ExampleId }[] = [
   {
     label: "Impact",
-    sample: "impact-wood-crate-smash",
+    sample: "chip-impact",
     prompt: "heavy wooden crate dropping onto a concrete floor, close mic, dry room",
   },
   {
     label: "Footsteps",
-    sample: "footsteps-mud-squelch",
+    sample: "chip-footsteps",
     prompt: "boots on wet gravel, slow steady pace, outdoors at night",
   },
   {
     label: "Machinery",
-    sample: "machinery-drill-press",
+    sample: "chip-machinery",
     prompt: "old freight lift motor starting under load, metal cable strain, echoing shaft",
   },
   {
     label: "Ambience",
-    sample: "rain-thunderstorm-full",
+    sample: "chip-ambience",
     prompt: "rain on a tin roof, distant thunder, steady wind through trees",
   },
   {
     label: "UI",
-    sample: "ui-keyboard-tap",
-    prompt: "small plastic button click, tight and dry, no reverb",
+    sample: "chip-ui",
+    prompt: "three small plastic button clicks in a row, tight and dry, no reverb",
   },
   {
     label: "Whoosh",
-    sample: "whoosh-heavy-door-air",
+    sample: "chip-whoosh",
     prompt: "heavy steel blade swinging fast past the microphone, turbulent air",
   },
 ];
@@ -760,21 +760,21 @@ const THINGS: {
     body: "Name the material, the action and the space and get a WAV. Each take keeps its prompt, model and seed.",
     href: "/sfx",
     cta: "Hear hundreds of examples",
-    sample: "impact-wood-crate-smash",
+    sample: "chip-impact",
   },
   {
     title: "Music, with or without lyrics",
     body: "A style prompt gives an instrumental. Add a lyric sheet and a model that sings does the rest.",
     href: "/music",
     cta: "Listen to the tracks",
-    sample: "victory-lap",
+    sample: "song-own-machine",
   },
   {
     title: "Speech and voice cloning",
     body: "Read a script aloud, or clone a voice from a short clip and cast it onto the lines of a script.",
     href: "/voices",
     cta: "How voices work",
-    sample: "narration-intro",
+    sample: "voice-intro",
   },
   {
     title: "One timeline for all of it",

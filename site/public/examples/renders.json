@@ -1,0 +1,200 @@
+{
+ "chip-impact": {
+  "model": "audiocpp-stable-audio-3-sfx",
+  "prompt": "heavy wooden crate dropping onto a concrete floor, close mic, dry room",
+  "lyrics": null,
+  "text": null,
+  "voice": null,
+  "seed": 1716829317,
+  "duration_s": 1.39,
+  "chosen_take": "3 of 4",
+  "source": {
+   "lufs": -17.1,
+   "peak_db": -0.100468
+  },
+  "served": {
+   "lufs": -19.5,
+   "true_peak_dbtp": -1.8
+  }
+ },
+ "chip-footsteps": {
+  "model": "audiocpp-stable-audio-3-sfx",
+  "prompt": "boots on wet gravel, slow steady pace, outdoors at night",
+  "lyrics": null,
+  "text": null,
+  "voice": null,
+  "seed": 821573187,
+  "duration_s": 5.68,
+  "chosen_take": "3 of 4",
+  "source": {
+   "lufs": -21.3,
+   "peak_db": -0.100468
+  },
+  "served": {
+   "lufs": -18.7,
+   "true_peak_dbtp": -1.4
+  }
+ },
+ "chip-machinery": {
+  "model": "audiocpp-stable-audio-3-sfx",
+  "prompt": "old freight lift motor starting under load, metal cable strain, echoing shaft",
+  "lyrics": null,
+  "text": null,
+  "voice": null,
+  "seed": 212426096,
+  "duration_s": 5.96,
+  "chosen_take": "4 of 4",
+  "source": {
+   "lufs": -19.2,
+   "peak_db": -0.100468
+  },
+  "served": {
+   "lufs": -18.3,
+   "true_peak_dbtp": -2.0
+  }
+ },
+ "chip-ambience": {
+  "model": "audiocpp-stable-audio-3-sfx",
+  "prompt": "rain on a tin roof, distant thunder, steady wind through trees",
+  "lyrics": null,
+  "text": null,
+  "voice": null,
+  "seed": 1097810645,
+  "duration_s": 10.0,
+  "chosen_take": "2 of 4",
+  "source": {
+   "lufs": -20.1,
+   "peak_db": -0.100468
+  },
+  "served": {
+   "lufs": -19.0,
+   "true_peak_dbtp": -1.9
+  }
+ },
+ "chip-ui": {
+  "model": "audiocpp-stable-audio-3-sfx",
+  "prompt": "three small plastic button clicks in a row, tight and dry, no reverb",
+  "lyrics": null,
+  "text": null,
+  "voice": null,
+  "seed": 1429962913,
+  "duration_s": 0.88,
+  "chosen_take": "3 of 4",
+  "source": {
+   "lufs": -21.6,
+   "peak_db": -0.100467
+  },
+  "served": {
+   "lufs": -24.0,
+   "true_peak_dbtp": -2.3
+  }
+ },
+ "chip-whoosh": {
+  "model": "audiocpp-stable-audio-3-sfx",
+  "prompt": "heavy steel blade swinging fast past the microphone, turbulent air",
+  "lyrics": null,
+  "text": null,
+  "voice": null,
+  "seed": 1344470847,
+  "duration_s": 2.34,
+  "chosen_take": "1 of 4",
+  "source": {
+   "lufs": -21.3,
+   "peak_db": -0.100468
+  },
+  "served": {
+   "lufs": -23.2,
+   "true_peak_dbtp": -2.0
+  }
+ },
+ "coin-chime": {
+  "model": "audiocpp-stable-audio-3-sfx",
+  "prompt": "bright two-note rising coin pickup chime with a short metallic sparkle tail, clean and dry",
+  "lyrics": null,
+  "text": null,
+  "voice": null,
+  "seed": 933801625,
+  "duration_s": 1.17,
+  "chosen_take": "3 of 4",
+  "source": {
+   "lufs": -14.8,
+   "peak_db": -3.777745
+  },
+  "served": {
+   "lufs": -18.0,
+   "true_peak_dbtp": -6.4
+  }
+ },
+ "song-own-machine": {
+  "model": "audiocpp-ace-step",
+  "prompt": "upbeat indie pop, jangly electric guitars, tight live drums, warm bass, bright female lead vocal, catchy singalong chorus, major key, 118 BPM",
+  "lyrics": "[verse]\nTyped a little sentence, then I hit the key\nOut came a thunderstorm, just for me\nNo meter ticking, no cloud in the sky\nIt's all running here on my own machine tonight\n\n[chorus]\nPlay it again, play it loud\nNobody's watching, nobody's around\nEvery sound I dreamed up\nCame right out of the speakers now",
+  "text": null,
+  "voice": null,
+  "seed": 1256824695,
+  "duration_s": 32.0,
+  "chosen_take": "3 of 4",
+  "source": {
+   "lufs": -15.9,
+   "peak_db": -5.29473
+  },
+  "served": {
+   "lufs": -17.9,
+   "true_peak_dbtp": -6.3
+  }
+ },
+ "inst-lofi": {
+  "model": "audiocpp-stable-audio-3-small-music",
+  "prompt": "warm lo-fi hip hop beat, dusty vinyl crackle, mellow Rhodes chords, soft boom-bap drums, round upright bass, laid-back 82 BPM",
+  "lyrics": null,
+  "text": null,
+  "voice": null,
+  "seed": 2110173577,
+  "duration_s": 29.28,
+  "chosen_take": "2 of 4",
+  "source": {
+   "lufs": -15.9,
+   "peak_db": -4.205289
+  },
+  "served": {
+   "lufs": -18.0,
+   "true_peak_dbtp": -5.7
+  }
+ },
+ "inst-trailer": {
+  "model": "audiocpp-stable-audio-3-small-music",
+  "prompt": "cinematic hybrid trailer build, low string ostinato, big taiko drums, brass swells rising to a hit, tense and heroic, 100 BPM",
+  "lyrics": null,
+  "text": null,
+  "voice": null,
+  "seed": 1858699973,
+  "duration_s": 29.79,
+  "chosen_take": "3 of 4",
+  "source": {
+   "lufs": -15.9,
+   "peak_db": -5.77603
+  },
+  "served": {
+   "lufs": -17.7,
+   "true_peak_dbtp": -6.9
+  }
+ },
+ "voice-intro": {
+  "model": "audiocpp-chatterbox",
+  "prompt": null,
+  "lyrics": null,
+  "text": "Describe a sound, and get a file on your disk. Write some lyrics and get a song. Clone a voice from a short clip. It all runs on your own machine, with no account and no credits.",
+  "voice": "Bea (saved Chatterbox voice)",
+  "seed": 11,
+  "duration_s": 12.72,
+  "chosen_take": "1 of 3",
+  "source": {
+   "lufs": -15.9,
+   "peak_db": -0.100869
+  },
+  "served": {
+   "lufs": -18.0,
+   "true_peak_dbtp": -2.0
+  }
+ }
+}

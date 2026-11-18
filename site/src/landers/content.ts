@@ -54,7 +54,7 @@ export const LANDERS: Lander[] = [
     eyebrow: "Alternatives · ElevenLabs",
     headline: "A free, local alternative to ElevenLabs",
     lede: "Describe a sound and get a WAV. Read a script in a cloned voice. Everything runs on your own GPU, so there is no account, no credits and nothing to upload.",
-    hero: "rain-thunderstorm-full",
+    hero: "chip-ambience",
     shot: {
       src: "/product/studio.png",
       alt: 'The Soundbox studio: a script cast across three speakers above a multi-track timeline holding the spoken lines, an ambient music bed and sound effects.',
@@ -69,12 +69,12 @@ export const LANDERS: Lander[] = [
       {
         title: "Speech and voice cloning",
         body: "Read a script aloud, clone a voice from a short clip, and save voices to cast onto the lines of a script. Only clone a voice you have permission to use.",
-        sample: "narration-intro",
+        sample: "voice-intro",
       },
       {
         title: "Music, instrumental or with lyrics",
         body: "A style prompt gives an instrumental. Add a lyric sheet and a model that supports it sings.",
-        sample: "victory-lap",
+        sample: "song-own-machine",
       },
       {
         title: "One timeline for all of it",
@@ -109,7 +109,7 @@ export const LANDERS: Lander[] = [
     eyebrow: "Alternatives · Suno",
     headline: "A free, local alternative to Suno",
     lede: "Write a style prompt for an instrumental, or add a lyric sheet for a song. The models run on your own machine, so there is no account, no credit meter and no queue.",
-    hero: "neon-arcade-nights",
+    hero: "song-own-machine",
     shot: {
       src: "/product/music-studio.png",
       alt: 'The Music page: a request form with model, licence, styles, tempo, key and length beside a shelf of generated takes.',
@@ -119,12 +119,12 @@ export const LANDERS: Lander[] = [
       {
         title: "Instrumentals from a style prompt",
         body: "Stable Audio 3.0 Small Music turns a description of genre, instruments and tempo into a track. It has no vocal path.",
-        sample: "neon-arcade-nights",
+        sample: "inst-lofi",
       },
       {
         title: "Songs from a lyric sheet",
         body: "ACE-Step 1.5 is the lyrics-conditioned model: give it a style prompt and a [verse] / [chorus] lyric block and it sings.",
-        sample: "victory-lap",
+        sample: "song-own-machine",
       },
       {
         title: "Same prompt, three models",
@@ -166,7 +166,7 @@ export const LANDERS: Lander[] = [
     eyebrow: "Make · Sound effects",
     headline: "Generate sound effects on your own machine",
     lede: "Describe the sound and get a WAV file. No account, no credits, no upload. Every example on this site shows the exact prompt that made it, so you can learn what works before you install.",
-    hero: "impact-wood-crate-smash",
+    hero: "chip-impact",
     shot: {
       src: "/product/sfx.png",
       alt: 'The SFX page: a list of generated sounds, each with its model, tags, duration and seed, above a prompt box reading "Heavy iron portcullis slamming shut in a stone gatehouse, long echo".',
@@ -176,22 +176,22 @@ export const LANDERS: Lander[] = [
       {
         title: "A material",
         body: "Not “a crash”: a wooden crate, a steel door, a glass bottle. Materials decide the whole character of a sound.",
-        sample: "impact-wood-crate-smash",
+        sample: "chip-impact",
       },
       {
         title: "An action",
         body: "Smashing apart, dragging, trudging, boring, swinging past the microphone. The verb sets the shape over time.",
-        sample: "footsteps-mud-squelch",
+        sample: "chip-footsteps",
       },
       {
         title: "A space",
         body: "Warehouse reverb, a close mic, a dry room, a stone corridor. The space is half of what you hear.",
-        sample: "machinery-drill-press",
+        sample: "chip-machinery",
       },
       {
         title: "Loops and ambience",
         body: "Ask for a seamless loop and get a bed: rain, a factory floor, a subway platform.",
-        sample: "rain-thunderstorm-full",
+        sample: "chip-ambience",
       },
       {
         title: "Browse hundreds more",
@@ -240,12 +240,17 @@ export const LANDERS: Lander[] = [
       {
         title: "The small gestures",
         body: "A jump, a power-up, a defeat. Short, dry sounds are what the SFX model is good at.",
-        sample: "powerup-double-jump",
+        sample: "coin-chime",
       },
       {
         title: "Tone, including the silly",
         body: "Describe the mood. Not every game over wants a dirge.",
         sample: "gameover-sad-trombone",
+      },
+      {
+        title: "Music for the level, too",
+        body: "A trailer build, a boss theme, a loop for a menu. Instrumentals come from Stable Audio 3.0 Small Music, from a description of genre, instruments and tempo.",
+        sample: "inst-trailer",
       },
       {
         title: "A sound pass, by an agent",
@@ -282,7 +287,7 @@ export const LANDERS: Lander[] = [
     eyebrow: "Make · Voiceovers",
     headline: "Text to speech and voice cloning, on your machine",
     lede: "Read text aloud, clone a voice from a short clip, and cast saved voices onto the lines of a script. It runs locally, so your script and voice samples stay on your computer while you generate.",
-    hero: "narration-intro",
+    hero: "voice-intro",
     shot: {
       src: "/product/voice-lab.png",
       alt: 'The Voice Lab: saved voices as cards, most cloned from a clip and one built into a model, each with Try it and Edit.',
@@ -292,7 +297,7 @@ export const LANDERS: Lander[] = [
       {
         title: "One read, or a whole script",
         body: "Speak a single line, or write a script with several speakers and voice it line by line.",
-        sample: "narration-intro",
+        sample: "voice-intro",
       },
       {
         title: "Clone from a short clip",

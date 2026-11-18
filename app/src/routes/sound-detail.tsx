@@ -169,7 +169,7 @@ export function SoundDetailPage() {
               >
                 <StarIcon
                   className={cn(
-                    sound.favorite && "fill-amber-400 text-amber-500 dark:text-amber-300",
+                    sound.favorite && "fill-foreground text-foreground",
                   )}
                 />
               </Button>

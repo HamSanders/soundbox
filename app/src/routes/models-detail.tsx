@@ -33,6 +33,8 @@ import { ModelsLicenseChip, ModelsLicensePanel } from "@/components/models-licen
 import { CATEGORY_LABEL, ModelMonogram } from "@/components/models-list";
 import { MODELS, getModel } from "@/content/models/models";
 import type { ModelCapability, ModelContent } from "@/content/models/types";
+import { SamplePlay } from "@/components/sample-play";
+import { exampleForModel } from "@/content/examples";
 import { MODELS_HUB_HREF, REPO_URL, WELCOME_HREF } from "@/lib/marketing-links";
 
 
@@ -177,6 +179,18 @@ function ModelBody({ model }: { model: ModelContent }) {
           <ModelsLicensePanel license={model.license} />
         </div>
       </Section>
+
+      {exampleForModel(model.catalogId) ? (
+        <Section
+          id="listen"
+          title="Hear it"
+          lede="A real file made with this model, not a mock-up."
+        >
+          <div className="border-border max-w-xl rounded-md border p-4">
+            <SamplePlay id={exampleForModel(model.catalogId)!} />
+          </div>
+        </Section>
+      ) : null}
 
       <Section
         id="specs"
@@ -347,7 +361,7 @@ function ModelBody({ model }: { model: ModelContent }) {
         <Section id="related" title="Related models">
           {family.length > 0 && (
             <>
-              <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+              <h3 className="label-caps text-muted-foreground">
                 Same loader family ({model.spec.family})
               </h3>
               <ul className="mt-3 flex flex-wrap gap-2">
@@ -363,7 +377,7 @@ function ModelBody({ model }: { model: ModelContent }) {
           )}
           {sameCategory.length > 0 && (
             <>
-              <h3 className="text-muted-foreground mt-6 text-xs font-semibold tracking-wide uppercase">
+              <h3 className="label-caps text-muted-foreground mt-6">
                 Other {CATEGORY_LABEL[model.category].toLowerCase()} models
               </h3>
               <ul className="mt-3 flex flex-wrap gap-2">

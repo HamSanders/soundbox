@@ -551,7 +551,7 @@ export function SoundCard({
               <DropdownMenuItem
                 onClick={() => update.mutate({ id: sound.id, patch: { favorite: !sound.favorite } })}
               >
-                <StarIcon className={cn(sound.favorite && "fill-amber-400 text-amber-500 dark:text-amber-300")} />
+                <StarIcon className={cn(sound.favorite && "fill-foreground text-foreground")} />
                 {sound.favorite ? "Remove from favourites" : "Add to favourites"}
               </DropdownMenuItem>
               <DropdownMenuItem

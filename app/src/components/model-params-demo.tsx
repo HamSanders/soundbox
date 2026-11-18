@@ -120,7 +120,7 @@ function Control({
         <label className="text-muted-foreground truncate font-mono text-[11px]">{param.name}</label>
         <span
           className={cn(
-            "shrink-0 font-mono text-[11px] tabular-nums",
+            "shrink-0 font-(family-name:--font-log) text-[11px] tabular-nums",
             // A changed value is the one that will actually be sent, so it is
             // the one that gets the accent.
             touched ? "text-primary" : "text-muted-foreground/60",
@@ -185,7 +185,7 @@ export function ModelParamsDemo() {
       {/* The model switch. This is the control that carries the argument, so it
           is the first thing in the panel rather than a footnote under it. */}
       <div className="border-border/60 flex flex-wrap items-center gap-1.5 border-b px-3 py-2">
-        <span className="text-muted-foreground mr-1 text-[10px] font-semibold tracking-[0.14em] uppercase">
+        <span className="label-caps text-muted-foreground mr-1">
           Model
         </span>
         {FAMILIES.map((f) => (
@@ -213,7 +213,7 @@ export function ModelParamsDemo() {
         <div className="space-y-3">
           {groups.map((group) => (
             <div key={group}>
-              <p className="text-muted-foreground/60 mb-1.5 text-[10px] font-semibold tracking-[0.14em] uppercase">
+              <p className="label-caps text-muted-foreground/60 mb-1.5">
                 {GROUP_LABEL[group] ?? group}
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -241,7 +241,7 @@ export function ModelParamsDemo() {
         {/* What would actually be sent. The empty state is the interesting one:
             touch nothing and nothing is sent, so the model's defaults stand. */}
         <div className="border-border/50 mt-4 border-t pt-3">
-          <p className="text-muted-foreground/60 text-[10px] font-semibold tracking-[0.14em] uppercase">
+          <p className="label-caps text-muted-foreground/60">
             Sent with the request
           </p>
           <pre className="text-muted-foreground mt-1.5 overflow-x-auto font-mono text-[11px]">

@@ -74,7 +74,7 @@ export function SignalChain() {
 
   return (
     <figure className="border-border/70 bg-card/40 rounded-2xl border p-4 sm:p-6">
-      <figcaption className="text-muted-foreground mb-4 text-xs font-semibold tracking-wide uppercase">
+      <figcaption className="label-caps text-muted-foreground mb-4">
         A generation, end to end
       </figcaption>
 

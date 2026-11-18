@@ -34,6 +34,7 @@
   font-family: var(--font-heading, inherit);
   font-weight: 600;
   letter-spacing: -0.015em;
+  text-transform: none;
   text-wrap: balance;
   scroll-margin-top: 6rem; /* clears the sticky header on an anchor jump */
 }
@@ -145,7 +146,7 @@
 .soundbox-doc video {
   display: block;
   width: 100%;
-  background: #000;
+  background: #181817;
 }
 
 .soundbox-doc img,
@@ -226,10 +227,9 @@
 
 .soundbox-doc th {
   color: var(--muted-foreground);
-  font-weight: 600;
-  font-size: 0.72rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-family: var(--font-log);
+  font-weight: 400;
+  font-size: 0.75rem;
 }
 
 .soundbox-doc tbody tr:last-child td {

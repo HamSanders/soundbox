@@ -190,7 +190,7 @@ function TrackBody({ track }: { track: MusicTrack }) {
                 line.isTag ? (
                   <li
                     key={i}
-                    className="text-muted-foreground/60 pt-3 font-mono text-[11px] tracking-wider uppercase first:pt-0"
+                    className="label-caps text-muted-foreground/60 pt-3 first:pt-0"
                   >
                     {line.text}
                   </li>

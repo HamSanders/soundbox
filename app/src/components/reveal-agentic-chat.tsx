@@ -196,7 +196,7 @@ export function RevealAgenticChat() {
               *for*, so "here are other things you could ask" is the product's
               own affordance rather than page furniture. */}
           <div className="border-border/50 mt-3 shrink-0 border-t pt-3">
-            <p className="text-muted-foreground/60 mb-1.5 text-[10px] font-semibold tracking-[0.14em] uppercase">
+            <p className="label-caps text-muted-foreground/60 mb-1.5">
               Try asking
             </p>
             <ul className="flex flex-wrap gap-1.5">

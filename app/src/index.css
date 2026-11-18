@@ -1,18 +1,26 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-/* Inter with its optical-size axis, so headings get the Display cut on their
-   own; JetBrains Mono for every number you read like a meter. The same pair
-   the promo films use — see docs/design-direction.md. */
+/* Inter with its optical-size axis for everything read at length; JetBrains
+   Mono for code. */
 @import "@fontsource-variable/inter/opsz.css";
 @import "@fontsource-variable/jetbrains-mono";
+/* Courier Prime: the log face. Labels, seeds, times and sizes are typed up
+   like a field recordist's notebook entry. */
+@import "@fontsource/courier-prime/400.css";
+@import "@fontsource/courier-prime/700.css";
+/* Big Shoulders Display: a condensed, film-poster face for the wordmark, the
+   M mark and page titles only. Everything you read at length stays in Inter. */
+@import "@fontsource-variable/big-shoulders-display";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
     --font-heading: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Big Shoulders Display Variable', 'Arial Narrow', 'Roboto Condensed', sans-serif;
     --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
     --font-mono: 'JetBrains Mono Variable', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    --font-log: 'Courier Prime', 'Courier New', ui-monospace, monospace;
     /* One step under text-xs: meter readouts, rack labels, the sidebar's
        section heads. Tailwind's scale stops at 12px and the app was reaching
        for text-[10px]/text-[11px] by hand in a hundred places. */
@@ -59,6 +67,9 @@
     --color-warn: var(--warn);
     --color-danger: var(--danger);
     --color-border-strong: var(--border-strong);
+    /* The dusk ground as a fixed colour, for what stays dark in both
+       themes: a video's letterbox, the scrim under text on a picture. */
+    --color-dusk: #181817;
     --radius-sm: calc(var(--radius) * 0.6);
     --radius-md: calc(var(--radius) * 0.8);
     --radius-lg: var(--radius);
@@ -77,117 +88,113 @@
 }
 
 /*
- * Palette — "bench at night". See docs/design-direction.md for the reasoning.
+ * Palette: "dusk log". The blackbird sings at dusk, so the two themes are
+ * the two ends of that hour: warm paper and pen ink by day, a warm dark
+ * grey by night: neutral, like a code editor, and never pure black.
  *
- * Neutrals are graphite with a faint teal-blue cast (hue ~210) rather than
- * shadcn's dead-neutral greys: next to the teal they read as one material,
- * the way a DAW's chrome is tinted to sit with its meters. Surfaces step up
- * in luminance — ground, panel, raised — and are separated by hairlines, not
- * shadows. Teal is the *signal*: what is playing, what is selected, the one
- * action that makes sound, and focus. Everything else stays graphite.
+ * One colour is the brand's: `signal`, the yellow of the bird's beak. It
+ * means "sound is happening here" (the playhead, a model that is running,
+ * a row that just arrived) and it is only ever a flat dot, an underline or
+ * a thin line. On paper it is 2:1, so it is never text and never a fill
+ * behind text. Buttons are ink.
  *
- * Every text pairing below was checked for WCAG AA (4.5:1) against the
- * surfaces it lands on; `wave` and `border-strong` for 3:1 as graphics.
+ * Surfaces step by luminance and are separated by hairlines, not shadows.
+ * Status keeps its colours; `warn` is a rust so it cannot be mistaken for
+ * the beak. Text pairings clear WCAG AA (4.5:1) on the surfaces they land
+ * on; `wave` and `border-strong` clear 3:1 as graphics.
  */
 :root {
-    --background: #f3f5f5;
-    --foreground: #0e1314;
-    /* Track colours: one hue per lane (see lib/lanes.ts) rendered at this
-       lightness and chroma. Kept here rather than in the palette above because
-       they are not theme *colours* — they are the two numbers that make an
-       arbitrary hue readable on this background. */
+    --background: #f1ece0;
+    --foreground: #14130f;
+    /* Track colours are one hue per lane (lib/lanes.ts) at this lightness
+       and chroma. */
     --lane-l: 0.55;
     --lane-c: 0.14;
-    --card: #ffffff;
-    --card-foreground: #0e1314;
-    --popover: #ffffff;
-    --popover-foreground: #0e1314;
-    /* Teal-700, a shade deeper. White on it is 6:1, and as text it clears 4.5:1 on every surface —
-       so the same token can colour the Generate button and a link. */
-    --primary: #0d6b64;
-    --primary-foreground: #ffffff;
-    --signal: #0d9488;
-    --secondary: #e8ecec;
-    --secondary-foreground: #0e1314;
-    --muted: #e8ecec;
-    --muted-foreground: #556166;
-    --accent: #e3e8e9;
-    --accent-foreground: #0e1314;
-    --destructive: #c62828;
-    --ok: #036b4e;
-    --warn: #92400e;
-    --danger: #c62828;
-    --border: #dce1e2;
-    --border-strong: #7a868c;
-    --input: #ced5d7;
-    --field: #ffffff;
-    --wave: #7a868c;
-    --ring: #0d9488;
-    --chart-1: #0d9488;
-    --chart-2: #556166;
-    --chart-3: #3c4649;
-    --chart-4: #2a3235;
-    --chart-5: #1a2022;
+    --card: #faf6ec;
+    --card-foreground: #14130f;
+    --popover: #faf6ec;
+    --popover-foreground: #14130f;
+    --primary: #14130f;
+    --primary-foreground: #f1ece0;
+    /* The beak. The same yellow in both themes. */
+    --signal: #f2a40c;
+    --secondary: #e7e0d0;
+    --secondary-foreground: #14130f;
+    --muted: #e7e0d0;
+    --muted-foreground: #5c5850;
+    --accent: #e0d8c6;
+    --accent-foreground: #14130f;
+    --destructive: #b3261e;
+    --ok: #1f6b4a;
+    --warn: #a8501b;
+    --danger: #b3261e;
+    --border: #d9d2c0;
+    --border-strong: #7d7768;
+    --input: #cbc3af;
+    --field: #faf6ec;
+    --wave: #7d7768;
+    --ring: #14130f;
+    --chart-1: #14130f;
+    --chart-2: #5c5850;
+    --chart-3: #7d7768;
+    --chart-4: #a8a08c;
+    --chart-5: #cbc3af;
+    /* 6px: a notebook card, not a cut plate. Buttons are pills. */
     --radius: 0.375rem;
-    --sidebar: #eceff0;
-    --sidebar-foreground: #0e1314;
-    --sidebar-primary: #0d6b64;
-    --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #dfe5e6;
-    --sidebar-accent-foreground: #0e1314;
-    --sidebar-border: #dce1e2;
-    --sidebar-ring: #0d9488;
+    --sidebar: #e9e3d4;
+    --sidebar-foreground: #14130f;
+    --sidebar-primary: #14130f;
+    --sidebar-primary-foreground: #f1ece0;
+    --sidebar-accent: #dcd4c1;
+    --sidebar-accent-foreground: #14130f;
+    --sidebar-border: #d9d2c0;
+    --sidebar-ring: #14130f;
 }
 
 .dark {
-    /* The promo films' ground. */
-    --background: #0a0c0d;
-    --foreground: #e6ecec;
-    /* Lighter and a little less saturated than in light mode: the same hue at
-       0.55 lightness disappears into a near-black lane. */
+    --background: #181817;
+    --foreground: #f1ece0;
+    /* Lighter lanes at dusk: at 0.55 a lane disappears into the grey. */
     --lane-l: 0.75;
     --lane-c: 0.13;
-    --card: #111416;
-    --card-foreground: #e6ecec;
-    --popover: #15191b;
-    --popover-foreground: #e6ecec;
-    /* #2dd4bf, the brand teal, at full strength: on near-black it needs no
-       help. Its label flips to near-black because white on a bright teal
-       fails contrast (it is ~1.9:1); this pairing is ~10:1. */
-    --primary: #2dd4bf;
-    --primary-foreground: #04201c;
-    --signal: #2dd4bf;
-    --secondary: #1a1f21;
-    --secondary-foreground: #e6ecec;
-    --muted: #1a1f21;
-    --muted-foreground: #8e999d;
-    --accent: #1f2527;
-    --accent-foreground: #e6ecec;
-    --destructive: #f87171;
-    --ok: #34d399;
-    --warn: #fbbf24;
-    --danger: #f87171;
-    --border: #22282b;
-    --border-strong: #67747a;
-    --input: #2b3235;
-    /* Inputs sit *below* the panel they are on, like a recessed fader well,
-       rather than floating above it the way a translucent white fill does. */
-    --field: #0c0f10;
-    --wave: #67747a;
-    --ring: #2dd4bf;
-    --chart-1: #2dd4bf;
-    --chart-2: #8e999d;
-    --chart-3: #5f6b70;
-    --chart-4: #3a4346;
-    --chart-5: #22282b;
-    --sidebar: #0d1011;
-    --sidebar-foreground: #e6ecec;
-    --sidebar-primary: #2dd4bf;
-    --sidebar-primary-foreground: #04201c;
-    --sidebar-accent: #181d1f;
-    --sidebar-accent-foreground: #e6ecec;
-    --sidebar-border: #1c2224;
-    --sidebar-ring: #2dd4bf;
+    --card: #20201e;
+    --card-foreground: #f1ece0;
+    --popover: #262624;
+    --popover-foreground: #f1ece0;
+    /* Paper ink on dark grey. Its label is the ground, ~14:1. */
+    --primary: #f1ece0;
+    --primary-foreground: #181817;
+    --signal: #f2a40c;
+    --secondary: #272725;
+    --secondary-foreground: #f1ece0;
+    --muted: #272725;
+    --muted-foreground: #a9a797;
+    --accent: #30302d;
+    --accent-foreground: #f1ece0;
+    --destructive: #f08a80;
+    --ok: #6fcf9f;
+    --warn: #e08a52;
+    --danger: #f08a80;
+    --border: #33332f;
+    --border-strong: #7c7b74;
+    --input: #3e3e3a;
+    /* Inputs sit below the panel, a recessed well. */
+    --field: #121211;
+    --wave: #7c7b74;
+    --ring: #f1ece0;
+    --chart-1: #f1ece0;
+    --chart-2: #a9a797;
+    --chart-3: #7c7b74;
+    --chart-4: #4a4a45;
+    --chart-5: #33332f;
+    --sidebar: #141413;
+    --sidebar-foreground: #f1ece0;
+    --sidebar-primary: #f1ece0;
+    --sidebar-primary-foreground: #181817;
+    --sidebar-accent: #242422;
+    --sidebar-accent-foreground: #f1ece0;
+    --sidebar-border: #2b2b28;
+    --sidebar-ring: #f1ece0;
 }
 
 @layer base {
@@ -237,9 +244,19 @@
   }
 }
 
+/* Page titles are the one place the display face speaks. Outside any layer
+   on purpose: most titles also carry `font-heading`, and a layered rule would
+   lose to that utility. */
+h1 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
 /*
  * Focus. Every shared component asks for `ring-ring/50` on focus, which is a
- * half-strength teal: fine on near-black, ~2:1 on white. Rather than chase the
+ * half-strength ink: fine on dark grey, faint on paper. Rather than chase the
  * class through every file, the colour is pinned here at full strength for
  * anything that is actually showing keyboard focus — so a ring, whatever
  * width or tint a component asked for, always clears 3:1 in both themes.
@@ -265,22 +282,23 @@
   }
 }
 
-/* A rack label: small, mono, uppercase, spaced. The section heads in the
-   sidebar, table headings, and the licence badges all speak in it. */
+/* A log label: small, typewritten, sentence case. The section heads in the
+   sidebar, table headings, and the licence badges all speak in it. (The
+   name is from the noir pass, when these were capitals.) */
 @utility label-caps {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-family: var(--font-log);
+  font-size: 0.75rem;
   line-height: 1rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
-/* A meter readout: times, seeds, sizes, VRAM. Mono, tabular, slashed zero. */
+/* A log readout: times, seeds, sizes, VRAM. Typewritten; Courier is
+   fixed-pitch, so columns of digits line up on their own. */
 @utility readout {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums slashed-zero;
-  font-size: var(--text-2xs);
+  font-family: var(--font-log);
+  font-size: 0.75rem;
   letter-spacing: 0;
 }
 
@@ -288,7 +306,7 @@
  * Signature moments (see docs/design-direction.md).
  * ------------------------------------------------------------------------ */
 
-/* 1. A fresh generation lands. The row comes in with a teal edge that
+/* 1. A fresh generation lands. The row comes in with a beak-yellow edge that
    fades — a channel lighting as signal arrives — and its waveform draws
    itself left to right, the way a recording head writes. */
 @keyframes sb-arrive-edge {
@@ -348,7 +366,6 @@
     flex-shrink: 0;
     border-radius: 9999px;
     background: currentColor;
-    box-shadow: 0 0 6px -1px currentColor;
   }
 
   .sb-led[data-off] {
@@ -554,4 +571,18 @@
   .soundbox-panel-settle {
     animation: none;
   }
+}
+
+/* Film grain: a fixed layer of fractal noise over the page, the tooth of
+   notebook paper. Decoration only, so it ignores the pointer and goes quiet when
+   the viewer prefers less. Applied by the site's layout, not the app, where a
+   noisy surface would sit under every waveform. */
+@utility film-grain {
+  position: fixed;
+  inset: -50%;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1.2 -0.1'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
 }

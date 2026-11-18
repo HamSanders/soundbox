@@ -224,7 +224,7 @@ function ParamRow({
           {param.type !== "bool" && param.type !== "text" && (
             <span
               className={cn(
-                "font-mono text-[11px] tabular-nums",
+                "font-(family-name:--font-log) text-[11px] tabular-nums",
                 set ? "text-foreground" : "text-muted-foreground/70",
               )}
             >

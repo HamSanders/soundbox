@@ -14,6 +14,9 @@ to follow [Semantic Versioning](https://semver.org/).
 - **Render and wait.** `POST /api/render` runs one generation or speech job and answers with the WAV once it is done, so a single request gets a file back. If the caller hangs up, the job is cancelled. New **Another Soundbox** endpoint presets use it, so one Soundbox can send its renders to another one, such as a desktop with a bigger GPU.
 
 ### Changed
+- Pages that talk about a sound now let you play one: the home page's example chips (one real render each, with its prompt), the model cards and model pages, the MCP page's vault door, and a new "Hear a voice" section on the voices page. A new `scripts/check-examples.ts` checks each example still matches the SFX and music catalogues.
+- The home page's first screen has a Download button that names your system (Windows, Mac or Intel Mac) and links straight to that installer, with the version and size under it. A row of all three installers, with yours marked, sits in Getting started. A phone or Linux visitor gets a plain Download link to the download page.
+- A new look for the app and the site: warm paper by day and dark grey at dusk, with one accent, a beak yellow that marks where sound is playing. The mark and app icon are a one-line M (a sound wave that turns into the letter). Titles are Big Shoulders Display in capitals, labels and readouts are typewritten in Courier Prime, corners are soft and buttons are pills.
 - Every blog post can be listened to, read by a new, softer Soundbox voice (Bea, on Chatterbox). The post page has a Listen card, a player that docks to the bottom with 15-second skips and 0.75× to 2× speed, and a highlight that follows the paragraph being read; click a paragraph to jump to it.
 - The site's download page has a new design: a full-width hero, the Soundbox film in a frame that flattens as you scroll, live GitHub numbers and a card per installer.
 

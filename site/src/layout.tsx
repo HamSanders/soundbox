@@ -51,6 +51,8 @@ export function Layout() {
       <ScrollToTop />
       <SiteHeader />
       <Outlet />
+      {/* Film grain over the whole page; see `film-grain` in the app's index.css. */}
+      <div className="film-grain" aria-hidden="true" />
       <Analytics />
     </ThemeProvider>
   );

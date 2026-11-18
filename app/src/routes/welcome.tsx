@@ -52,6 +52,9 @@ import { RevealPromptToSample } from "@/components/reveal-prompt-to-sample";
 import { RevealPillars } from "@/components/reveal-pillars";
 import { ProductShots } from "@/components/product-shots";
 import { LicenseChip } from "@/components/license-badge";
+import { DownloadButton, PlatformPicker } from "@/components/download-cta";
+import { SamplePlay } from "@/components/sample-play";
+import { exampleForModel, type ExampleId } from "@/content/examples";
 import type { LicenseInfo } from "@/lib/api";
 import { GENERATOR_HREF, MODELS_HUB_HREF, REPO_URL, repoFile } from "@/lib/marketing-links";
 import { cn } from "@/lib/utils";
@@ -64,29 +67,35 @@ import { cn } from "@/lib/utils";
  * "Writing prompts that work" section argues for. These do double duty: they
  * fill the box, and they are the only teaching material anyone reads.
  */
-const EXAMPLES: { label: string; prompt: string }[] = [
+const EXAMPLES: { label: string; prompt: string; sample: ExampleId }[] = [
   {
     label: "Impact",
+    sample: "impact-wood-crate-smash",
     prompt: "heavy wooden crate dropping onto a concrete floor, close mic, dry room",
   },
   {
     label: "Footsteps",
+    sample: "footsteps-mud-squelch",
     prompt: "boots on wet gravel, slow steady pace, outdoors at night",
   },
   {
     label: "Machinery",
+    sample: "machinery-drill-press",
     prompt: "old freight lift motor starting under load, metal cable strain, echoing shaft",
   },
   {
     label: "Ambience",
+    sample: "rain-thunderstorm-full",
     prompt: "rain on a tin roof, distant thunder, steady wind through trees",
   },
   {
     label: "UI",
+    sample: "ui-keyboard-tap",
     prompt: "small plastic button click, tight and dry, no reverb",
   },
   {
     label: "Whoosh",
+    sample: "whoosh-heavy-door-air",
     prompt: "heavy steel blade swinging fast past the microphone, turbulent air",
   },
 ];
@@ -230,7 +239,7 @@ function SectionHead({
 }) {
   return (
     <div className="max-w-2xl">
-      <p className="text-primary text-xs font-semibold tracking-[0.14em] uppercase">
+      <p className="label-caps text-primary">
         {eyebrow}
       </p>
       <h2
@@ -361,9 +370,11 @@ function HeroPrompt({
 
 function Hero() {
   const [prompt, setPrompt] = useState("");
+  const [active, setActive] = useState(0);
 
-  const applyExample = (example: string) => {
-    setPrompt(example);
+  const applyExample = (index: number) => {
+    setActive(index);
+    setPrompt(EXAMPLES[index].prompt);
     document.getElementById("hero-prompt")?.focus();
   };
 
@@ -397,6 +408,11 @@ function Hero() {
           offline.
         </p>
 
+        {/* Straight under the pitch, so it is on screen without scrolling. It
+            names the visitor's system and links to that installer; the picker
+            under "Getting started" has the rest. */}
+        <DownloadButton pickerHref="#install" className="mt-7" />
+
         {/* The product, under the pitch rather than above it. The banner led
             the page for a while; with the badge and headline stacked beneath
             it the top of the hero read as three things shouting at once, and
@@ -412,15 +428,16 @@ function Hero() {
           role="group"
           aria-label="Example prompts"
         >
-          {EXAMPLES.map((ex) => (
+          {EXAMPLES.map((ex, i) => (
             <Button
               key={ex.label}
               type="button"
-              variant="outline"
+              variant={i === active ? "secondary" : "outline"}
               size="sm"
               className="rounded-full"
               title={ex.prompt}
-              onClick={() => applyExample(ex.prompt)}
+              aria-pressed={i === active}
+              onClick={() => applyExample(i)}
             >
               {ex.label}
             </Button>
@@ -430,17 +447,21 @@ function Hero() {
           Each example names a material, an action and a space.
         </p>
 
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
-          {/* A real link rather than an onClick navigate: this page is
-              prerendered, and a crawler following the site needs an href. */}
-          <Button size="lg" asChild>
-            <Link to={MODELS_HUB_HREF}>Browse the models</Link>
-          </Button>
+        {/* One real render per chip, with the prompt that made it. The
+            chip fills the box with a starter prompt; this plays a sound
+            made with a prompt of the same kind. */}
+        <div className="border-border mx-auto mt-5 max-w-md rounded-md border p-3 text-left">
+          <p className="label-caps text-muted-foreground mb-2">
+            Hear one made this way
+          </p>
+          <SamplePlay key={EXAMPLES[active].sample} id={EXAMPLES[active].sample} />
+        </div>
+
+        {/* A real link rather than an onClick navigate: this page is
+            prerendered, and a crawler following the site needs an href. */}
+        <div className="mt-8 flex justify-center">
           <Button size="lg" variant="outline" asChild>
-            <a href={GENERATOR_HREF} target="_blank" rel="noreferrer noopener">
-              Download
-              <ExternalLinkIcon aria-hidden="true" />
-            </a>
+            <Link to={MODELS_HUB_HREF}>Browse the models</Link>
           </Button>
         </div>
       </div>
@@ -483,6 +504,10 @@ function ModelRow({ model }: { model: ModelCard }) {
         </div>
       </dl>
 
+      {exampleForModel(model.id) ? (
+        <SamplePlay id={exampleForModel(model.id)!} className="mt-4" />
+      ) : null}
+
       <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
         <LicenseChip license={model.license} />
         <span className="text-muted-foreground text-xs">{model.license.name}</span>
@@ -495,7 +520,7 @@ function ModelRow({ model }: { model: ModelCard }) {
         className={cn(
           "mt-3 flex items-start gap-1.5 text-xs leading-relaxed",
           model.verified
-            ? "text-emerald-700 dark:text-emerald-300"
+            ? "text-ok"
             : "text-muted-foreground",
         )}
       >
@@ -652,7 +677,7 @@ function Prompting() {
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         <div className="ring-border/70 bg-card rounded-2xl p-5 ring-1">
-          <p className="text-muted-foreground text-xs font-semibold tracking-[0.14em] uppercase">
+          <p className="label-caps text-muted-foreground">
             Too vague
           </p>
           <p className="mt-3 font-mono text-sm">scary sound</p>
@@ -661,7 +686,7 @@ function Prompting() {
           </p>
         </div>
         <div className="ring-primary/30 bg-card rounded-2xl p-5 ring-1">
-          <p className="text-primary text-xs font-semibold tracking-[0.14em] uppercase">
+          <p className="label-caps text-primary">
             Usable
           </p>
           <p className="mt-3 font-mono text-sm">
@@ -742,7 +767,7 @@ function Agents() {
             </div>
             <div className="rounded-lg border px-3 py-2.5">
               <div className="flex items-center gap-2">
-                <span className="size-2 shrink-0 rounded-full bg-emerald-500" aria-hidden="true" />
+                <span className="size-2 shrink-0 rounded-full bg-ok" aria-hidden="true" />
                 <BotIcon className="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
                 <span className="text-sm font-medium">
                   claude-code
@@ -761,7 +786,7 @@ function Agents() {
                 ["generate", "wooden crate dropped on concrete floor"],
               ].map(([tool, prompt], i) => (
                 <li key={i} className="flex items-center gap-2 py-2">
-                  <CheckIcon className="size-3 shrink-0 text-emerald-500" aria-hidden="true" />
+                  <CheckIcon className="size-3 shrink-0 text-ok" aria-hidden="true" />
                   <span className="text-muted-foreground shrink-0 font-mono">{tool}</span>
                   <span className="min-w-0 flex-1 truncate">{prompt}</span>
                 </li>
@@ -880,7 +905,7 @@ const STEPS: { title: string; body: React.ReactNode }[] = [
 
 function GetStarted() {
   return (
-    <Section labelledBy="start-heading">
+    <Section id="install" className="scroll-mt-16" labelledBy="start-heading">
       <SectionHead
         id="start-heading"
         eyebrow="Getting started"
@@ -892,6 +917,8 @@ function GetStarted() {
         <code className="font-mono text-xs">npm run dev:mock</code> runs it
         against an in-browser fake.
       </SectionHead>
+
+      <PlatformPicker className="mt-8" />
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_1fr]">
         <ol className="space-y-5">

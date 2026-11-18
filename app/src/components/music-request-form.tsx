@@ -360,7 +360,7 @@ export function MusicRequestForm({
                 <Label htmlFor="cover-strength" className="text-xs">
                   Stay close to the original
                 </Label>
-                <span className="text-muted-foreground font-mono text-xs tabular-nums">
+                <span className="text-muted-foreground font-(family-name:--font-log) text-xs tabular-nums">
                   {Math.round((settings.editOptions.cover_strength ?? 1) * 100)}%
                 </span>
               </div>
@@ -614,7 +614,7 @@ export function MusicRequestForm({
         <div className="space-y-2">
           <div className="flex items-baseline justify-between">
             <Label htmlFor="duration">{edit === "extend" ? "Extend to" : "Length"}</Label>
-            <span className="text-muted-foreground font-mono text-xs tabular-nums">
+            <span className="text-muted-foreground font-(family-name:--font-log) text-xs tabular-nums">
               {settings.duration.toFixed(1)}s
             </span>
           </div>
@@ -680,7 +680,7 @@ export function MusicRequestForm({
             <div className="space-y-2">
               <div className="flex items-baseline justify-between">
                 <Label htmlFor="steps">Steps</Label>
-                <span className="text-muted-foreground font-mono text-xs tabular-nums">
+                <span className="text-muted-foreground font-(family-name:--font-log) text-xs tabular-nums">
                   {settings.steps ?? model.defaults.steps ?? 0}
                 </span>
               </div>
@@ -699,7 +699,7 @@ export function MusicRequestForm({
             <div className="space-y-2">
               <div className="flex items-baseline justify-between">
                 <Label htmlFor="cfg">Guidance</Label>
-                <span className="text-muted-foreground font-mono text-xs tabular-nums">
+                <span className="text-muted-foreground font-(family-name:--font-log) text-xs tabular-nums">
                   {(settings.cfg ?? model.defaults.cfg ?? 0).toFixed(1)}
                 </span>
               </div>

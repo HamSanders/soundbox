@@ -152,7 +152,7 @@ export function TakeActions({
             <Label htmlFor="take-strength" className="text-muted-foreground text-[0.7rem]">
               Keep the notes
             </Label>
-            <span className="text-muted-foreground font-mono text-[0.7rem] tabular-nums">
+            <span className="text-muted-foreground font-(family-name:--font-log) text-[0.7rem] tabular-nums">
               {Math.round(strength * 100)}%
             </span>
           </div>

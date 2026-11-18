@@ -213,7 +213,7 @@ function ToolBadge({ kind }: { kind: "slow" | "destructive" }) {
   return (
     <span
       className={
-        "shrink-0 rounded px-1 py-px text-[0.6rem] font-medium tracking-wide uppercase " +
+"label-caps shrink-0 rounded px-1 py-px" +
         (kind === "destructive"
           ? "bg-destructive/10 text-destructive"
           : "bg-muted text-muted-foreground")
@@ -258,7 +258,7 @@ export function McpTools() {
               >
                 {tool.args.length > 0 ? (
                   <div className="space-y-1.5">
-                    <p className="text-muted-foreground text-[0.7rem] font-semibold tracking-wide uppercase">
+                    <p className="label-caps text-muted-foreground">
                       Arguments
                     </p>
                     <FieldList fields={tool.args} />
@@ -273,7 +273,7 @@ export function McpTools() {
       ))}
 
       <div className="space-y-1.5">
-        <p className="text-muted-foreground text-[0.7rem] font-semibold tracking-wide uppercase">
+        <p className="label-caps text-muted-foreground">
           What a sound looks like coming back
         </p>
         <CopyBlock code={SOUND_RESULT} language="json" label="Copy the sound result shape" />
@@ -307,7 +307,7 @@ function Turn({
 }) {
   return (
     <div className="min-w-0">
-      <p className="text-muted-foreground mb-1 text-[0.7rem] font-semibold tracking-wide uppercase">
+      <p className="label-caps text-muted-foreground mb-1">
         {role}
       </p>
       <div className="min-w-0 text-sm leading-relaxed">{children}</div>

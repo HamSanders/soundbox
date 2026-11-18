@@ -778,7 +778,7 @@ export function GenerateComposer({
               <span className="text-muted-foreground text-xs">
                 max {durationMax}s on this model
               </span>
-              <span className="font-mono text-xs tabular-nums">
+              <span className="font-(family-name:--font-log) text-xs tabular-nums">
                 {settings.duration.toFixed(1)}s
               </span>
             </div>
@@ -994,7 +994,7 @@ export function GenerateComposer({
                   className={cn(
                     "mt-1.5 text-xs leading-relaxed",
                     (settings.cfg ?? model.defaults.cfg ?? 0) > model.max_cfg
-                      ? "text-amber-700 dark:text-amber-300"
+                      ? "text-warn"
                       : "text-muted-foreground",
                   )}
                 >
@@ -1118,7 +1118,7 @@ export function GenerateComposer({
           {!running && estimateS !== null && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="text-muted-foreground cursor-default font-mono text-xs tabular-nums">
+                <span className="text-muted-foreground cursor-default font-(family-name:--font-log) text-xs tabular-nums">
                   ~{formatDuration(estimateS)}
                 </span>
               </TooltipTrigger>

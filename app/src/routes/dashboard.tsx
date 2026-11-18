@@ -165,7 +165,7 @@ export function DashboardPage() {
                       name never sit on unshaded artwork. */}
                   <div
                     aria-hidden="true"
-                    className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/75 via-black/35 to-transparent"
+                    className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-dusk/80 via-dusk/40 to-transparent"
                   />
                   <div className="absolute inset-x-0 bottom-0 p-2.5">
                     <p className="line-clamp-2 text-sm leading-tight font-medium text-white">

@@ -292,25 +292,30 @@ const GIFS: Still[] = [
 
 const MARKS: { label: string; svg: string; png: string; tile: string }[] = [
   {
-    label: "Teal tile",
-    svg: "/press/soundbox-mark.svg",
-    png: "/press/soundbox-mark.png",
-    tile: "bg-[#0a0c0d]",
+    label: "Dusk tile",
+    svg: "/press/mirli-mark.svg",
+    png: "/press/mirli-mark.png",
+    tile: "bg-[#f1ece0]",
   },
   {
-    label: "Dark tile",
-    svg: "/press/soundbox-mark-dark.svg",
-    png: "/press/soundbox-mark-dark.png",
-    tile: "bg-[#e6ecec]",
+    label: "Paper tile",
+    svg: "/press/mirli-mark-light.svg",
+    png: "/press/mirli-mark-light.png",
+    tile: "bg-[#181817]",
   },
 ];
 
 const COLOURS: { name: string; hex: string; use: string; light?: boolean }[] = [
-  { name: "Teal", hex: "#2DD4BF", use: "The mark, waveforms and links." },
-  { name: "Ground", hex: "#0A0C0D", use: "The background of the app and every film." },
-  { name: "Ink", hex: "#E6ECEC", use: "Text on the ground.", light: true },
-  { name: "Muted", hex: "#8E999D", use: "Labels and secondary text." },
-  { name: "Deep teal", hex: "#0D6B64", use: "Teal on a light background." },
+  { name: "Dusk", hex: "#181817", use: "The dark theme's background: a warm dark grey, never pure black." },
+  { name: "Paper", hex: "#F1ECE0", use: "The light theme's background, and text at dusk.", light: true },
+  { name: "Ink", hex: "#14130F", use: "Text on paper, the mark and buttons." },
+  { name: "Chalk", hex: "#A9A797", use: "Labels and secondary text at dusk." },
+  {
+    name: "Beak",
+    hex: "#F2A40C",
+    use: "Where sound is happening: the playhead, a running model. A dot or a thin line, never text.",
+    light: true,
+  },
 ];
 
 const LINKS: { label: string; href: string; internal?: boolean }[] = [
@@ -351,7 +356,7 @@ function Quotable({ label, text }: { label: string; text: string }) {
   return (
     <figure className="border-border/70 bg-card/40 rounded-xl border p-4 sm:p-5">
       <div className="flex items-center justify-between gap-2">
-        <figcaption className="text-muted-foreground text-xs font-semibold tracking-[0.14em] uppercase">
+        <figcaption className="label-caps text-muted-foreground">
           {label}
         </figcaption>
         <CopyButton value={text} label={`Copy the ${label.toLowerCase()}`}>
@@ -389,8 +394,8 @@ function VideoCard({ video }: { video: Video }) {
         poster={assetUrl(video.poster)}
         className={
           video.vertical
-            ? "aspect-[9/16] w-full bg-black object-contain"
-            : "aspect-video w-full bg-black object-contain"
+            ? "aspect-[9/16] w-full bg-dusk object-contain"
+            : "aspect-video w-full bg-dusk object-contain"
         }
         aria-label={video.title}
       >
@@ -453,7 +458,7 @@ export function PressPage() {
       <div className="mx-auto w-full max-w-4xl px-4">
         {/* ------------------------------------------------------------ hero */}
         <header className="py-12">
-          <p className="text-primary text-xs font-semibold tracking-[0.14em] uppercase">
+          <p className="label-caps text-primary">
             Press kit
           </p>
           <h1 className="font-heading mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
@@ -577,8 +582,8 @@ export function PressPage() {
         {/* ----------------------------------------------------------- brand */}
         <Section id="brand" title="Mark, colours and type">
           <p className="text-muted-foreground mt-3 max-w-2xl leading-relaxed">
-            The mark is a waveform on a rounded tile. Use whichever tile suits your background,
-            and please don't recolour or redraw it.
+            The mark is an M drawn in one pen line that starts as a sound wave, on a rounded tile.
+            Use whichever tile suits your background, and please don't recolour or redraw it.
           </p>
           <ul className="mt-6 grid gap-5 sm:grid-cols-2">
             {MARKS.map((mark) => (
@@ -586,7 +591,7 @@ export function PressPage() {
                 <div className={`flex items-center justify-center py-8 ${mark.tile}`}>
                   <img
                     src={assetUrl(mark.svg)}
-                    alt={`The Soundbox mark, ${mark.label.toLowerCase()}`}
+                    alt={`The Mirli mark, ${mark.label.toLowerCase()}`}
                     width={96}
                     height={96}
                   />
@@ -621,10 +626,13 @@ export function PressPage() {
 
           <h3 className="font-heading mt-10 text-lg font-semibold tracking-tight">Type</h3>
           <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-relaxed">
-            <span className="text-foreground font-medium">Inter</span> for headings and the
-            interface (the films set titles in its 800 and 900 weights), and{" "}
-            <span className="text-foreground font-mono">JetBrains Mono</span> for prompts, labels
-            and code. Both are free under the SIL Open Font License.
+            <span className="text-foreground font-display text-base font-extrabold">Big Shoulders Display</span>,
+            a condensed poster face, for the mark, the wordmark and page titles only;{" "}
+            <span className="text-foreground font-medium">Inter</span> for the interface and
+            everything read at length; and{" "}
+            <span className="text-foreground font-(family-name:--font-log)">Courier Prime</span> for
+            labels and the log line under every sound. All three are free under the SIL Open Font
+            License.
           </p>
         </Section>
 

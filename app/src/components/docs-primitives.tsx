@@ -169,7 +169,7 @@ export function DocSubsection({
       <h3
         id={`${id}-heading`}
         className={cn(
-          "text-muted-foreground text-xs font-semibold tracking-wide uppercase",
+"label-caps text-muted-foreground",
           SCROLL_MT,
         )}
       >
@@ -218,7 +218,7 @@ export function FieldList({ fields }: { fields: FieldRow[] }) {
             <dt className="font-mono text-xs font-medium break-all">{f.name}</dt>
             <dd className="text-muted-foreground font-mono text-xs break-all">{f.type}</dd>
             {f.required ? (
-              <dd className="text-primary text-[0.65rem] font-medium tracking-wide uppercase">
+              <dd className="label-caps text-primary">
                 required
               </dd>
             ) : null}

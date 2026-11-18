@@ -260,7 +260,7 @@ function Dial({
       <span className="text-muted-foreground w-full truncate text-center text-[11px] leading-none">
         {param.label}
       </span>
-      <span className="w-full truncate text-center font-mono text-[11px] leading-none tabular-nums">
+      <span className="w-full truncate text-center font-(family-name:--font-log) text-[11px] leading-none tabular-nums">
         {formatParam(param, value)}
       </span>
     </div>
@@ -380,7 +380,7 @@ function DeviceCard({
             value={[spec.params[param.key]]}
             onValueChange={([v]) => onPatch(param.key, v)}
           />
-          <span className="w-8 shrink-0 text-right font-mono text-[10px] tabular-nums">
+          <span className="w-8 shrink-0 text-right font-(family-name:--font-log) text-[10px] tabular-nums">
             {Math.round(spec.params[param.key] * 100)}%
           </span>
         </div>

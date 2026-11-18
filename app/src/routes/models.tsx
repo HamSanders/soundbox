@@ -423,7 +423,7 @@ function ModelListItem({
         <div className="pointer-events-none relative px-3 pb-2.5 @sm:px-4">
           <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs">
             <span className="truncate">{job?.message ?? busyLabel}</span>
-            <span className="font-mono tabular-nums">{progressPct}%</span>
+            <span className="font-(family-name:--font-log) tabular-nums">{progressPct}%</span>
           </div>
           <Progress value={progressPct} />
         </div>
@@ -515,7 +515,7 @@ function ModelListItem({
                 {model.gated && needsGateSetup && (
                   <Notice>
                     <KeyRoundIcon
-                      className="mt-0.5 size-3.5 shrink-0 text-amber-700 dark:text-amber-300"
+                      className="mt-0.5 size-3.5 shrink-0 text-warn"
                       aria-hidden="true"
                     />
                     <div className="text-foreground/90 space-y-1.5 leading-relaxed">
@@ -656,7 +656,7 @@ function ModelListItem({
                   <div className="space-y-1.5">
                     <div className="text-muted-foreground flex items-center justify-between text-xs">
                       <span>{job?.message ?? busyLabel}</span>
-                      <span className="font-mono tabular-nums">{progressPct}%</span>
+                      <span className="font-(family-name:--font-log) tabular-nums">{progressPct}%</span>
                     </div>
                     <Progress value={progressPct} />
                   </div>

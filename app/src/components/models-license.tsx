@@ -149,7 +149,7 @@ export function ModelsLicensePanel({ license }: { license: LicenseFinding }) {
 
       {license.conditions.length > 0 && (
         <>
-          <h4 className="text-foreground mt-4 text-xs font-semibold tracking-wide uppercase">
+          <h4 className="label-caps text-foreground mt-4">
             Conditions
           </h4>
           <ul className="text-muted-foreground mt-2 list-disc space-y-1.5 pl-5 text-sm leading-relaxed">
@@ -160,7 +160,7 @@ export function ModelsLicensePanel({ license }: { license: LicenseFinding }) {
         </>
       )}
 
-      <h4 className="text-foreground mt-4 text-xs font-semibold tracking-wide uppercase">
+      <h4 className="label-caps text-foreground mt-4">
         What about the audio you generate?
       </h4>
       <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{license.output}</p>

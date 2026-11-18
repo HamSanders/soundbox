@@ -39,7 +39,7 @@ function Sidebar({ current }: { current: string }) {
       </Link>
       {DOC_SECTIONS.map((section) => (
         <div key={section.name}>
-          <p className="text-muted-foreground mb-2 text-xs font-semibold tracking-[0.14em] uppercase">
+          <p className="label-caps text-muted-foreground mb-2">
             {section.name}
           </p>
           <ul className="space-y-0.5">
@@ -66,7 +66,7 @@ function Sidebar({ current }: { current: string }) {
         </div>
       ))}
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">
+        <p className="label-caps text-muted-foreground mb-2">
           Generated
         </p>
         <Link

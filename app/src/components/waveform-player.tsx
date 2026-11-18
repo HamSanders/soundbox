@@ -116,8 +116,8 @@ export function WaveformPlayer({
       height: compact ? 32 : 56,
       waveColor: cssVar("--wave", "#888"),
       progressColor: cssVar("--primary", "#eee"),
-      cursorColor: cssVar("--foreground", "#aaa"),
-      cursorWidth: 1,
+      cursorColor: cssVar("--signal", "#f2a40c"),
+      cursorWidth: 2,
       barWidth: 2,
       barGap: 1,
       barRadius: 1,
@@ -165,7 +165,7 @@ export function WaveformPlayer({
       ws.setOptions({
         waveColor: cssVar("--wave", "#888"),
         progressColor: cssVar("--primary", "#eee"),
-        cursorColor: cssVar("--foreground", "#aaa"),
+        cursorColor: cssVar("--signal", "#f2a40c"),
       });
     });
     return () => cancelAnimationFrame(frame);

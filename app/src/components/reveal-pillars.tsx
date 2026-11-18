@@ -251,7 +251,7 @@ function GenerateView({ index }: { index: number }) {
   return (
     <div className="flex h-full flex-col">
       <div className="bg-background/60 ring-border/60 rounded-lg px-3 py-2.5 ring-1">
-        <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.14em] uppercase">
+        <p className="label-caps text-muted-foreground">
           {input.label}
         </p>
         {input.lines.map((line) => (
@@ -306,7 +306,7 @@ function TimelineView({ playhead }: { playhead: number }) {
           sync with, and a playhead that moves on its own would be claiming
           something is playing. Scrolling it means the reader is the transport. */}
       <span
-        className="bg-primary pointer-events-none absolute inset-y-0 w-px"
+        className="bg-signal pointer-events-none absolute inset-y-0 w-0.5"
         style={{ left: `${playhead * 100}%` }}
         aria-hidden="true"
       />

@@ -104,7 +104,7 @@ function Row({
           className="h-5 w-24 shrink-0"
         />
       )}
-      <span className="text-muted-foreground shrink-0 font-mono text-[10px] tabular-nums">
+      <span className="text-muted-foreground shrink-0 font-(family-name:--font-log) text-[10px] tabular-nums">
         {playing ? formatDuration(currentTime) : formatDuration(sound.duration_s)}
       </span>
     </div>

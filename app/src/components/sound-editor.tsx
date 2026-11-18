@@ -412,7 +412,7 @@ export function SoundEditor({ sound }: { sound: Sound }) {
           active={loop}
           onClick={() => setLoop((v) => !v)}
         />
-        <span className="text-muted-foreground font-mono text-xs tabular-nums">
+        <span className="text-muted-foreground font-(family-name:--font-log) text-xs tabular-nums">
           {formatDuration(currentTime)} / {formatDuration(sound.duration_s)}
         </span>
 

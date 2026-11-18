@@ -376,7 +376,7 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
           onClick={() => setFavoritesOnly((f) => !f)}
         >
           <StarIcon
-            className={favoritesOnly ? "fill-amber-400 text-amber-500 dark:text-amber-300" : ""}
+            className={favoritesOnly ? "fill-foreground text-foreground" : ""}
           />
           Favourites
         </Button>

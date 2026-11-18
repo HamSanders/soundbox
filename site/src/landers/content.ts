@@ -13,17 +13,13 @@
  */
 
 import type { ExampleId } from "@/content/examples";
+import { COMMERCIAL, FREE, GPU, MAC, OFFLINE, type Faq } from "@/content/faq";
 
 export interface Trick {
   title: string;
   body: string;
   /** A real render that shows this off. */
   sample?: ExampleId;
-}
-
-export interface Faq {
-  question: string;
-  answer: string;
 }
 
 export interface Lander {
@@ -47,37 +43,6 @@ export interface Lander {
   faq: Faq[];
   related: string[];
 }
-
-/** Answers every page shares, so they read the same everywhere. */
-const FREE: Faq = {
-  question: "Is it really free?",
-  answer:
-    "The app is MIT licensed. There is no account and no credit meter. The model weights are separate: each carries its own licence, several forbid commercial use, and the licence is shown before you download one.",
-};
-
-const GPU: Faq = {
-  question: "Do I need a GPU?",
-  answer:
-    "A few GB of VRAM covers the verified models, and MiniMax Music 3 wants about 10 GB. With no dedicated GPU it still works, slowly: a clip that takes seconds on a GPU takes minutes on the CPU.",
-};
-
-const OFFLINE: Faq = {
-  question: "Does it work offline?",
-  answer:
-    "Yes, once the weights are downloaded. Generation runs on your machine and nothing is uploaded.",
-};
-
-const COMMERCIAL: Faq = {
-  question: "Can I use what it makes in a commercial project?",
-  answer:
-    "That is decided by the licence of the model that made the sound, not by the app. The Models page shows each licence before you download, and any model whose licence could not be established is treated as non-commercial. This is not legal advice: read the licence before you ship.",
-};
-
-const MAC: Faq = {
-  question: "Does it run on a Mac?",
-  answer:
-    "There are installers for Apple silicon and Intel Macs, and for Windows 10 and 11. None of the verified models has been confirmed on a Mac yet, so treat it as untested there. Linux runs from source.",
-};
 
 export const LANDERS: Lander[] = [
   {

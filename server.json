@@ -1,0 +1,35 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.HamSanders/mirli",
+  "version": "0.5.0",
+  "title": "Mirli",
+  "description": "Local AI sound effects, music, speech and voice cloning on your own GPU. Returns WAV paths.",
+  "websiteUrl": "https://mirli.app/developers/",
+  "repository": {
+    "url": "https://github.com/HamSanders/soundbox",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/hamsanders/soundbox:v0.5.0",
+      "transport": {
+        "type": "streamable-http",
+        "url": "http://localhost:17494/mcp"
+      },
+      "environmentVariables": [
+        {
+          "name": "SOUNDBOX_API_TOKEN",
+          "description": "Optional access token (16+ characters). When set, send it as Authorization: Bearer <token>.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "SOUNDBOX_ALLOWED_HOSTS",
+          "description": "Comma-separated extra Host names /mcp accepts, for reaching it by a name other than localhost.",
+          "isRequired": false
+        }
+      ]
+    }
+  ]
+}

@@ -10,6 +10,7 @@ import { notFoundPage } from "./plugins/not-found";
 import { writeCrawlerFiles } from "./plugins/crawlers";
 import { writeSitemap } from "./plugins/sitemap";
 import { sfxSampleFacts } from "./plugins/sfx-sample-facts";
+import { developerFacts } from "./plugins/developer-facts";
 
 /**
  * Where the site is served from, for hosts that put it under a path.
@@ -103,6 +104,8 @@ export default defineConfig({
     blogFeed(),
     // Duration and size per sfx sample, for the prerendered sample pages.
     sfxSampleFacts(path.resolve(__dirname, "public/sfx")),
+    // MCP tools, env vars and version for /developers, read from source.
+    developerFacts(path.resolve(__dirname, "..")),
     // Files both builds serve stay in app/public; see the plugin.
     sharedPublicFiles(path.resolve(__dirname, "../app/public"), [
       "favicon.svg",

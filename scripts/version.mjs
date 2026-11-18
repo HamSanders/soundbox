@@ -12,7 +12,8 @@
  *
  * The files: the root, app, server and site package.json, both entries'
  * mirrors in package-lock.json, src-tauri/tauri.conf.json, src-tauri/Cargo.toml
- * and its Cargo.lock entry. Edits are textual so formatting and key order stay
+ * and its Cargo.lock entry, and server.json (the MCP Registry entry: its
+ * version and the Docker image tag it points at). Edits are textual so formatting and key order stay
  * as they were. Versions are plain X.Y.Z: the Windows installer's version
  * field takes numbers only, so a release candidate is a build of the release
  * PR rather than a -rc version (see docs/RELEASING.md).
@@ -39,6 +40,9 @@ function fail(message) {
 const JSON_VERSION = /("version"\s*:\s*")([^"]+)(")/;
 
 const CARGO_TOML = /^(\[package\][\s\S]*?^version\s*=\s*")([^"]+)(")/m;
+/** The image tag in server.json's OCI package: `…/soundbox:v0.5.0`. */
+const OCI_TAG = /("identifier"\s*:\s*"ghcr\.io\/hamsanders\/soundbox:v)([^"]+)(")/;
+
 const CARGO_LOCK = /(\[\[package\]\]\r?\nname = "soundbox-desktop"\r?\nversion = ")([^"]+)(")/;
 
 /** Every place the version lives, each with how to read and write it. */
@@ -50,6 +54,8 @@ const SOURCES = [
   { label: "src-tauri/tauri.conf.json", file: "src-tauri/tauri.conf.json", pattern: JSON_VERSION },
   { label: "src-tauri/Cargo.toml", file: "src-tauri/Cargo.toml", pattern: CARGO_TOML },
   { label: "src-tauri/Cargo.lock", file: "src-tauri/Cargo.lock", pattern: CARGO_LOCK },
+  { label: "server.json", file: "server.json", pattern: JSON_VERSION },
+  { label: "server.json (image tag)", file: "server.json", pattern: OCI_TAG },
 ];
 
 /** package-lock.json is parsed rather than matched: the same workspace

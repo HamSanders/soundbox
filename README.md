@@ -53,11 +53,13 @@ switched from the header without a restart; the models are shared.
 
 ## Download
 
+The [download page](https://mirli.app/download/) picks the installer for your system. Or take one directly:
+
 | Platform | Installer |
 |---|---|
-| **Windows** 10 and 11 (x64) | [`Soundbox_x.y.z_x64-setup.exe`](https://github.com/HamSanders/soundbox/releases/latest) |
-| **macOS**, Apple silicon | [`Soundbox_x.y.z_aarch64.dmg`](https://github.com/HamSanders/soundbox/releases/latest) |
-| **macOS**, Intel | [`Soundbox_x.y.z_x64.dmg`](https://github.com/HamSanders/soundbox/releases/latest) |
+| **Windows** 10 and 11 (x64) | [`Soundbox_x.y.z_x64-setup.exe`](https://mirli.app/download/) |
+| **macOS**, Apple silicon | [`Soundbox_x.y.z_aarch64.dmg`](https://mirli.app/download/) |
+| **macOS**, Intel | [`Soundbox_x.y.z_x64.dmg`](https://mirli.app/download/) |
 
 The installer carries its own runtime. The builds are not signed yet, so the
 first launch asks you to confirm ([where](docs/DESKTOP.md#installing)). Open

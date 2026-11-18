@@ -6,7 +6,7 @@ around it, with no second copy of the UI and no separate API.
 ## Installing
 
 1. Download the installer for your machine from the
-   [Releases page](https://github.com/HamSanders/soundbox/releases):
+   [download page](https://mirli.app/download/), which picks the right one for your system:
    - Windows: `Soundbox_<version>_x64-setup.exe`
    - macOS: the `.dmg`, `aarch64` for Apple silicon or `x64` for Intel
 2. Run it. The app carries its own Node and server, so nothing else needs

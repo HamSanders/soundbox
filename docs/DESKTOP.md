@@ -1,6 +1,6 @@
 # Desktop app (Tauri)
 
-Soundbox is a web app you run locally. The desktop shell is a thin wrapper
+Mirli is a web app you run locally. The desktop shell is a thin wrapper
 around it, with no second copy of the UI and no separate API.
 
 ## Installing
@@ -20,7 +20,8 @@ confirm:
   Run anyway**.
 - **macOS:** the app is ad-hoc signed but not notarized, so macOS refuses the
   first open. Open **System Settings → Privacy & Security**, find the note
-  about Soundbox and choose **Open Anyway**. If macOS says the app is
+  about `Soundbox` (the app bundle keeps that name for now) and choose
+  **Open Anyway**. If macOS says the app is
   "damaged", the download's quarantine flag is the cause. Clear it with
   `xattr -dr com.apple.quarantine /Applications/Soundbox.app`.
 

@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Something in Soundbox doesn't work
+about: Something in Mirli doesn't work
 title: ""
 labels: bug
 ---

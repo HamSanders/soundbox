@@ -27,7 +27,7 @@ when the first chunk reached the client, "last" when the final one did.
   reads with a new clip took 4.2 to 5.2 s to first audio, the third 0.17 s.
   _(to verify: what audio.cpp caches per reference clip.)_
 - **Cloned voice, OmniVoice:** refused. audio.cpp needs the clip's
-  transcript (`reference_text`), and Soundbox voices don't store one yet.
+  transcript (`reference_text`), and Mirli voices don't store one yet.
   This affects OmniVoice cloning everywhere, not just streaming.
 - Cold times include loading both the offline and the streaming copy.
 - A client hanging up mid-stream released the GPU lock; the next request
@@ -39,7 +39,7 @@ when the first chunk reached the client, "last" when the final one did.
 
 - `/v1/tasks/stream` ignores `stream_format: "sse"` and answers with one
   `{ events, result }` JSON body once the run is over, so it can't stream.
-  `/v1/audio/speech` with `stream_format: "sse"` does stream. Soundbox uses
+  `/v1/audio/speech` with `stream_format: "sse"` does stream. Mirli uses
   the speech route, and falls back to the task route only for the first
   stream of a model, because the speech route's PCM deltas carry no sample
   rate and the task route's WAVs do. The rate is remembered per model after
@@ -52,7 +52,7 @@ when the first chunk reached the client, "last" when the final one did.
   knob (exaggeration, temperature and so on) was silently dropped whenever a
   model ran resident in the server. Fixed for generate, speak, convert and
   the stream. It showed up here because VoxCPM2 refuses to stream unless
-  `retry_badcase=false` reaches it; Soundbox now sets that for VoxCPM2
+  `retry_badcase=false` reaches it; Mirli now sets that for VoxCPM2
   streams.
 
 Today `POST /api/speak` is a job: you submit a script, poll or watch
@@ -76,7 +76,7 @@ Streaming adds that second mode: **text in, audio chunks out, as they're made.**
 
 ## What already exists underneath
 
-The `audiocpp_server` Soundbox already runs (see
+The `audiocpp_server` Mirli already runs (see
 [`server/src/models/audiocppRuntime.ts`](../server/src/models/audiocppRuntime.ts))
 streams natively. Upstream exposes:
 
@@ -88,12 +88,12 @@ streams natively. Upstream exposes:
 
 Only families whose session implements the streaming run mode can do it.
 audio.cpp ships `model_specs/<family>.json` beside its binaries, and each
-lists its `modes`; Soundbox reads that folder and sets `supports.streaming`
+lists its `modes`; Mirli reads that folder and sets `supports.streaming`
 from it (`server/src/models/audiocppModes.ts`), so the flag follows whatever
 build is installed, including your own via `SOUNDBOX_AUDIOCPP_BIN`.
 
 In the bundled **audio.cpp 0.6.1**, the TTS families that list `streaming`
-and that the Soundbox catalogue carries are:
+and that the Mirli catalogue carries are:
 
 | Model id | Family |
 | --- | --- |
@@ -106,14 +106,14 @@ and that the Soundbox catalogue carries are:
 
 Kokoro, Chatterbox, PocketTTS, IndexTTS2, Irodori and VibeVoice do **not**
 stream in 0.6.1. VoxCPM2 also needs `retry_badcase=false` when streaming
-_(to verify whether Soundbox should set that automatically)_.
+_(to verify whether Mirli should set that automatically)_.
 
 audio.cpp fixes a model entry's run mode at load time, so a streamed read
 loads a second resident copy of the weights (`<id>::stream`) next to the
 offline one. Both are held until the model unloads: plan on **twice the
 model's memory** while you use both `/api/speak` and the stream.
 
-So most of the work is in Soundbox's own layer: a route, a capability flag,
+So most of the work is in Mirli's own layer: a route, a capability flag,
 voice resolution, cancellation, and the clients.
 
 ## Design principles
@@ -198,7 +198,7 @@ JSON with a 4xx/5xx status; an error after audio has started just closes the
 stream (there's no in-band channel), and is logged.
 
 **Cancel:** close the connection. Because audio.cpp has no per-request
-cancel, Soundbox stops the audio.cpp process when a listener leaves
+cancel, Mirli stops the audio.cpp process when a listener leaves
 mid-stream (the same trade job cancel makes), so **the next request pays a
 model reload**. _(to verify: whether aborting `/v1/tasks/stream` alone stops
 the run, which would let us skip the kill.)_
@@ -260,7 +260,7 @@ New tool:
   with `{ duration_s, ttft_ms, sound_id? }`.
 
 MCP tool results aren't a streaming audio channel, so this tool is mainly for
-agents that **play audio on the Soundbox machine** (`play: true` routes the
+agents that **play audio on the Mirli machine** (`play: true` routes the
 stream to the default output device server-side) or that want a saved
 `sound_id` with lower total latency. Agents that need the audio bytes as they
 arrive should use the HTTP route directly. The MCP doc will say so plainly
@@ -333,7 +333,7 @@ Steps 1 to 4 are built (`server/src/models/audiocppRuntime.ts` `streamTask`,
   (for example by reading the rate from `/v1/models` if a later build
   reports it).
 - The catalogue: VoxCPM2 and OmniVoice clone in audio.cpp but aren't marked
-  `supports.voice_reference`, so Soundbox won't attach a clip to them made
+  `supports.voice_reference`, so Mirli won't attach a clip to them made
   for that model, and both list the wrong `sample_rate`.
 
 - Which bundled TTS families actually stream in our shipped binary, and their

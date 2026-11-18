@@ -1,7 +1,7 @@
 /**
  * Real screenshots of the running app, switchable.
  *
- * Everything else on this site that looks like Soundbox is a drawing of it —
+ * Everything else on this site that looks like Mirli is a drawing of it —
  * `timeline-banner`, the `reveal-*` panels, `model-params-demo`. Those exist to
  * animate and to be interactive, which a screenshot cannot be, and they are
  * honest about being illustrations. But a visitor deciding whether to install
@@ -56,7 +56,7 @@ const SHOTS: Shot[] = [
     id: "library",
     label: "Library",
     src: "/product/library.png",
-    alt: "The Soundbox library: eight generated sounds in a list, each with a waveform, the prompt that made it, its model, seed, file size and age. Two rows carry a badge showing the agent that generated them.",
+    alt: "The Mirli library: eight generated sounds in a list, each with a waveform, the prompt that made it, its model, seed, file size and age. Two rows carry a badge showing the agent that generated them.",
     caption:
       "Everything generated, with the prompt, model and seed kept beside it. The badge on a row is the agent that made it.",
   },

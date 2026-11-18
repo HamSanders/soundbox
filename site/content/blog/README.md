@@ -94,13 +94,13 @@ principle:
 A post with `audio: /blog/audio/<slug>.mp3` in its frontmatter gets a Listen
 card under the header: the narrator, the length and a play button. Once it is
 playing, a player docks to the bottom of the page and the paragraph being read
-is highlighted; clicking a paragraph jumps the voice to it. Soundbox makes the
+is highlighted; clicking a paragraph jumps the voice to it. Mirli makes the
 recording, which is the only reason this is worth doing: the blog is narrated
 by the thing the blog is about.
 
 The narrator is **Bea**, a Chatterbox clone from the shared voice library
 (exaggeration 0.3). `scripts/blog-narration.mjs` does everything but the
-speaking, which goes through the Soundbox MCP as a story so each line can be
+speaking, which goes through the Mirli MCP as a story so each line can be
 re-taken on its own:
 
 1. **Make a story and load the script.** `soundbox.create_story` with
@@ -134,7 +134,7 @@ misled, however briefly, and this blog does not spend its credibility on that.
 
 ## What a post may claim
 
-Only what this repository can show. Every claim about Soundbox — a model it
+Only what this repository can show. Every claim about Mirli — a model it
 runs, a number it reports, a thing it does — has to be checkable against the
 code, the docs or a run you can reproduce, and a claim nobody has checked does
 not go on the page.

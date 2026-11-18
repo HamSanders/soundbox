@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 /**
- * Narrate a blog post with Soundbox, and keep the timings the player follows.
+ * Narrate a blog post with Mirli, and keep the timings the player follows.
  *
  *   node scripts/blog-narration.mjs plan   <slug>               > lines.json
  *   node scripts/blog-narration.mjs finish <slug> <story-id>
  *
- * `plan` turns a post into the lines of a Soundbox story: one spoken block per
+ * `plan` turns a post into the lines of a Mirli story: one spoken block per
  * paragraph or list item, in the order the page renders them, with headings
  * turned into pauses and code, tables and images left out. Feed its output to
  * `soundbox.add_lines` (or POST it as segments), then `soundbox.speak_story`
  * and `soundbox.export_story`.
  *
- * `finish` reads the voiced story back from the running Soundbox server, finds
+ * `finish` reads the voiced story back from the running Mirli server, finds
  * its export, encodes it to the site's audio format and writes the per-block
  * start times to `site/content/blog/narration/<slug>.json`, which the post
  * page imports at build time.
@@ -287,7 +287,7 @@ async function layout(storyId) {
   let prev = null;
   for (const seg of segments) {
     if (seg.kind !== "pause" && !seg.sound_id) throw new Error(`line ${seg.position} has not been voiced`);
-    // Soundbox trims each take's trailing silence, so two halves of one
+    // Mirli trims each take's trailing silence, so two halves of one
     // paragraph would otherwise run together without a breath.
     if (seg.kind !== "pause" && prev && prev.kind !== "pause") cursor += SENTENCE_GAP_S;
     prev = seg;

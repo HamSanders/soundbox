@@ -1,10 +1,10 @@
 # Custom endpoints
 
 A custom endpoint sends generation to a server you already run, or to a
-hosted provider with your own key, instead of a model Soundbox downloads and
+hosted provider with your own key, instead of a model Mirli downloads and
 runs itself. Use one when a machine on your network already serves the model
 (LocalAI, an OpenAI-compatible speech server, a gateway), when the machine
-running Soundbox can't download weights, or when it has no GPU and you would
+running Mirli can't download weights, or when it has no GPU and you would
 rather pay a provider such as ElevenLabs or fal for each render.
 
 Each endpoint appears as one model in the pickers. Its id is
@@ -21,7 +21,7 @@ check four things:
 | **Used for** | Sound effects, Music or Speech. This decides which picker the endpoint appears in. |
 | **URL** | The full URL to POST to, path included, e.g. `http://192.168.1.20:8080/v1/sound-generation`. It may contain `{{voice}}` or `{{language}}`, filled URL-encoded. |
 | **API key** | Optional. Sent as `Authorization: Bearer <key>` unless you change **Key header** and **Before the key**: ElevenLabs takes `xi-api-key` with nothing before the key, fal takes `Authorization` with `Key ` before it. Once saved the key is never shown or returned again. Leave the field blank when editing to keep the saved key. |
-| **Body template** | The JSON request body, with `{{variables}}` for what Soundbox fills in. |
+| **Body template** | The JSON request body, with `{{variables}}` for what Mirli fills in. |
 
 Press **Test** before saving. It sends one short request with the form as it
 stands and reports the length and format of the audio that came back, or the
@@ -34,12 +34,12 @@ server's error. Nothing is added to the library.
 | LocalAI ACE-Step music | `POST /v1/sound-generation` | Sends `model_id`, `caption`, `lyrics`, `bpm`, `keyscale` and `duration_seconds`. LocalAI's ACE-Step example uses `model` instead. If your server rejects `model_id`, rename it. |
 | LocalAI sound effects | `POST /v1/sound-generation` | ElevenLabs-shaped: `model_id`, `text`, `duration_seconds`. |
 | OpenAI-compatible speech | `POST /v1/audio/speech` | Works with LocalAI, OpenAI-compatible servers and most proxies. Asks for `response_format: "wav"`, so ffmpeg is not needed. List your server's voices in **Voices**. |
-| Another Soundbox (music, sound effects, speech) | `POST /api/render` | A Soundbox on another machine. See [Another Soundbox](#another-soundbox). |
+| Another Mirli (music, sound effects, speech) | `POST /api/render` | A Mirli on another machine. See [Another Mirli](#another-soundbox). |
 
 ### Hosted providers, with your own key
 
 These presets use your own account with the provider. The provider bills you
-for every render, including **Test**. Soundbox does not resell the service,
+for every render, including **Test**. Mirli does not resell the service,
 takes no cut and never sees the bill. Each preset links to the provider's
 price page.
 
@@ -48,7 +48,7 @@ price page.
 | ElevenLabs sound effects | `POST https://api.elevenlabs.io/v1/sound-generation` | Up to 30 seconds. Answers in MP3, so ffmpeg is needed. On a plan that allows it, change `output_format` in the URL to `wav_44100`. |
 | ElevenLabs music | `POST https://api.elevenlabs.io/v1/music` | 3 seconds to 10 minutes. MP3, so ffmpeg is needed. Sends no lyrics; describe vocals in the prompt. |
 | ElevenLabs speech | `POST https://api.elevenlabs.io/v1/text-to-speech/{{voice}}` | Voices are ElevenLabs voice IDs, which go in the URL. The preset holds the ID from ElevenLabs' own example; replace it with IDs from your Voices page. MP3, so ffmpeg is needed. |
-| fal ACE-Step music | `POST https://fal.run/fal-ai/ace-step/prompt-to-audio` | fal answers with JSON holding a link to a WAV. The response path `audio.url` points at it and Soundbox downloads it. fal writes the tags and lyrics from the prompt. |
+| fal ACE-Step music | `POST https://fal.run/fal-ai/ace-step/prompt-to-audio` | fal answers with JSON holding a link to a WAV. The response path `audio.url` points at it and Mirli downloads it. fal writes the tags and lyrics from the prompt. |
 
 These were written from each provider's API reference in November 2026. A
 provider can rename a model or a field, and **Test** is the quickest way to
@@ -59,9 +59,9 @@ agree on the body: two `/v1/audio/music` implementations take `prompt` and
 `duration_seconds` and `input` and `duration` respectively. This is why the
 body is a template and not a fixed format.
 
-## Another Soundbox
+## Another Mirli
 
-A Soundbox can use another Soundbox as an endpoint: a laptop sends its
+A Mirli can use another Mirli as an endpoint: a laptop sends its
 renders to a desktop with a big GPU, or to a rented GPU server. The far side
 does the work through its [`/api/render`](API.md#render-and-wait) route, and
 the result lands in the near side's library like any other sound.
@@ -75,7 +75,7 @@ On the far machine:
 3. Give it an [access token](INSTALL.md#access-token) if anything other than
    your own machines can reach that port.
 
-On the near machine, add an endpoint from one of the **Another Soundbox**
+On the near machine, add an endpoint from one of the **Another Mirli**
 presets, then:
 
 - Change `gpu-box:17494` in the URL to the far machine's address.
@@ -90,7 +90,7 @@ copy of every render. Remove it from the template to keep them there too.
 
 ## Where requests go
 
-Soundbox is local-first, and an endpoint is the one setting that can send a
+Mirli is local-first, and an endpoint is the one setting that can send a
 prompt somewhere else. If an endpoint's URL is not on this machine or your
 local network, the form and the model's description say so, and the
 endpoint is marked **Off-network** in the list. Prompts, lyrics and any voice
@@ -154,7 +154,7 @@ no `{{seed}}`, there is no seed control for that endpoint. If it uses
 
 ## What comes back
 
-Soundbox expects the response body to be the audio:
+Mirli expects the response body to be the audio:
 
 - **WAV** is decoded directly, detected by its header, whatever the
   `Content-Type` says.
@@ -168,7 +168,7 @@ If a server wraps the audio in JSON, set **Response path** to where it is,
 e.g. `data.0.b64_json` or `audio`. What is there can be:
 
 - **base64 audio.** A `data:audio/...;base64,` prefix is stripped.
-- **A link to the audio file**, as fal and Replicate answer. Soundbox
+- **A link to the audio file**, as fal and Replicate answer. Mirli
   downloads it and decodes it as above. The download carries no key, because
   the link is usually on a CDN rather than the host the key is for.
 - **An object with a `url`**, such as fal's `{ "url": ..., "content_type": ... }`,

@@ -57,7 +57,7 @@ export function BlogPostPage() {
   return (
     <>
       <SeoHead
-        title={`${post.title} | Soundbox`}
+        title={`${post.title} | Mirli`}
         description={post.description}
         path={`/blog/${post.slug}`}
         type="article"
@@ -118,7 +118,7 @@ export function BlogPostPage() {
                   <a href={assetUrl(post.audio)}>Download the recording</a> instead.
                 </audio>
                 <figcaption className="text-muted-foreground mt-2.5 text-xs leading-relaxed">
-                  Read aloud by Soundbox with a synthetic voice, on the machine that wrote it.
+                  Read aloud by Mirli with a synthetic voice, on the machine that wrote it.
                 </figcaption>
               </figure>
             )

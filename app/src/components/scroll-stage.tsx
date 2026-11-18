@@ -8,7 +8,7 @@
  * **The copy lives here, not inside the product.** The first version of this
  * put the step description in a `<figcaption>` inside the mockup's own frame,
  * which made the explanation look like part of the application's UI — a
- * caption bar no screen in Soundbox actually has. Out here it is plainly the
+ * caption bar no screen in Mirli actually has. Out here it is plainly the
  * page talking about the product rather than the product talking about
  * itself, and it can cross-fade between steps instead of hard-swapping.
  *

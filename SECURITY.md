@@ -31,7 +31,7 @@ What the app sends on its own, and how to turn it off, is listed in
 
 ## Threat model
 
-Soundbox is a single-user, local application. Its security rests on the
+Mirli is a single-user, local application. Its security rests on the
 following assumptions. Please report any way to break one of them.
 
 - **The server binds to loopback** (`127.0.0.1`) by default. It is meant to be
@@ -75,6 +75,6 @@ following assumptions. Please report any way to break one of them.
   expected repository's release downloads.
 
 Also in scope: path traversal through file routes, command injection into the
-native binaries Soundbox spawns, and tampering with the binary/model download
+native binaries Mirli spawns, and tampering with the binary/model download
 path. Out of scope: the licences or behaviour of third-party model weights,
 and attacks that already require local code execution as your user.

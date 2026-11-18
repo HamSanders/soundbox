@@ -45,6 +45,12 @@ export const MODELS_FAQ: Faq = {
     "Four are verified end to end and on by default: Stable Audio 3.0 SFX, Stable Audio 3.0 Small Music, ACE-Step 1.5 Turbo and MiniMax Music 3. Dozens more can be switched on from the Models page, and each one's licence is shown before you download it.",
 };
 
+export const RENAMED: Faq = {
+  question: "Wasn't this called Soundbox?",
+  answer:
+    "Yes. Mirli is formerly Soundbox: the same app under a new name. Existing installs, settings and libraries carry on as they were, and the soundbox command, the soundbox.* MCP tools and the GitHub repository keep the old name for now.",
+};
+
 export const AGENT_FAQ: Faq = {
   question: "How do I connect Claude Code or Cursor?",
   answer:

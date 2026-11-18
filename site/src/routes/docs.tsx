@@ -23,8 +23,8 @@ export function DocsPage() {
   return (
     <div className="bg-background text-foreground min-h-svh">
       <SeoHead
-        title="API & MCP Reference | Soundbox"
-        description="The full HTTP API and MCP tool reference for Soundbox, generated from the server's own OpenAPI schema."
+        title="API & MCP Reference | Mirli"
+        description="The full HTTP API and MCP tool reference for Mirli, generated from the server's own OpenAPI schema."
         path="/docs"
       />
       <div className="mx-auto w-full max-w-5xl px-4 py-10">

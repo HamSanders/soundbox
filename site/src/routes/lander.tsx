@@ -61,7 +61,7 @@ function LanderPage({ lander }: { lander: Lander }) {
         jsonLd={[
           faqJsonLd(lander.faq.map((f) => ({ question: f.question, answer: f.answer }))),
           breadcrumbJsonLd([
-            { name: "Soundbox", path: "/" },
+            { name: "Mirli", path: "/" },
             { name: lander.eyebrow.split(" · ")[1] ?? lander.headline, path: `/${lander.path}` },
           ]),
         ]}

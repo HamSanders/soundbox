@@ -1,6 +1,6 @@
 # Generating sound
 
-Every sound in Soundbox is made from a prompt, a model, a few parameters, and
+Every sound in Mirli is made from a prompt, a model, a few parameters, and
 a job you can watch. This page follows one generation through, then covers the
 parameters that change the result.
 
@@ -42,12 +42,12 @@ LLM, is optional, and tells you when it is unavailable.
 There are three ways to supply the LLM, all of which keep your prompts on
 your own setup:
 
-- Let Soundbox install `llama-server` and a small GGUF (Models page, or
+- Let Mirli install `llama-server` and a small GGUF (Models page, or
   `soundbox model install llm`).
 - Point it at a `llama-server` you built, with `SOUNDBOX_LLAMA_SERVER_BIN`.
 - Set the mode to *external* and give it any OpenAI-compatible base URL
   (Ollama, LM Studio, vLLM, LocalAI, a hosted endpoint). With or without
-  `/v1` both work, since Soundbox adds `/v1/chat/completions` without
+  `/v1` both work, since Mirli adds `/v1/chat/completions` without
   doubling it. An error names the full URL it tried.
 
 `soundbox model status llm` shows which one is live.
@@ -160,7 +160,7 @@ curl -N http://127.0.0.1:17494/api/jobs/<job_id>/events
 ```
 
 Every endpoint and field is in the [API reference](./API.md). To drive
-Soundbox from an agent, use [MCP](./MCP.md): the same operations, with schemas
+Mirli from an agent, use [MCP](./MCP.md): the same operations, with schemas
 the model can read.
 
 ## When it goes wrong

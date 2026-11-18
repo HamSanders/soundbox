@@ -185,8 +185,8 @@ export function BlogIndexPage() {
   return (
     <>
       <SeoHead
-        title="Blog | Soundbox"
-        description="How Soundbox is built, how the models behave, and how to get better sound out of them."
+        title="Blog | Mirli"
+        description="How Mirli is built, how the models behave, and how to get better sound out of them."
         path="/blog"
       />
       <div className="mx-auto w-full max-w-6xl px-4 pt-12 pb-24 sm:pt-16">

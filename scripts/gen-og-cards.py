@@ -83,12 +83,12 @@ def card(screenshot: str | None, eyebrow: str, title: str, line: str, command: s
         draw.text((left + pad + prompt_w, top + 27), command, font=font, fill=FOREGROUND)
         draw.text(
             (left, top + 112),
-            "21 tools · Claude Code, Cursor or any MCP client · no API key",
+            "24 tools · Claude Code, Cursor or any MCP client · no API key",
             font=geist(24, "Regular"),
             fill=MUTED,
         )
 
-    draw.text((left, H - 64), "hamsanders.github.io/soundbox", font=geist(22, "Medium"), fill=MUTED)
+    draw.text((left, H - 64), "mirli.app", font=geist(22, "Medium"), fill=MUTED)
     return im
 
 
@@ -98,13 +98,13 @@ def main() -> None:
         "default.jpg": card(
             "studio.png",
             "Open source · MIT",
-            "Soundbox",
+            "Mirli",
             "Sound effects, music and voices,\ngenerated on your own machine.",
         ),
         "mcp.jpg": card(
             None,
             "MCP server",
-            "Soundbox for agents",
+            "Mirli for agents",
             "Sound effects, music and speech,\ngenerated locally for your coding agent.",
             command="claude mcp add --transport http soundbox http://127.0.0.1:17494/mcp",
         ),

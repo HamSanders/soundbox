@@ -1,10 +1,10 @@
-# Using Soundbox from an AI agent
+# Using Mirli from an AI agent
 
-Soundbox exposes its generation pipeline over [MCP](https://modelcontextprotocol.io).
+Mirli exposes its generation pipeline over [MCP](https://modelcontextprotocol.io).
 An agent can generate sound effects, music and speech as part of a larger
 task, and arrange longer pieces on a timeline it can return to later.
 
-The MCP server runs inside the main Soundbox process at
+The MCP server runs inside the main Mirli process at
 `http://127.0.0.1:17494/mcp`. **The server must be running.** There is no
 separate daemon to start.
 
@@ -26,7 +26,7 @@ Claude Code:
 claude mcp add --transport http soundbox http://127.0.0.1:17494/mcp
 ```
 
-The URL has **no trailing slash**. Soundbox rewrites `/mcp` to the mounted path
+The URL has **no trailing slash**. Mirli rewrites `/mcp` to the mounted path
 internally, so clients that don't follow 307 redirects on POST work.
 
 ### stdio
@@ -85,7 +85,7 @@ and length.
 
 A long music render can outlast a client's tool-call timeout, and some clients
 cut a call off at 60 seconds. If the request carries `_meta.progressToken`,
-Soundbox sends `notifications/progress` while the job runs: `progress` from 0
+Mirli sends `notifications/progress` while the job runs: `progress` from 0
 to 1 (`total: 1`) and the job's own `message` ("loading model", "sampling",
 and so on). It sends one when the job moves, at most once a second, plus one
 every 5 seconds while nothing moves, such as while weights load. A client that
@@ -240,7 +240,7 @@ voice's model, one at a time. **This is the slowest tool**: a forty-line script 
 `delete_line` takes a `line_id` and removes it from the story; the audio it was
 using stays in the library. `split_line` takes `line_id` and `at_s` (seconds
 into that line's own audio) and produces two clips. The text stays with the
-first clip, since Soundbox cannot tell which words fall on each side of the cut.
+first clip, since Mirli cannot tell which words fall on each side of the cut.
 
 #### `soundbox.export_story`
 
@@ -342,7 +342,7 @@ Every call the server handles is:
 
 ## Skills
 
-Soundbox ships agent skills under `server/skills/`:
+Mirli ships agent skills under `server/skills/`:
 `soundbox-sfx` (prompting technique, tool usage), `soundbox-sound-pass`
 (inventorying and generating every sound event a whole project needs) and
 `soundbox-voice-story` (writing, voicing and arranging spoken audio as a
@@ -358,7 +358,7 @@ soundbox skills list                     # see what's bundled/installed
 
 or click **Install skills** on the Agents page, which calls
 `POST /api/mcp/skills/install`. Re-running overwrites, so reinstall after
-upgrading Soundbox to keep them current.
+upgrading Mirli to keep them current.
 
 ## Notes for agent authors
 

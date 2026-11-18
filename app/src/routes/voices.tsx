@@ -1,5 +1,5 @@
 /**
- * Voices — the marketing page for the speech side of Soundbox, at `/voices`.
+ * Voices — the marketing page for the speech side of Mirli, at `/voices`.
  *
  * The site covered sound effects, music and the studio and said nothing about
  * voices, even though most of the catalog is voice models and the app has a
@@ -272,7 +272,7 @@ function Close() {
             Voices ship with the app
           </h2>
           <p className="text-muted-foreground mt-3 leading-relaxed">
-            The Voice Studio, stories and the Voice Lab are part of Soundbox. They use the same
+            The Voice Studio, stories and the Voice Lab are part of Mirli. They use the same
             local server on <code className="font-mono text-xs">127.0.0.1:17494</code> and the
             same library, with no account. Before your first read you need a text-to-speech
             model. Check its licence first: voice licences vary more than any other category in
@@ -305,7 +305,7 @@ export function VoicesPage() {
   return (
     <div className="bg-background text-foreground min-h-svh overflow-x-clip">
       <SeoHead
-        title="Text to speech, voice cloning and scripts | Soundbox"
+        title="Text to speech, voice cloning and scripts | Mirli"
         description={`Text-to-speech, voice cloning and multi-speaker scripts on your own machine. ${VOICE_STATS.count} open-weight voice models, each listed with its licence. Several are non-commercial.`}
         path="/voices"
       />
@@ -339,7 +339,7 @@ export function VoicesPage() {
                   Delivery is set separately from the text. Writing{" "}
                   <code className="font-mono text-xs">(whispering)</code> into the text makes the
                   model say the word &ldquo;whispering&rdquo; out loud, so delivery has its own
-                  controls. Soundbox reads each model family&apos;s parameter table, and the
+                  controls. Mirli reads each model family&apos;s parameter table, and the
                   controls you see are the ones that model accepts. A model with no delivery
                   controls shows none.
                 </p>
@@ -444,7 +444,7 @@ export function VoicesPage() {
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-8">
               <div className="text-muted-foreground space-y-4 text-sm leading-relaxed">
                 <p>
-                  Soundbox ships parameter definitions for{" "}
+                  Mirli ships parameter definitions for{" "}
                   <span className="text-foreground font-medium">29 model families</span>,{" "}
                   <span className="text-foreground font-medium">165 controls</span> in total,
                   across sliders, numbers, toggles, choices and text. They are vendored from
@@ -477,7 +477,7 @@ export function VoicesPage() {
           <Section
             id="agents"
             title="Agents can write and voice scripts too"
-            lede="The story tools are on the same MCP surface as everything else in Soundbox."
+            lede="The story tools are on the same MCP surface as everything else in Mirli."
           >
             <div className="text-muted-foreground max-w-3xl space-y-4 text-sm leading-relaxed">
               <p>

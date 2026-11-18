@@ -6,7 +6,6 @@ updated: 2026-11-04
 author: Anthony Saviano
 tags: [models, performance]
 image: /blog/one-model-at-a-time.jpg
-audio: /blog/audio/one-model-at-a-time.mp3
 draft: false
 ---
 

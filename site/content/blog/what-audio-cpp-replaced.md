@@ -6,7 +6,6 @@ updated: 2026-11-04
 author: Anthony Saviano
 tags: [engineering, audio.cpp]
 image: /blog/what-audio-cpp-replaced.jpg
-audio: /blog/audio/what-audio-cpp-replaced.mp3
 draft: false
 ---
 

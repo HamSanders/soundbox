@@ -18,7 +18,7 @@
 
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowUpRightIcon, HeadphonesIcon } from "lucide-react";
+import { ArrowUpRightIcon } from "lucide-react";
 
 import { SeoHead } from "@/components/seo-head";
 import { assetUrl } from "@/lib/asset-url";
@@ -74,22 +74,13 @@ function Cover({ post, className }: { post: BlogPost; className?: string }) {
   );
 }
 
-/** Date, reading time and the listen marker, in the mono label voice. */
+/** Date and reading time, in the mono label voice. */
 function Meta({ post }: { post: BlogPost }) {
   return (
     <p className="label-caps text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1">
       <time dateTime={post.date}>{formatDate(post.date)}</time>
       <span aria-hidden="true">·</span>
       <span>{readingMinutes(post.html)} min read</span>
-      {post.audio ? (
-        <>
-          <span aria-hidden="true">·</span>
-          <span className="text-foreground inline-flex items-center gap-1">
-            <HeadphonesIcon className="size-3" aria-hidden="true" />
-            Listen
-          </span>
-        </>
-      ) : null}
       {post.draft ? (
         <span className="bg-warn/15 text-warn rounded-sm px-1.5 font-semibold">
           Draft

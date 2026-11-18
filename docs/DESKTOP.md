@@ -198,8 +198,9 @@ Check for updates** turns the check off, and with it off the app asks nobody,
 GitHub included. The server's own daily version check is described in
 [PRIVACY.md](./PRIVACY.md).
 
-On Linux the in-app update replaces the AppImage. A `.deb` install updates
-by installing the newer `.deb` from the releases page.
+On Linux the release carries signed update bundles for both the AppImage and
+the `.deb`. Neither path has been tried on a real install yet. If an in-app
+update fails, download the newer package from the releases page.
 
 Updates replace the app only. Models and projects live in the data directory
 and are kept.

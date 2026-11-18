@@ -6,6 +6,8 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-18
+
 ### Added
 - **A daily update check, which you can turn off.** Once a day at most, a running Soundbox asks whether a newer version is out. The request carries the version and the platform and nothing else: no install ID, no account, no cookie. The project counts requests per day, version and platform to learn roughly how many copies run and on which versions. When there is a newer version, Settings and the sidebar say so and link to the release page; nothing is downloaded for you. Turn it off in Settings → Updates or with `SOUNDBOX_UPDATE_CHECK=0`, and no request is sent; the desktop app's installer prompt is skipped too. `docs/PRIVACY.md` lists everything the app sends on its own.
 - **Hosted providers with your own key.** Custom endpoints have presets for ElevenLabs sound effects, music and speech, and for ACE-Step on fal, used with your own account. The provider bills you directly, and Soundbox takes no cut. Endpoints can send the key in any header with any prefix, download audio from a link in a JSON answer, and put `{{voice}}` or `{{language}}` in the URL.
@@ -308,7 +310,8 @@ Initial public release, MIT-licensed. Everything below is new.
   `SOUNDBOX_ALLOWED_HOSTS`), and requires JSON or an `X-Soundbox` header on
   mutating API requests.
 
-[Unreleased]: https://github.com/HamSanders/soundbox/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/HamSanders/soundbox/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/HamSanders/soundbox/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/HamSanders/soundbox/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/HamSanders/soundbox/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/HamSanders/soundbox/compare/v0.2.0...v0.3.0

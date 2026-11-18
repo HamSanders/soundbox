@@ -367,7 +367,13 @@ function abs(origin: string, p: string): string {
   return p.startsWith("http") ? p : `${origin}${p}${p.includes(".") ? "" : "/"}`;
 }
 
-const cell = (s: string) => s.replace(/\|/g, "\\|").replace(/\n+/g, " ");
+/**
+ * Text that is safe inside one Markdown table cell. Backslashes are escaped
+ * first, so a `\` already in the text cannot pair with the `\|` added for a
+ * pipe and turn it back into a column break.
+ */
+const cell = (s: string) =>
+  s.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\n+/g, " ");
 
 /**
  * `/developers/index.md`: the page as Markdown, for agents that fetch it and

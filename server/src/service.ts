@@ -46,7 +46,7 @@ import * as audiocppBinary from "./models/audiocppBinary.js";
 import { migrateLayout } from "./models/audiocppMigrate.js";
 import { withRequirements } from "./models/params.js";
 import { llmModelSpec } from "./models/llmCatalog.js";
-import { CancelledJob, ModelError } from "./errors.js";
+import { CancelledJob, ModelError, StreamUnsupported } from "./errors.js";
 import { JobHandle, JobManager } from "./jobs.js";
 import { LlmService, type LlmStatus } from "./llm/service.js";
 import type { StudioContext } from "./llm/studio.js";
@@ -99,6 +99,7 @@ import type {
   SoundEditRequest,
   SoundPage,
   SpeakRequest,
+  SpeakStreamRequest,
   Story,
   StoryBuilder,
   StorySegment,
@@ -121,6 +122,7 @@ import {
 } from "./stems.js";
 import { StoryHub } from "./story-hub.js";
 import { McpTelemetry } from "./telemetry.js";
+import { UpdateChecker } from "./updateCheck.js";
 
 const log = getLogger("soundbox.service");
 
@@ -235,6 +237,9 @@ export class SoundboxService {
   /** Live story activity — see story-hub.ts. */
   readonly stories = new StoryHub();
 
+  /** The daily "is there a newer version?" question — see updateCheck.ts. */
+  readonly updates: UpdateChecker;
+
   constructor(config: Config) {
     this.config = config;
     this.db = openDatabase(config.paths.db, true);
@@ -250,16 +255,21 @@ export class SoundboxService {
     this.llm = new LlmService(config);
     this.image = new ImageService(config);
     this.telemetry = new McpTelemetry(this.db, config);
+    this.updates = new UpdateChecker(config);
   }
 
   /** Start the background machinery. The Python took the event loop to bind
    *  its worker thread to; here the job worker is a plain async loop. */
   start(): void {
     this.jobs.start();
+    // Tests and the dev server must not phone anyone: the endpoint counts
+    // requests, and a contributor's restarts are not installs.
+    if (!process.env.VITEST) this.updates.start();
   }
 
   async close(): Promise<void> {
     this.jobs.stop();
+    this.updates.stop();
     this.telemetry.close();
     await this.models.unload();
     // Our child process, so it does not outlive us.
@@ -956,6 +966,10 @@ export class SoundboxService {
     if (info.task !== "tts") {
       throw new ModelError(`${info.name} is not a text-to-speech model.`);
     }
+    const { refPath, builtinId, requestOptions } = this.resolveVoice(
+      segment.voice_id ?? null, info.family,
+      this.deliveryFor(segment, info.family, req.request_options),
+    );
     if (!model.loaded) {
       handle?.phase("loading", `Loading ${info.name}`);
       await this.models.load(req.model, (f, m) => handle?.progress(f * 0.2, m, "loading"));
@@ -963,7 +977,6 @@ export class SoundboxService {
     this.models.touch();
 
     handle?.phase("generating", "Speaking");
-    const { refPath, builtinId } = this.resolveVoice(segment.voice_id ?? null);
     const clip = await model.speak(segment.text, {
       voiceRefPath: refPath,
       voiceId: builtinId,
@@ -971,7 +984,7 @@ export class SoundboxService {
       steps: req.steps ?? null,
       cfg: req.cfg ?? null,
       loadOptions: req.load_options,
-      requestOptions: this.deliveryFor(segment, info.family, req.request_options),
+      requestOptions,
       progress: handle ? reporter(handle, 0.2, 0.7, "Speaking") : undefined,
     });
 
@@ -1045,10 +1058,12 @@ export class SoundboxService {
    *  other generation does: it takes real time, and the UI already knows how
    *  to show a job's progress. */
   submitSegmentGenerate(segmentId: string, request: SegmentGenerate): Job {
-    if (this.db.getSegment(segmentId) === null) {
+    const segment = this.db.getSegment(segmentId);
+    if (segment === null) {
       throw new ModelError("Line not found.");
     }
-    this.models.get(request.model); // throws ModelError on unknown id, before queueing
+    const info = this.models.get(request.model).describe();
+    this.resolveVoice(segment.voice_id ?? null, info.family);
     return this.jobs.submit("segment", { ...request, segment_id: segmentId }, async (handle) => {
       const segment = await this.generateSegment(segmentId, request, handle);
       return { sounds: segment?.sound_id ? [segment.sound_id] : [], segment_id: segmentId };
@@ -1409,19 +1424,41 @@ export class SoundboxService {
    * synthesising anything) and by single-segment generation, so a stale voice
    * id fails the same way in both.
    */
-  private resolveVoice(voiceId: string | null): {
+  private resolveVoice(
+    voiceId: string | null,
+    family: string,
+    options: Record<string, string> = {},
+  ): {
     refPath: string | null;
     builtinId: string | null;
+    requestOptions: Record<string, string>;
   } {
-    if (!voiceId) return { refPath: null, builtinId: null };
+    const requestOptions = { ...options };
+    if (!voiceId) return { refPath: null, builtinId: null, requestOptions };
     const voice = this.db.getVoice(voiceId);
     if (voice === null) throw new ModelError(`Voice '${voiceId}' not found.`);
-    if (voice.kind === "builtin") return { refPath: null, builtinId: voice.voice_id ?? null };
+    if (voice.kind === "builtin") {
+      return { refPath: null, builtinId: voice.voice_id ?? null, requestOptions };
+    }
     const refPath = this.voiceRefPath(voice.id);
     if (refPath === null) {
       throw new ModelError(`Voice '${voice.name}' has no reference clip on disk.`);
     }
-    return { refPath, builtinId: null };
+    if (family === "fish_audio") {
+      // listVoiceSamples and voiceSampleFilenames use the same ORDER BY.
+      // Never skip an untranscribed clip: its speech is still in voice_ref.
+      const samples = voice.samples ?? [];
+      const missing = samples.flatMap((s, i) => s.reference_text?.trim() ? [] : [i + 1]);
+      if (!samples.length || missing.length) {
+        throw new ModelError(
+          `Fish Audio: voice “${voice.name}” needs a Reference Transcript` +
+          (missing.length ? ` for clip(s) ${missing.join(", ")}` : "") +
+          ". Open Voice Lab → Edit voice and enter the exact words spoken in each reference clip.",
+        );
+      }
+      requestOptions.reference_text = samples.map((s) => s.reference_text!.trim()).join(" ");
+    }
+    return { refPath, builtinId: null, requestOptions };
   }
 
   /**
@@ -2157,6 +2194,7 @@ export class SoundboxService {
       filename,
       duration_s: dsp.frameCount(clip.audio) / clip.sampleRate,
       created_at: created,
+      reference_text: req.reference_text,
     });
     return this.db.getVoice(id)!;
   }
@@ -2201,6 +2239,7 @@ export class SoundboxService {
     voiceId: string,
     source: { audio: dsp.Audio; sampleRate: number } | { source_sound_id: string },
     tidy = false,
+    referenceText?: string | null,
   ): Voice {
     const voice = this.db.getVoice(voiceId);
     if (voice === null) throw new ModelError(`Voice '${voiceId}' not found.`);
@@ -2236,7 +2275,10 @@ export class SoundboxService {
       voice_id: voiceId,
       filename,
       duration_s: seconds,
-      created_at: now(),
+      // Preserve append order even when imports add several clips in one ms.
+      created_at: new Date(Math.max(Date.now(),
+        Date.parse(existing[existing.length - 1]!.created_at) + 1)).toISOString(),
+      reference_text: referenceText,
     });
     this.rebuildVoiceReference(voiceId);
     return this.db.getVoice(voiceId)!;
@@ -2306,6 +2348,7 @@ export class SoundboxService {
     const samples = this.db.voiceSampleFilenames(voiceId).map((filename, i) => ({
       wav_base64: readFileSync(join(dir, filename)).toString("base64"),
       duration_s: voice.samples?.[i]?.duration_s ?? null,
+      reference_text: voice.samples?.[i]?.reference_text ?? null,
     }));
     return {
       format: "soundbox-voice",
@@ -2374,11 +2417,14 @@ export class SoundboxService {
       }
     });
     const voice = this.createVoice(
-      { name, kind: "clone", model_id: modelId, notes: file.voice.notes ?? null },
+      { name, kind: "clone", model_id: modelId, notes: file.voice.notes ?? null,
+        reference_text: file.samples[0]?.reference_text },
       clips[0],
     );
     try {
-      for (const clip of clips.slice(1)) this.addVoiceSample(voice.id, clip);
+      for (let i = 1; i < clips.length; i++) {
+        this.addVoiceSample(voice.id, clips[i]!, false, file.samples[i]?.reference_text);
+      }
     } catch (err) {
       // All or nothing: a half-imported voice would look complete and sound
       // like a fraction of the speaker.
@@ -2389,6 +2435,14 @@ export class SoundboxService {
   }
 
   updateVoice(voiceId: string, patch: VoicePatch): Voice | null {
+    const voice = this.db.getVoice(voiceId);
+    if (voice === null) return null;
+    if (patch.samples) {
+      const ids = new Set(voice.samples?.map((s) => s.id));
+      if (patch.samples.some((s) => !ids.has(s.id))) {
+        throw new ModelError("A transcript can only be changed for this voice's own clips.");
+      }
+    }
     return this.db.updateVoice(voiceId, patch);
   }
 
@@ -2421,6 +2475,9 @@ export class SoundboxService {
       if (info.task !== "tts") {
         throw new ModelError(`${info.name} is not a text-to-speech model.`);
       }
+    }
+    for (const line of request.lines) {
+      this.resolveVoice(line.voice_id ?? null, this.models.get(line.model ?? request.model).describe().family);
     }
 
     // Same session handling as generate, for the same reason: a read started
@@ -2470,16 +2527,17 @@ export class SoundboxService {
     // Resolve every voice before synthesising anything: failing on line 40 of
     // a 60-line script after five minutes of work, because one voice id was
     // stale, is the worst possible time to find out.
-    const resolved = req.lines.map((line) => ({
-      line,
-      ...this.resolveVoice(line.voice_id ?? null),
-    }));
+    const resolved = req.lines.map((line) => {
+      const family = this.models.get(line.model ?? req.model).describe().family;
+      return { line, ...this.resolveVoice(line.voice_id ?? null, family,
+        withRequirements(family, req.request_options)) };
+    });
 
     const clips: { audio: dsp.Audio; sampleRate: number }[] = [];
     const n = resolved.length;
     for (let i = 0; i < n; i++) {
       handle.checkCancelled();
-      const { line, refPath, builtinId } = resolved[i]!;
+      const { line, refPath, builtinId, requestOptions } = resolved[i]!;
       const base = 0.2 + (i / n) * 0.7;
       const span = 0.7 / n;
       const label = n > 1 ? `Line ${i + 1}/${n}` : "Speaking";
@@ -2505,7 +2563,7 @@ export class SoundboxService {
           voiceId: builtinId,
           // One delivery for the whole read: `speak` is the one-off path with
           // no story behind it, so there is nothing per-line to merge.
-          requestOptions: withRequirements(lineInfo.family, req.request_options),
+          requestOptions,
           // One seed for the whole read, not one per line: varying it between
           // turns makes the same character drift audibly mid-conversation.
           seed: req.seed ?? null,
@@ -2580,6 +2638,115 @@ export class SoundboxService {
 
     this.models.touch();
     return { sounds: [soundId] };
+  }
+
+  /* ------------------------------------------------------------ speak stream */
+
+  /**
+   * Speak one line, yielding 16-bit PCM as the model produces it.
+   *
+   * Not a job: it holds the GPU for as long as the caller is listening and
+   * gives it back when the stream ends or `signal` fires (the client hung up).
+   * Throws before yielding anything if the model can't stream or the GPU is
+   * taken, so the route can still answer with a normal status code.
+   *
+   * The first item is always `start` (rate and channels are only known once
+   * the first chunk is decoded), then `audio` chunks, then `done`.
+   */
+  async *speakStream(
+    req: SpeakStreamRequest,
+    signal: AbortSignal,
+  ): AsyncGenerator<SpeakStreamEvent> {
+    const model = this.models.get(req.model);
+    const info = model.describe();
+    if (info.task !== "tts") throw new ModelError(`${info.name} is not a text-to-speech model.`);
+    if (typeof model.speakStream !== "function") {
+      throw new StreamUnsupported(`${info.name} can't stream. Use /api/speak instead.`);
+    }
+    // Same voice resolution as /api/speak, so a Fish clone gets its clips'
+    // reference transcripts (and fails early, before the GPU, without them).
+    const { refPath, builtinId, requestOptions } = this.resolveVoice(
+      req.voice_id ?? null,
+      info.family,
+      withRequirements(info.family, req.request_options),
+    );
+
+    const release = this.jobs.acquireExclusive();
+    const startedAt = Date.now();
+    const kept: dsp.Audio[] = [];
+    let sampleRate = 0;
+    let channels = 0;
+    let frames = 0;
+    let firstAudioMs: number | null = null;
+    let upstreamTtft: number | null = null;
+    try {
+      if (!model.loaded) await this.models.load(req.model, () => {});
+      this.models.touch();
+      const chunks = model.speakStream(req.text, {
+        voiceRefPath: refPath,
+        voiceId: builtinId,
+        seed: req.seed ?? null,
+        steps: req.steps ?? null,
+        cfg: req.cfg ?? null,
+        requestOptions,
+        signal,
+      });
+      for await (const chunk of chunks) {
+        if (signal.aborted) throw new CancelledJob();
+        if (chunk.kind === "done") {
+          upstreamTtft = chunk.ttftMs;
+          continue;
+        }
+        if (sampleRate === 0) {
+          sampleRate = chunk.sampleRate;
+          channels = chunk.audio.length;
+          firstAudioMs = Date.now() - startedAt;
+          yield { kind: "start", sampleRate, channels };
+        }
+        // One stream, one format: a family that changed rate or layout mid-read
+        // would play back garbled, so say so rather than send it.
+        if (chunk.sampleRate !== sampleRate || chunk.audio.length !== channels) {
+          throw new ModelError("The model changed audio format mid-stream.");
+        }
+        const n = dsp.frameCount(chunk.audio);
+        frames += n;
+        if (req.save) kept.push(chunk.audio);
+        yield { kind: "audio", pcm: toPcm16(chunk.audio), frames: n };
+      }
+      if (sampleRate === 0) throw new ModelError(`${info.name} streamed no audio.`);
+
+      let soundId: string | null = null;
+      if (req.save) {
+        const sound = this.writeSound(dsp.concatAudio(kept, sampleRate, 0), sampleRate, {
+          model: req.model,
+          prompt: req.text.slice(0, 2000),
+          name: req.name || defaultName(req.text),
+          seed: req.seed ?? null,
+          steps: info.supports.steps ? req.steps ?? null : null,
+          cfg: info.supports.cfg ? req.cfg ?? null : null,
+          projectId: req.project_id ?? null,
+          voiceId: req.voice_id ?? null,
+          trim: false,
+          // What was heard is what's kept: normalising afterwards would make
+          // the saved file louder or quieter than the stream that played.
+          normalize: false,
+        });
+        if (req.tags.length) this.db.updateSound(sound.id, { tags: req.tags });
+        soundId = sound.id;
+      }
+      this.models.touch();
+      yield {
+        kind: "done",
+        durationS: round3(frames / sampleRate),
+        // Ours includes the model load and the trip through audio.cpp, which
+        // is what a caller actually waits; upstream's starts once it's loaded.
+        ttftMs: firstAudioMs,
+        modelTtftMs: upstreamTtft,
+        soundId,
+      };
+    } finally {
+      release();
+    }
   }
 
   /* ----------------------------------------------------------------- convert */
@@ -3511,4 +3678,32 @@ async function unlinkQuiet(path: string): Promise<void> {
   } catch {
     /* already gone */
   }
+}
+
+/** One item of `SoundboxService.speakStream`. */
+export type SpeakStreamEvent =
+  | { kind: "start"; sampleRate: number; channels: number }
+  | { kind: "audio"; pcm: Buffer; frames: number }
+  | {
+      kind: "done";
+      durationS: number;
+      ttftMs: number | null;
+      modelTtftMs: number | null;
+      soundId: string | null;
+    };
+
+/** Channels-first float audio → interleaved little-endian 16-bit PCM. */
+export function toPcm16(audio: dsp.Audio): Buffer {
+  const channels = audio.length;
+  const frames = channels ? audio[0]!.length : 0;
+  const out = Buffer.allocUnsafe(frames * channels * 2);
+  let o = 0;
+  for (let f = 0; f < frames; f++) {
+    for (let c = 0; c < channels; c++) {
+      const v = Math.max(-1, Math.min(1, audio[c]![f]!));
+      out.writeInt16LE(Math.round(v < 0 ? v * 0x8000 : v * 0x7fff), o);
+      o += 2;
+    }
+  }
+  return out;
 }

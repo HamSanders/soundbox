@@ -27,6 +27,7 @@ import type {
   Model,
   GenerateRequest,
   HealthStatus,
+  UpdateStatus,
   Job,
   JobRef,
   ImageModelEntry,
@@ -1006,7 +1007,23 @@ let settings: Settings = {
   image_external_api_key_set: false,
   image_auto_artwork: false,
   onboarded_at: null,
+  update_check: true,
 };
+
+function mockUpdateStatus(): UpdateStatus {
+  const on = settings.update_check;
+  return {
+    enabled: on,
+    disabled_by: on ? null : "setting",
+    current: "0.4.1",
+    latest: on ? "0.4.1" : null,
+    available: false,
+    url: null,
+    checked_at: on ? new Date().toISOString() : null,
+    endpoint: "https://mirli.app/api/update",
+    error: null,
+  };
+}
 
 /** Profiles are a server-side notion — a data directory each — so the mock
  *  keeps the same shape and simply pretends the switch happened. */
@@ -1059,9 +1076,13 @@ const MOCK_ENDPOINT_PRESETS: EndpointPreset[] = [
     label: "LocalAI — ACE-Step music",
     hint: "LocalAI's /v1/sound-generation with an ACE-Step model. Set the model name to the one your LocalAI serves.",
     docs_url: "https://localai.io/docs/features/text-to-audio/",
+    hosted: false,
+    pricing_url: "",
     endpoint: {
       task: "music",
       url: "http://localhost:8080/v1/sound-generation",
+      api_key_header: "Authorization",
+      api_key_prefix: "Bearer ",
       headers: {},
       body_template:
         '{\n  "model_id": "ace-step-turbo",\n  "caption": "{{prompt}}",\n  "lyrics": "{{lyrics}}",\n  "instrumental": {{instrumental}},\n  "bpm": {{bpm}},\n  "keyscale": "{{key}}",\n  "duration_seconds": {{duration}}\n}',
@@ -1076,9 +1097,13 @@ const MOCK_ENDPOINT_PRESETS: EndpointPreset[] = [
     label: "OpenAI-compatible speech (/v1/audio/speech)",
     hint: "OpenAI, LocalAI, Inference Gateway and most proxies. Asks for WAV, so no ffmpeg is needed.",
     docs_url: "https://platform.openai.com/docs/api-reference/audio/createSpeech",
+    hosted: false,
+    pricing_url: "",
     endpoint: {
       task: "speech",
       url: "http://localhost:8080/v1/audio/speech",
+      api_key_header: "Authorization",
+      api_key_prefix: "Bearer ",
       headers: {},
       body_template:
         '{\n  "model": "tts-1",\n  "input": "{{text}}",\n  "voice": "{{voice}}",\n  "response_format": "wav"\n}',
@@ -1086,6 +1111,68 @@ const MOCK_ENDPOINT_PRESETS: EndpointPreset[] = [
       pcm_sample_rate: 24000,
       max_duration_s: 300,
       voices: ["alloy", "echo", "nova"],
+    },
+  },
+  {
+    id: "soundbox-music",
+    label: "Another Soundbox — music",
+    hint: "A Soundbox on another machine, such as a GPU box, through its /api/render route. Change the host and model, and put its access token in the key field.",
+    docs_url: "https://github.com/HamSanders/soundbox/blob/main/docs/API.md#render-and-wait",
+    hosted: false,
+    pricing_url: "",
+    endpoint: {
+      task: "music",
+      url: "http://gpu-box:17494/api/render",
+      api_key_header: "Authorization",
+      api_key_prefix: "Bearer ",
+      headers: {},
+      body_template:
+        '{\n  "model": "audiocpp-ace-step",\n  "prompt": "{{prompt}}",\n  "lyrics": "{{lyrics}}",\n  "duration_s": {{duration}},\n  "seed": {{seed}},\n  "keep": false\n}',
+      response_path: "",
+      pcm_sample_rate: 24000,
+      max_duration_s: 240,
+      voices: [],
+    },
+  },
+  {
+    id: "elevenlabs-sfx",
+    label: "ElevenLabs — sound effects (your account)",
+    hint: "ElevenLabs text-to-sound-effects, up to 30 seconds, billed to your ElevenLabs account. Answers in MP3, so ffmpeg is needed.",
+    docs_url: "https://elevenlabs.io/docs/api-reference/text-to-sound-effects/convert",
+    hosted: true,
+    pricing_url: "https://elevenlabs.io/pricing/api",
+    endpoint: {
+      task: "sfx",
+      url: "https://api.elevenlabs.io/v1/sound-generation?output_format=mp3_44100_128",
+      api_key_header: "xi-api-key",
+      api_key_prefix: "",
+      headers: {},
+      body_template:
+        '{\n  "text": "{{prompt}}",\n  "duration_seconds": {{duration}},\n  "model_id": "eleven_text_to_sound_v2"\n}',
+      response_path: "",
+      pcm_sample_rate: 24000,
+      max_duration_s: 30,
+      voices: [],
+    },
+  },
+  {
+    id: "fal-ace-step",
+    label: "fal — ACE-Step music (your account)",
+    hint: "ACE-Step on fal, billed to your fal account per second of audio. The answer is a link to a WAV, which Soundbox downloads.",
+    docs_url: "https://fal.ai/models/fal-ai/ace-step/prompt-to-audio/api",
+    hosted: true,
+    pricing_url: "https://fal.ai/models/fal-ai/ace-step/prompt-to-audio",
+    endpoint: {
+      task: "music",
+      url: "https://fal.run/fal-ai/ace-step/prompt-to-audio",
+      api_key_header: "Authorization",
+      api_key_prefix: "Key ",
+      headers: {},
+      body_template: '{\n  "prompt": "{{prompt}}",\n  "duration": {{duration}},\n  "seed": {{seed}}\n}',
+      response_path: "audio.url",
+      pcm_sample_rate: 24000,
+      max_duration_s: 240,
+      voices: [],
     },
   },
 ];
@@ -2122,6 +2209,13 @@ const withCount = (c: Conversation): Conversation => ({
 });
 
 export const mockApi: SoundboxApi = {
+  // The mock has no access token, the same as a desktop server.
+  async getAuthStatus() {
+    return { required: false, signed_in: true };
+  },
+  async signIn() {},
+  async signOut() {},
+
   async getHealth(): Promise<HealthStatus> {
     await wait(60);
     const loaded = models.find((e) => e.status === "loaded");
@@ -3041,6 +3135,11 @@ export const mockApi: SoundboxApi = {
       model_id: req.model_id ?? null,
       notes: req.notes ?? null,
     };
+    if (voice.kind === "clone" && voice.reference_file) {
+      voice.samples = [{ id: nextId("sample"), file: voice.reference_file,
+        duration_s: sounds.find((s) => s.id === req.source_sound_id)?.duration_s ?? null,
+        created_at: voice.created_at, reference_text: req.reference_text ?? null }];
+    }
     voices.unshift(voice);
     return { ...voice };
   },
@@ -3065,7 +3164,7 @@ export const mockApi: SoundboxApi = {
     return sound;
   },
 
-  async uploadVoice(name, file, notes, modelId): Promise<Voice> {
+  async uploadVoice(name, file, notes, modelId, _tidy, referenceText): Promise<Voice> {
     await wait(140);
     // Real uploaded bytes, so playback works exactly as it would live.
     const url = URL.createObjectURL(file);
@@ -3079,13 +3178,14 @@ export const mockApi: SoundboxApi = {
       voice_id: null,
       model_id: modelId ?? null,
       notes: notes ?? null,
-      samples: [{ id: nextId("sample"), file: url, duration_s: await mockDuration(file), created_at: created }],
+      samples: [{ id: nextId("sample"), file: url, duration_s: await mockDuration(file),
+        created_at: created, reference_text: referenceText ?? null }],
     };
     voices.unshift(voice);
     return withVoiceCounts(voice);
   },
 
-  async addVoiceSample(voiceId, source): Promise<Voice> {
+  async addVoiceSample(voiceId, source, _tidy, referenceText): Promise<Voice> {
     await wait(140);
     const voice = voices.find((v) => v.id === voiceId);
     if (!voice) throw new Error(`Unknown voice ${voiceId}`);
@@ -3105,7 +3205,8 @@ export const mockApi: SoundboxApi = {
       file = sound.file;
       duration = sound.duration_s;
     }
-    samples.push({ id: nextId("sample"), file, duration_s: duration, created_at: new Date().toISOString() });
+    samples.push({ id: nextId("sample"), file, duration_s: duration,
+      created_at: new Date().toISOString(), reference_text: referenceText ?? null });
     voice.samples = samples;
     // The mock cannot join WAVs; the first clip stands in for the joined
     // reference so the card still has something to play.
@@ -3177,6 +3278,10 @@ export const mockApi: SoundboxApi = {
     if (!voice) throw new Error(`Unknown voice ${id}`);
     if (patch.name !== undefined) voice.name = patch.name;
     if (patch.notes !== undefined) voice.notes = patch.notes ?? null;
+    for (const sample of patch.samples ?? []) {
+      const stored = voice.samples?.find((s) => s.id === sample.id);
+      if (stored && sample.reference_text !== undefined) stored.reference_text = sample.reference_text;
+    }
     return { ...voice };
   },
 
@@ -3242,6 +3347,16 @@ export const mockApi: SoundboxApi = {
   async getSettings() {
     await wait(60);
     return { ...settings };
+  },
+
+  async getUpdateStatus() {
+    await wait(60);
+    return mockUpdateStatus();
+  },
+
+  async checkForUpdate() {
+    await wait(300);
+    return mockUpdateStatus();
   },
 
   async updateSettings(patch: SettingsPatch) {

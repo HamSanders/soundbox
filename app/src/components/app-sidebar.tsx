@@ -15,6 +15,7 @@ import {
   BotIcon,
   ChevronDownIcon,
   CpuIcon,
+  DownloadIcon,
   FolderIcon,
   InfoIcon,
   LibraryIcon,
@@ -62,7 +63,14 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useDeleteSession, useHealth, useModelAction, useModels, useSessions } from "@/lib/queries";
+import {
+  useDeleteSession,
+  useHealth,
+  useModelAction,
+  useModels,
+  useSessions,
+  useUpdateStatus,
+} from "@/lib/queries";
 import { useUiPrefs, wantsRail } from "@/lib/ui-prefs";
 import { formatMb, formatRelative } from "@/lib/format";
 import { SITE_URL } from "@/lib/marketing-links";
@@ -476,6 +484,26 @@ function NavGroup({
 }
 
 /**
+ * "A newer version is out", only when the daily check found one. Links to the
+ * release page rather than installing anything: the desktop app has its own
+ * prompt, and a Docker or source install updates its own way.
+ */
+function UpdateNotice() {
+  const { data } = useUpdateStatus();
+  if (!data?.available || !data.url) return null;
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton tooltip={`Soundbox ${data.latest} is available`} asChild>
+        <a href={data.url} target="_blank" rel="noreferrer noopener">
+          <DownloadIcon />
+          <span>Update to {data.latest}</span>
+        </a>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
+/**
  * The device row: a dot for the backend, the GPU's name, and VRAM in use.
  * Clicking it opens the one place the loaded model can be seen and unloaded
  * without a trip to Models — freeing VRAM is the thing people want from this
@@ -745,6 +773,7 @@ export function AppSidebar() {
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>
+            <UpdateNotice />
             <SidebarMenuItem>
               <ThemeToggle />
             </SidebarMenuItem>

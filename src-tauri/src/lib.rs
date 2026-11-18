@@ -270,7 +270,9 @@ pub fn run() {
 
                 // Only an installed copy updates itself: a checkout run with
                 // `npm run desktop` is updated with git.
-                if home.bundled {
+                // And only when "Check for updates" is on in Settings → Updates:
+                // off means the app asks nobody, GitHub included.
+                if home.bundled && backend::update_check_enabled(port) {
                     updater::check_and_offer(&handle);
                 }
             });

@@ -129,6 +129,32 @@ pub fn is_healthy(port: u16) -> bool {
     status_line.starts_with("HTTP/1.1 2") || status_line.starts_with("HTTP/1.0 2")
 }
 
+/// Has the person left "Check for updates" on? Asked of the server rather than
+/// read from its settings file, because the server knows which profile is open
+/// and whether `SOUNDBOX_UPDATE_CHECK=0` overrides the setting.
+///
+/// Any failure to find out answers `true`: that is what the app did before the
+/// switch existed, and this only gates a prompt, not a request of ours.
+pub fn update_check_enabled(port: u16) -> bool {
+    let Ok(addr) = format!("127.0.0.1:{port}").parse::<SocketAddr>() else {
+        return true;
+    };
+    let Ok(mut stream) = TcpStream::connect_timeout(&addr, Duration::from_millis(400)) else {
+        return true;
+    };
+    let _ = stream.set_read_timeout(Some(Duration::from_millis(1500)));
+    let request = format!(
+        "GET /api/update HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\r\n"
+    );
+    if stream.write_all(request.as_bytes()).is_err() {
+        return true;
+    }
+    let mut body = String::new();
+    let _ = stream.read_to_string(&mut body);
+    // The reply is a small JSON object; the one field we need is a boolean.
+    !body.contains("\"enabled\":false")
+}
+
 /// Block until the server answers, or give up.
 ///
 /// A cold start (module resolution, opening the SQLite file, HF cache

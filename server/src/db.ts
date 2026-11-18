@@ -36,6 +36,7 @@ import type {
   TrackPatch,
   TagCount,
   Voice,
+  VoicePatch,
   VoiceSample,
   EditKind,
   EditOptions,
@@ -144,6 +145,7 @@ CREATE TABLE IF NOT EXISTS voice_samples (
     voice_id   TEXT NOT NULL REFERENCES voices(id) ON DELETE CASCADE,
     filename   TEXT NOT NULL,
     duration_s REAL,
+    reference_text TEXT,
     created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_voice_samples_voice ON voice_samples(voice_id, created_at);
@@ -533,6 +535,7 @@ export class Database {
       "ALTER TABLE sounds ADD COLUMN artwork TEXT",
       "ALTER TABLE sounds ADD COLUMN voice_id TEXT",
       "ALTER TABLE voices ADD COLUMN artwork TEXT",
+      "ALTER TABLE voice_samples ADD COLUMN reference_text TEXT",
       "ALTER TABLE story_segments ADD COLUMN kind TEXT NOT NULL DEFAULT 'line'",
       "ALTER TABLE story_segments ADD COLUMN trim_start_s REAL NOT NULL DEFAULT 0",
       "ALTER TABLE story_segments ADD COLUMN fade_in_s REAL NOT NULL DEFAULT 0",
@@ -1504,11 +1507,13 @@ export class Database {
     filename: string;
     duration_s: number;
     created_at: string;
+    reference_text?: string | null;
   }): void {
     this.prep(
-      `INSERT INTO voice_samples (id, voice_id, filename, duration_s, created_at)
-       VALUES (?,?,?,?,?)`,
-    ).run(sample.id, sample.voice_id, sample.filename, sample.duration_s, sample.created_at);
+      `INSERT INTO voice_samples (id, voice_id, filename, duration_s, created_at, reference_text)
+       VALUES (?,?,?,?,?,?)`,
+    ).run(sample.id, sample.voice_id, sample.filename, sample.duration_s, sample.created_at,
+      sample.reference_text ?? null);
   }
 
   /** Removes one clip's row and returns its filename for the caller to
@@ -1559,7 +1564,7 @@ export class Database {
     return rows.map((r) => r.filename);
   }
 
-  updateVoice(voiceId: string, patch: { name?: string; notes?: string | null }): Voice | null {
+  updateVoice(voiceId: string, patch: VoicePatch): Voice | null {
     const sets: string[] = [];
     const args: unknown[] = [];
     if (patch.name !== undefined) {
@@ -1570,11 +1575,19 @@ export class Database {
       sets.push("notes=?");
       args.push(patch.notes ?? null);
     }
-    if (sets.length) {
-      args.push(voiceId);
-      this.prep(`UPDATE voices SET ${sets.join(", ")} WHERE id=?`).run(...args);
-    }
-    return this.getVoice(voiceId);
+    return this.conn.transaction(() => {
+      if (sets.length) {
+        args.push(voiceId);
+        this.prep(`UPDATE voices SET ${sets.join(", ")} WHERE id=?`).run(...args);
+      }
+      for (const sample of patch.samples ?? []) {
+        if (sample.reference_text !== undefined) {
+          this.prep("UPDATE voice_samples SET reference_text=? WHERE voice_id=? AND id=?")
+            .run(sample.reference_text, voiceId, sample.id);
+        }
+      }
+      return this.getVoice(voiceId);
+    })();
   }
 
   /**
@@ -2099,6 +2112,7 @@ interface VoiceSampleRow {
   filename: string;
   duration_s: number | null;
   created_at: string;
+  reference_text: string | null;
 }
 
 function rowToSample(row: VoiceSampleRow): VoiceSample {
@@ -2107,6 +2121,7 @@ function rowToSample(row: VoiceSampleRow): VoiceSample {
     file: `/files/${row.filename}`,
     duration_s: row.duration_s,
     created_at: row.created_at,
+    reference_text: row.reference_text,
   };
 }
 

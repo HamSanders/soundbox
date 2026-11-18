@@ -18,7 +18,7 @@ import {
   writeRegistry,
   type Registry,
 } from "./profiles.js";
-import type { AudioEndpoint } from "./endpoints/types.js";
+import { type AudioEndpoint, withEndpointDefaults } from "./endpoints/types.js";
 
 export const APP_NAME = "soundbox";
 /** From server/package.json, which sits one level above both src/ and dist/,
@@ -123,6 +123,12 @@ export interface SettingsData {
    * `sounds_dir` uses, which is how Settings' "Run setup again" works.
    */
   onboarded_at: string | null;
+  /**
+   * Ask once a day whether a newer version exists. On by default, and the one
+   * request Soundbox makes on its own: it carries the version and the platform
+   * and nothing else (see `updateCheck.ts`). Off means no request at all.
+   */
+  update_check: boolean;
 }
 
 const DEFAULT_SETTINGS: SettingsData = {
@@ -151,6 +157,7 @@ const DEFAULT_SETTINGS: SettingsData = {
   image_auto_artwork: false,
   audio_endpoints: [],
   onboarded_at: null,
+  update_check: true,
 };
 
 /** Every key a client is allowed to set, so an unknown field is ignored rather
@@ -187,6 +194,7 @@ export interface PublicSettings {
   image_external_api_key_set: boolean;
   image_auto_artwork: boolean;
   onboarded_at: string | null;
+  update_check: boolean;
 }
 
 export class Settings {
@@ -215,6 +223,7 @@ export class Settings {
   image_auto_artwork: boolean = DEFAULT_SETTINGS.image_auto_artwork;
   audio_endpoints: AudioEndpoint[] = [];
   onboarded_at: string | null = DEFAULT_SETTINGS.onboarded_at;
+  update_check: boolean = DEFAULT_SETTINGS.update_check;
 
   constructor(data: Partial<SettingsData> = {}) {
     Object.assign(this, DEFAULT_SETTINGS, {
@@ -226,6 +235,9 @@ export class Settings {
     for (const key of SETTING_KEYS) {
       const value = data[key];
       if (value !== undefined) (this as Record<string, unknown>)[key] = value;
+    }
+    if (Array.isArray(this.audio_endpoints)) {
+      this.audio_endpoints = this.audio_endpoints.map(withEndpointDefaults);
     }
   }
 
@@ -264,6 +276,7 @@ export class Settings {
       image_external_api_key_set: Boolean(this.image_external_api_key),
       image_auto_artwork: this.image_auto_artwork,
       onboarded_at: this.onboarded_at,
+      update_check: this.update_check,
     };
   }
 
@@ -328,6 +341,7 @@ export class Settings {
       image_auto_artwork: this.image_auto_artwork,
       audio_endpoints: this.audio_endpoints,
       onboarded_at: this.onboarded_at,
+      update_check: this.update_check,
     };
   }
 }

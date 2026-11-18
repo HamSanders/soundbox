@@ -7,7 +7,7 @@ relative URLs.
 ## Request rules
 
 Two checks run before any route, so a web page open in your browser cannot
-drive the server:
+drive the server, and a third when an access token is set:
 
 - **Host header.** Requests are served only when the `Host` header names
   `localhost`, `127.0.0.1` or `[::1]` (any port), or the specific host passed
@@ -23,6 +23,17 @@ drive the server:
 
   ```sh
   curl -X POST -H 'X-Soundbox: 1' http://127.0.0.1:17494/api/sessions
+  ```
+
+- **Access token.** When the server runs with `SOUNDBOX_API_TOKEN`, every
+  `/api/*`, `/mcp`, `/files/*` and `/artwork/*` request needs
+  `Authorization: Bearer <token>` or the session cookie that
+  `POST /api/auth/login` sets, or it gets `401`. `GET /api/health`,
+  `GET /api/auth/status`, `POST /api/auth/login` and `POST /api/auth/logout`
+  stay open. See [Access token](INSTALL.md#access-token).
+
+  ```sh
+  curl -H "Authorization: Bearer $SOUNDBOX_API_TOKEN" https://gpu-box.example/api/models
   ```
 
 ## Endpoint index
@@ -58,6 +69,8 @@ route answers `202 { "job_id": "..." }` and the work is followed through
 | POST | `/api/separate` | Split a sound into stems. Body `{ model, source_sound_id, stems?: { keep: string[], rest: "discard" \| "merge" } }` → job |
 | POST | `/api/repaint` | Regenerate one window of a sound. Body `{ source_sound_id, start_s, end_s, prompt?, lyrics?, model?, strength?, mode?, seed?, variations? }` → job |
 | POST | `/api/speak` | Text to speech. Body `{ model, lines: [{ text, voice_id?, speaker? }], gap_s?, seed?, steps?, cfg?, name?, tags?, session_id?, project_id? }` → job |
+| POST | `/api/speak/stream` | One line of speech, sent as it is generated. Body `{ model, text, voice_id?, format?: "sse" \| "pcm", seed?, steps?, cfg?, request_options?, save?, name?, tags?, project_id? }` → SSE or raw PCM, not a job. See [STREAMING.md](STREAMING.md) |
+| POST | `/api/render` | Run one generate or speak job, wait for it, and answer with the WAV. Body as `/api/generate` or `/api/speak`, plus `text`/`voice` shorthand, `task?` and `keep?`. See [Render and wait](#render-and-wait) |
 | POST | `/api/convert` | Voice conversion. Body `{ model, source_sound_id, voice_id, seed? }` → job |
 | GET | `/api/jobs` | Recent jobs, newest first (`?limit`) |
 | GET | `/api/jobs/{id}` | One job |
@@ -94,13 +107,13 @@ route answers `202 { "job_id": "..." }` and the work is followed through
 
 | Method | Path | What it does |
 |---|---|---|
-| GET | `/api/voices` | Saved voices. Each carries `read_count` and, for a clone, `samples: [{ id, file, duration_s, created_at }]` |
+| GET | `/api/voices` | Saved voices. Each carries `read_count` and, for a clone, `samples: [{ id, file, duration_s, created_at, reference_text }]` |
 | GET | `/api/voices/{id}` | One voice |
-| POST | `/api/voices` | Body `{ name, kind: "clone" \| "builtin", voice_id?, model_id?, notes?, source_sound_id?, tidy? }` |
-| POST | `/api/voices/upload` | Clone from a WAV. Body is the file; `?name, notes, model_id, tidy` |
-| PATCH | `/api/voices/{id}` | Body `{ name?, notes? }` |
+| POST | `/api/voices` | Body `{ name, kind: "clone" \| "builtin", voice_id?, model_id?, notes?, source_sound_id?, tidy?, reference_text? }` |
+| POST | `/api/voices/upload` | Clone from a WAV. Body is the file; `?name, notes, model_id, tidy, reference_text` (URL-encode values) |
+| PATCH | `/api/voices/{id}` | Body `{ name?, notes?, samples?: [{ id, reference_text }] }` |
 | DELETE | `/api/voices/{id}` | Delete the voice and every clip file |
-| POST | `/api/voices/{id}/samples` | Add a clip to a clone. Body is a WAV (`?tidy`), or JSON `{ source_sound_id, tidy? }` |
+| POST | `/api/voices/{id}/samples` | Add a clip to a clone. Body is a WAV (`?tidy&reference_text=...`), or JSON `{ source_sound_id, tidy?, reference_text? }` |
 | DELETE | `/api/voices/{id}/samples/{sample_id}` | Remove a clip. Refused for a voice's last one |
 | GET | `/api/voices/{id}/export` | The voice as a `.soundbox-voice.json` download |
 | POST | `/api/voices/import` | Body is an exported file. Makes a copy under a new id |
@@ -113,13 +126,27 @@ is under 1 s, over 60 s or almost silent, and a voice's clips together stay
 under 90 s — past that, models read the start of the reference and ignore the
 rest.
 
+Each clip's nullable `reference_text` is its exact spoken transcript (up to
+20,000 characters), editable in Voice Lab under **Reference Transcript**.
+For Fish Audio, every clip must have a non-blank transcript: `/api/speak` and
+segment generation return HTTP 400 before queueing if any is missing, naming
+the voice and clips to fix. Existing voices remain readable with null
+transcripts; other models do not require them.
+
+Soundbox derives `request_options.reference_text` from the selected voice's
+samples in the same `created_at, id` order used to join their audio, separated
+by spaces. This overrides any story, line, request or catalog transcript.
+The HTTP and MCP speech paths share this behavior. At the audio.cpp transport
+boundary, Soundbox's `request_options` map becomes the runtime's JSON `options`
+map; the CLI fallback uses `--request-option reference_text=...`.
+
 `tidy` (off by default over the API, on by default in the app) takes out DC
 offset, cuts near-silence off both ends with a little padding left on, and pulls
 a peak above full scale back under it. It never makes a clip louder or changes
 its tone, because that is the voice.
 
 An export is JSON: `{ format: "soundbox-voice", version: 1, voice: { name, kind,
-voice_id, model_id, notes }, samples: [{ wav_base64, duration_s }] }`. The clips
+voice_id, model_id, notes }, samples: [{ wav_base64, duration_s, reference_text }] }`. The clips
 travel and the joined file does not; import rebuilds it. The avatar is not
 included and can be redrawn from the notes. On import, a name already in the
 library gets " (2)", and a `model_id` this Soundbox does not know is dropped
@@ -176,6 +203,8 @@ rather than failing the import.
 | Method | Path | What it does |
 |---|---|---|
 | GET / PATCH | `/api/settings` | Read or change settings |
+| GET | `/api/update` | What the daily update check last learned: `enabled`, `current`, `latest`, `available`, `url`, `checked_at` |
+| POST | `/api/update/check` | Ask now (the Settings button). Does nothing when the check is off |
 | GET | `/api/logs` | Tail of the server log (`?lines`) |
 | GET | `/api/fs/dirs` | List folders on the server's disk (`?path`) |
 | GET / POST | `/api/profiles` | List or create (`{ name }`) |
@@ -356,6 +385,68 @@ history yet for that model, or the job isn't queued.
 `POST /api/jobs/{job_id}/cancel` → `200 Job`. Cancels a queued or running job.
 
 `GET /api/jobs?limit=50` → `Job[]` newest first (in-memory ring, not persisted).
+
+## Streaming speech
+
+`POST /api/speak/stream` speaks one line and sends the audio while it is
+still being made, for game dialogue and chat agents. It is not a job: it
+holds the GPU while you listen, and closing the connection cancels it.
+Nothing is saved unless you pass `"save": true`.
+
+```json
+{ "model": "audiocpp-supertonic-3", "text": "Halt! Who goes there?",
+  "voice_id": null, "format": "sse", "save": false }
+```
+
+- `format: "sse"` (default): `event: start` (`sample_rate`, `channels`,
+  `encoding: "pcm_s16le"`), then `event: audio` with base64 PCM in `pcm`, then
+  `event: done` (`duration_s`, `ttft_ms`, `model_ttft_ms`, `sound_id`). A
+  failure after audio has started arrives as `event: error`.
+- `format: "pcm"`: raw interleaved 16-bit little-endian PCM,
+  `Content-Type: audio/L16; rate=…; channels=…`, with the same values in
+  `X-Soundbox-Sample-Rate` and `X-Soundbox-Channels`.
+- `409` with `reason: "unsupported"` when the model can't stream on this
+  audio.cpp build, or `reason: "busy"` (plus `Retry-After`) when a generation
+  holds the GPU. Streams never queue.
+- Which models stream is `supports.streaming` in `GET /api/models`.
+
+Full details, client examples and limits: [STREAMING.md](STREAMING.md).
+
+### Render and wait
+
+`POST /api/render` runs one job and holds the request open until it finishes,
+then answers with the audio itself. Use it when you want a file back from one
+call: a script, a render farm, or another Soundbox that has this one set up as
+a [custom endpoint](ENDPOINTS.md#another-soundbox).
+
+```sh
+curl -X POST http://127.0.0.1:17494/api/render   -H 'Content-Type: application/json'   -d '{"model": "audiocpp-stable-audio-3-sfx", "prompt": "door slam", "duration_s": 2}'   -o door.wav
+```
+
+The body is a `/api/generate` body, or a `/api/speak` body for speech. Speech
+also takes a one-line shorthand, `{ "model", "text", "voice"? }`, where
+`voice` is a saved voice's id or name (case does not matter). The route reads
+two fields of its own:
+
+- `task`: `"generate"` or `"speak"`. Omit it and a body with `text` or
+  `lines` is speech; anything else is a generation.
+- `keep`: `false` deletes the sound from this library once it has been sent,
+  for a server that only renders for others. Default `true`.
+
+A success is `200` with `Content-Type: audio/wav`, plus `X-Soundbox-Job-Id`
+and `X-Soundbox-Sound-Id` headers (the sound id is empty when `keep` is
+false). A render that fails is `500 { detail, failure, job_id }`, and one
+cancelled from the app is `409`. Bad input is `400` before anything runs,
+including `variations` above 1 and `separate`, since the answer is one file.
+A full queue is `429`.
+
+The job goes through the same queue as the app's, so the wait includes any
+jobs ahead of it, and it shows in the app's queue while it runs. If the caller
+disconnects before it finishes, the job is cancelled.
+
+Some proxies cut a request that waits too long; a GPU host's HTTP proxy often
+allows about 100 seconds. For longer renders behind one of those, use
+`/api/generate` and follow the job instead.
 
 ## Logs
 

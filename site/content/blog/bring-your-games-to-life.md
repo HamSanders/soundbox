@@ -6,6 +6,7 @@ author: Anthony Saviano
 tags: [games, mcp, agents, godot]
 draft: true
 image: /blog/bring-your-games-to-life.jpg
+audio: /blog/audio/bring-your-games-to-life.mp3
 ---
 
 On 23 October I asked Claude Code to make the sounds for a small Godot

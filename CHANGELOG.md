@@ -6,13 +6,24 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **A daily update check, which you can turn off.** Once a day at most, a running Soundbox asks whether a newer version is out. The request carries the version and the platform and nothing else: no install ID, no account, no cookie. The project counts requests per day, version and platform to learn roughly how many copies run and on which versions. When there is a newer version, Settings and the sidebar say so and link to the release page; nothing is downloaded for you. Turn it off in Settings → Updates or with `SOUNDBOX_UPDATE_CHECK=0`, and no request is sent; the desktop app's installer prompt is skipped too. `docs/PRIVACY.md` lists everything the app sends on its own.
+- **Hosted providers with your own key.** Custom endpoints have presets for ElevenLabs sound effects, music and speech, and for ACE-Step on fal, used with your own account. The provider bills you directly, and Soundbox takes no cut. Endpoints can send the key in any header with any prefix, download audio from a link in a JSON answer, and put `{{voice}}` or `{{language}}` in the URL.
+- **An optional access token.** Set `SOUNDBOX_API_TOKEN` and every API, MCP and file request needs it, so a Soundbox on a rented GPU or a LAN box is no longer open to anyone who can reach its port. The web UI asks for the token once and stays signed in for 30 days; scripts and MCP clients send it as a bearer header, and the stdio bridge and CLI pick it up from the environment. The health check stays open, and wrong tokens are rate limited per address. Off by default, so a desktop install is unchanged.
+- **Streaming speech.** `POST /api/speak/stream` speaks a line and sends the audio while it's still being generated, as server-sent events or raw 16-bit PCM, for game dialogue and chat agents. Closing the connection cancels it; nothing is saved unless you ask. Models that can stream report `supports.streaming`, read from the audio.cpp build's own model specs. See `docs/STREAMING.md`.
+- **Render and wait.** `POST /api/render` runs one generation or speech job and answers with the WAV once it is done, so a single request gets a file back. If the caller hangs up, the job is cancelled. New **Another Soundbox** endpoint presets use it, so one Soundbox can send its renders to another one, such as a desktop with a bigger GPU.
+
 ### Changed
 - Pages that talk about a sound now let you play one: the home page's example chips (one real render each, with its prompt), the model cards and model pages, the MCP page's vault door, and a new "Hear a voice" section on the voices page. A new `scripts/check-examples.ts` checks each example still matches the SFX and music catalogues.
 - The home page's first screen has a Download button that names your system (Windows, Mac or Intel Mac) and links straight to that installer, with the version and size under it. A row of all three installers, with yours marked, sits in Getting started. A phone or Linux visitor gets a plain Download link to the download page.
 - A new look for the app and the site: warm paper by day and dark grey at dusk, with one accent, a beak yellow that marks where sound is playing. The mark and app icon are a one-line M (a sound wave that turns into the letter). Titles are Big Shoulders Display in capitals, labels and readouts are typewritten in Courier Prime, corners are soft and buttons are pills.
+- Every blog post can be listened to, read by a new, softer Soundbox voice (Bea, on Chatterbox). The post page has a Listen card, a player that docks to the bottom with 15-second skips and 0.75× to 2× speed, and a highlight that follows the paragraph being read; click a paragraph to jump to it.
 - The site's download page has a new design: a full-width hero, the Soundbox film in a frame that flattens as you scroll, live GitHub numbers and a card per installer.
 
 ### Fixed
+- The site opens each new page at the top instead of keeping the scroll position of the page you came from. A link with a `#section` still goes to that section, and the back button returns you to where you were.
+- Fish Audio S2 Pro cloning: save a Reference Transcript for each voice clip, pass the selected voice's transcripts in combined-audio order in Speak and Script Builder, and report missing transcripts before synthesis. Translate request options to audio.cpp's HTTP `options` map so the runtime receives them.
+- `soundbox ps` asked the server for `/models` instead of `/api/models`, so it always reported that no server was running.
 - Security: updated dependencies with open advisories: the system information library, the HTTP server adapter, and the desktop updater's zip support (Dependabot alerts).
 
 ## [0.4.1] - 2026-10-29

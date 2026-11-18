@@ -109,6 +109,10 @@ export interface ModelSupports {
    *  `--task-route repaint`). Drives the editor's Repaint tool, `/api/repaint`
    *  and the `repaint` edit on generate. */
   repaint: boolean;
+  /** Can speak a line as it is generated (`POST /api/speak/stream`). Read
+   *  from the running audio.cpp build's own model specs, so it is true only
+   *  where a streaming load will actually work. */
+  streaming: boolean;
 }
 
 export const DEFAULT_SUPPORTS: ModelSupports = {
@@ -122,6 +126,7 @@ export const DEFAULT_SUPPORTS: ModelSupports = {
   extend: false,
   cover: false,
   repaint: false,
+  streaming: false,
 };
 
 /** The audio-to-audio edits a `gen` model can run on a library sound. */
@@ -257,6 +262,8 @@ export interface Voice {
 /** One clip a clone voice was made from. */
 export interface VoiceSample {
   id: string;
+  /** Exact speech in this clip; null for older voices or an unknown transcript. */
+  reference_text?: string | null;
   /** Served path, `/files/<name>`. */
   file: string;
   /** Null for the clip of a voice saved before voices held several. */
@@ -739,6 +746,31 @@ export const speakRequestSchema = z.object({
 
 export type SpeakRequest = z.infer<typeof speakRequestSchema>;
 
+/**
+ * One utterance streamed as it is generated — `POST /api/speak/stream`.
+ *
+ * The same inputs as a single `/api/speak` line, minus what can't apply to a
+ * live read: no multi-line script, no `load_options` (a weights variant is
+ * chosen at load time). `format` picks the wire shape; `save` also writes the
+ * finished audio to the library.
+ */
+export const speakStreamRequestSchema = z.object({
+  model: z.string(),
+  text: z.string().min(1).max(5000),
+  voice_id: z.string().nullish(),
+  format: z.enum(["sse", "pcm"]).default("sse"),
+  seed: z.number().int().min(0).max(2 ** 31 - 1).nullish(),
+  steps: z.number().int().min(1).max(500).nullish(),
+  cfg: z.number().min(0).max(30).nullish(),
+  request_options: requestOptionsSchema.default({}),
+  save: z.boolean().default(false),
+  name: z.string().max(200).nullish(),
+  tags: z.array(z.string()).default([]).transform(normalizeTags),
+  project_id: z.string().nullish(),
+});
+
+export type SpeakStreamRequest = z.infer<typeof speakStreamRequestSchema>;
+
 /** Re-voice an existing library sound through a `--task vc` model. */
 export const convertRequestSchema = z.object({
   model: z.string(),
@@ -755,6 +787,8 @@ export const convertRequestSchema = z.object({
 
 export type ConvertRequest = z.infer<typeof convertRequestSchema>;
 
+const referenceTextSchema = z.string().max(20000).nullish();
+
 export const voiceCreateSchema = z.object({
   name: z.string().min(1).max(120),
   kind: z.enum(["clone", "builtin"]).default("clone"),
@@ -767,6 +801,7 @@ export const voiceCreateSchema = z.object({
   /** clone only: id of a library sound to use as the reference clip, as an
    *  alternative to uploading one. Lets a generated read become a voice. */
   source_sound_id: z.string().nullish(),
+  reference_text: referenceTextSchema,
   /** clone only: clean the clip up before saving — DC offset out, silence cut
    *  off both ends, an over-full-scale peak pulled back. Never boosts or
    *  re-tones it. Off by default so an API caller gets their bytes verbatim. */
@@ -779,6 +814,7 @@ export type VoiceCreate = z.input<typeof voiceCreateSchema>;
  *  from disk is a raw WAV body on the same route instead.) */
 export const voiceSampleCreateSchema = z.object({
   source_sound_id: z.string(),
+  reference_text: referenceTextSchema,
   tidy: z.boolean().default(false),
 });
 
@@ -802,7 +838,11 @@ export const voiceExportSchema = z.object({
     notes: z.string().max(2000).nullish(),
   }),
   samples: z
-    .array(z.object({ wav_base64: z.string().min(1), duration_s: z.number().nullish() }))
+    .array(z.object({
+      wav_base64: z.string().min(1),
+      duration_s: z.number().nullish(),
+      reference_text: referenceTextSchema,
+    }))
     .max(5)
     .default([]),
 });
@@ -812,6 +852,9 @@ export type VoiceExport = z.infer<typeof voiceExportSchema>;
 export const voicePatchSchema = z.object({
   name: z.string().min(1).max(120).optional(),
   notes: z.string().max(2000).nullish(),
+  /** Update transcripts by sample id, without changing the audio or its order. */
+  samples: z.array(z.object({ id: z.string(), reference_text: referenceTextSchema }))
+    .max(5).optional(),
 });
 
 export type VoicePatch = z.infer<typeof voicePatchSchema>;
@@ -1178,6 +1221,7 @@ export const settingsPatchSchema = z.object({
   image_external_model: z.string().nullish(),
   image_external_api_key: z.string().nullish(),
   image_auto_artwork: z.boolean().nullish(),
+  update_check: z.boolean().nullish(),
   // ISO timestamp when first-run setup was finished or skipped. "" clears it,
   // the `sounds_dir` convention — see `Config.updateSettings`.
   onboarded_at: z.string().nullish(),
@@ -1198,6 +1242,15 @@ export const audioEndpointInputSchema = z.object({
     .url()
     .refine((u) => /^https?:\/\//i.test(u), "The URL must start with http:// or https://."),
   api_key: z.string().nullish(),
+  /** A header name: letters, digits and hyphens (an HTTP token, minus the
+   *  punctuation nobody uses in one). */
+  api_key_header: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9-]{1,64}$/, "The key header must be a header name, like Authorization or xi-api-key.")
+    .default("Authorization"),
+  /** Not trimmed: the space in "Bearer " is part of it. */
+  api_key_prefix: z.string().max(32).default("Bearer "),
   headers: z.record(z.string(), z.string()).default({}),
   body_template: z.string().min(2).max(20_000),
   response_path: z.string().trim().max(200).default(""),

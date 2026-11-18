@@ -54,6 +54,8 @@ export interface ModelSupports {
   /** Can regenerate a time window inside an existing sound — the editor's
    *  Repaint tool, over whatever range is highlighted. */
   repaint: boolean;
+  /** Can speak a line as it is generated — `POST /api/speak/stream`. */
+  streaming?: boolean;
 }
 
 /** The audio-to-audio edits a generation model can run on a library sound. */
@@ -233,6 +235,7 @@ export interface Voice {
 /** One clip a clone voice is made from. */
 export interface VoiceSample {
   id: string;
+  reference_text?: string | null;
   /** Served URL, playable directly. */
   file: string;
   /** Null for the clip of a voice saved before voices held several. */
@@ -252,6 +255,7 @@ export interface VoiceExportFile {
 
 export interface VoiceCreate {
   name: string;
+  reference_text?: string | null;
   kind?: "clone" | "builtin";
   voice_id?: string | null;
   model_id?: string | null;
@@ -266,6 +270,7 @@ export interface VoiceCreate {
 export interface VoicePatch {
   name?: string;
   notes?: string | null;
+  samples?: { id: string; reference_text?: string | null }[];
 }
 
 /** One speaker's turn. `voice_id` is a saved Voice's id, or null for the
@@ -442,12 +447,18 @@ export interface AudioEndpoint {
   id: string;
   name: string;
   task: "sfx" | "music" | "speech";
+  /** May hold `{{voice}}` or `{{language}}`, filled URL-encoded. */
   url: string;
   api_key_set: boolean;
+  /** The header the key goes in and what precedes it there:
+   *  `Authorization` + `Bearer ` by default. */
+  api_key_header: string;
+  api_key_prefix: string;
   headers: Record<string, string>;
   /** JSON with `{{variable}}` placeholders. */
   body_template: string;
-  /** Dotted path to base64 audio in a JSON response; "" for a raw audio body. */
+  /** Dotted path to base64 audio, or a link to it, in a JSON response; "" for
+   *  a raw audio body. */
   response_path: string;
   pcm_sample_rate: number;
   max_duration_s: number;
@@ -466,6 +477,9 @@ export interface EndpointPreset {
   label: string;
   hint: string;
   docs_url: string;
+  /** A paid service used with the user's own key, billed by its provider. */
+  hosted: boolean;
+  pricing_url: string;
   endpoint: Omit<AudioEndpoint, "id" | "name" | "api_key_set" | "enabled">;
 }
 
@@ -1180,6 +1194,25 @@ export interface Settings {
    *  for a profile that has never been through it. What gates the onboarding
    *  wizard — see `lib/onboarding.ts`. */
   onboarded_at: string | null;
+  /** Ask once a day whether a newer version exists. See Settings → Updates. */
+  update_check: boolean;
+}
+
+/** What the daily update check knows. See Settings → Updates. */
+export interface UpdateStatus {
+  /** False when the check is off, in Settings or by SOUNDBOX_UPDATE_CHECK=0. */
+  enabled: boolean;
+  disabled_by: "env" | "setting" | null;
+  current: string;
+  latest: string | null;
+  /** `latest` is newer than `current` (and the check is on). */
+  available: boolean;
+  /** The release page for `latest`, always on github.com. */
+  url: string | null;
+  checked_at: string | null;
+  /** Where the request goes, so the page can say so. */
+  endpoint: string;
+  error: string | null;
 }
 
 /** `hf_token` is write-only — the server never echoes it back. */
@@ -1218,6 +1251,7 @@ export interface SettingsPatch {
   /** Mark first-run setup done (an ISO timestamp) or, with "", undo it so the
    *  wizard opens again. */
   onboarded_at?: string;
+  update_check?: boolean;
 }
 
 /**
@@ -1493,6 +1527,11 @@ export interface AudioCppRuntimeStatus {
 
 export interface SoundboxApi {
   getHealth(): Promise<HealthStatus>;
+  /** Whether this server wants an access token, and whether we have it. */
+  getAuthStatus(): Promise<AuthStatus>;
+  /** Trade the access token for a session cookie. */
+  signIn(token: string): Promise<void>;
+  signOut(): Promise<void>;
   listModels(): Promise<Model[]>;
   listAudioCppCatalog(): Promise<AudioCppCatalogEntry[]>;
   getAudioCppRuntime(): Promise<AudioCppRuntimeStatus>;
@@ -1607,6 +1646,7 @@ export interface SoundboxApi {
     notes?: string | null,
     modelId?: string | null,
     tidy?: boolean,
+    referenceText?: string | null,
   ): Promise<Voice>;
   /** Add a clip to a clone voice: a WAV from disk or the mic, or a library
    *  sound by id. Returns the voice with its new clip list. */
@@ -1614,6 +1654,7 @@ export interface SoundboxApi {
     voiceId: string,
     source: { file: Blob } | { sourceSoundId: string },
     tidy?: boolean,
+    referenceText?: string | null,
   ): Promise<Voice>;
   /** Remove one clip. The server refuses to remove a voice's last one. */
   deleteVoiceSample(voiceId: string, sampleId: string): Promise<Voice>;
@@ -1638,6 +1679,9 @@ export interface SoundboxApi {
   browseDirectories(path?: string | null): Promise<DirectoryListing>;
   getSettings(): Promise<Settings>;
   updateSettings(patch: SettingsPatch): Promise<Settings>;
+  getUpdateStatus(): Promise<UpdateStatus>;
+  /** Ask now, whatever the once-a-day throttle says. A no-op when the check is off. */
+  checkForUpdate(): Promise<UpdateStatus>;
   listProfiles(): Promise<ProfileList>;
   /** Creates without switching — making a library and opening it are separate
    *  decisions. */
@@ -1684,6 +1728,17 @@ export interface SoundboxApi {
   installSkills(req: SkillInstallRequest): Promise<SkillInstallResult>;
 }
 
+/** `GET /api/auth/status`. `required` is false when the server has no
+ *  access token set, which is the default on a desktop. */
+export interface AuthStatus {
+  required: boolean;
+  signed_in: boolean;
+}
+
+/** Fired on `window` when any request comes back 401: the session cookie has
+ *  expired, or the token was changed. The sign-in gate listens for it. */
+export const AUTH_REQUIRED_EVENT = "soundbox:auth-required";
+
 /* ------------------------------------------------------------- transport */
 
 export class ApiError extends Error {
@@ -1717,6 +1772,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       "Could not reach the Soundbox backend. Is the server running?",
       0,
     );
+  }
+  if (res.status === 401 && !path.startsWith("/api/auth/")) {
+    window.dispatchEvent(new Event(AUTH_REQUIRED_EVENT));
   }
   if (!res.ok) {
     let detail = `${res.status} ${res.statusText}`;
@@ -1760,6 +1818,10 @@ const POLL_INTERVAL_MS = 750;
 
 export const httpApi: SoundboxApi = {
   getHealth: () => request<HealthStatus>("/api/health"),
+  getAuthStatus: () => request<AuthStatus>("/api/auth/status"),
+  signIn: (token) =>
+    request<void>("/api/auth/login", { method: "POST", body: JSON.stringify({ token }) }),
+  signOut: () => request<void>("/api/auth/logout", { method: "POST" }),
 
   listModels: () => request<Model[]>("/api/models"),
 
@@ -2080,12 +2142,13 @@ export const httpApi: SoundboxApi = {
 
   // The WAV is the whole body, so the name/notes ride as query params and the
   // Content-Type override stops `request` from labelling the bytes as JSON.
-  uploadVoice: (name, file, notes, modelId, tidy) =>
+  uploadVoice: (name, file, notes, modelId, tidy, referenceText) =>
     request<Voice>(
       `/api/voices/upload${qs({
         name,
         notes: notes ?? undefined,
         model_id: modelId ?? undefined,
+        reference_text: referenceText ?? undefined,
         tidy: tidy ? "true" : undefined,
       })}`,
       {
@@ -2115,10 +2178,11 @@ export const httpApi: SoundboxApi = {
     request<void>(`/api/voices/${encodeURIComponent(id)}`, { method: "DELETE" }),
 
   // One route, two bodies: raw WAV like uploadVoice, or JSON naming a sound.
-  addVoiceSample: (voiceId, source, tidy) => {
+  addVoiceSample: (voiceId, source, tidy, referenceText) => {
     const path = `/api/voices/${encodeURIComponent(voiceId)}/samples`;
     if ("file" in source) {
-      return request<Voice>(`${path}${qs({ tidy: tidy ? "true" : undefined })}`, {
+      return request<Voice>(`${path}${qs({ tidy: tidy ? "true" : undefined,
+        reference_text: referenceText ?? undefined })}`, {
         method: "POST",
         body: source.file,
         headers: { "Content-Type": "audio/wav" },
@@ -2126,7 +2190,8 @@ export const httpApi: SoundboxApi = {
     }
     return request<Voice>(path, {
       method: "POST",
-      body: JSON.stringify({ source_sound_id: source.sourceSoundId, tidy: tidy ?? false }),
+      body: JSON.stringify({ source_sound_id: source.sourceSoundId, tidy: tidy ?? false,
+        reference_text: referenceText }),
     });
   },
 
@@ -2160,6 +2225,10 @@ export const httpApi: SoundboxApi = {
       method: "PATCH",
       body: JSON.stringify(patch),
     }),
+
+  getUpdateStatus: () => request<UpdateStatus>("/api/update"),
+
+  checkForUpdate: () => request<UpdateStatus>("/api/update/check", { method: "POST" }),
 
   listProfiles: () => request<ProfileList>("/api/profiles"),
 

@@ -165,7 +165,10 @@ An installed copy checks the newest published GitHub Release once per launch,
 after the server is up. When a newer version exists it asks; **Install and
 restart** downloads it, stops the server, installs and restarts. **Later**
 asks again next launch. A failed check (offline, rate-limited) is logged and
-otherwise ignored. A checkout run with `npm run desktop` never checks.
+otherwise ignored. A checkout run with `npm run desktop` never checks. **Settings → Updates →
+Check for updates** turns the check off, and with it off the app asks nobody,
+GitHub included. The server's own daily version check is described in
+[PRIVACY.md](./PRIVACY.md).
 
 Updates replace the app only. Models and projects live in the data directory
 and are kept.

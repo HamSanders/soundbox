@@ -197,9 +197,10 @@ To build from the checkout instead, add `-f docker-compose.build.yml`
 (and `-f docker-compose.build-cuda.yml` for CUDA) and `--build`; see
 [docs/INSTALL.md](docs/INSTALL.md#docker).
 
-There is no authentication, so keep the port on localhost or behind a reverse
-proxy that has some, and set `SOUNDBOX_ALLOWED_HOSTS` to the name you reach it
-by. Details are in [docs/INSTALL.md](docs/INSTALL.md#docker).
+There is no authentication unless you set `SOUNDBOX_API_TOKEN`, so keep the
+port on localhost, or set a token and serve it over HTTPS, and set
+`SOUNDBOX_ALLOWED_HOSTS` to the name you reach it by. Details are in
+[docs/INSTALL.md](docs/INSTALL.md#access-token).
 
 **HTTP API.** Everything the app does is available on port 17494:
 
@@ -240,6 +241,16 @@ a Mac yet, so reports are welcome.
 
 **How do I remove it?** Delete the app and `~/.soundbox`. There is no account
 to close and nothing was uploaded.
+
+## Star history
+
+<a href="https://www.star-history.com/#HamSanders/soundbox&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=HamSanders/soundbox&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=HamSanders/soundbox&type=Date" />
+   <img alt="Star history chart for HamSanders/soundbox" src="https://api.star-history.com/svg?repos=HamSanders/soundbox&type=Date" />
+ </picture>
+</a>
 
 ## Licence
 

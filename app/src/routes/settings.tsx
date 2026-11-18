@@ -31,6 +31,7 @@ import { EndpointSettingsCard } from "@/components/endpoint-settings";
 import { FolderPickerDialog } from "@/components/folder-picker";
 import { SettingsLayout, SettingsSection } from "@/components/settings-layout";
 import { OutputDeviceCard } from "@/components/output-device-card";
+import { UpdateSettingsCard } from "@/components/update-settings";
 import { useUiPrefs } from "@/lib/ui-prefs";
 import {
   useAudioCppRuntime,
@@ -707,6 +708,10 @@ export function SettingsPage() {
 
       <SettingsSection id="interface" title="Interface">
         <InterfaceCard />
+      </SettingsSection>
+
+      <SettingsSection id="updates" title="Updates">
+        <UpdateSettingsCard />
       </SettingsSection>
 
       <SettingsSection id="advanced" title="Advanced">

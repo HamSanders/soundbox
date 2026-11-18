@@ -5,7 +5,7 @@
  * lists the run `modes` the family implements. That is the authority on
  * whether a streaming load will work, so `supports.streaming` comes from it
  * rather than a hand-kept list that drifts every upstream release. A user's
- * own build (`SOUNDBOX_AUDIOCPP_BIN`) answers for itself the same way.
+ * own build (`MIRLI_AUDIOCPP_BIN`) answers for itself the same way.
  *
  * `describe()` is synchronous, so the answer is cached: `refresh` reads the
  * folder (async, cheap, once per binary path) and `knownStreaming` reports

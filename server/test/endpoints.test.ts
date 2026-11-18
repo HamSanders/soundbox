@@ -455,7 +455,7 @@ describe("custom endpoints through the API", () => {
     expect(received[0]!.xi).toBe("el-secret");
     expect(received[0]!.auth).toBeUndefined();
     // No seed and no language on a test render, so both fields are left out.
-    expect(received[0]!.body).toEqual({ text: "This is a test of the Soundbox endpoint.", model_id: "eleven_multilingual_v2" });
+    expect(received[0]!.body).toEqual({ text: "This is a test of the Mirli endpoint.", model_id: "eleven_multilingual_v2" });
   });
 
   it("refuses a prompt in the URL", async () => {

@@ -2,7 +2,7 @@
 /**
  * Stdio MCP bridge for clients that cannot speak streamable HTTP.
  *
- * This does NOT load models. It is a thin proxy onto a running Soundbox server —
+ * This does NOT load models. It is a thin proxy onto a running Mirli server —
  * one GPU, one process holding the weights. If the server isn't running, tools
  * return an actionable error rather than silently starting a second copy.
  *
@@ -32,11 +32,12 @@ import { bearerHeaders } from "../auth.js";
 import { DEFAULT_HOST, DEFAULT_PORT, VERSION } from "../config.js";
 import { ProgressReporter } from "./progress.js";
 import { MCP_INSTRUCTIONS } from "./server.js";
+import { envVar } from "../env.js";
 
-const BASE_URL = process.env.SOUNDBOX_URL || `http://${DEFAULT_HOST}:${DEFAULT_PORT}`;
+const BASE_URL = envVar("MIRLI_URL") || `http://${DEFAULT_HOST}:${DEFAULT_PORT}`;
 const NOT_RUNNING =
-  `Cannot reach the Soundbox server at ${BASE_URL}. Start it with \`npx soundbox\` ` +
-  `(or open the Soundbox app), then try again. Set SOUNDBOX_URL if it listens elsewhere.`;
+  `Cannot reach the Mirli server at ${BASE_URL}. Start it with \`npx soundbox\` ` +
+  `(or open the Mirli app), then try again. Set MIRLI_URL if it listens elsewhere.`;
 
 /** Generation is slow by nature; a short timeout here would look like a bug. */
 const REQUEST_TIMEOUT_MS = 900_000;
@@ -56,7 +57,7 @@ async function request(
       method,
       // X-Soundbox marks this as a deliberate API call — the server refuses
       // body-less mutating requests without it (CSRF defence, see app.ts).
-      // The bearer token too, when SOUNDBOX_API_TOKEN is set for a server
+      // The bearer token too, when MIRLI_API_TOKEN is set for a server
       // that requires one (auth.ts).
       headers:
         opts.json === undefined
@@ -78,7 +79,7 @@ async function request(
     } catch {
       /* not JSON — use the raw text */
     }
-    throw new Error(`Soundbox error (${response.status}): ${detail}`);
+    throw new Error(`Mirli error (${response.status}): ${detail}`);
   }
   if (response.status === 204) return null;
   return await response.json();
@@ -138,7 +139,7 @@ function json(payload: unknown): CallToolResult {
 
 export function build(): McpServer {
   const mcp = new McpServer(
-    { name: "soundbox", version: VERSION },
+    { name: "mirli", version: VERSION },
     { instructions: MCP_INSTRUCTIONS },
   );
 
@@ -186,7 +187,7 @@ export function build(): McpServer {
     "soundbox.generate",
     {
       title: "Generate a sound effect",
-      description: "Generate sound effects and save them to the Soundbox library.",
+      description: "Generate sound effects and save them to the Mirli library.",
       inputSchema: {
         prompt: z
           .string()
@@ -257,7 +258,7 @@ export function build(): McpServer {
             );
             if (!ready.length) {
               throw new Error(
-                "No model is installed. Open Soundbox and download one from the " +
+                "No model is installed. Open Mirli and download one from the " +
                   "Models tab first.",
               );
             }

@@ -19,10 +19,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { Config } from "../src/config.js";
 import { buildMcp } from "../src/mcp/server.js";
-import { SoundboxService } from "../src/service.js";
+import { MirliService } from "../src/service.js";
 
 let client: Client;
-let svc: SoundboxService;
+let svc: MirliService;
 let dataDir: string;
 
 async function call(name: string, args: Record<string, unknown>): Promise<any> {
@@ -37,7 +37,7 @@ async function call(name: string, args: Record<string, unknown>): Promise<any> {
 
 beforeAll(async () => {
   dataDir = await mkdtemp(join(tmpdir(), "soundbox-mcp-separate-"));
-  svc = new SoundboxService(new Config(dataDir));
+  svc = new MirliService(new Config(dataDir));
   const server = buildMcp(() => svc);
   client = new Client({ name: "test", version: "0" });
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();

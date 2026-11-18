@@ -62,7 +62,7 @@ export function soundDownloadName(name: string, format: "wav" | "mp3" | undefine
  *
  * A plain `<a href>` can't be used for this: the browser's own navigation
  * can't read response headers, so there would be no way to tell a real mp3
- * from the server's silent wav fallback (Soundbox doesn't bundle ffmpeg, so
+ * from the server's silent wav fallback (Mirli doesn't bundle ffmpeg, so
  * that fallback is common). Fetching manually lets us check
  * X-Soundbox-Format-Fallback and say so, instead of handing over a .mp3
  * filename that's actually a wav with no explanation.

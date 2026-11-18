@@ -7,7 +7,7 @@
  *
  * It used to be "any http://localhost:* or 127.0.0.1:* page", on the theory
  * that only local things can reach a local server. But plenty of local things
- * are not Soundbox — another app's dev server, a local web tool, anything a
+ * are not Mirli — another app's dev server, a local web tool, anything a
  * browser extension opens on localhost — and that rule let every one of them
  * read the library and drive generation. The trusted set is now just:
  *
@@ -16,16 +16,18 @@
  *     including inside the desktop shell, whose webview is pointed straight
  *     at `http://127.0.0.1:<port>` (the Tauri splash page never calls the
  *     API). The Host header is itself checked in app.ts (loopback, the bound
- *     host, SOUNDBOX_ALLOWED_HOSTS), so a rebinding page can't satisfy this
+ *     host, MIRLI_ALLOWED_HOSTS), so a rebinding page can't satisfy this
  *     by naming its own domain.
  *   - the Vite dev server: `npm run dev` serves the UI on 5174 (or `PORT`)
  *     and proxies `/api`, `/mcp` and `/files` here with `changeOrigin`, so
  *     those requests arrive with Host rewritten to ours but Origin still
  *     naming the dev server.
- *   - origins whose host is listed in SOUNDBOX_ALLOWED_HOSTS — the existing
+ *   - origins whose host is listed in MIRLI_ALLOWED_HOSTS — the existing
  *     opt-in for serving beyond loopback, which is also where a UI hosted on
  *     that name would load from.
  */
+
+import { envVar } from "./env.js";
 
 /** The ports the Vite dev server serves the UI on: its configured default
  *  (app/vite.config.ts) and whatever `PORT` overrides it with — `npm run dev`
@@ -60,10 +62,10 @@ export function hostnameOf(hostHeader: string): string {
   return h;
 }
 
-/** SOUNDBOX_ALLOWED_HOSTS, comma-separated `host` or `host:port` values,
+/** MIRLI_ALLOWED_HOSTS, comma-separated `host` or `host:port` values,
  *  lower-cased. */
 export function allowedHostEntries(): string[] {
-  return (process.env.SOUNDBOX_ALLOWED_HOSTS ?? "")
+  return (envVar("MIRLI_ALLOWED_HOSTS") ?? "")
     .split(",")
     .map((h) => h.trim().toLowerCase())
     .filter(Boolean);
@@ -71,7 +73,7 @@ export function allowedHostEntries(): string[] {
 
 /**
  * Whether a `host[:port]` value (a Host header, or an Origin's host) is listed
- * in SOUNDBOX_ALLOWED_HOSTS. A bare `host` entry matches that name on any
+ * in MIRLI_ALLOWED_HOSTS. A bare `host` entry matches that name on any
  * port; a `host:port` entry matches only that port. The Host-header check in
  * app.ts, the MCP endpoint's Host check and the origin rule below all use it.
  */

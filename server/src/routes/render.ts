@@ -3,7 +3,7 @@
  *
  * The job routes return a job id at once and leave the caller to follow it.
  * That suits the app, which shows progress, but not a client that wants a
- * file back from one request: a script, a render farm, or another Soundbox
+ * file back from one request: a script, a render farm, or another Mirli
  * that has this one set up as a custom endpoint (endpoints/). This route
  * holds the request open until the job finishes, so this server's models
  * become a single URL that any HTTP client can call.
@@ -26,7 +26,7 @@ import {
   type GenerateRequest,
   type SpeakRequest,
 } from "../schemas.js";
-import type { SoundboxService } from "../service.js";
+import type { MirliService } from "../service.js";
 import { HttpError } from "./helpers.js";
 
 const TERMINAL = new Set(["done", "error", "cancelled"]);
@@ -52,7 +52,7 @@ const speakShorthandSchema = z.object({
   lines: z.array(scriptLineSchema).min(1).max(200).nullish(),
 });
 
-export function registerRender(app: FastifyInstance, svc: SoundboxService): void {
+export function registerRender(app: FastifyInstance, svc: MirliService): void {
   // This route is the one meant to face other machines, and each call holds
   // a GPU job and a whole WAV in memory, so it is rate-limited per client.
   // Generous enough for a render farm; the queue's own cap (429) still holds.
@@ -118,7 +118,7 @@ function generateRequest(body: Record<string, unknown>): GenerateRequest {
 }
 
 /** `/api/speak`'s body, or the `text` + `voice` shorthand for one line. */
-function speakRequest(svc: SoundboxService, body: Record<string, unknown>): SpeakRequest {
+function speakRequest(svc: MirliService, body: Record<string, unknown>): SpeakRequest {
   const short = speakShorthandSchema.parse(body);
   if (short.lines && short.text) {
     throw new HttpError(400, "Send either text or lines, not both.");
@@ -133,7 +133,7 @@ function speakRequest(svc: SoundboxService, body: Record<string, unknown>): Spea
 
 /** A voice named by id or by name (case-insensitive), so an endpoint's voice
  *  list can carry the names people see in the Voice Lab. */
-function resolveVoice(svc: SoundboxService, voice: string | null): string | null {
+function resolveVoice(svc: MirliService, voice: string | null): string | null {
   if (!voice) return null;
   const voices = svc.listVoices();
   const found =
@@ -157,7 +157,7 @@ function soundOf(job: Job): string | null {
  * Returns null if the caller disconnects first, after cancelling the job:
  * a GPU on a rented box should not keep rendering for nobody.
  */
-async function waitFor(svc: SoundboxService, jobId: string, reply: FastifyReply): Promise<Job | null> {
+async function waitFor(svc: MirliService, jobId: string, reply: FastifyReply): Promise<Job | null> {
   const queue = svc.jobs.subscribe(jobId);
   let gone = false;
   const onClose = () => {

@@ -16,6 +16,7 @@ export default defineConfig({
     alias: { "@": fileURLToPath(new URL("../app/src", import.meta.url)) },
   },
   test: {
+    setupFiles: ["test/setup-env.ts"],
     reporters: report ? ["default", "github-actions", "junit", "json", "html"] : ["default"],
     outputFile: {
       junit: "test-results/junit.xml",

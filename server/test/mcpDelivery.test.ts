@@ -19,10 +19,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { Config } from "../src/config.js";
 import { buildMcp } from "../src/mcp/server.js";
-import { SoundboxService } from "../src/service.js";
+import { MirliService } from "../src/service.js";
 
 let client: Client;
-let svc: SoundboxService;
+let svc: MirliService;
 let dataDir: string;
 
 /** The tool's structured payload, which the SDK returns as JSON text. */
@@ -38,7 +38,7 @@ async function call(name: string, args: Record<string, unknown>): Promise<any> {
 
 beforeAll(async () => {
   dataDir = await mkdtemp(join(tmpdir(), "soundbox-mcp-delivery-"));
-  svc = new SoundboxService(new Config(dataDir));
+  svc = new MirliService(new Config(dataDir));
   // Every speech family is an opt-in catalog entry — a default install has no
   // TTS model at all — so enable the two this file reasons about.
   svc.updateSettings({

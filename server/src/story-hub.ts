@@ -20,7 +20,7 @@
 import { AsyncQueue } from "./jobs.js";
 import { getLogger } from "./logging.js";
 
-const log = getLogger("soundbox.stories");
+const log = getLogger("mirli.stories");
 
 export type StoryEvent =
   | { type: "changed" }

@@ -204,7 +204,7 @@ export class ImageService {
     if (mode === "off") {
       throw new ModelError(
         "Artwork is turned off. Turn it on in Settings — either install the local " +
-          "engine, or point Soundbox at an image server you already run.",
+          "engine, or point Mirli at an image server you already run.",
       );
     }
 
@@ -249,7 +249,7 @@ export class ImageService {
     if (binaryPath === null) {
       throw new ModelError(
         "The artwork engine (sd-server) isn't installed. Install it from Settings, or " +
-          `point Soundbox at your own build with ${sdBinary.BIN_ENV}.`,
+          `point Mirli at your own build with ${sdBinary.BIN_ENV}.`,
       );
     }
     // The catalog decides what loading this model means — one checkpoint, or

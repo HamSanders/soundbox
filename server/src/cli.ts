@@ -28,7 +28,7 @@ import { bearerHeaders, TOKEN_ENV, TokenError, tokenFromEnv } from "./auth.js";
 import * as skills from "./skills.js";
 import { writeWav } from "./audio/dsp.js";
 
-const log = getLogger("soundbox.cli");
+const log = getLogger("mirli.cli");
 
 /** `str(exc)` equivalent: the Python printed the exception message alone, and
  *  ModelError/InstallError messages are already written for a human. */
@@ -385,7 +385,7 @@ async function psMain(argv: string[]): Promise<number> {
     models = (await resp.json()) as typeof models;
   } catch (exc) {
     return fail(
-      `error: could not reach a running soundbox server at ${values.host}:${values.port} ` +
+      `error: could not reach a running Mirli server at ${values.host}:${values.port} ` +
         `(${message(exc)})`,
     );
   }
@@ -433,7 +433,7 @@ async function enhanceMain(argv: string[]): Promise<number> {
     return 0;
   } catch (exc) {
     return fail(
-      `error: could not reach a running soundbox server at ${values.host}:${values.port} ` +
+      `error: could not reach a running Mirli server at ${values.host}:${values.port} ` +
         `(${message(exc)})`,
     );
   }
@@ -444,14 +444,14 @@ async function enhanceMain(argv: string[]): Promise<number> {
 const USAGE = `usage: soundbox [--host HOST] [--port PORT] [--data-dir DIR] [--no-ui]
                 [--profile NAME] [--log-level LEVEL] [--version]
 
-Local sound-effects generation server (HTTP + MCP).
+Mirli: local sound-effects generation server (HTTP + MCP).
 
   --host       default ${DEFAULT_HOST}
   --port       default ${DEFAULT_PORT}
-  --data-dir   default ~/.soundbox
+  --data-dir   default ~/.mirli, or ~/.soundbox from an older install
   --profile    library to open (default: whichever was last active)
   --no-ui      serve the API only
-  --log-level  debug|info|warning|error|critical (default: SOUNDBOX_LOG_LEVEL,
+  --log-level  debug|info|warning|error|critical (default: MIRLI_LOG_LEVEL,
                else info)
 
 Also: \`soundbox model install audiocpp\` to install the audio.cpp runtime,
@@ -490,7 +490,7 @@ async function serveMain(argv: string[]): Promise<number> {
   const config = new Config(values["data-dir"], values.profile);
   setConfig(config);
 
-  // One file per instance, not per data directory. Two Soundbox processes
+  // One file per instance, not per data directory. Two Mirli processes
   // sharing a data dir would interleave their lines into one file — which looks
   // like duplicate output — while both trying to rotate it at 10MB, which is a
   // genuine race over the rename.
@@ -500,7 +500,7 @@ async function serveMain(argv: string[]): Promise<number> {
   if (logLevel.invalid !== null) {
     log.warning(
       `Unknown log level "${logLevel.invalid}" from ` +
-        `${logLevel.source === "flag" ? "--log-level" : "SOUNDBOX_LOG_LEVEL"}; using info. ` +
+        `${logLevel.source === "flag" ? "--log-level" : "MIRLI_LOG_LEVEL"}; using info. ` +
         `Valid levels: ${LOG_LEVELS.join(", ")}.`,
     );
   }
@@ -517,7 +517,7 @@ async function serveMain(argv: string[]): Promise<number> {
   }
   if (!["127.0.0.1", "localhost", "::1"].includes(host) && !apiToken) {
     log.warning(
-      `Binding ${host} exposes Soundbox beyond this machine, and no access token is set; ` +
+      `Binding ${host} exposes Mirli beyond this machine, and no access token is set; ` +
         `anyone who can reach this port can generate audio and read your library. ` +
         `Set ${TOKEN_ENV} to require one.`,
     );
@@ -532,7 +532,7 @@ async function serveMain(argv: string[]): Promise<number> {
     allowedHosts: wildcard ? "any" : [host],
     apiToken,
   });
-  console.log(`\n  Soundbox ${VERSION}  ->  http://${host}:${port}`);
+  console.log(`\n  Mirli ${VERSION}  ->  http://${host}:${port}`);
   console.log(`  MCP endpoint       ->  http://${host}:${port}/mcp`);
   console.log(`  Access token       ->  ${apiToken ? `required (${TOKEN_ENV})` : "none"}`);
   console.log(`  Profile            ->  ${config.profile}`);
@@ -540,7 +540,7 @@ async function serveMain(argv: string[]): Promise<number> {
   console.log(`  Log file           ->  ${logPath}`);
   console.log(
     `  Log level          ->  ${logLevel.level}` +
-      (logLevel.source === "env" && !logLevel.invalid ? " (SOUNDBOX_LOG_LEVEL)" : "") +
+      (logLevel.source === "env" && !logLevel.invalid ? " (MIRLI_LOG_LEVEL)" : "") +
       "\n",
   );
   await app.listen({ host, port });

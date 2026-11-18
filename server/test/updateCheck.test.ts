@@ -24,12 +24,12 @@ let dataDir: string;
 
 beforeEach(async () => {
   dataDir = await mkdtemp(join(tmpdir(), "soundbox-update-"));
-  delete process.env.SOUNDBOX_UPDATE_CHECK;
-  delete process.env.SOUNDBOX_UPDATE_URL;
+  delete process.env.MIRLI_UPDATE_CHECK;
+  delete process.env.MIRLI_UPDATE_URL;
 });
 
 afterEach(async () => {
-  delete process.env.SOUNDBOX_UPDATE_CHECK;
+  delete process.env.MIRLI_UPDATE_CHECK;
   await rm(dataDir, { recursive: true, force: true });
 });
 
@@ -84,8 +84,8 @@ describe("UpdateChecker", () => {
     expect(status).toMatchObject({ enabled: false, disabled_by: "setting", available: false });
   });
 
-  it("makes no request when SOUNDBOX_UPDATE_CHECK=0, whatever the setting says", async () => {
-    process.env.SOUNDBOX_UPDATE_CHECK = "0";
+  it("makes no request when MIRLI_UPDATE_CHECK=0, whatever the setting says", async () => {
+    process.env.MIRLI_UPDATE_CHECK = "0";
     const fetchFn = answer("9.9.9");
     const checker = new UpdateChecker(new Config(dataDir), { fetch: fetchFn as unknown as typeof fetch });
     const status = await checker.check();

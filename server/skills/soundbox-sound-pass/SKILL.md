@@ -1,9 +1,9 @@
 ---
 name: soundbox-sound-pass
-description: Do a full "sound pass" on a project — read the code/design of a game, app, video or prototype, derive the list of sound events it needs, generate every one through the Soundbox MCP server, drop the files into the project and wire them up. Use when the user says "add sound to my game", "it needs SFX", "do an audio pass", "make all the sounds for this", or hands you a project with silent interactions.
+description: Do a full "sound pass" on a project — read the code/design of a game, app, video or prototype, derive the list of sound events it needs, generate every one through the Mirli (formerly Soundbox) MCP server, drop the files into the project and wire them up. Use when the user says "add sound to my game", "it needs SFX", "do an audio pass", "make all the sounds for this", or hands you a project with silent interactions.
 ---
 
-# Soundbox: sound pass over a whole project
+# Mirli: sound pass over a whole project
 
 A sound pass is a batch job with judgement: find every moment that should make a
 sound, decide what it should sound like, generate it, and integrate it. Do it in
@@ -76,4 +76,4 @@ and re-run anything the model cut short. If a prompt errors, adjust per
 
 Give the user: the final table with file paths, model + licence used, what was
 skipped and why, and how to regenerate any single item (prompt + seed are in
-the Soundbox library, tagged with the project name).
+the Mirli library, tagged with the project name).

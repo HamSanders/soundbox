@@ -67,7 +67,7 @@ export function McpConnect({ origin }: { origin: string }) {
         soundbox: {
           command: "node",
           args: ["/absolute/path/to/soundbox/server/dist/mcp/stdio.js"],
-          env: { SOUNDBOX_URL: origin },
+          env: { MIRLI_URL: origin },
         },
       },
     },
@@ -194,7 +194,7 @@ export function McpConnect({ origin }: { origin: string }) {
           </p>
           <CopyBlock code={stdioConfig} language="json" label="Copy the stdio bridge config" />
           <Note>
-            <C>SOUNDBOX_URL</C> tells the bridge where the server is; it defaults to{" "}
+            <C>MIRLI_URL</C> tells the bridge where the server is; it defaults to{" "}
             <C>http://127.0.0.1:17494</C> and only needs setting if you moved the port. The path in{" "}
             <C>args</C> must be absolute, and must be the built{" "}
             <C>server/dist/mcp/stdio.js</C>. The Agents page prints it with the path already
@@ -454,7 +454,7 @@ export function McpDebugging({ origin }: { origin: string }) {
           arms DNS-rebinding protection with a localhost-only host allowlist. That is right for a
           local app, but it rejects requests arriving under any other hostname. That
           happens if you bound the server to <C>0.0.0.0</C> and connect by LAN address or container
-          name. Set <C>SOUNDBOX_ALLOWED_HOSTS</C> to a comma-separated list of the hosts you use.
+          name. Set <C>MIRLI_ALLOWED_HOSTS</C> to a comma-separated list of the hosts you use.
         </li>
         <li>
           <strong className="text-foreground">Check the URL has no trailing slash</strong> and that
@@ -464,7 +464,7 @@ export function McpDebugging({ origin }: { origin: string }) {
         <li>
           <strong className="text-foreground">stdio bridge.</strong> The bridge proxies to a
           running server, so both must be up. If the server is not on the
-          default port, set <C>SOUNDBOX_URL</C> in the client's <C>env</C> block{" "}
+          default port, set <C>MIRLI_URL</C> in the client's <C>env</C> block{" "}
           (<C>{origin}</C> for this instance).
         </li>
         <li>

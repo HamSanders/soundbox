@@ -24,7 +24,7 @@ import {
   voicePatchSchema,
   voiceSampleCreateSchema,
 } from "../schemas.js";
-import type { SoundboxService } from "../service.js";
+import type { MirliService } from "../service.js";
 import { HttpError, MAX_UPLOAD_BYTES, boolQuery, strQuery } from "./helpers.js";
 
 type IdParams = { Params: { voice_id: string } };
@@ -54,7 +54,7 @@ async function decodeUpload(body: unknown): Promise<{ audio: dsp.Audio; sampleRa
   }
 }
 
-export function registerVoices(app: FastifyInstance, svc: SoundboxService): void {
+export function registerVoices(app: FastifyInstance, svc: MirliService): void {
   // Buffer raw audio bodies for the upload route below. Registered here rather
   // than in app.ts because this is the only route that takes one.
   for (const mime of ["audio/wav", "audio/x-wav", "audio/wave", "application/octet-stream"]) {

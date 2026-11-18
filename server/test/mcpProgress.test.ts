@@ -26,7 +26,7 @@ import { Config } from "../src/config.js";
 import { ProgressReporter, type ProgressExtra } from "../src/mcp/progress.js";
 import { buildMcp } from "../src/mcp/server.js";
 import { build as buildStdio } from "../src/mcp/stdio.js";
-import { SoundboxService } from "../src/service.js";
+import { MirliService } from "../src/service.js";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -127,13 +127,13 @@ async function connect(server: McpServer): Promise<Client> {
 }
 
 describe("soundbox.generate over MCP", () => {
-  let svc: SoundboxService;
+  let svc: MirliService;
   let dataDir: string;
   let client: Client;
 
   beforeAll(async () => {
     dataDir = await mkdtemp(join(tmpdir(), "soundbox-mcp-progress-"));
-    svc = new SoundboxService(new Config(dataDir));
+    svc = new MirliService(new Config(dataDir));
     // A render that loads, samples and finishes over ~2.5 s, with no model.
     svc.submitGenerate = () =>
       svc.jobs.submit("generate", {}, async (h) => {

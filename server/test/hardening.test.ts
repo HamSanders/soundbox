@@ -146,24 +146,24 @@ describe("trusted origins", () => {
     expect(isTrustedOrigin("null")).toBe(false);
   });
 
-  it("matches SOUNDBOX_ALLOWED_HOSTS on the parsed host, not a suffix", () => {
-    process.env.SOUNDBOX_ALLOWED_HOSTS = "example.com";
+  it("matches MIRLI_ALLOWED_HOSTS on the parsed host, not a suffix", () => {
+    process.env.MIRLI_ALLOWED_HOSTS = "example.com";
     try {
       expect(isOriginAllowed("https://example.com")).toBe(true);
       expect(isOriginAllowed("https://evil-example.com")).toBe(false);
       expect(isOriginAllowed("https://example.com.evil.net")).toBe(false);
     } finally {
-      delete process.env.SOUNDBOX_ALLOWED_HOSTS;
+      delete process.env.MIRLI_ALLOWED_HOSTS;
     }
   });
 
-  it("holds a host:port entry in SOUNDBOX_ALLOWED_HOSTS to that port", () => {
-    process.env.SOUNDBOX_ALLOWED_HOSTS = "example.com:8443";
+  it("holds a host:port entry in MIRLI_ALLOWED_HOSTS to that port", () => {
+    process.env.MIRLI_ALLOWED_HOSTS = "example.com:8443";
     try {
       expect(isTrustedOrigin("https://example.com:8443")).toBe(true);
       expect(isTrustedOrigin("https://example.com")).toBe(false);
     } finally {
-      delete process.env.SOUNDBOX_ALLOWED_HOSTS;
+      delete process.env.MIRLI_ALLOWED_HOSTS;
     }
   });
 });

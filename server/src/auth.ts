@@ -1,17 +1,17 @@
 /**
- * An optional access token for a Soundbox reachable from other machines.
+ * An optional access token for a Mirli reachable from other machines.
  *
  * Off by default: on a desktop the server listens on loopback only, and the
  * Host and CSRF checks in app.ts are what keep a web page from driving it. On
  * a rented GPU, a LAN box or anything behind a public address those checks are
  * not enough, because anyone who can reach the port is a legitimate client as
- * far as they can tell. `SOUNDBOX_API_TOKEN` closes that gap.
+ * far as they can tell. `MIRLI_API_TOKEN` closes that gap.
  *
  * With a token set, every request to `/api/`, `/mcp`, `/files/` and
  * `/artwork/` must prove it knows the token, one of two ways:
  *
  *   - `Authorization: Bearer <token>`, for scripts, MCP clients, the stdio
- *     bridge and another Soundbox using this one as a custom endpoint.
+ *     bridge and another Mirli using this one as a custom endpoint.
  *   - A session cookie, for the browser UI. The sign-in screen posts the token
  *     once to `/api/auth/login`, which sets an HttpOnly, SameSite=Strict
  *     cookie. A cookie is the only thing EventSource, `<audio src>` and plain
@@ -30,8 +30,9 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { envVar } from "./env.js";
 
-export const TOKEN_ENV = "SOUNDBOX_API_TOKEN";
+export const TOKEN_ENV = "MIRLI_API_TOKEN";
 export const SESSION_COOKIE = "soundbox_session";
 /** Long enough that guessing it over the network is hopeless. */
 export const MIN_TOKEN_LENGTH = 16;
@@ -71,7 +72,7 @@ export class TokenError extends Error {}
  * server that looks protected and is not.
  */
 export function tokenFromEnv(env: NodeJS.ProcessEnv = process.env): string | null {
-  const raw = env[TOKEN_ENV]?.trim();
+  const raw = envVar(TOKEN_ENV, env)?.trim();
   if (!raw) return null;
   if (raw.length < MIN_TOKEN_LENGTH) {
     throw new TokenError(
@@ -198,7 +199,7 @@ export class AccessGuard {
       .header("WWW-Authenticate", 'Bearer realm="soundbox"')
       .send({
         detail:
-          "This Soundbox needs its access token. Sign in from the app, or send " +
+          "This Mirli needs its access token. Sign in from the app, or send " +
           "Authorization: Bearer <token>.",
       });
   }
@@ -219,7 +220,7 @@ export class AccessGuard {
     if (locked) return locked;
     if (typeof given !== "string" || !sameSecret(given.trim(), this.token)) {
       await this.recordFailure(request);
-      return reply.code(401).send({ detail: "That is not this Soundbox's access token." });
+      return reply.code(401).send({ detail: "That is not this Mirli's access token." });
     }
     return reply
       .header("Set-Cookie", this.cookie(request, this.session, SESSION_MAX_AGE_S))
@@ -271,6 +272,6 @@ export function registerAuth(app: FastifyInstance, guard: AccessGuard | null): v
  * the environment, nothing otherwise.
  */
 export function bearerHeaders(env: NodeJS.ProcessEnv = process.env): Record<string, string> {
-  const token = env[TOKEN_ENV]?.trim();
+  const token = envVar(TOKEN_ENV, env)?.trim();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }

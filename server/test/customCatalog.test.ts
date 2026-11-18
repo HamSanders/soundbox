@@ -7,14 +7,14 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 /**
  * The bring-your-own-model overlay: `<data dir>/models/custom.json`.
  *
- * `SOUNDBOX_DATA_DIR` is set before the module is imported so `userCatalogPath()`
+ * `MIRLI_DATA_DIR` is set before the module is imported so `userCatalogPath()`
  * resolves into a temp tree — the module reads the file lazily on each call, so
  * writing it mid-test is the whole point rather than a hazard.
  */
 
 let tmp: string;
 let customPath: string;
-const previousDataDir = process.env.SOUNDBOX_DATA_DIR;
+const previousDataDir = process.env.MIRLI_DATA_DIR;
 
 let audiocpp: typeof import("../src/models/audiocpp.js");
 
@@ -22,7 +22,7 @@ beforeAll(async () => {
   tmp = await mkdtemp(join(tmpdir(), "soundbox-custom-catalog-"));
   await mkdir(join(tmp, "models"), { recursive: true });
   customPath = join(tmp, "models", "custom.json");
-  process.env.SOUNDBOX_DATA_DIR = tmp;
+  process.env.MIRLI_DATA_DIR = tmp;
   audiocpp = await import("../src/models/audiocpp.js");
 });
 
@@ -32,8 +32,8 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  if (previousDataDir === undefined) delete process.env.SOUNDBOX_DATA_DIR;
-  else process.env.SOUNDBOX_DATA_DIR = previousDataDir;
+  if (previousDataDir === undefined) delete process.env.MIRLI_DATA_DIR;
+  else process.env.MIRLI_DATA_DIR = previousDataDir;
   await rm(tmp, { recursive: true, force: true });
 });
 

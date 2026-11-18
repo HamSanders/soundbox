@@ -22,10 +22,10 @@ import { buildApp } from "../src/app.js";
 import { Config } from "../src/config.js";
 import { defaultParams } from "../src/devices.js";
 import { buildMcp } from "../src/mcp/server.js";
-import type { SoundboxService } from "../src/service.js";
+import type { MirliService } from "../src/service.js";
 
 let app: FastifyInstance;
-let svc: SoundboxService;
+let svc: MirliService;
 let client: Client;
 let dataDir: string;
 
@@ -53,7 +53,7 @@ beforeAll(async () => {
   dataDir = await mkdtemp(join(tmpdir(), "soundbox-mcp-devices-"));
   app = buildApp(new Config(dataDir), { serveUi: false });
   await app.ready();
-  svc = (app as unknown as { soundbox: SoundboxService }).soundbox;
+  svc = (app as unknown as { soundbox: MirliService }).soundbox;
   const server = buildMcp(() => svc);
   client = new Client({ name: "test", version: "0" });
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();

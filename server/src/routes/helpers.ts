@@ -12,7 +12,7 @@ import type { AsyncQueue } from "../jobs.js";
 import { isTrustedOrigin } from "../origins.js";
 
 /** Cross-origin callers that are allowed: our own origin, the Vite dev
- *  server, and hosts named in SOUNDBOX_ALLOWED_HOSTS — see `origins.ts` for
+ *  server, and hosts named in MIRLI_ALLOWED_HOSTS — see `origins.ts` for
  *  why it is that list and not "anything on localhost". The server binds
  *  127.0.0.1 by default but can be told to listen elsewhere (`--host`), so
  *  "only local pages can reach it" is not something this check may assume. */

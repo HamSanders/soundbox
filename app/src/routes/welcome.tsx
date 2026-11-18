@@ -1030,6 +1030,49 @@ function Footer() {
               </Link>
             </li>
           </ul>
+          <h2 className="mt-6 text-sm font-semibold tracking-tight">Guides</h2>
+          <ul className="text-muted-foreground mt-3 space-y-2 text-sm">
+            <li>
+              <Link
+                to="/alternatives/elevenlabs"
+                className="hover:text-foreground focus-visible:ring-ring rounded focus-visible:ring-2 focus-visible:outline-none"
+              >
+                ElevenLabs alternative
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/alternatives/suno"
+                className="hover:text-foreground focus-visible:ring-ring rounded focus-visible:ring-2 focus-visible:outline-none"
+              >
+                Suno alternative
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/make/sound-effects"
+                className="hover:text-foreground focus-visible:ring-ring rounded focus-visible:ring-2 focus-visible:outline-none"
+              >
+                Sound effects generator
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/make/game-audio"
+                className="hover:text-foreground focus-visible:ring-ring rounded focus-visible:ring-2 focus-visible:outline-none"
+              >
+                Game audio
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/make/voiceovers"
+                className="hover:text-foreground focus-visible:ring-ring rounded focus-visible:ring-2 focus-visible:outline-none"
+              >
+                Text to speech and cloning
+              </Link>
+            </li>
+          </ul>
         </nav>
       </div>
     </footer>

@@ -1,9 +1,13 @@
 name: Pages
 
-# Publishes the marketing/docs site (site/) to GitHub Pages as a project site,
-# served at https://hamsanders.github.io/soundbox/. SITE_BASE sets Vite's `base`
-# and the router's basename; SITE_ORIGIN is the origin canonical, og:url and
-# RSS links are built from. See site/vite.config.ts.
+# The site lives at https://mirli.app (Vercel, see vercel.json). This keeps the
+# old GitHub Pages address, https://hamsanders.github.io/soundbox/, working as a
+# permanent redirect to it, so links and search standing carry over.
+#
+# It builds the site the way Vercel does, then scripts/pages-redirect.mjs swaps
+# every page for a stub with a canonical link and an instant meta refresh to the
+# same path on mirli.app (what Google accepts as a 301 from a static host).
+# Videos, images and other files stay, so hotlinked media keeps working.
 
 on:
   push:
@@ -41,8 +45,9 @@ jobs:
       - name: Build the site
         run: npm run site:build
         env:
-          SITE_BASE: /soundbox/
-          SITE_ORIGIN: https://hamsanders.github.io
+          SITE_ORIGIN: https://mirli.app
+      - name: Turn every page into a redirect to mirli.app
+        run: node scripts/pages-redirect.mjs site/dist https://mirli.app /soundbox/
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

@@ -121,6 +121,26 @@ These live in GitHub, not in the repo:
 - A `no-changelog` label.
 - The **updater key** secrets (below).
 
+## Update counts
+
+The app asks `https://mirli.app/api/update` once a day (see
+[PRIVACY.md](./PRIVACY.md)). The function in `api/update.ts` deploys with the
+site on Vercel and adds one to a Redis hash per request:
+`installs:<date>` → `<version>|<platform>` = count.
+
+To turn counting on, add an Upstash Redis store to the Vercel project
+(Marketplace → Upstash) and let it set `UPSTASH_REDIS_REST_URL` and
+`UPSTASH_REDIS_REST_TOKEN` (the `KV_REST_API_*` names work too). Without them
+the endpoint still answers and counts nothing. Read a day back with
+`HGETALL installs:2026-11-17`. Keys expire after about 400 days.
+
+Counts are requests, not people: with no install ID, a copy that runs for a
+week is about seven counts, and anyone can send junk that passes validation.
+Treat them as a trend by version.
+
+Check the deploy with `curl "https://mirli.app/api/update?v=0.4.1&p=win32-x64"`:
+it should answer `{"latest":"…","url":"…"}`.
+
 ## Updater key
 
 Installed copies update themselves (see [DESKTOP.md](./DESKTOP.md#updates)).

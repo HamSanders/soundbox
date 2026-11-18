@@ -34,6 +34,7 @@ import {
   type Model,
   type GenerateRequest,
   type HealthStatus,
+  type UpdateStatus,
   type Job,
   type JobRef,
   type ImageStatus,
@@ -73,6 +74,7 @@ import {
 
 export const qk = {
   health: ["health"] as const,
+  update: ["update"] as const,
   jobs: ["jobs"] as const,
   models: ["models"] as const,
   audiocppCatalog: ["audiocpp-catalog"] as const,
@@ -127,6 +129,30 @@ export function useHealth(): UseQueryResult<HealthStatus> {
     queryFn: () => api.getHealth(),
     refetchInterval: 5000,
     retry: false,
+  });
+}
+
+/**
+ * What the daily update check last learned. Read, never triggered: the server
+ * does the asking on its own schedule, so this polls only its answer, and
+ * rarely.
+ */
+export function useUpdateStatus(): UseQueryResult<UpdateStatus> {
+  return useQuery({
+    queryKey: qk.update,
+    queryFn: () => api.getUpdateStatus(),
+    refetchInterval: 30 * 60 * 1000,
+    retry: false,
+  });
+}
+
+/** The "Check now" button. */
+export function useCheckForUpdate() {
+  const qc = useQueryClient();
+  return useMutation<UpdateStatus, Error, void>({
+    mutationFn: () => api.checkForUpdate(),
+    onError: fail("Could not check for updates"),
+    onSuccess: (next) => qc.setQueryData(qk.update, next),
   });
 }
 
@@ -1282,6 +1308,8 @@ export function useUpdateSettings() {
     onError: fail("Could not save settings"),
     onSuccess: (next) => {
       qc.setQueryData(qk.settings, next);
+      // Turning the check on or off changes what the update row may show.
+      void qc.invalidateQueries({ queryKey: qk.update });
       toast.success("Settings saved");
     },
   });

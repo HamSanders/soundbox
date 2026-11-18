@@ -24,6 +24,12 @@ export function registerSettings(app: FastifyInstance, svc: SoundboxService): vo
     return svc.updateSettings(patch);
   });
 
+  /** What the daily update check last learned, and whether it is on. */
+  app.get("/api/update", async () => svc.updates.status());
+
+  /** Ask now (the "Check now" button). Does nothing when the check is off. */
+  app.post("/api/update/check", async () => svc.updates.check());
+
   /**
    * Tail of the persistent log file (see docs/INSTALL.md#troubleshooting).
    *

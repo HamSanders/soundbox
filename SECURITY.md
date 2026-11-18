@@ -24,6 +24,11 @@ reproduce, and what an attacker gains. You will get an acknowledgement in the
 advisory thread, and the fix and any credit are coordinated there before
 anything is disclosed publicly.
 
+## Privacy
+
+What the app sends on its own, and how to turn it off, is listed in
+[docs/PRIVACY.md](./docs/PRIVACY.md).
+
 ## Threat model
 
 Soundbox is a single-user, local application. Its security rests on the

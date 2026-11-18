@@ -1194,6 +1194,25 @@ export interface Settings {
    *  for a profile that has never been through it. What gates the onboarding
    *  wizard — see `lib/onboarding.ts`. */
   onboarded_at: string | null;
+  /** Ask once a day whether a newer version exists. See Settings → Updates. */
+  update_check: boolean;
+}
+
+/** What the daily update check knows. See Settings → Updates. */
+export interface UpdateStatus {
+  /** False when the check is off, in Settings or by SOUNDBOX_UPDATE_CHECK=0. */
+  enabled: boolean;
+  disabled_by: "env" | "setting" | null;
+  current: string;
+  latest: string | null;
+  /** `latest` is newer than `current` (and the check is on). */
+  available: boolean;
+  /** The release page for `latest`, always on github.com. */
+  url: string | null;
+  checked_at: string | null;
+  /** Where the request goes, so the page can say so. */
+  endpoint: string;
+  error: string | null;
 }
 
 /** `hf_token` is write-only — the server never echoes it back. */
@@ -1232,6 +1251,7 @@ export interface SettingsPatch {
   /** Mark first-run setup done (an ISO timestamp) or, with "", undo it so the
    *  wizard opens again. */
   onboarded_at?: string;
+  update_check?: boolean;
 }
 
 /**
@@ -1659,6 +1679,9 @@ export interface SoundboxApi {
   browseDirectories(path?: string | null): Promise<DirectoryListing>;
   getSettings(): Promise<Settings>;
   updateSettings(patch: SettingsPatch): Promise<Settings>;
+  getUpdateStatus(): Promise<UpdateStatus>;
+  /** Ask now, whatever the once-a-day throttle says. A no-op when the check is off. */
+  checkForUpdate(): Promise<UpdateStatus>;
   listProfiles(): Promise<ProfileList>;
   /** Creates without switching — making a library and opening it are separate
    *  decisions. */
@@ -2202,6 +2225,10 @@ export const httpApi: SoundboxApi = {
       method: "PATCH",
       body: JSON.stringify(patch),
     }),
+
+  getUpdateStatus: () => request<UpdateStatus>("/api/update"),
+
+  checkForUpdate: () => request<UpdateStatus>("/api/update/check", { method: "POST" }),
 
   listProfiles: () => request<ProfileList>("/api/profiles"),
 

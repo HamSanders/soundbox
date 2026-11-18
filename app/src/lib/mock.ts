@@ -27,6 +27,7 @@ import type {
   Model,
   GenerateRequest,
   HealthStatus,
+  UpdateStatus,
   Job,
   JobRef,
   ImageModelEntry,
@@ -1006,7 +1007,23 @@ let settings: Settings = {
   image_external_api_key_set: false,
   image_auto_artwork: false,
   onboarded_at: null,
+  update_check: true,
 };
+
+function mockUpdateStatus(): UpdateStatus {
+  const on = settings.update_check;
+  return {
+    enabled: on,
+    disabled_by: on ? null : "setting",
+    current: "0.4.1",
+    latest: on ? "0.4.1" : null,
+    available: false,
+    url: null,
+    checked_at: on ? new Date().toISOString() : null,
+    endpoint: "https://mirli.app/api/update",
+    error: null,
+  };
+}
 
 /** Profiles are a server-side notion — a data directory each — so the mock
  *  keeps the same shape and simply pretends the switch happened. */
@@ -3330,6 +3347,16 @@ export const mockApi: SoundboxApi = {
   async getSettings() {
     await wait(60);
     return { ...settings };
+  },
+
+  async getUpdateStatus() {
+    await wait(60);
+    return mockUpdateStatus();
+  },
+
+  async checkForUpdate() {
+    await wait(300);
+    return mockUpdateStatus();
   },
 
   async updateSettings(patch: SettingsPatch) {

@@ -122,6 +122,7 @@ import {
 } from "./stems.js";
 import { StoryHub } from "./story-hub.js";
 import { McpTelemetry } from "./telemetry.js";
+import { UpdateChecker } from "./updateCheck.js";
 
 const log = getLogger("soundbox.service");
 
@@ -236,6 +237,9 @@ export class SoundboxService {
   /** Live story activity — see story-hub.ts. */
   readonly stories = new StoryHub();
 
+  /** The daily "is there a newer version?" question — see updateCheck.ts. */
+  readonly updates: UpdateChecker;
+
   constructor(config: Config) {
     this.config = config;
     this.db = openDatabase(config.paths.db, true);
@@ -251,16 +255,21 @@ export class SoundboxService {
     this.llm = new LlmService(config);
     this.image = new ImageService(config);
     this.telemetry = new McpTelemetry(this.db, config);
+    this.updates = new UpdateChecker(config);
   }
 
   /** Start the background machinery. The Python took the event loop to bind
    *  its worker thread to; here the job worker is a plain async loop. */
   start(): void {
     this.jobs.start();
+    // Tests and the dev server must not phone anyone: the endpoint counts
+    // requests, and a contributor's restarts are not installs.
+    if (!process.env.VITEST) this.updates.start();
   }
 
   async close(): Promise<void> {
     this.jobs.stop();
+    this.updates.stop();
     this.telemetry.close();
     await this.models.unload();
     // Our child process, so it does not outlive us.

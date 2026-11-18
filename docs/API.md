@@ -203,6 +203,8 @@ rather than failing the import.
 | Method | Path | What it does |
 |---|---|---|
 | GET / PATCH | `/api/settings` | Read or change settings |
+| GET | `/api/update` | What the daily update check last learned: `enabled`, `current`, `latest`, `available`, `url`, `checked_at` |
+| POST | `/api/update/check` | Ask now (the Settings button). Does nothing when the check is off |
 | GET | `/api/logs` | Tail of the server log (`?lines`) |
 | GET | `/api/fs/dirs` | List folders on the server's disk (`?path`) |
 | GET / POST | `/api/profiles` | List or create (`{ name }`) |

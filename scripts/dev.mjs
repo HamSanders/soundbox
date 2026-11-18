@@ -27,6 +27,10 @@ const isWin = process.platform === "win32";
 
 const port = process.env.SOUNDBOX_PORT || "17494";
 
+// A contributor restarting the dev server is not an install, and the update
+// endpoint counts requests. Set SOUNDBOX_UPDATE_CHECK=1 to try the check.
+process.env.SOUNDBOX_UPDATE_CHECK ??= "0";
+
 const children = [];
 function run(name, cmd, args, opts = {}) {
   const child = spawn(cmd, args, {

@@ -1221,6 +1221,7 @@ export const settingsPatchSchema = z.object({
   image_external_model: z.string().nullish(),
   image_external_api_key: z.string().nullish(),
   image_auto_artwork: z.boolean().nullish(),
+  update_check: z.boolean().nullish(),
   // ISO timestamp when first-run setup was finished or skipped. "" clears it,
   // the `sounds_dir` convention — see `Config.updateSettings`.
   onboarded_at: z.string().nullish(),

@@ -591,7 +591,9 @@ function Local() {
       >
         Soundbox is a server on your loopback interface and a folder on your
         disk. Weights download from Hugging Face when you ask for them. After
-        that it works offline.
+        that it works offline. The one request it makes on its own is a daily
+        check for a newer version, which sends the version and the platform and
+        nothing else, and which you can turn off in Settings.
       </SectionHead>
 
       <div className="mt-8 grid gap-4 lg:grid-cols-[1.15fr_1fr]">

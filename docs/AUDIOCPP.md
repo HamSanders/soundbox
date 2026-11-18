@@ -1,6 +1,6 @@
 # audio.cpp
 
-audio.cpp is the inference engine behind most of the models Soundbox runs. It
+audio.cpp is the inference engine behind most of the models Mirli runs. It
 is a [ggml](https://github.com/ggerganov/ggml)-based C++ runtime that
 implements 50+ audio model families behind a single CLI, with CUDA, HIP, Metal,
 Vulkan and CPU backends. There is no Python in the inference path.
@@ -11,7 +11,7 @@ or sidecar process is needed.
 
 ## Installing it
 
-Soundbox manages the binary for you:
+Mirli manages the binary for you:
 
 ```bash
 soundbox model install audiocpp   # download, verify, cache
@@ -59,7 +59,7 @@ Prebuilt Windows CUDA and CPU packages are on the
 `brew tap 0xShug0/audio-cpp && brew install audio-cpp`. On Linux, build with
 `scripts/build_linux.sh --backend cuda --target audiocpp_cli`.
 
-Point Soundbox at the binary, or put `audiocpp_cli` on your `PATH`:
+Point Mirli at the binary, or put `audiocpp_cli` on your `PATH`:
 
 ```bash
 SOUNDBOX_AUDIOCPP_BIN=/path/to/audiocpp_cli
@@ -74,7 +74,7 @@ a desktop launcher's `PATH` often omits them.
 
 ### Choosing a backend
 
-Soundbox infers a backend and falls back to CPU. To override the guess, or to
+Mirli infers a backend and falls back to CPU. To override the guess, or to
 compare backends, force one:
 
 ```bash
@@ -91,7 +91,7 @@ If a generation is far slower than expected, it is usually running on CPU.
 ```
 
 Weights do not go in the Hugging Face cache. The GGUF repos hold every family
-audio.cpp supports, and Soundbox downloads only the files for the model you
+audio.cpp supports, and Mirli downloads only the files for the model you
 asked for.
 
 ## The model catalogue
@@ -139,14 +139,14 @@ catalogue, in the same shape:
 
 - `weights_path` is an **absolute** path to weights already on your disk: a
   file, or a directory for `weights_layout: "directory"`. Nothing is
-  downloaded, and Soundbox never deletes the file.
+  downloaded, and Mirli never deletes the file.
 - Alternatively, give `hf_repo` + `weights_glob` and it downloads like any
   shipped entry, into `<models dir>/audiocpp/<your id>/`.
 - `family` must be one audio.cpp knows (`audiocpp_cli --list-loaders`). Every
   other field (`defaults`, `supports`, `edit_routes`, `voice_ids`,
   `request_options` and the rest) means the same as for a shipped entry.
 - If you omit `license`, the model is shown as **Unspecified / not
-  commercial**, since Soundbox cannot know the terms for weights on your disk.
+  commercial**, since Mirli cannot know the terms for weights on your disk.
 
 Custom entries are always enabled; there is no separate toggle in Settings.
 They are never marked verified, because "verified" means someone ran the model
@@ -178,14 +178,14 @@ each one supports, and the app offers only what is declared.
 | Repaint             | Regenerate a window inside a clip                                        |
 
 Negative prompts are not available on this path. No family exposes a flag for
-them, so Soundbox does not offer one.
+them, so Mirli does not offer one.
 
 ### Lyrics
 
 A lyrics-conditioned model takes the sung words separately from the prompt.
 The prompt sets genre and production; the lyrics are what is sung. Some
 models, including MiniMax Music 3, **refuse to run without lyrics**. For
-those, Soundbox supplies an explicit `[instrumental]` marker when you give
+those, Mirli supplies an explicit `[instrumental]` marker when you give
 none.
 
 ### Separation
@@ -197,7 +197,7 @@ you miss them:
   reference input is for voice conversion and style transfer. Using it for
   plain separation fails with an unrelated-sounding contract error.
 - **htdemucs requires exactly 44.1 kHz.** Other rates fail with a sample-rate
-  mismatch, so Soundbox resamples the source to the model's rate before
+  mismatch, so Mirli resamples the source to the model's rate before
   invoking it. Splitting a 48 kHz ACE-Step render is the common case.
 
 htdemucs emits four stems: `vocals`, `drums`, `bass`, `other`.
@@ -244,7 +244,7 @@ unaffected:
 - `weights_root: string`. The repo-relative subdirectory that is the
   package's real root, for a package under a prefix inside a shared repo.
   audio.cpp's own downloader strips the prefix (`strip_prefix` in the package
-  spec); Soundbox preserves repo paths, so `--model` has to point at the
+  spec); Mirli preserves repo paths, so `--model` has to point at the
   subdirectory. MiniMax H3's `MiniMax-H3-Q4-GGUF/` prefix inside the shared
   registry repo needs it; MiniMax Music 3's dedicated repo does not.
 
@@ -255,15 +255,15 @@ repos is 58 GB and the entry pulls 8.45 GB of it.
 
 From 0.9.x, audio.cpp refuses any request option a family's spec does not
 list, with an error like `unknown MiDashengLM-Gen request option:
-duration_seconds`. Soundbox sends a generation the generic fields
+duration_seconds`. Mirli sends a generation the generic fields
 `duration_seconds`, `num_inference_steps` and `guidance_scale`. Most `gen`
 families accept all three, but not every one does. Two catalogue knobs cover
 that:
 
-- `supports.steps: false` / `supports.cfg: false` on a `gen` entry. Soundbox
+- `supports.steps: false` / `supports.cfg: false` on a `gen` entry. Mirli
   then sends no step count or guidance scale at all, rather than a default
   the family rejects.
-- `duration_option: "<name>"`. Soundbox sends the target length as that
+- `duration_option: "<name>"`. Mirli sends the target length as that
   request option (for example `duration_sec`) instead of `duration_seconds`.
 
 The family's accepted options are in `model_specs/<family>.json` beside the
@@ -288,12 +288,12 @@ uniform: a "q4_0" package can ship a q8_0 component. And the per-component
 option defaults in the same spec can disagree with the package's own file
 list. **Use the `files` array**, not the name or the defaults.
 
-## How Soundbox drives it
+## How Mirli drives it
 
 - **Loading resolves paths; it does not fill VRAM.** The child process holds
   the model in memory, per generation.
 - **Cancelling a job kills the child.** An orphaned process would hold a GPU
-  that Soundbox believes is free, and the next job would contend for it.
+  that Mirli believes is free, and the next job would contend for it.
 - **A failed run shows the child's own last lines**, so you see the ggml error
   instead of "generation failed".
 - **The binary is never auto-installed as part of a model download.** Install

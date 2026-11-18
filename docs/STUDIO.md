@@ -88,7 +88,7 @@ window. Popped-out panels are marked ↗ in the Panels menu.
 Pop-out windows do not survive a reload. Browsers only open windows in
 response to a click or a drag, so when the studio reloads every panel comes
 back into the page. In a browser, a pop-up blocker can refuse the window. If
-it does, the studio says so: allow pop-ups for Soundbox and try again. The
+it does, the studio says so: allow pop-ups for Mirli and try again. The
 desktop app opens them as native windows.
 
 ## The panels
@@ -348,7 +348,7 @@ The lane right-click menu has the same action as **New recording**. The take
 still goes onto a new lane of its own.
 
 The browser picks the container (WebM/Opus on Chrome and Firefox, MP4/AAC on
-Safari). Soundbox decodes it, converts it to WAV, uploads it to your library as
+Safari). Mirli decodes it, converts it to WAV, uploads it to your library as
 `Take HH:MM`, and then places the clip. Takes must be library sounds because the
 timeline references clips by id and the export reads them from disk.
 

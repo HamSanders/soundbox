@@ -283,7 +283,7 @@ function ModelBody({ model }: { model: ModelContent }) {
         <ul className="text-muted-foreground mt-4 max-w-2xl list-disc space-y-2 pl-5 text-sm leading-relaxed">
           <li>
             The binary is fetched from audio.cpp's GitHub releases the first time you ask for it
-            and cached under your own data directory. Soundbox ships no native binaries and
+            and cached under your own data directory. Mirli ships no native binaries and
             vendors none.
           </li>
           <li>
@@ -300,7 +300,7 @@ function ModelBody({ model }: { model: ModelContent }) {
           {model.license.gated === "yes" && (
             <li>
               The download is gated. Accept the terms on your own Hugging Face account and add an
-              access token in Settings first. Soundbox cannot accept terms on your behalf.
+              access token in Settings first. Mirli cannot accept terms on your behalf.
             </li>
           )}
         </ul>
@@ -342,7 +342,7 @@ function ModelBody({ model }: { model: ModelContent }) {
               rel="noreferrer noopener"
               className="hover:text-primary inline-flex items-center gap-1.5 text-sm underline-offset-4 hover:underline"
             >
-              How Soundbox drives audio.cpp, including the catalog format
+              How Mirli drives audio.cpp, including the catalog format
               <ExternalLinkIcon className="size-3.5 shrink-0" aria-hidden="true" />
             </a>
           </li>
@@ -404,7 +404,7 @@ function ModelBody({ model }: { model: ModelContent }) {
           GitHub
         </a>
         <MarketingLink href={WELCOME_HREF} className="hover:text-foreground">
-          What Soundbox is
+          What Mirli is
         </MarketingLink>
       </footer>
     </>

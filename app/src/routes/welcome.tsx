@@ -50,7 +50,7 @@ import { ProductShots } from "@/components/product-shots";
 import { LicenseChip } from "@/components/license-badge";
 import { DownloadButton, PlatformPicker } from "@/components/download-cta";
 import { COMPARISON, COMPARISON_HEAD } from "@/content/comparison";
-import { AGENT_FAQ, COMMERCIAL, FREE, GPU, MAC, MODELS_FAQ, OFFLINE } from "@/content/faq";
+import { AGENT_FAQ, COMMERCIAL, FREE, GPU, MAC, MODELS_FAQ, OFFLINE, RENAMED } from "@/content/faq";
 import { SamplePlay } from "@/components/sample-play";
 import { exampleForModel, type ExampleId } from "@/content/examples";
 import type { LicenseInfo } from "@/lib/api";
@@ -350,7 +350,7 @@ function HeroPrompt({
             type="submit"
             size="icon"
             disabled={!value.trim()}
-            aria-label="Download Soundbox to run this prompt"
+            aria-label="Download Mirli to run this prompt"
             className="mb-1 shrink-0 rounded-full shadow-sm transition-transform hover:scale-105 active:scale-95"
           >
             <ArrowUpIcon />
@@ -358,7 +358,7 @@ function HeroPrompt({
         </div>
       </div>
       <p id="hero-prompt-hint" className="text-muted-foreground mt-2 text-xs">
-        Soundbox runs on your own machine, so this opens the download page.
+        Mirli runs on your own machine, so this opens the download page.
         Prompts work best when they name the material, the action and the
         space.
       </p>
@@ -603,7 +603,7 @@ function Models() {
 }
 
 /**
- * The companion-app pitch. Soundbox is built to be driven by AI agents, not
+ * The companion-app pitch. Mirli is built to be driven by AI agents, not
  * just clicked through — this section leads with that rather than burying it
  * under "Developers", and shows the part a screenshot actually sells: the
  * in-app Agents page, which is where "an agent can call this" turns into
@@ -686,7 +686,7 @@ function Agents() {
             metric over standard OTLP/HTTP.
           </Feature>
           <Feature icon={SparklesIcon} title="Bundled agent skills">
-            Three skills ship with Soundbox: prompting for sound effects, a
+            Three skills ship with Mirli: prompting for sound effects, a
             sound pass that finds and generates every sound a project needs,
             and writing and voicing dialogue. Install them from the Agents page
             or with{" "}
@@ -825,7 +825,7 @@ function FiveThings() {
 function Compare() {
   return (
     <Section id="compare" labelledBy="compare-heading">
-      <SectionHead id="compare-heading" eyebrow="Is it for you?" title="Soundbox next to a hosted service">
+      <SectionHead id="compare-heading" eyebrow="Is it for you?" title="Mirli next to a hosted service">
         Open models trade consistency for ownership. This is the whole trade, row
         by row.
       </SectionHead>
@@ -867,7 +867,7 @@ function Compare() {
 
 /* --------------------------------------------------------------- questions */
 
-const HOME_FAQ = [FREE, GPU, OFFLINE, COMMERCIAL, MAC, MODELS_FAQ, AGENT_FAQ];
+const HOME_FAQ = [FREE, GPU, OFFLINE, COMMERCIAL, MAC, MODELS_FAQ, AGENT_FAQ, RENAMED];
 
 function Questions() {
   return (
@@ -898,7 +898,7 @@ function Questions() {
 
 /* ---------------------------------------------------------------- download */
 
-const AGENT_INSTALL = `Install Soundbox on this machine and confirm it works, following
+const AGENT_INSTALL = `Install Mirli on this machine and confirm it works, following
 ${repoFile("docs/INSTALL-AGENT.md")}`;
 
 function Download() {
@@ -942,14 +942,14 @@ function Footer() {
             <span className="bg-primary text-primary-foreground flex size-7 items-center justify-center rounded-lg">
               <AudioLinesIcon className="size-4" aria-hidden="true" />
             </span>
-            <span className="font-heading font-semibold tracking-tight">Soundbox</span>
+            <span className="font-heading font-semibold tracking-tight">Mirli</span>
           </div>
           <p className="text-muted-foreground mt-4 max-w-md text-sm leading-relaxed">
             <strong className="text-foreground font-medium">
-              Soundbox is MIT licensed. The model weights are not.
+              Mirli is MIT licensed. The model weights are not.
             </strong>{" "}
             Each model carries its own licence and several forbid commercial
-            use. Soundbox downloads weights from Hugging Face at your direction
+            use. Mirli downloads weights from Hugging Face at your direction
             and does not redistribute them. What you may do with a generated
             sound is governed by the licence of the model that produced it.
           </p>
@@ -1056,10 +1056,10 @@ function Footer() {
 export function WelcomePage() {
   return (
     <div className="bg-background text-foreground min-h-svh overflow-x-clip">
-      {/* "Soundbox" alone is a name several unrelated products share, so the
-          title carries what it is as well as what it is called. */}
+      {/* A new name says nothing on its own, so the title carries what it
+          is as well as what it is called. */}
       <SeoHead
-        title="Soundbox: free local ElevenLabs and Suno alternative for AI sound effects, music and voices"
+        title="Mirli: free local ElevenLabs and Suno alternative for AI sound effects, music and voices"
         description="Free, open-source alternative to ElevenLabs and Suno that runs on your own GPU: AI sound effects, music with lyrics, text-to-speech and voice cloning. No account, no credits, works offline, with an MCP server for Claude Code and Cursor."
         path="/"
         jsonLd={[
@@ -1088,7 +1088,7 @@ export function WelcomePage() {
         <FiveThings />
 
         {/* And then the unglamorous version of the same thing. Everything above
-            this point is a drawing of Soundbox — animated and interactive,
+            this point is a drawing of Mirli — animated and interactive,
             which is what makes those sections worth their space, but also what
             makes them illustrations. Someone deciding whether to install this
             eventually wants to see the actual application, so here it is,

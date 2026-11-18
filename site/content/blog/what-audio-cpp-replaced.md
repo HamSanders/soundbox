@@ -6,21 +6,20 @@ updated: 2026-11-04
 author: Anthony Saviano
 tags: [engineering, audio.cpp]
 image: /blog/what-audio-cpp-replaced.jpg
-audio: /blog/audio/what-audio-cpp-replaced.mp3
 draft: false
 ---
 
 If you've tried to run two open-weight audio models on one machine, you know
 how it goes: two repos, two `requirements.txt` files, and two different ideas
-about which torch build to use. In Soundbox every model runs through one native
+about which torch build to use. In Mirli every model runs through one native
 binary, and adding a model means adding a catalogue entry, not building an
 environment.
 
 This post covers what the old way cost, what replaced it, and two install
 decisions and the failures they avoid. It doesn't cover why only one model
 stays in VRAM (see [one model at a time](/blog/one-model-at-a-time)), driving
-Soundbox from an agent (see
-[point your agent at Soundbox](/blog/point-your-agent-at-soundbox)), or which
+Mirli from an agent (see
+[point your agent at Mirli](/blog/point-your-agent-at-soundbox)), or which
 model is best at what.
 
 ## Two kinds of model
@@ -57,7 +56,7 @@ It implements 50+ audio model families behind one CLI, with CUDA, HIP, Metal,
 Vulkan and CPU backends. There's no Python in the inference path, so there's no
 torch to pin.
 
-Soundbox's base install has no model runtimes in it: Node 20+, `npm install`,
+Mirli's base install has no model runtimes in it: Node 20+, `npm install`,
 and no GPU-specific wheel to match to your hardware. The backend is detected
 per machine (Metal on Apple silicon, CUDA where `nvidia-smi` responds, Vulkan
 or CPU otherwise), and that picks which release asset to download. The server
@@ -89,7 +88,7 @@ in `<data dir>/models/custom.json` is loaded alongside the shipped catalogue in
 the same format. A quantised version of your own fine-tune is a file you write,
 not a fork you maintain.
 
-![The Soundbox Models table: each model with its licence badge, VRAM estimate and installed status](/blog/models-page.png)
+![The Mirli Models table: each model with its licence badge, VRAM estimate and installed status](/blog/models-page.png)
 
 **Listed** models appear in the picker. **Extras** are catalogued but hidden
 until you enable them on the Models page. Enabling one adds it to
@@ -98,7 +97,7 @@ not code.
 
 ## Two install decisions
 
-Soundbox doesn't ship or vendor any native binaries. `audiocpp_cli` is
+Mirli doesn't ship or vendor any native binaries. `audiocpp_cli` is
 downloaded from upstream GitHub releases the first time it's needed and cached
 in your data directory, not in the checkout.
 
@@ -110,7 +109,7 @@ manifest. If the manifest leaves out your platform, the installer warns and
 installs anyway, because refusing would make the automatic install less
 reliable than downloading it by hand.
 
-**Why `PATH` comes last.** When Soundbox needs the binary, it checks the
+**Why `PATH` comes last.** When Mirli needs the binary, it checks the
 `SOUNDBOX_AUDIOCPP_BIN` override first, then the managed install in
 `<data dir>/bin/`, then `PATH`. The managed install comes before `PATH` so that
 after you run the installer, you get what you just installed, not an old

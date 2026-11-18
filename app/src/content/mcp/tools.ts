@@ -9,7 +9,7 @@
  *
  * That is not hypothetical. This documentation described five tools long after
  * the server had grown to twenty, and cited `backend/src/soundbox/mcp_server.py`
- * — a Python module that no longer exists. Anyone reading it concluded Soundbox
+ * — a Python module that no longer exists. Anyone reading it concluded Mirli
  * could generate sounds and nothing else: no speech, no stories, no timeline.
  * The whole voice and arrangement half of the product was invisible. Hence the
  * split into a content module: the reference page and the marketing page now
@@ -332,7 +332,7 @@ export const MCP_TOOLS: McpToolDoc[] = [
     name: "soundbox.split_line",
     title: "Split a line in two",
     blurb:
-      "Cuts a voiced line at a point in its own audio, giving two clips. The words stay with the first half, because Soundbox cannot tell which words fell on either side of the cut.",
+      "Cuts a voiced line at a point in its own audio, giving two clips. The words stay with the first half, because Mirli cannot tell which words fell on either side of the cut.",
     group: "stories",
     args: [
       { name: "line_id", type: "string", required: true },

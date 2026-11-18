@@ -1,6 +1,6 @@
 # The library
 
-Everything Soundbox makes is saved automatically. There is no "save" button:
+Everything Mirli makes is saved automatically. There is no "save" button:
 a generation writes a WAV to disk and a row to the database before you hear
 it. The library is where you find it again.
 

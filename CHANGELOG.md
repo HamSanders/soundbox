@@ -6,6 +6,12 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **Soundbox is now Mirli.** The site, page titles, share cards, press kit, blog, README, docs and issue templates use the new name, and the README and docs link to https://mirli.app. Nothing you rely on moves: the `soundbox` command, the `soundbox.*` MCP tools, the `SOUNDBOX_*` environment variables, `~/.soundbox`, the Docker image, the GitHub repository and the installer file names keep the old name for now, and existing installs carry on as they were. The home page, the download page, the press kit and the README each say once that Mirli was formerly Soundbox.
+
+### Removed
+- **Blog read-alouds, for now.** The Listen card, the docked player and the paragraph highlight are gone from blog posts, along with the recordings, their timing files and `scripts/blog-narration.mjs`. The recordings said the old name, and the feature can come back from git history when the posts are re-voiced.
+
 ## [0.5.0] - 2026-11-18
 
 ### Added

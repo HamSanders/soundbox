@@ -1,12 +1,12 @@
 # Privacy: what leaves your machine
 
-Soundbox runs on your computer. Your prompts, lyrics, voices, sounds and
+Mirli runs on your computer. Your prompts, lyrics, voices, sounds and
 projects stay in the data directory, and generation never uploads them. This
 page lists every request the app makes on its own, so you can check it.
 
 ## The daily update check
 
-Once a day, at most, a running Soundbox asks whether a newer version exists.
+Once a day, at most, a running Mirli asks whether a newer version exists.
 
 - **What is sent.** One `GET` to `https://mirli.app/api/update` with two query
   values: the version you run (`v=0.4.1`) and your platform (`p=win32-x64`).
@@ -21,7 +21,7 @@ Once a day, at most, a running Soundbox asks whether a newer version exists.
 - **How often.** The time of the last answer is saved in your data directory,
   so restarting the app does not send another request the same day.
 - **What comes back.** The newest release number and its GitHub release page.
-  Soundbox shows "an update is available" and links to the page. It does not
+  Mirli shows "an update is available" and links to the page. It does not
   download or install anything by itself.
 - **Turning it off.** Settings → Updates → **Check for updates**, or set
   `SOUNDBOX_UPDATE_CHECK=0` in the server's environment (Docker, services; the
@@ -37,7 +37,7 @@ when the check above is turned off.
 ## Things you ask for
 
 - **Model downloads** come from Hugging Face or GitHub when you press Download.
-  Soundbox asks them for the files and sends your Hugging Face token only if you
+  Mirli asks them for the files and sends your Hugging Face token only if you
   saved one for gated models.
 - **Custom endpoints and hosted providers** receive the prompt and text you
   send through them. You add these yourself in Settings, and they are off until

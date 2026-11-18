@@ -56,7 +56,7 @@ picked.
 
 ## How the native binaries are managed
 
-Soundbox ships and vendors no native binaries. It uses three, each fetched
+Mirli ships and vendors no native binaries. It uses three, each fetched
 from upstream GitHub releases on demand and cached under your data directory:
 
 | Binary | Upstream | What it is | When it's fetched |
@@ -88,7 +88,7 @@ download the binary yourself and point the environment override below at it.
 
 ### Resolution order
 
-When Soundbox needs one of these binaries it checks, in order:
+When Mirli needs one of these binaries it checks, in order:
 
 1. the environment override (`SOUNDBOX_AUDIOCPP_BIN`,
    `SOUNDBOX_LLAMA_SERVER_BIN` or `SOUNDBOX_SD_SERVER_BIN`), an absolute path
@@ -100,7 +100,7 @@ When Soundbox needs one of these binaries it checks, in order:
    a `brew install`ed binary would otherwise be missed.
 
 The managed install is checked before `PATH` so that a binary you installed
-through Soundbox wins over a stray system-wide copy.
+through Mirli wins over a stray system-wide copy.
 
 The backend is detected per machine (Metal on Apple silicon, CUDA where
 `nvidia-smi` answers, Vulkan or CPU otherwise) and decides which release asset
@@ -123,7 +123,7 @@ soundbox model install llm --engine-only       # engine only, no weights
 
 `status` shows whether the binary is managed or your own. A managed install
 reports its version. A bring-your-own binary reports `external (env)` or
-`external (PATH)` with no version, since Soundbox did not install it.
+`external (PATH)` with no version, since Mirli did not install it.
 `soundbox model status llm` also lists the prompt-assistant models and whether
 each is downloaded.
 
@@ -143,7 +143,7 @@ downloads. The audio models need no account. See Step 3 for the one download
 that does.
 
 Each model is an audio.cpp package of GGUF files (the catalog entry's
-`weights_glob` names them). Soundbox downloads only those files, not the whole
+`weights_glob` names them). Mirli downloads only those files, not the whole
 Hugging Face repo.
 
 The catalogue has two tiers. **Listed** models appear in the picker and are
@@ -159,7 +159,7 @@ open use of the weights but forbid selling what the model makes.
 The audio models come from audio.cpp's GGUF repo (`audio-cpp/audio.cpp-gguf`),
 which is not gated. Their licences still apply, but there is nothing to sign.
 The optional artwork model, Stable Diffusion 3.5 Medium, is gated on Hugging
-Face, as is any custom catalog entry pointing at a gated repo. Soundbox cannot
+Face, as is any custom catalog entry pointing at a gated repo. Mirli cannot
 accept the terms for you.
 
 1. Sign in to Hugging Face and accept the licence on the model page
@@ -286,7 +286,7 @@ request is checked; see
 
 ## Access token
 
-To reach Soundbox from another machine (a rented GPU, a box on your LAN, Docker
+To reach Mirli from another machine (a rented GPU, a box on your LAN, Docker
 on a public address), give it an access token:
 
 ```bash
@@ -305,7 +305,7 @@ With a token set, every request to `/api/*`, `/mcp`, `/files/*` and
   stays signed in for 30 days with an HttpOnly cookie. The cookie holds a
   value derived from the token, not the token itself, and changing the token
   signs every browser out.
-- **Scripts, MCP clients and other Soundboxes** send
+- **Scripts, MCP clients and other Mirli servers** send
   `Authorization: Bearer <token>`. For Claude Code:
 
   ```bash
@@ -422,7 +422,7 @@ CUDA runtime; the CPU image is about 3.5 GB. `full-vulkan` with
 **How the image is built.** It starts from
 [audio.cpp's own published images](https://github.com/0xShug0/audio.cpp/blob/main/docs/docker.md)
 (`ghcr.io/0xshug0/audio.cpp:full-<backend>`), which carry `audiocpp_cli`, its
-backend libraries and ffmpeg, and adds Node and Soundbox on top.
+backend libraries and ffmpeg, and adds Node and Mirli on top.
 `SOUNDBOX_AUDIOCPP_BIN` points at that binary, so `soundbox model install
 audiocpp` is never needed — and `SOUNDBOX_AUDIOCPP_BACKEND` is set from the
 build arg rather than detected, so a CPU image given `--gpus` does not ask its
@@ -437,7 +437,7 @@ point the assistant at an external OpenAI-compatible endpoint instead.
 about 130 characters to `SOUNDBOX_DATA_DIR`, and Windows caps paths at 260
 unless long paths are enabled. Past that limit a download fails partway
 through with *"The system cannot find the path specified"*, even though the
-directory exists. Soundbox detects this and tells you. To fix it, do one of:
+directory exists. Mirli detects this and tells you. To fix it, do one of:
 
 - use a short data dir: `set SOUNDBOX_DATA_DIR=C:\soundbox` (the default
   `%USERPROFILE%\.soundbox` is short enough for a normal username), or
@@ -471,7 +471,7 @@ with `GET /api/jobs` (or the log file) before assuming something is wrong.
 output device your browser is using has stopped consuming audio. The usual
 cause is a wireless headset that is off or out of range. Windows still lists
 the endpoint as present, so `play()` succeeds, the button flips to Pause, no
-error is raised, and the position never advances. Soundbox detects this and
+error is raised, and the position never advances. Mirli detects this and
 tells you. Go to **Settings → Playback device**, pick another output, and
 click **Play test tone** to confirm.
 
@@ -485,7 +485,7 @@ Vite alone (`npm run dev:ui`), start the backend separately.
 you built or downloaded yourself.
 
 **A model says Installed but Load fails.** The download was interrupted and
-the cache is partial. Click Download again; it resumes. (Soundbox writes a
+the cache is partial. Click Download again; it resumes. (Mirli writes a
 completion marker at the end of a download and does not mark a model
 installed without it, so this should be rare.)
 
@@ -527,7 +527,7 @@ Server-side variables are read by the process running `soundbox` (or
 | `SOUNDBOX_LOG_LEVEL` | server | `debug`, `info` (default), `warning`, `error` or `critical`; `warn` works too. Used when `--log-level` isn't given, so it reaches `npm run dev`, Docker and the desktop app, none of which pass the flag. The startup banner shows the level in force; an unknown value logs a warning and runs at `info`. At `debug`, every request to the prompt assistant, artwork and custom endpoints is logged with its full URL, HTTP status and timing. Custom endpoints also log the body's field names. Keys, headers, prompts and lyrics are never logged. For the desktop app, set it as a user environment variable (Windows) or with `launchctl setenv` (macOS), then restart the app. |
 | `PORT` | server, Vite | The Vite dev server's port (default 5174); the server also trusts it as a dev origin. |
 | `HF_TOKEN` / `HUGGING_FACE_HUB_TOKEN` | server | Hugging Face token for gated models, used when none is saved in Settings. |
-| `HF_HOME` | server | Hugging Face cache location. Left alone if set; otherwise Soundbox points it at `<data dir>/models`. |
+| `HF_HOME` | server | Hugging Face cache location. Left alone if set; otherwise Mirli points it at `<data dir>/models`. |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | server | OpenTelemetry collector for MCP call traces and metrics. Wins over the Settings value. |
 | `SOUNDBOX_URL` | stdio MCP bridge | Where the running server is. Default `http://127.0.0.1:17494`. Set `SOUNDBOX_API_TOKEN` too if that server requires one. |
 | `SOUNDBOX_PORT` | `npm run dev`, Vite | Port `scripts/dev.mjs` starts the server on, and the port Vite proxies `/api`, `/mcp`, `/files` and `/artwork` to. Default 17494. The `soundbox` CLI itself takes `--port`. |

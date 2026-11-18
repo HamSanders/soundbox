@@ -1,34 +1,33 @@
 ---
-title: "Bring your games to life: Claude Code, Soundbox and Godot"
+title: "Bring your games to life: Claude Code, Mirli and Godot"
 description: One sentence to Claude Code, six local sounds, one jingle that failed by ear and the retake that fixed it, with prompts, seeds and timings from the call log.
 date: 2026-10-26
 author: Anthony Saviano
 tags: [games, mcp, agents, godot]
 draft: true
 image: /blog/bring-your-games-to-life.jpg
-audio: /blog/audio/bring-your-games-to-life.mp3
 ---
 
 On 23 October I asked Claude Code to make the sounds for a small Godot
-platformer. It got them from Soundbox, the app I build, over MCP. The models
+platformer. It got them from Mirli, the app I build, over MCP. The models
 ran on my own GPU. Here is the run call by call, including the jingle that
 came back wrong.
 
 Setting up the MCP connection is covered in
-[point your agent at Soundbox](/blog/point-your-agent-at-soundbox), and why
+[point your agent at Mirli](/blog/point-your-agent-at-soundbox), and why
 none of this needs Python is in
 [what audio.cpp replaced](/blog/what-audio-cpp-replaced).
 
-![The finished run: the Godot platformer playing its six generated sounds, then the Soundbox library and Agents page showing the calls that made them](/media/godot.mp4 "/media/posters/godot.jpg")
+![The finished run: the Godot platformer playing its six generated sounds, then the Mirli library and Agents page showing the calls that made them](/media/godot.mp4 "/media/posters/godot.jpg")
 
 The game audio in the clip is the sounds from this run, loudness-matched for
-video. The synthwave bed under it is from an earlier Soundbox film.
+video. The synthwave bed under it is from an earlier Mirli film.
 
 ## The setup
 
 Everything ran on one Windows machine with an RTX 5080.
 
-- **Soundbox, open.** The MCP server runs inside the app at
+- **Mirli, open.** The MCP server runs inside the app at
   `http://127.0.0.1:17494/mcp`.
 - **Claude Code, connected with one command.**
 
@@ -79,14 +78,14 @@ I didn't tell the agent how to write prompts. The `generate` tool's
 description of its `prompt` argument says "Describe material, action and
 space", and all six prompts do that.
 
-The sounds came back shorter than asked because Soundbox trims trailing
+The sounds came back shorter than asked because Mirli trims trailing
 silence. A 1-second coin request gave 0.2 s of coin. For game sounds I want
 that.
 
 Each result includes the WAV's full path on disk, so the files were copied
 straight into the project's `sfx/` folder under the names the scene expects.
 
-![The Soundbox SFX library filtered to the godot-video tag: six sounds, each with its model, seed and the label claude-code 2.1.299](/blog/godot-sfx-library.png)
+![The Mirli SFX library filtered to the godot-video tag: six sounds, each with its model, seed and the label claude-code 2.1.299](/blog/godot-sfx-library.png)
 
 All six are in the library with prompt, model, seed and the client that asked
 for them. If I want another take of the crate, I start from that row.
@@ -123,7 +122,7 @@ finish on the highest one, and it fades to −38 dB, so the end isn't chopped.
 
 ## The Agents page
 
-Soundbox logs every agent call with the client, the prompt, how many sounds
+Mirli logs every agent call with the client, the prompt, how many sounds
 came back and how long it took. These are the ten calls from this run, newest
 first:
 
@@ -142,12 +141,12 @@ this on each model's card before you download it. So does the site, for
 [Small Music](/models/stable-audio-3-small-music).
 
 Some models in the catalogue are non-commercial. Check before you ship a game
-with their output in it. If Soundbox can't establish a model's licence, it
+with their output in it. If Mirli can't establish a model's licence, it
 treats it as non-commercial. The card is a summary, not legal advice.
 
 ## If you're looking for a local Suno alternative
 
-Soundbox also makes songs with lyrics. ACE-Step 1.5 Turbo is MIT-licensed and
+Mirli also makes songs with lyrics. ACE-Step 1.5 Turbo is MIT-licensed and
 allows commercial use. MiniMax Music 3 needs about 10 GB of VRAM and has
 conditional commercial terms. Both take a lyric sheet, and ACE-Step can also
 extend, cover and repaint a take. Every model runs through the same audio.cpp
@@ -181,7 +180,7 @@ The first load is slow. On the same RTX 5080 with audio.cpp 0.9.2, a
 
 ## Try it
 
-Install Soundbox from the
+Install Mirli from the
 [latest release](https://github.com/HamSanders/soundbox/releases/latest),
 connect Claude Code with the command above, and give it the sentence from this
 post or one about your own game.

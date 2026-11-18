@@ -1,4 +1,4 @@
-# Soundbox HTTP API
+# Mirli HTTP API
 
 Base URL: `http://127.0.0.1:17494`. All JSON. The Vite dev server proxies
 `/api`, `/mcp`, `/files` and `/artwork` to this port, so the frontend uses
@@ -133,11 +133,11 @@ segment generation return HTTP 400 before queueing if any is missing, naming
 the voice and clips to fix. Existing voices remain readable with null
 transcripts; other models do not require them.
 
-Soundbox derives `request_options.reference_text` from the selected voice's
+Mirli derives `request_options.reference_text` from the selected voice's
 samples in the same `created_at, id` order used to join their audio, separated
 by spaces. This overrides any story, line, request or catalog transcript.
 The HTTP and MCP speech paths share this behavior. At the audio.cpp transport
-boundary, Soundbox's `request_options` map becomes the runtime's JSON `options`
+boundary, Mirli's `request_options` map becomes the runtime's JSON `options`
 map; the CLI fallback uses `--request-option reference_text=...`.
 
 `tidy` (off by default over the API, on by default in the app) takes out DC
@@ -149,7 +149,7 @@ An export is JSON: `{ format: "soundbox-voice", version: 1, voice: { name, kind,
 voice_id, model_id, notes }, samples: [{ wav_base64, duration_s, reference_text }] }`. The clips
 travel and the joined file does not; import rebuilds it. The avatar is not
 included and can be redrawn from the notes. On import, a name already in the
-library gets " (2)", and a `model_id` this Soundbox does not know is dropped
+library gets " (2)", and a `model_id` this Mirli does not know is dropped
 rather than failing the import.
 
 **Stories: scripts and studio timelines** (`routes/stories.ts`)
@@ -318,7 +318,7 @@ audio.cpp adapter knows, enabled or not.
 once their id is in `enabled_audiocpp_models` (`PATCH /api/settings`), which
 takes effect without a restart. `source: "custom"` marks an entry from your own
 `<data dir>/models/custom.json`; these are always on and never `verified`. Use
-that file to add a model Soundbox doesn't ship, including one whose weights are
+that file to add a model Mirli doesn't ship, including one whose weights are
 already on your disk; see [AUDIOCPP.md](AUDIOCPP.md#bring-your-own-model).
 
 ## Generation
@@ -416,7 +416,7 @@ Full details, client examples and limits: [STREAMING.md](STREAMING.md).
 
 `POST /api/render` runs one job and holds the request open until it finishes,
 then answers with the audio itself. Use it when you want a file back from one
-call: a script, a render farm, or another Soundbox that has this one set up as
+call: a script, a render farm, or another Mirli that has this one set up as
 a [custom endpoint](ENDPOINTS.md#another-soundbox).
 
 ```sh
@@ -576,7 +576,7 @@ profile is reopened.
 
 An optional local LLM that rewrites a terse prompt ("scary sound") into a
 descriptive one, off by default (`llm_mode: "off"`). `managed` runs a small
-model Soundbox installs and manages (`llama-server` + a curated GGUF);
+model Mirli installs and manages (`llama-server` + a curated GGUF);
 `external` talks to any OpenAI-compatible endpoint already running on this
 machine. Check `detected` (below) before pointing someone at the managed install.
 

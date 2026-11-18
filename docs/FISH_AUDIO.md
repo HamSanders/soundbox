@@ -6,7 +6,7 @@ each field includes a player. When adding another clip, enter that clip's
 transcript before uploading or adding the recorded take.
 
 The transcript describes the reference recording. The Speak prompt or script
-line describes the new speech to generate. Soundbox never invents a transcript.
+line describes the new speech to generate. Mirli never invents a transcript.
 Fish Audio requires a transcript for every clip, including older saved voices.
 Other TTS models continue to accept voices without transcripts.
 
@@ -21,7 +21,7 @@ Builder. It concatenates them in the exact database order used to join audio
 clips get increasing timestamps even during a rapid import. Voice transcripts
 override shared request, story, line and catalog settings for Fish Audio.
 
-Soundbox passes `voice_ref` and `request_options.reference_text` to its adapter.
+Mirli passes `voice_ref` and `request_options.reference_text` to its adapter.
 The native runtime's [task JSON parser](https://github.com/0xShug0/audio.cpp/blob/v0.9.4/app/cli/request.cpp)
 reads family options from `options`, so the HTTP transport translates the map
 to that name. Sending `request_options` directly to audio.cpp silently drops

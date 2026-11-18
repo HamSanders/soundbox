@@ -1,6 +1,6 @@
-# How Soundbox is put together
+# How Mirli is put together
 
-Soundbox is a local audio workstation: a web app, an HTTP API and an MCP server,
+Mirli is a local audio workstation: a web app, an HTTP API and an MCP server,
 all served by one process on one port, generating audio with open-weight models
 that run on your own machine. Nothing leaves the box unless you export it.
 
@@ -60,7 +60,7 @@ Everything is under one directory: `~/.soundbox` by default, or wherever
 
 A sound is a file plus a row. The row carries the prompt, the model, the seed
 and the peaks; the file is a plain WAV any audio tool can open. To back up,
-copy the directory. Soundbox keeps no state anywhere else.
+copy the directory. Mirli keeps no state anywhere else.
 
 ### The database
 

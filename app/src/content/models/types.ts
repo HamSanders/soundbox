@@ -1,6 +1,6 @@
 /**
  * Content model for the `/models` pages — the public write-up of every model
- * Soundbox can run.
+ * Mirli can run.
  *
  * ## Why this file was rewritten
  *
@@ -79,7 +79,7 @@ export interface LicenseFinding {
    * when that is the truth.
    */
   output: string;
-  /** Whether the weights Soundbox downloads require accepting terms on a
+  /** Whether the weights Mirli downloads require accepting terms on a
    *  Hugging Face account. Every audio model downloads audio.cpp's ungated
    *  GGUF conversion, so "no" even where the original upstream repo is gated. */
   gated: Tristate;

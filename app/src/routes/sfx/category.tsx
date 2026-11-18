@@ -103,7 +103,7 @@ function CategoryBody({ category }: { category: PublishedCategory }) {
         {...(category.coverImage
           ? {
               image: coverCard(category.coverImage),
-              imageAlt: `Cover art for Soundbox's ${category.name.toLowerCase()} sound effects`,
+              imageAlt: `Cover art for Mirli's ${category.name.toLowerCase()} sound effects`,
             }
           : {})}
         jsonLd={[
@@ -145,7 +145,7 @@ function CategoryBody({ category }: { category: PublishedCategory }) {
         </p>
         <div className="mt-6 flex flex-wrap gap-2">
           <Button asChild>
-            <MarketingLink href={GENERATOR_HREF}>Download Soundbox</MarketingLink>
+            <MarketingLink href={GENERATOR_HREF}>Download Mirli</MarketingLink>
           </Button>
           <Button variant="outline" asChild>
             <a href={REPO_URL} target="_blank" rel="noreferrer noopener">
@@ -213,12 +213,12 @@ function CategoryBody({ category }: { category: PublishedCategory }) {
             {
               icon: BotIcon,
               title: "Your agent can use it",
-              body: "Soundbox runs an MCP server in the same process, with tools for generating and listing sounds. Generated files come back as absolute paths, so an agent can copy them into a project.",
+              body: "Mirli runs an MCP server in the same process, with tools for generating and listing sounds. Generated files come back as absolute paths, so an agent can copy them into a project.",
             },
             {
               icon: ScaleIcon,
               title: "Licences stated up front",
-              body: "Every model's terms are shown before you download it, and non-commercial weights need an explicit confirmation. Soundbox is MIT. The licence of the model that made a sound governs what you may do with it.",
+              body: "Every model's terms are shown before you download it, and non-commercial weights need an explicit confirmation. Mirli is MIT. The licence of the model that made a sound governs what you may do with it.",
             },
           ].map(({ icon: Icon, title, body }) => (
             <div key={title} className="bg-card ring-border/70 rounded-2xl p-5 ring-1">
@@ -277,7 +277,7 @@ function CategoryBody({ category }: { category: PublishedCategory }) {
           GitHub
         </a>
         <MarketingLink href={WELCOME_HREF} className="hover:text-foreground">
-          What Soundbox is
+          What Mirli is
         </MarketingLink>
       </footer>
     </>

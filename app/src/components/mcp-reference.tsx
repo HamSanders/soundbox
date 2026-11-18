@@ -81,7 +81,7 @@ export function McpConnect({ origin }: { origin: string }) {
       title="Connect an MCP client"
       intro={
         <>
-          The MCP server runs inside the main Soundbox process at <C>{origin}/mcp</C>. There is no
+          The MCP server runs inside the main Mirli process at <C>{origin}/mcp</C>. There is no
           second daemon to start, but this app must be running for any of it to work.
         </>
       }
@@ -109,7 +109,7 @@ export function McpConnect({ origin }: { origin: string }) {
         <TabsContent value="claude-code" className="mt-3 min-w-0 space-y-3">
           <ol className="ml-4 list-decimal space-y-3 text-sm marker:text-muted-foreground">
             <li>
-              Leave Soundbox running. The MCP endpoint is served by this process, so a client can
+              Leave Mirli running. The MCP endpoint is served by this process, so a client can
               only reach it while the app is up.
             </li>
             <li>
@@ -123,7 +123,7 @@ export function McpConnect({ origin }: { origin: string }) {
               one.
             </li>
             <li>
-              Start or restart <C>claude</C>, then type <C>/mcp</C>. Soundbox should be listed as{" "}
+              Start or restart <C>claude</C>, then type <C>/mcp</C>. Mirli should be listed as{" "}
               <C>connected</C>, with its {MCP_TOOLS.length} tools.
             </li>
             <li>
@@ -140,7 +140,7 @@ export function McpConnect({ origin }: { origin: string }) {
 
         <TabsContent value="claude-desktop" className="mt-3 min-w-0 space-y-3">
           <ol className="ml-4 list-decimal space-y-3 text-sm marker:text-muted-foreground">
-            <li>Leave Soundbox running.</li>
+            <li>Leave Mirli running.</li>
             <li>
               In Claude Desktop, open <strong>Settings → Developer → Edit Config</strong>. That
               opens <C>claude_desktop_config.json</C>: on Windows in{" "}
@@ -163,11 +163,11 @@ export function McpConnect({ origin }: { origin: string }) {
             </li>
             <li>
               Open a new chat and check the tools indicator in the composer: all{" "}
-              {MCP_TOOLS.length} Soundbox tools should be listed there.
+              {MCP_TOOLS.length} Mirli tools should be listed there.
             </li>
           </ol>
           <Note>
-            If Soundbox does not appear, check the config file first. A trailing comma or a
+            If Mirli does not appear, check the config file first. A trailing comma or a
             duplicated <C>mcpServers</C> key makes the whole file unparseable, and every server
             in it disappears.
           </Note>
@@ -182,7 +182,7 @@ export function McpConnect({ origin }: { origin: string }) {
           <CopyBlock code={httpConfig} language="json" label="Copy the HTTP MCP config" />
           <Note>
             There is <strong className="text-foreground">no trailing slash</strong> on the URL.
-            Soundbox rewrites <C>/mcp</C> to the mounted path internally so that clients which do
+            Mirli rewrites <C>/mcp</C> to the mounted path internally so that clients which do
             not follow 307 redirects on POST still work.
           </Note>
         </TabsContent>
@@ -283,7 +283,7 @@ export function McpTools() {
         Every sound-shaped result carries <C>path</C>: an{" "}
         <strong className="text-foreground">absolute filesystem path</strong> to the WAV on this
         machine. The agent can hand it straight to ffmpeg, copy it into a game project's assets
-        folder, or attach it, without knowing anything about the Soundbox server or its HTTP port.
+        folder, or attach it, without knowing anything about the Mirli server or its HTTP port.
       </Note>
 
       <Note>
@@ -377,7 +377,7 @@ export function McpWorkedExample() {
         <Turn role="Agent">
           <p className="text-muted-foreground">
             The <C>path</C> is absolute, so the next step is ordinary file work, with no HTTP and no
-            knowledge of the Soundbox port. It converts to the format the project wants and drops it
+            knowledge of the Mirli port. It converts to the format the project wants and drops it
             in:
           </p>
           <CopyBlock
@@ -395,8 +395,8 @@ export function McpWorkedExample() {
       </div>
 
       <Note>
-        The agent needed no Soundbox-specific code: it called a tool, got JSON with a path, and
-        used its normal file tools. A URL relative to the Soundbox server would have made this turn
+        The agent needed no Mirli-specific code: it called a tool, got JSON with a path, and
+        used its normal file tools. A URL relative to the Mirli server would have made this turn
         three steps longer.
       </Note>
     </DocSection>
@@ -415,7 +415,7 @@ export function McpDebugging({ origin }: { origin: string }) {
       <ol className="ml-4 min-w-0 list-decimal space-y-4 text-sm marker:text-muted-foreground">
         <li>
           <strong className="text-foreground">Check the server is up.</strong> The MCP endpoint lives
-          inside this app's process, so if Soundbox is closed there is nothing to connect to.
+          inside this app's process, so if Mirli is closed there is nothing to connect to.
           <CopyBlock
             className="mt-2"
             code={`curl ${origin}/api/health`}

@@ -6,7 +6,7 @@
  * competitor charges or allows; nobody has checked that.
  */
 
-export const COMPARISON_HEAD = ["Hosted (ElevenLabs, Suno and similar)", "Soundbox"] as const;
+export const COMPARISON_HEAD = ["Hosted (ElevenLabs, Suno and similar)", "Mirli"] as const;
 
 export const COMPARISON: readonly [row: string, hosted: string, ours: string][] = [
   ["Runs on", "Their GPUs", "Your machine"],

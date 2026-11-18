@@ -41,9 +41,6 @@ export interface BlogFrontmatter {
   draft: boolean;
   /** Root-relative, e.g. `/blog/why-audio-cpp.jpg`. 1200x630. */
   image?: string;
-  /** Root-relative path to a spoken version of the post, e.g.
-   *  `/blog/audio/why-audio-cpp.mp3`. Soundbox reads its own blog. */
-  audio?: string;
 }
 
 /** Leading BOM tolerated because editors add one and the failure is baffling. */
@@ -60,7 +57,6 @@ const KNOWN_KEYS = new Set([
   "author",
   "draft",
   "image",
-  "audio",
 ]);
 
 function unquote(value: string): string {
@@ -187,6 +183,5 @@ export function parseBlogFrontmatter(data: Record<string, FmValue>, file: string
     author,
     draft,
     image: str(data, "image", file),
-    audio: str(data, "audio", file),
   };
 }

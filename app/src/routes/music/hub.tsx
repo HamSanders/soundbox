@@ -77,7 +77,7 @@ const FAQS = [
   {
     question: "Can I use this music in a commercial game or video?",
     answer:
-      "It depends on which model rendered the track; every row names it. The instrumentals come from Stable Audio 3.0 Small Music, under the Stability AI Community License: free for commercial use below USD $1M annual revenue, Enterprise licence required above it. The sung tracks come from ACE-Step, listed as Apache 2.0 but flagged unverified in the model catalogue, so read its model card before shipping. Soundbox itself is MIT and imposes no terms on what you generate.",
+      "It depends on which model rendered the track; every row names it. The instrumentals come from Stable Audio 3.0 Small Music, under the Stability AI Community License: free for commercial use below USD $1M annual revenue, Enterprise licence required above it. The sung tracks come from ACE-Step, listed as Apache 2.0 but flagged unverified in the model catalogue, so read its model card before shipping. Mirli itself is MIT and imposes no terms on what you generate.",
   },
   {
     question: "How long can a generated track be?",
@@ -102,7 +102,7 @@ const FAQS = [
   {
     question: "Can an agent generate these instead of me?",
     answer:
-      "Yes. Soundbox exposes an MCP server, so a coding agent can call soundbox.generate with a prompt and a lyrics block and get back an absolute path to a WAV it can drop into a project. Every track on this page was produced through the HTTP API that server is built on.",
+      "Yes. Mirli exposes an MCP server, so a coding agent can call soundbox.generate with a prompt and a lyrics block and get back an absolute path to a WAV it can drop into a project. Every track on this page was produced through the HTTP API that server is built on.",
   },
 ];
 
@@ -833,7 +833,7 @@ export function MusicHubPage() {
     <PlayerContext.Provider value={player}>
       <div className="bg-background text-foreground min-h-svh">
         <SeoHead
-          title="AI music generated locally | Soundbox"
+          title="AI music generated locally | Mirli"
           description="Thirty-six tracks generated on one desktop GPU, each with the exact prompt that made it: amapiano, drill, hyperpop, corridos, garage and more. Instrumental and sung, from open-weight models, with no account and no per-track billing."
           path="/music"
           jsonLd={[
@@ -842,7 +842,7 @@ export function MusicHubPage() {
             {
               "@context": "https://schema.org",
               "@type": "MusicPlaylist",
-              name: "Generated locally with Soundbox",
+              name: "Generated locally with Mirli",
               numTracks: MUSIC_TRACKS.length,
               track: MUSIC_TRACKS.map((t) => ({
                 "@type": "MusicRecording",
@@ -1089,12 +1089,12 @@ export function MusicHubPage() {
                   {
                     icon: BotIcon,
                     title: "An agent can drive it",
-                    body: "Soundbox runs an MCP server. An agent calls soundbox.generate with a prompt and a lyrics block and gets back an absolute path to a WAV. This page was produced through the same HTTP API.",
+                    body: "Mirli runs an MCP server. An agent calls soundbox.generate with a prompt and a lyrics block and gets back an absolute path to a WAV. This page was produced through the same HTTP API.",
                   },
                   {
                     icon: ScaleIcon,
                     title: "Licences stated before you download",
-                    body: "Every track names its model, and every model's terms are on this page. No per-track billing, and Soundbox itself is MIT.",
+                    body: "Every track names its model, and every model's terms are on this page. No per-track billing, and Mirli itself is MIT.",
                   },
                 ].map(({ icon: Icon, title, body }) => (
                   <div key={title} className="bg-card rounded-md p-5">
@@ -1166,7 +1166,7 @@ export function MusicHubPage() {
                   { to: "/sfx/8bit-music", label: "8-bit background music" },
                   { to: "/sfx/chiptune-music", label: "Chiptune music" },
                   { to: "/sfx", label: "All sound effect collections" },
-                  { to: MODELS_HUB_HREF, label: "The models Soundbox runs" },
+                  { to: MODELS_HUB_HREF, label: "The models Mirli runs" },
                 ].map((link) => (
                   <Link
                     key={link.to}
@@ -1184,7 +1184,7 @@ export function MusicHubPage() {
 
             <footer className="border-border/60 text-muted-foreground mt-14 border-t pt-6 text-xs">
               <p className="max-w-3xl">
-                Soundbox Records is a fictional label: every act on the roster
+                Mirli Records is a fictional label: every act on the roster
                 is a prompt persona, every cover on this page is generated
                 illustration, and no real artist, release or record is depicted.
                 The audio was rendered locally by the models named above and
@@ -1195,7 +1195,7 @@ export function MusicHubPage() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Soundbox on GitHub
+                  Mirli on GitHub
                 </a>
                 .
               </p>

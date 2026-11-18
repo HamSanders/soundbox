@@ -1,5 +1,5 @@
 /**
- * `/download` — the installers, the Soundbox film and the repo's numbers, on the site.
+ * `/download` — the installers, the Mirli film and the repo's numbers, on the site.
  *
  * The page is built around the mark's own idea: a line of sound that turns
  * into the M. In the hero a calm wave runs in from the left edge of the
@@ -444,8 +444,8 @@ export function DownloadPage() {
   return (
     <div className="bg-background text-foreground relative min-h-svh overflow-x-clip">
       <SeoHead
-        title="Download Soundbox for Windows and macOS | Soundbox"
-        description="Download the Soundbox desktop app for Windows 10/11 or macOS. Free, open source, no account. Models download from inside the app."
+        title="Download Mirli for Windows and macOS | Mirli"
+        description="Download the Mirli desktop app for Windows 10/11 or macOS. Free, open source, no account. Models download from inside the app."
         path="/download"
       />
       <style>{STYLES}</style>
@@ -519,7 +519,7 @@ export function DownloadPage() {
               className="h-14 w-full px-9 text-base shadow-[0_0_70px_-14px_var(--foreground)] hover:shadow-[0_0_90px_-10px_var(--foreground)] sm:w-auto"
             >
               <ArrowDownIcon className="size-4.5" aria-hidden="true" />
-              {primary ? `Download for ${primary.short}` : "Download Soundbox"}
+              {primary ? `Download for ${primary.short}` : "Download Mirli"}
             </ButtonLink>
             <ButtonLink
               href={REPO_URL}
@@ -592,7 +592,8 @@ export function DownloadPage() {
             title="Pick your platform"
           >
             One installer with everything inside. Models download from the app
-            the first time you use them.
+            the first time you use them. Mirli was formerly Soundbox, and the
+            installer files still carry that name.
           </SectionHead>
 
           <ul className="bg-border border-border mt-10 grid gap-px border md:grid-cols-3">
@@ -693,7 +694,7 @@ export function DownloadPage() {
               <SiteVideo
                 src="/media/soundbox-vibe.mp4"
                 poster="/media/posters/vibe.jpg"
-                label="Soundbox in thirty seconds: type a prompt, hear sound effects, music and voices, switch models"
+                label="Mirli in thirty seconds: type a prompt, hear sound effects, music and voices, switch models"
                 className="[&>div]:rounded-none [&>div]:border-0"
               />
             </div>

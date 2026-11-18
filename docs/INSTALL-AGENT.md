@@ -1,15 +1,15 @@
-# Installing Soundbox with a coding agent
+# Installing Mirli with a coding agent
 
 This page is written for an agent such as Claude Code, Cursor or Codex that
-has been asked to install Soundbox on the machine it is running on. Paste
+has been asked to install Mirli on the machine it is running on. Paste
 this into the agent to start:
 
 ```text
-Install Soundbox on this machine and confirm it works, following
+Install Mirli on this machine and confirm it works, following
 https://github.com/HamSanders/soundbox/blob/main/docs/INSTALL-AGENT.md
 ```
 
-Soundbox runs entirely on the user's machine. The server listens on
+Mirli runs entirely on the user's machine. The server listens on
 `http://127.0.0.1:17494` and every step below can be checked against its
 HTTP API, which is documented in full in [API.md](API.md).
 
@@ -112,7 +112,7 @@ HTTP API, which is documented in full in [API.md](API.md).
 
    Other clients and the three bundled skills are in [MCP.md](MCP.md).
 
-8. **Report.** Tell the user: where Soundbox is installed, what `GET
+8. **Report.** Tell the user: where Mirli is installed, what `GET
    /api/health` said about the GPU, which model was downloaded and under which
    licence, the path of the test WAV, and anything from the rules above that
    needed their hand.

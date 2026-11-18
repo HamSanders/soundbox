@@ -48,7 +48,7 @@ export const LANDERS: Lander[] = [
   {
     slug: "elevenlabs",
     path: "alternatives/elevenlabs",
-    seoTitle: "A free, local ElevenLabs alternative | Soundbox",
+    seoTitle: "A free, local ElevenLabs alternative | Mirli",
     seoDescription:
       "Sound effects, speech and voice cloning from open-weight models on your own machine. No account, no credits, works offline. MIT licensed.",
     eyebrow: "Alternatives · ElevenLabs",
@@ -57,7 +57,7 @@ export const LANDERS: Lander[] = [
     hero: "chip-ambience",
     shot: {
       src: "/product/studio.png",
-      alt: 'The Soundbox studio: a script cast across three speakers above a multi-track timeline holding the spoken lines, an ambient music bed and sound effects.',
+      alt: 'The Mirli studio: a script cast across three speakers above a multi-track timeline holding the spoken lines, an ambient music bed and sound effects.',
     },
     tricksTitle: "What you can do with it",
     tricks: [
@@ -85,7 +85,7 @@ export const LANDERS: Lander[] = [
         body: "An MCP server with 24 tools lets Claude Code, Cursor or any MCP client make and place the audio for you.",
       },
     ],
-    compare: "Soundbox next to a hosted service",
+    compare: "Mirli next to a hosted service",
     faq: [
       FREE,
       {
@@ -103,7 +103,7 @@ export const LANDERS: Lander[] = [
   {
     slug: "suno",
     path: "alternatives/suno",
-    seoTitle: "A free, local Suno alternative | Soundbox",
+    seoTitle: "A free, local Suno alternative | Mirli",
     seoDescription:
       "Make instrumentals and songs with lyrics from open-weight music models on your own GPU. No account, no credits, works offline. MIT licensed.",
     eyebrow: "Alternatives · Suno",
@@ -139,7 +139,7 @@ export const LANDERS: Lander[] = [
         body: "Drop the music onto the timeline beside sound effects and voices, or let an agent do it over MCP.",
       },
     ],
-    compare: "Soundbox next to a hosted service",
+    compare: "Mirli next to a hosted service",
     faq: [
       FREE,
       {
@@ -160,7 +160,7 @@ export const LANDERS: Lander[] = [
   {
     slug: "sound-effects",
     path: "make/sound-effects",
-    seoTitle: "Free AI sound effects generator, offline | Soundbox",
+    seoTitle: "Free AI sound effects generator, offline | Mirli",
     seoDescription:
       "Describe a sound and get a WAV, generated on your own machine. Hundreds of real examples with the exact prompts. No account, no credits. MIT licensed.",
     eyebrow: "Make · Sound effects",
@@ -219,7 +219,7 @@ export const LANDERS: Lander[] = [
   {
     slug: "game-audio",
     path: "make/game-audio",
-    seoTitle: "AI game audio generator for developers | Soundbox",
+    seoTitle: "AI game audio generator for developers | Mirli",
     seoDescription:
       "Generate game sound effects and music locally, then let Claude Code or Cursor add them to your project over MCP. A library per game. MIT licensed.",
     eyebrow: "Make · Game audio",
@@ -265,7 +265,7 @@ export const LANDERS: Lander[] = [
       {
         question: "How does the agent connect?",
         answer:
-          "Start Soundbox, then add it to your client with one command: claude mcp add --transport http soundbox http://127.0.0.1:17494/mcp. Cursor and other MCP clients take the same URL. The agent gets 24 tools for sounds, speech and multi-track stories.",
+          "Start Mirli, then add it to your client with one command: claude mcp add --transport http soundbox http://127.0.0.1:17494/mcp. Cursor and other MCP clients take the same URL. The agent gets 24 tools for sounds, speech and multi-track stories.",
       },
       {
         question: "Can I ship these sounds in a commercial game?",
@@ -281,7 +281,7 @@ export const LANDERS: Lander[] = [
   {
     slug: "voiceovers",
     path: "make/voiceovers",
-    seoTitle: "Local text to speech and voice cloning | Soundbox",
+    seoTitle: "Local text to speech and voice cloning | Mirli",
     seoDescription:
       "Read a script aloud, clone a voice from a short clip and cast voices onto script lines, all on your own machine. No account, no credits. MIT licensed.",
     eyebrow: "Make · Voiceovers",

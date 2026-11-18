@@ -39,7 +39,7 @@ function DocBody({ page }: { page: DocPage }) {
   return (
     <>
       <SeoHead
-        title={`${page.metaTitle ?? page.title} | Soundbox docs`}
+        title={`${page.metaTitle ?? page.title} | Mirli docs`}
         description={page.description ?? page.blurb}
         path={`/docs/${page.slug}`}
       />

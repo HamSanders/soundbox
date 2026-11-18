@@ -5,8 +5,8 @@
  * `site/` only (see `site/src/routes.tsx`), and the app has no marketing
  * routes at all. That move is what removed the live pieces: there is no
  * backend behind this page and no `QueryClientProvider` above it, so nothing
- * here may call a query hook, and the hero prompt no longer hands anything to
- * the composer — see `HeroPrompt`.
+ * here may call a query hook. The hero plays pre-rendered files instead of
+ * offering a prompt box with nothing behind it — see `Hero`.
  *
  * Two rules shaped everything else, and both survive the move.
  *
@@ -25,11 +25,10 @@
  *    "should I trust this?" question.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ActivityIcon,
-  ArrowUpIcon,
   AudioLinesIcon,
   BookOpenIcon,
   BotIcon,
@@ -38,13 +37,12 @@ import {
   ExternalLinkIcon,
   RadarIcon,
   SparklesIcon,
+  StarIcon,
   TerminalIcon,
 } from "lucide-react";
 
 import { SeoHead, faqJsonLd, softwareAppJsonLd } from "@/components/seo-head";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { TimelineBanner } from "@/components/timeline-banner";
 import { RevealPromptToSample } from "@/components/reveal-prompt-to-sample";
 import { ProductShots } from "@/components/product-shots";
 import { LicenseChip } from "@/components/license-badge";
@@ -54,48 +52,24 @@ import { AGENT_FAQ, COMMERCIAL, FREE, GPU, MAC, MODELS_FAQ, OFFLINE, RENAMED } f
 import { SamplePlay } from "@/components/sample-play";
 import { exampleForModel, type ExampleId } from "@/content/examples";
 import type { LicenseInfo } from "@/lib/api";
-import { GENERATOR_HREF, MODELS_HUB_HREF, REPO_URL, repoFile } from "@/lib/marketing-links";
+import { MODELS_HUB_HREF, REPO_URL, repoFile } from "@/lib/marketing-links";
 import { cn } from "@/lib/utils";
 
 
 /* ------------------------------------------------------------------- data */
 
 /**
- * Prompt starters, in the material / action / space shape the README's
- * "Writing prompts that work" section argues for. These do double duty: they
- * fill the box, and they are the only teaching material anyone reads.
+ * What the hero lets you hear: two sound effects, two pieces of music (one
+ * sung) and a voice, so one row covers everything the app makes. Each is a
+ * real render from `content/examples.ts`, played with the prompt beside it.
  */
-const EXAMPLES: { label: string; prompt: string; sample: ExampleId }[] = [
-  {
-    label: "Impact",
-    sample: "chip-impact",
-    prompt: "heavy wooden crate dropping onto a concrete floor, close mic, dry room",
-  },
-  {
-    label: "Footsteps",
-    sample: "chip-footsteps",
-    prompt: "boots on wet gravel, slow steady pace, outdoors at night",
-  },
-  {
-    label: "Machinery",
-    sample: "chip-machinery",
-    prompt: "old freight lift motor starting under load, metal cable strain, echoing shaft",
-  },
-  {
-    label: "Ambience",
-    sample: "chip-ambience",
-    prompt: "rain on a tin roof, distant thunder, steady wind through trees",
-  },
-  {
-    label: "UI",
-    sample: "chip-ui",
-    prompt: "three small plastic button clicks in a row, tight and dry, no reverb",
-  },
-  {
-    label: "Whoosh",
-    sample: "chip-whoosh",
-    prompt: "heavy steel blade swinging fast past the microphone, turbulent air",
-  },
+const HERO_SAMPLES: ExampleId[] = [
+  "chip-impact",
+  "song-own-machine",
+  "chip-ambience",
+  "voice-intro",
+  "inst-lofi",
+  "laser-plasma-bolt",
 ];
 
 interface ModelCard {
@@ -298,170 +272,107 @@ function Feature({
 
 /* ------------------------------------------------------------------ hero */
 
-function HeroPrompt({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  // This used to hand the typed prompt to the composer through the session
-  // store and navigate to `/app`. That only ever worked because this page was
-  // built into the app; on the public site there is no composer to open and no
-  // store to write to, so the submit goes where someone who wants to run this
-  // prompt actually has to go — the install guide.
-  const go = () => {
-    if (!value.trim()) return;
-    window.open(GENERATOR_HREF, "_blank", "noreferrer,noopener");
-  };
+/** GitHub's public repo endpoint, from the same `REPO_URL` every link uses. */
+const REPO_API = REPO_URL.replace("https://github.com/", "https://api.github.com/repos/");
 
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        go();
-      }}
-      className="mx-auto mt-8 w-full max-w-2xl"
-    >
-      {/* Deliberately the same shell as the real composer — card, soft ring,
-          ring lights up on focus-within — so arriving at Generate feels like
-          the same box got bigger rather than like a different app. */}
-      <div className="bg-card ring-foreground/10 focus-within:ring-ring/40 rounded-2xl p-2 text-left shadow-lg ring-1 transition-shadow">
-        <label htmlFor="hero-prompt" className="sr-only">
-          Describe a sound
-        </label>
-        <div className="flex items-end gap-2">
-          <Textarea
-            id="hero-prompt"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                go();
-              }
-            }}
-            rows={2}
-            placeholder="heavy wooden door slam, dry room, close mic"
-            aria-describedby="hero-prompt-hint"
-            className="max-h-40 min-h-[3.25rem] resize-none overflow-y-auto border-transparent bg-transparent px-2.5 py-2 text-base leading-relaxed shadow-none placeholder:text-muted-foreground/70 focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent"
-          />
-          <Button
-            type="submit"
-            size="icon"
-            disabled={!value.trim()}
-            aria-label="Download Mirli to run this prompt"
-            className="mb-1 shrink-0 rounded-full shadow-sm transition-transform hover:scale-105 active:scale-95"
-          >
-            <ArrowUpIcon />
-          </Button>
-        </div>
-      </div>
-      <p id="hero-prompt-hint" className="text-muted-foreground mt-2 text-xs">
-        Mirli runs on your own machine, so this opens the download page.
-        Prompts work best when they name the material, the action and the
-        space.
-      </p>
-    </form>
-  );
+/** The star count for the secondary button. Fetched after load and left out
+ *  if the request fails or is rate limited: the button never shows a dash. */
+function useStars(): number | null {
+  const [stars, setStars] = useState<number | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(REPO_API, { signal: controller.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { stargazers_count?: number } | null) => {
+        if (typeof d?.stargazers_count === "number") setStars(d.stargazers_count);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+  return stars;
 }
 
+/**
+ * Say what it is, then let it be heard.
+ *
+ * The audio sites that do this well (Stable Audio, Suno, ElevenLabs) put real
+ * output with a play button in the first screen, labelled with the prompt
+ * that made it. This hero used to hold a decorative timeline and a prompt box
+ * that could only open the download page; both are gone. What is left is one
+ * headline, one sentence, two buttons and six renders, each playable without
+ * installing anything.
+ */
 function Hero() {
-  const [prompt, setPrompt] = useState("");
-  const [active, setActive] = useState(0);
-
-  const applyExample = (index: number) => {
-    setActive(index);
-    setPrompt(EXAMPLES[index].prompt);
-    document.getElementById("hero-prompt")?.focus();
-  };
+  const stars = useStars();
 
   return (
     <section aria-labelledby="hero-heading" className="relative overflow-hidden px-4">
-      {/* Decorative only: a soft teal wash behind the headline, drawn from the
-          accent token. No imagery, no asset, nothing to load — and hidden from
-          assistive tech. */}
+      {/* Decorative only: a soft wash behind the headline, drawn from the
+          accent token. Hidden from assistive tech. */}
       <div
         aria-hidden="true"
         className="bg-primary/12 pointer-events-none absolute -top-48 left-1/2 size-[34rem] -translate-x-1/2 rounded-full blur-3xl"
       />
 
-      <div className="relative mx-auto w-full max-w-3xl py-16 text-center sm:py-24">
-        <span className="text-muted-foreground ring-border bg-card inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ring-1">
-          <span className="bg-primary size-1.5 rounded-full" aria-hidden="true" />
-          Open source · MIT · runs on your own GPU
-        </span>
+      <div className="relative mx-auto w-full max-w-5xl py-16 sm:py-24">
+        <div className="mx-auto max-w-3xl text-center">
+          <span className="text-muted-foreground ring-border bg-card inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ring-1">
+            <span className="bg-primary size-1.5 rounded-full" aria-hidden="true" />
+            Free · Open source · Runs on your GPU
+          </span>
 
-        <h1
-          id="hero-heading"
-          className="font-heading mt-5 text-4xl font-semibold tracking-tight text-balance sm:text-5xl"
-        >
-          The local alternative to ElevenLabs and Suno
-        </h1>
+          <h1
+            id="hero-heading"
+            className="font-heading mt-5 text-4xl font-semibold tracking-tight text-balance sm:text-5xl"
+          >
+            Sound effects, music and voices, made on your own GPU
+          </h1>
 
-        <p className="text-muted-foreground mx-auto mt-5 max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
-          Describe a sound and get a WAV. Write lyrics and get a song. Clone a
-          voice from a short clip. Arrange it all on a timeline, or let your
-          coding agent do it over MCP. Open-weight models, no account, works
-          offline.
-        </p>
-
-        {/* Straight under the pitch, so it is on screen without scrolling. It
-            names the visitor's system and links to that installer; the picker
-            under "Getting started" has the rest. */}
-        <DownloadButton pickerHref="#install" className="mt-7" />
-
-        {/* The product, under the pitch rather than above it. The banner led
-            the page for a while; with the badge and headline stacked beneath
-            it the top of the hero read as three things shouting at once, and
-            the headline is the one that has to win. The banner still sits
-            above the fold — it just answers the headline now instead of
-            preempting it. Decorative and silent — see components/timeline-banner. */}
-        <TimelineBanner className="mt-10 text-left" />
-
-        <HeroPrompt value={prompt} onChange={setPrompt} />
-
-        <div
-          className="mt-6 flex flex-wrap justify-center gap-2"
-          role="group"
-          aria-label="Example prompts"
-        >
-          {EXAMPLES.map((ex, i) => (
-            <Button
-              key={ex.label}
-              type="button"
-              variant={i === active ? "secondary" : "outline"}
-              size="sm"
-              className="rounded-full"
-              title={ex.prompt}
-              aria-pressed={i === active}
-              onClick={() => applyExample(i)}
-            >
-              {ex.label}
-            </Button>
-          ))}
-        </div>
-        <p className="text-muted-foreground mx-auto mt-3 max-w-md text-xs leading-relaxed">
-          Each example names a material, an action and a space.
-        </p>
-
-        {/* One real render per chip, with the prompt that made it. The
-            chip fills the box with a starter prompt; this plays a sound
-            made with a prompt of the same kind. */}
-        <div className="border-border mx-auto mt-5 max-w-md rounded-md border p-3 text-left">
-          <p className="label-caps text-muted-foreground mb-2">
-            Hear one made this way
+          <p className="text-muted-foreground mx-auto mt-5 max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
+            A free, open-source alternative to ElevenLabs and Suno. No account,
+            no credits, works offline.
           </p>
-          <SamplePlay key={EXAMPLES[active].sample} id={EXAMPLES[active].sample} />
+
+          <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row sm:items-start">
+            <DownloadButton pickerHref="#install" />
+            <Button size="lg" variant="outline" asChild>
+              <a href={REPO_URL} target="_blank" rel="noreferrer noopener">
+                <StarIcon aria-hidden="true" />
+                Star on GitHub
+                {stars !== null ? (
+                  <span className="text-muted-foreground tabular-nums">
+                    {stars.toLocaleString("en")}
+                  </span>
+                ) : null}
+              </a>
+            </Button>
+          </div>
         </div>
 
-        {/* A real link rather than an onClick navigate: this page is
-            prerendered, and a crawler following the site needs an href. */}
-        <div className="mt-8 flex justify-center">
-          <Button size="lg" variant="outline" asChild>
-            <Link to={MODELS_HUB_HREF}>Browse the models</Link>
-          </Button>
-        </div>
+        <ul
+          aria-label="Sounds made with Mirli"
+          className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+        >
+          {/* Four on a phone, where each tile is a full row; all six once the
+              grid has columns. */}
+          {HERO_SAMPLES.map((id, i) => (
+            <li
+              key={id}
+              className={cn("bg-card ring-border/70 rounded-xl p-4 ring-1", i >= 4 && "max-sm:hidden")}
+            >
+              <SamplePlay id={id} clamp />
+            </li>
+          ))}
+        </ul>
+        {/* Measured, not quoted: the same figure /press cites, from
+            docs/new-models-2026-10.md (RTX 5080, CUDA, model already loaded). */}
+        <p className="text-muted-foreground mt-4 text-center text-xs leading-relaxed">
+          Every clip above was made on one desktop GPU from the prompt shown. A
+          five-second sound effect takes 1.3 s on an RTX 5080.{" "}
+          <Link to="/sfx" className="text-foreground underline underline-offset-4">
+            Hear hundreds more
+          </Link>
+        </p>
       </div>
     </section>
   );

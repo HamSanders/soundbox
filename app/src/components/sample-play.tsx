@@ -32,11 +32,15 @@ export function SamplePlay({
   id,
   className,
   compact,
+  clamp,
 }: {
   id: ExampleId;
   className?: string;
   /** Drop the prompt and the credit line: just the button and the title. */
   compact?: boolean;
+  /** Keep the prompt to two lines and leave the lyrics out, for a grid of
+   *  players where every tile should be the same height. */
+  clamp?: boolean;
 }) {
   const example: Example = EXAMPLES[id];
   // One owner per player, not per sound: the same render can sit twice on a page.
@@ -117,11 +121,14 @@ export function SamplePlay({
           )}
         </p>
         {!compact && (example.prompt ?? example.text) ? (
-          <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
+          <p
+            className={cn("text-muted-foreground mt-0.5 text-xs leading-relaxed", clamp && "line-clamp-2")}
+            title={clamp ? (example.prompt ?? example.text) : undefined}
+          >
             &ldquo;{example.prompt ?? example.text}&rdquo;
           </p>
         ) : null}
-        {!compact && example.lyrics ? (
+        {!compact && !clamp && example.lyrics ? (
           <details className="text-muted-foreground mt-1 text-xs">
             <summary className="hover:text-foreground cursor-pointer">Lyrics</summary>
             <p className="mt-1 leading-relaxed whitespace-pre-line">

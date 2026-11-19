@@ -36,7 +36,7 @@ it and offers a one-click switch to External. It probes 127.0.0.1 on 7860,
 The engine is one native binary, fetched from stable-diffusion.cpp's GitHub
 releases and cached under `<data dir>/bin/sd/<version>/`. It uses the same
 managed-binary system as `audiocpp_cli` and `llama-server`, including the
-`SOUNDBOX_SD_SERVER_BIN` override for your own build. See
+`MIRLI_SD_SERVER_BIN` override for your own build. See
 [INSTALL.md](INSTALL.md).
 
 Three models are offered:

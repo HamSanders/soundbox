@@ -15,14 +15,14 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { CancelledJob, GpuBusy, StreamUnsupported } from "../errors.js";
 import { getLogger } from "../logging.js";
 import { speakStreamRequestSchema } from "../schemas.js";
-import type { SoundboxService, SpeakStreamEvent } from "../service.js";
+import type { MirliService, SpeakStreamEvent } from "../service.js";
 import { isAllowedOrigin } from "./helpers.js";
 
-const log = getLogger("soundbox.stream");
+const log = getLogger("mirli.stream");
 
 const FORMAT_HEADERS = ["X-Soundbox-Sample-Rate", "X-Soundbox-Channels", "X-Soundbox-Stream-Id"];
 
-export function registerSpeakStream(app: FastifyInstance, svc: SoundboxService): void {
+export function registerSpeakStream(app: FastifyInstance, svc: MirliService): void {
   app.post("/api/speak/stream", async (request, reply) => {
     const req = speakStreamRequestSchema.parse(request.body);
 

@@ -168,8 +168,9 @@ export function DevelopersPage() {
           </p>
           <p className="text-muted-foreground mt-4 max-w-2xl text-sm leading-relaxed">
             Some identifiers kept the old name and are what you type: the MCP tools are{" "}
-            <C>soundbox.*</C>, the environment variables <C>SOUNDBOX_*</C>, the CLI{" "}
-            <C>soundbox</C> and the image <C>{IMAGE}</C>. Version {facts.version}.
+            <C>soundbox.*</C>, the CLI <C>soundbox</C> and the image <C>{IMAGE}</C>. The
+            environment variables are <C>MIRLI_*</C>; the old <C>SOUNDBOX_*</C> names still
+            work, and are the only ones 0.5.0 and earlier read. Version {facts.version}.
           </p>
 
           <div className="mt-6 flex flex-wrap gap-2">

@@ -86,7 +86,7 @@ For a browser-based checkout run after `npm.cmd run build`, select an isolated
 data directory explicitly if testing:
 
 ```powershell
-$env:SOUNDBOX_DATA_DIR = Join-Path (Get-Location) 'build/manual-fish-test'
+$env:MIRLI_DATA_DIR = Join-Path (Get-Location) 'build/manual-fish-test'
 node server/dist/cli.js --port 17495
 ```
 

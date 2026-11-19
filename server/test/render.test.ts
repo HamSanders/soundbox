@@ -37,7 +37,7 @@ async function settled(app: FastifyInstance, jobId: string): Promise<Job> {
 }
 
 /**
- * The "GPU box": a Soundbox whose models are custom endpoints pointing at a
+ * The "GPU box": a Mirli whose models are custom endpoints pointing at a
  * stub, so a render costs nothing and the stub records what it was sent.
  */
 describe("POST /api/render", () => {
@@ -219,10 +219,10 @@ describe("POST /api/render", () => {
 });
 
 /**
- * The case the route is for: a laptop's Soundbox using a GPU box's Soundbox
+ * The case the route is for: a laptop's Mirli using a GPU box's Mirli
  * as a custom endpoint, through the shipped preset, over a real socket.
  */
-describe("one Soundbox rendering through another", () => {
+describe("one Mirli rendering through another", () => {
   let gpu: FastifyInstance;
   let laptop: FastifyInstance;
   let stub: Server;

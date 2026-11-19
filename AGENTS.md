@@ -13,10 +13,12 @@ To *use* Mirli (install it, connect its MCP server, call its HTTP API), read
 Mirli generates sound effects, music and speech locally from open-weight
 models. The product was called Soundbox, and many identifiers keep that
 name on purpose: the `soundbox` CLI and npm workspace names, the
-`soundbox.*` MCP tools, the `SOUNDBOX_*` environment variables, the
-`X-Soundbox` header, the `~/.soundbox` data directory and the
+`soundbox.*` MCP tools, the `X-Soundbox` header, `soundbox.db` and the
 `ghcr.io/hamsanders/soundbox` image. Do not rename them; agents and scripts
-out in the world type them.
+out in the world type them. Environment variables are `MIRLI_*`, and the
+server still accepts the old `SOUNDBOX_*` names (`server/src/env.ts`); the
+data directory is `~/.mirli`, or an existing `~/.soundbox` from before the
+rename (`config.defaultDataDir()`). Keep both fallbacks.
 
 ## Layout
 

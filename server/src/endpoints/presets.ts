@@ -9,7 +9,7 @@
  *
  * Two kinds. Servers people run themselves come first. After them come
  * hosted APIs used with the person's own account and key (`hosted: true`):
- * the provider bills them directly, and Soundbox neither resells the service
+ * the provider bills them directly, and Mirli neither resells the service
  * nor sees the charge. Those are offered because a laptop without a GPU has no
  * other way to reach these models, and the form says plainly that prompts
  * leave the machine and that the provider charges for each render.
@@ -124,10 +124,10 @@ export const ENDPOINT_PRESETS: EndpointPreset[] = [
   },
   {
     id: "soundbox-music",
-    label: "Another Soundbox — music",
+    label: "Another Mirli — music",
     hint:
-      "A Soundbox on another machine, such as a GPU box, through its /api/render route. Change the host, " +
-      "set the model to one installed there, and put its SOUNDBOX_API_TOKEN in the key field if it has one.",
+      "A Mirli on another machine, such as a GPU box, through its /api/render route. Change the host, " +
+      "set the model to one installed there, and put its MIRLI_API_TOKEN in the key field if it has one.",
     docs_url: "https://github.com/HamSanders/soundbox/blob/main/docs/API.md#render-and-wait",
     hosted: false,
     pricing_url: "",
@@ -150,9 +150,9 @@ export const ENDPOINT_PRESETS: EndpointPreset[] = [
   },
   {
     id: "soundbox-sfx",
-    label: "Another Soundbox — sound effects",
+    label: "Another Mirli — sound effects",
     hint:
-      "A Soundbox on another machine, through its /api/render route. Change the host, set the model to " +
+      "A Mirli on another machine, through its /api/render route. Change the host, set the model to " +
       "one installed there, and put its access token in the key field if it has one.",
     docs_url: "https://github.com/HamSanders/soundbox/blob/main/docs/API.md#render-and-wait",
     hosted: false,
@@ -176,9 +176,9 @@ export const ENDPOINT_PRESETS: EndpointPreset[] = [
   },
   {
     id: "soundbox-speech",
-    label: "Another Soundbox — speech",
+    label: "Another Mirli — speech",
     hint:
-      "A Soundbox on another machine, through its /api/render route. List the names of voices saved " +
+      "A Mirli on another machine, through its /api/render route. List the names of voices saved " +
       "there as this endpoint's voices, or leave the list empty for the model's default voice.",
     docs_url: "https://github.com/HamSanders/soundbox/blob/main/docs/API.md#render-and-wait",
     hosted: false,
@@ -269,7 +269,7 @@ export const ENDPOINT_PRESETS: EndpointPreset[] = [
     label: "fal — ACE-Step music (your account)",
     hint:
       "ACE-Step on fal, billed to your fal account per second of audio. fal writes the tags and lyrics from the prompt. " +
-      "The answer is a link to a WAV, which Soundbox downloads.",
+      "The answer is a link to a WAV, which Mirli downloads.",
     docs_url: "https://fal.ai/models/fal-ai/ace-step/prompt-to-audio/api",
     hosted: true,
     pricing_url: "https://fal.ai/models/fal-ai/ace-step/prompt-to-audio",

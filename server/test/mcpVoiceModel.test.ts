@@ -20,7 +20,7 @@ import { Config } from "../src/config.js";
 import { buildMcp } from "../src/mcp/server.js";
 import type { ModelInfo } from "../src/models/types.js";
 import type { Voice } from "../src/schemas.js";
-import { SoundboxService } from "../src/service.js";
+import { MirliService } from "../src/service.js";
 
 const VEVO2 = "audiocpp-vevo2";
 const VIBEVOICE = "audiocpp-vibevoice";
@@ -29,7 +29,7 @@ const CHATTERBOX = "audiocpp-chatterbox";
 const FISH = "audiocpp-fish-audio";
 
 let client: Client;
-let svc: SoundboxService;
+let svc: MirliService;
 let dataDir: string;
 /** Model id → the texts it was asked to speak, in order. */
 const spoken = new Map<string, string[]>();
@@ -58,7 +58,7 @@ function voice(id: string, name: string, modelId: string | null): void {
 
 beforeAll(async () => {
   dataDir = await mkdtemp(join(tmpdir(), "soundbox-mcp-voice-model-"));
-  svc = new SoundboxService(new Config(dataDir));
+  svc = new MirliService(new Config(dataDir));
   await svc.models.setAudiocppEnabled([VEVO2, VIBEVOICE, CHATTERBOX, FISH]);
 
   // Vevo2 is the loaded one — the model the old resolution reached for.

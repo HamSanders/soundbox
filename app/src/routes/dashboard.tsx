@@ -93,7 +93,7 @@ export function DashboardPage() {
             <div>
               <p className="text-sm font-medium">No models installed yet</p>
               <p className="text-muted-foreground text-xs">
-                Soundbox cannot make anything until one is on your disk.
+                Mirli cannot make anything until one is on your disk.
               </p>
             </div>
           </div>

@@ -46,12 +46,12 @@ import { registerProfiles } from "./routes/profiles.js";
 import { registerSettings } from "./routes/settings.js";
 import { registerSounds } from "./routes/sounds.js";
 import { registerVoices } from "./routes/voices.js";
-import { SoundboxService } from "./service.js";
+import { MirliService } from "./service.js";
 
 declare module "fastify" {
   interface FastifyInstance {
     /** The one service instance every route and the MCP layer share. */
-    soundbox: SoundboxService;
+    soundbox: MirliService;
   }
 }
 
@@ -70,7 +70,7 @@ export interface BuildAppOptions {
   /**
    * Extra hostnames the Host header may carry besides the loopback names — the
    * CLI passes its `--host` here when bound to a specific non-loopback address.
-   * SOUNDBOX_ALLOWED_HOSTS is accepted on top of these either way.
+   * MIRLI_ALLOWED_HOSTS is accepted on top of these either way.
    * `"any"` disables the check (wildcard binds like 0.0.0.0).
    */
   allowedHosts?: string[] | "any";
@@ -130,14 +130,14 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
     bodyLimit: MAX_UPLOAD_BYTES,
     forceCloseConnections: true,
   });
-  const svc = new SoundboxService(config);
+  const svc = new MirliService(config);
   svc.start();
   app.decorate("soundbox", svc);
 
   // DNS-rebinding defence: a hostile page whose domain re-resolves to
   // 127.0.0.1 reaches this server same-origin, but its Host header still
   // names the hostile domain. Only loopback names (any port), a host the user
-  // deliberately bound to, and the names in SOUNDBOX_ALLOWED_HOSTS (what a
+  // deliberately bound to, and the names in MIRLI_ALLOWED_HOSTS (what a
   // reverse proxy forwards as Host) are served.
   const extraHosts = new Set(
     allowedHosts === "any" ? [] : allowedHosts.map((h) => hostnameOf(h)),
@@ -302,7 +302,7 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
       void app.register(fastifyStatic, { root: dir, prefix: "/", index: ["index.html"] });
     } else {
       app.get("/", async () => ({
-        name: "Soundbox",
+        name: "Mirli",
         version: VERSION,
         ui: "not bundled — run `npm run dev` in app/ and open http://localhost:5174",
         docs: "/docs",
@@ -335,7 +335,7 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
     // not, so a model on this disk belongs in this profile's list.
     await svc.adoptDownloadedModels();
     console.info(
-      `Soundbox ${VERSION} ready — profile ${config.profile}, data dir ${config.paths.root}`,
+      `Mirli ${VERSION} ready — profile ${config.profile}, data dir ${config.paths.root}`,
     );
   });
   app.addHook("onClose", async () => {

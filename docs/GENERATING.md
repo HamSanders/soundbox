@@ -12,7 +12,7 @@ parameters that change the result.
 4. The takes land in your library, each with the prompt and seed that made it.
 
 Nothing is uploaded. The model runs on your machine, and the WAV is written to
-`~/.soundbox/sounds` before you hear it.
+`~/.mirli/sounds` before you hear it.
 
 ## Writing a prompt
 
@@ -44,7 +44,7 @@ your own setup:
 
 - Let Mirli install `llama-server` and a small GGUF (Models page, or
   `soundbox model install llm`).
-- Point it at a `llama-server` you built, with `SOUNDBOX_LLAMA_SERVER_BIN`.
+- Point it at a `llama-server` you built, with `MIRLI_LLAMA_SERVER_BIN`.
 - Set the mode to *external* and give it any OpenAI-compatible base URL
   (Ollama, LM Studio, vLLM, LocalAI, a hosted endpoint). With or without
   `/v1` both work, since Mirli adds `/v1/chat/completions` without

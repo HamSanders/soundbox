@@ -287,7 +287,7 @@ export function SettingsPage() {
           <CardHeader>
             <CardTitle className="text-base">Audio engine</CardTitle>
             <CardDescription>
-              Every model runs through audio.cpp. Point Soundbox at an audio.cpp you
+              Every model runs through audio.cpp. Point Mirli at an audio.cpp you
               already use and the two share one set of weights instead of each
               downloading its own.
             </CardDescription>
@@ -297,7 +297,7 @@ export function SettingsPage() {
               <div className="space-y-0.5">
                 <Label htmlFor="audiocpp-mode">Mode</Label>
                 <p className="text-muted-foreground text-xs">
-                  Local uses the runtime Soundbox installs and manages; External uses
+                  Local uses the runtime Mirli installs and manages; External uses
                   your own audio.cpp and its models folder.
                 </p>
               </div>
@@ -318,7 +318,7 @@ export function SettingsPage() {
             </div>
 
             {/* Which binary actually won. Worth showing even in Local mode:
-                SOUNDBOX_AUDIOCPP_BIN and a copy on PATH both outrank the
+                MIRLI_AUDIOCPP_BIN and a copy on PATH both outrank the
                 managed install, and until now nothing in the app said so. */}
             {audiocppRuntime && (
               <div className="border-border space-y-1 rounded-lg border border-dashed px-3 py-2">
@@ -330,7 +330,7 @@ export function SettingsPage() {
                         {audiocppRuntime.engine.source === "managed"
                           ? `the managed runtime ${audiocppRuntime.engine.version ?? ""}`
                           : audiocppRuntime.engine.source === "env"
-                            ? "your own binary (SOUNDBOX_AUDIOCPP_BIN)"
+                            ? "your own binary (MIRLI_AUDIOCPP_BIN)"
                             : "an audiocpp_cli found on your PATH"}
                       </span>
                       {audiocppRuntime.engine.backend
@@ -374,7 +374,7 @@ export function SettingsPage() {
                   </>
                 ) : (
                   <>
-                    Managed by Soundbox. Switch to External to share a folder with an
+                    Managed by Mirli. Switch to External to share a folder with an
                     audio.cpp you already run.
                   </>
                 )}
@@ -396,7 +396,7 @@ export function SettingsPage() {
               <div className="space-y-0.5">
                 <Label htmlFor="llm-mode">Mode</Label>
                 <p className="text-muted-foreground text-xs">
-                  Local runs a small model Soundbox manages; External points at your own
+                  Local runs a small model Mirli manages; External points at your own
                   OpenAI-compatible server (Ollama, LM Studio, …).
                 </p>
               </div>
@@ -583,7 +583,7 @@ export function SettingsPage() {
             <p className="text-muted-foreground text-xs">
               The open profile's folder — switch profiles from the chip in the header to
               point the app at a different library. The install root is set with the{" "}
-              <span className="font-mono">SOUNDBOX_DATA_DIR</span> environment variable
+              <span className="font-mono">MIRLI_DATA_DIR</span> environment variable
               before starting the server; downloaded models and runtimes live there and
               are shared by every profile.
             </p>
@@ -614,7 +614,7 @@ export function SettingsPage() {
                 onOpenChange={setPickingSounds}
                 initialPath={settings.sounds_dir}
                 title="Sounds folder"
-                description="Folders on the machine running Soundbox — that is where the audio is written. Anything you pick is created if it does not exist yet."
+                description="Folders on the machine running Mirli — that is where the audio is written. Anything you pick is created if it does not exist yet."
                 onSelect={(path) => {
                   setSoundsDir(path);
                   saveSoundsDir(path);

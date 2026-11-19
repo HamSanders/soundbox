@@ -34,6 +34,7 @@ import {
   type Release,
   type ReleaseAsset,
 } from "./releaseInstall.js";
+import { envVar } from "../env.js";
 
 export const GITHUB_REPO = "ggml-org/llama.cpp";
 export const BINARY_NAME = process.platform === "win32" ? "llama-server.exe" : "llama-server";
@@ -43,8 +44,8 @@ export const DEFAULT_VERSION = "latest";
 
 const HTTP_TIMEOUT_MS = 30_000;
 
-export const BIN_ENV = "SOUNDBOX_LLAMA_SERVER_BIN";
-export const BACKEND_ENV = "SOUNDBOX_LLAMA_SERVER_BACKEND";
+export const BIN_ENV = "MIRLI_LLAMA_SERVER_BIN";
+export const BACKEND_ENV = "MIRLI_LLAMA_SERVER_BACKEND";
 
 /** Raised for anything the user could plausibly fix (no matching asset,
  *  checksum mismatch, network). Message is written for a human. */
@@ -136,7 +137,7 @@ export async function installedVersions(): Promise<string[]> {
  * Whether *a* usable llama-server exists, managed or not.
  *
  * Resolves through the same `findBinary()` order the runtime launches with,
- * so a user who set `SOUNDBOX_LLAMA_SERVER_BIN` or has llama.cpp on PATH is
+ * so a user who set `MIRLI_LLAMA_SERVER_BIN` or has llama.cpp on PATH is
  * not told the engine is missing and pushed into downloading a second copy.
  * Only a managed install carries a version — an external binary's release tag
  * isn't ours to know, and guessing it from a directory name would be a lie.
@@ -152,7 +153,7 @@ export async function status(): Promise<InstallStatus> {
     version: managed ? basename(join(binary, "..")) : null,
     path: binary,
     backend: backend(),
-    source: managed ? "managed" : (process.env[BIN_ENV] ?? "").trim() ? "env" : "path",
+    source: managed ? "managed" : (envVar(BIN_ENV) ?? "").trim() ? "env" : "path",
   };
 }
 
@@ -171,7 +172,7 @@ function isManagedPath(path: string): boolean {
  * install llm` or a hand-set env var both work without restarting.
  */
 export async function findBinary(): Promise<string | null> {
-  const override = (process.env[BIN_ENV] ?? "").trim();
+  const override = (envVar(BIN_ENV) ?? "").trim();
   if (override) return (await isFile(override)) ? override : null;
 
   const managed = await findManagedBinary();
@@ -246,7 +247,7 @@ export function detectBackend(): string {
 /** The backend actually in force: env override, else the same detection
  *  `install()` uses to pick a release asset. */
 export function backend(): string {
-  const override = (process.env[BACKEND_ENV] ?? "").trim();
+  const override = (envVar(BACKEND_ENV) ?? "").trim();
   if (override) return override;
   return detectBackend();
 }

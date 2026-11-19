@@ -1,15 +1,15 @@
 ---
 name: soundbox-voice-story
-description: Write, voice and arrange spoken audio locally through the Soundbox MCP server — one-off narration with soundbox.speak, or a persistent multi-track "story" (create_story / add_lines / speak_story / export_story). Use whenever the user wants dialogue, narration, a voiceover, a scripted scene, a podcast segment, character lines for a game, or asks to "read this aloud", "make a voiceover", "write a scene with two characters". Produces WAV files on disk with absolute paths.
+description: Write, voice and arrange spoken audio locally through the Mirli (formerly Soundbox) MCP server — one-off narration with soundbox.speak, or a persistent multi-track "story" (create_story / add_lines / speak_story / export_story). Use whenever the user wants dialogue, narration, a voiceover, a scripted scene, a podcast segment, character lines for a game, or asks to "read this aloud", "make a voiceover", "write a scene with two characters". Produces WAV files on disk with absolute paths.
 ---
 
-# Soundbox: speech, scripts and stories
+# Mirli: speech, scripts and stories
 
-Soundbox runs text-to-speech models on the user's machine and exposes them over
+Mirli runs text-to-speech models on the user's machine and exposes them over
 MCP. No API key; their hardware does the work. Every result is a WAV on disk and
 the response gives you its absolute `path`.
 
-This is the *spoken* half of Soundbox. `soundbox.generate` makes sound effects
+This is the *spoken* half of Mirli. `soundbox.generate` makes sound effects
 and music and will not say words — asking it for "a man saying hello" gets you a
 texture. For anything with words in it, use the tools below.
 

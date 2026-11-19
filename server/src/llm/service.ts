@@ -1,5 +1,5 @@
 /**
- * `LlmService` — the prompt-assistant façade `SoundboxService` owns.
+ * `LlmService` — the prompt-assistant façade `MirliService` owns.
  *
  * Resolves `Settings.llm_mode` into a base URL + model name each call (managed
  * or external), keeps the one managed `llama-server` process alive across

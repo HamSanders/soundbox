@@ -1,5 +1,5 @@
 /**
- * Soundbox HTTP API client.
+ * Mirli HTTP API client.
  *
  * Types mirror docs/API.md exactly. Every network call in the app goes through
  * this module, so swapping in the in-memory mock (VITE_MOCK=1) is a one-line
@@ -141,7 +141,7 @@ export interface Model {
   /** Whether the engine that runs this model is installed. False with
    *  weights present is exactly the "needs_runtime" case. */
   installed_deps: boolean;
-  /** Whether Soundbox can install this model's engine itself. */
+  /** Whether Mirli can install this model's engine itself. */
   auto_installable?: boolean;
   /** Plain-language explanation shown when auto_installable is false. */
   manual_install_reason?: string | null;
@@ -382,7 +382,7 @@ export interface LlmStatus {
 }
 
 /** One entry of GET /api/image/status's `catalog` — an artwork checkpoint
- *  Soundbox can install for you, and whether it already is. */
+ *  Mirli can install for you, and whether it already is. */
 /** One weight file and the sd-server flag it loads under. A turbo checkpoint
  *  is one of these; SD 3.5 is four (`-m`, `--clip_l`, `--clip_g`, `--t5xxl`). */
 export interface ImageWeightFile {
@@ -510,7 +510,7 @@ export interface EnhanceRequest {
 
 export interface EnhanceResponse {
   variations: string[];
-  /** Short suggested keywords for Soundbox's own Tags field — a separate
+  /** Short suggested keywords for Mirli's own Tags field — a separate
    *  thing from `variations`, which stays a natural-phrase prompt. Apply
    *  these to `ComposerSettings.tags`, never into the prompt text. */
   tags: string[];
@@ -1200,7 +1200,7 @@ export interface Settings {
 
 /** What the daily update check knows. See Settings → Updates. */
 export interface UpdateStatus {
-  /** False when the check is off, in Settings or by SOUNDBOX_UPDATE_CHECK=0. */
+  /** False when the check is off, in Settings or by MIRLI_UPDATE_CHECK=0. */
   enabled: boolean;
   disabled_by: "env" | "setting" | null;
   current: string;
@@ -1382,7 +1382,7 @@ export interface JobRef {
   job_id: string;
 }
 
-/** Unsubscribe function returned by {@link SoundboxApi.subscribeJob}. */
+/** Unsubscribe function returned by {@link MirliApi.subscribeJob}. */
 export type Unsubscribe = () => void;
 
 /* ------------------------------------------------------------------- mcp */
@@ -1508,7 +1508,7 @@ export interface SkillInstallResult {
  *
  * Until this existed the answer was only available from `soundbox model status
  * audiocpp` on the command line, so someone whose binary resolved from
- * SOUNDBOX_AUDIOCPP_BIN or PATH had no way to see it in the app.
+ * MIRLI_AUDIOCPP_BIN or PATH had no way to see it in the app.
  */
 export interface AudioCppRuntimeStatus {
   mode: "managed" | "external";
@@ -1517,7 +1517,7 @@ export interface AudioCppRuntimeStatus {
     version: string | null;
     path: string | null;
     backend: string | null;
-    /** "managed" is Soundbox's own install; "env" and "path" are the user's. */
+    /** "managed" is Mirli's own install; "env" and "path" are the user's. */
     source: "managed" | "env" | "path" | null;
   };
   models_dir: string;
@@ -1525,7 +1525,7 @@ export interface AudioCppRuntimeStatus {
   models_dir_default: string;
 }
 
-export interface SoundboxApi {
+export interface MirliApi {
   getHealth(): Promise<HealthStatus>;
   /** Whether this server wants an access token, and whether we have it. */
   getAuthStatus(): Promise<AuthStatus>;
@@ -1769,7 +1769,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     });
   } catch {
     throw new ApiError(
-      "Could not reach the Soundbox backend. Is the server running?",
+      "Could not reach the Mirli backend. Is the server running?",
       0,
     );
   }
@@ -1816,7 +1816,7 @@ function qs(query: object | undefined): string {
 
 const POLL_INTERVAL_MS = 750;
 
-export const httpApi: SoundboxApi = {
+export const httpApi: MirliApi = {
   getHealth: () => request<HealthStatus>("/api/health"),
   getAuthStatus: () => request<AuthStatus>("/api/auth/status"),
   signIn: (token) =>
@@ -1953,7 +1953,7 @@ export const httpApi: SoundboxApi = {
 
   /** Reveal the sound's WAV on disk — Explorer, Finder, or the Linux
    *  desktop's default file manager. Only makes sense locally, which is the
-   *  only way Soundbox runs. */
+   *  only way Mirli runs. */
   revealSound: (id) =>
     request<void>(`/api/sounds/${encodeURIComponent(id)}/reveal`, { method: "POST" }),
 
@@ -2324,7 +2324,7 @@ export const IS_MOCK = import.meta.env.VITE_MOCK === "1";
 
 import { mockApi } from "./mock";
 
-export const api: SoundboxApi = IS_MOCK ? mockApi : httpApi;
+export const api: MirliApi = IS_MOCK ? mockApi : httpApi;
 
 /** Human-readable message for anything thrown by the API layer. */
 export function errorMessage(err: unknown): string {

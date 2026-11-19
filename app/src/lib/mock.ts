@@ -57,7 +57,7 @@ import type {
   SoundEditRequest,
   SoundPatch,
   SoundQuery,
-  SoundboxApi,
+  MirliApi,
   SoundsPage,
   StemSelection,
   TagCount,
@@ -1115,8 +1115,8 @@ const MOCK_ENDPOINT_PRESETS: EndpointPreset[] = [
   },
   {
     id: "soundbox-music",
-    label: "Another Soundbox — music",
-    hint: "A Soundbox on another machine, such as a GPU box, through its /api/render route. Change the host and model, and put its access token in the key field.",
+    label: "Another Mirli — music",
+    hint: "A Mirli on another machine, such as a GPU box, through its /api/render route. Change the host and model, and put its access token in the key field.",
     docs_url: "https://github.com/HamSanders/soundbox/blob/main/docs/API.md#render-and-wait",
     hosted: false,
     pricing_url: "",
@@ -1158,7 +1158,7 @@ const MOCK_ENDPOINT_PRESETS: EndpointPreset[] = [
   {
     id: "fal-ace-step",
     label: "fal — ACE-Step music (your account)",
-    hint: "ACE-Step on fal, billed to your fal account per second of audio. The answer is a link to a WAV, which Soundbox downloads.",
+    hint: "ACE-Step on fal, billed to your fal account per second of audio. The answer is a link to a WAV, which Mirli downloads.",
     docs_url: "https://fal.ai/models/fal-ai/ace-step/prompt-to-audio/api",
     hosted: true,
     pricing_url: "https://fal.ai/models/fal-ai/ace-step/prompt-to-audio",
@@ -1590,7 +1590,7 @@ function mockFailure(prompt: string, job: Job): Failure | null {
         topic: "disk_full",
         title: "The disk is full",
         hint:
-          "There was no room to write the file, so the partial file was removed. Free space on the drive that holds the Soundbox data directory, or move the models folder to another drive, then try again.",
+          "There was no room to write the file, so the partial file was removed. Free space on the drive that holds the Mirli data directory, or move the models folder to another drive, then try again.",
         fixes: [{ label: "Check storage in Settings", to: "/settings" }],
         detail: "ENOSPC: no space left on device, write",
       };
@@ -2208,7 +2208,7 @@ const withCount = (c: Conversation): Conversation => ({
   entry_count: historyEntries.filter((e) => e.conversation_id === c.id).length,
 });
 
-export const mockApi: SoundboxApi = {
+export const mockApi: MirliApi = {
   // The mock has no access token, the same as a desktop server.
   async getAuthStatus() {
     return { required: false, signed_in: true };
@@ -3252,7 +3252,7 @@ export const mockApi: SoundboxApi = {
     await wait(120);
     const f = file as { format?: string; voice?: Partial<Voice> };
     if (f?.format !== "soundbox-voice" || !f.voice?.name) {
-      throw new Error("That isn't a Soundbox voice file.");
+      throw new Error("That isn't a Mirli voice file.");
     }
     const names = new Set(voices.map((v) => v.name));
     let name = f.voice.name;
@@ -3317,14 +3317,14 @@ export const mockApi: SoundboxApi = {
     const t = (n: number) =>
       new Date(Date.now() - n * 1000).toISOString().slice(11, 19);
     const out = [
-      `${t(90)} INFO    soundbox.api: Soundbox 0.1.0 ready`,
-      `${t(70)} INFO    soundbox.jobs: job ${mockJobId} queued (kind=generate model=audiocpp-stable-audio-3-sfx)`,
-      `${t(68)} INFO    soundbox.jobs: job ${mockJobId} started (kind=generate model=audiocpp-stable-audio-3-sfx)`,
-      `${t(60)} INFO    soundbox.jobs: job ${mockJobId} 30% phase=generating Step 3/8`,
-      `${t(52)} WARNING soundbox.models.audiocpp: no CUDA device found; running on the CPU backend (slower, same output)`,
-      `${t(44)} INFO    soundbox.jobs: job ${mockJobId} 90% phase=generating Step 7/8`,
-      `${t(40)} INFO    soundbox.jobs: job ${mockJobId} done in 28.4s`,
-      `${t(20)} ERROR   soundbox.jobs: job ${mockOtherJobId} failed: audio.cpp exited with code 1 (see the log above)`,
+      `${t(90)} INFO    mirli.api: Mirli 0.1.0 ready`,
+      `${t(70)} INFO    mirli.jobs: job ${mockJobId} queued (kind=generate model=audiocpp-stable-audio-3-sfx)`,
+      `${t(68)} INFO    mirli.jobs: job ${mockJobId} started (kind=generate model=audiocpp-stable-audio-3-sfx)`,
+      `${t(60)} INFO    mirli.jobs: job ${mockJobId} 30% phase=generating Step 3/8`,
+      `${t(52)} WARNING mirli.models.audiocpp: no CUDA device found; running on the CPU backend (slower, same output)`,
+      `${t(44)} INFO    mirli.jobs: job ${mockJobId} 90% phase=generating Step 7/8`,
+      `${t(40)} INFO    mirli.jobs: job ${mockJobId} done in 28.4s`,
+      `${t(20)} ERROR   mirli.jobs: job ${mockOtherJobId} failed: audio.cpp exited with code 1 (see the log above)`,
     ];
     return { lines: out.slice(-lines) };
   },
@@ -3795,7 +3795,7 @@ export const mockApi: SoundboxApi = {
         {
           name: "soundbox-sfx",
           description:
-            "Generate sound effects, foley and ambience locally through the Soundbox MCP server.",
+            "Generate sound effects, foley and ambience locally through the Mirli MCP server.",
           path: "backend/src/soundbox/skills/soundbox-sfx",
           files: ["SKILL.md", "references/prompting.md"],
           installed_at: mockSkillsInstalledTo.claude

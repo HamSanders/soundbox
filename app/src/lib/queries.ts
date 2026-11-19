@@ -798,7 +798,7 @@ export function useImportVoice() {
       try {
         parsed = JSON.parse(await file.text());
       } catch {
-        throw new Error("That file isn't a Soundbox voice file.");
+        throw new Error("That file isn't a Mirli voice file.");
       }
       return api.importVoice(parsed);
     },

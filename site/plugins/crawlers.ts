@@ -196,7 +196,7 @@ export function writeCrawlerFiles(
     "",
     `> ${PAGE.summary}`,
     "",
-    "Some identifiers kept the product's old name, Soundbox, and are what you type: the MCP tools are `soundbox.*`, the environment variables `SOUNDBOX_*`, the CLI `soundbox`, and the Docker image `ghcr.io/hamsanders/soundbox`. To install or drive Mirli, read the developers page first; it has the install paths, MCP config for each client, every tool and the HTTP API on one page.",
+    "Some identifiers kept the product's old name, Soundbox, and are what you type: the MCP tools are `soundbox.*`, the CLI `soundbox`, and the Docker image `ghcr.io/hamsanders/soundbox`. The environment variables are `MIRLI_*`; the old `SOUNDBOX_*` names still work, and are the only ones 0.5.0 and earlier read. To install or drive Mirli, read the developers page first; it has the install paths, MCP config for each client, every tool and the HTTP API on one page.",
     "",
     "## Start here",
     "",

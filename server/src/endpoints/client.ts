@@ -34,7 +34,7 @@ import { type Audio, decodeWav } from "../audio/dsp.js";
 import { CancelledJob, ModelError } from "../errors.js";
 import { getLogger } from "../logging.js";
 
-const log = getLogger("soundbox.endpoints");
+const log = getLogger("mirli.endpoints");
 
 /** Long: Privateer's docs warn that a 60s client default abandons a track
  *  already paid for, and a long ACE-Step render on a homelab GPU takes minutes. */

@@ -21,7 +21,7 @@ soundbox model status audiocpp    # what is installed, and which backend
 The installer picks a release asset for your OS and GPU, verifies its SHA-256
 against GitHub's asset digest and the release's checksum manifest, and caches
 it under `<data dir>/bin/audiocpp/<version>/`. An asset with no published
-checksum is refused unless you set `SOUNDBOX_ALLOW_UNVERIFIED_BINARIES=1`. A
+checksum is refused unless you set `MIRLI_ALLOW_UNVERIFIED_BINARIES=1`. A
 mismatch is always refused. To override the choice:
 
 ```bash
@@ -62,13 +62,13 @@ Prebuilt Windows CUDA and CPU packages are on the
 Point Mirli at the binary, or put `audiocpp_cli` on your `PATH`:
 
 ```bash
-SOUNDBOX_AUDIOCPP_BIN=/path/to/audiocpp_cli
+MIRLI_AUDIOCPP_BIN=/path/to/audiocpp_cli
 ```
 
 `soundbox model status audiocpp` reports which binary it resolved and how. A
 managed install shows its version; a binary of yours shows `external (env)` or
 `external (PATH)`. The same three routes, in the same order, apply to the
-prompt-assistant engine via `SOUNDBOX_LLAMA_SERVER_BIN` (`soundbox model
+prompt-assistant engine via `MIRLI_LLAMA_SERVER_BIN` (`soundbox model
 status llm`). On macOS both also check the Homebrew prefixes directly, because
 a desktop launcher's `PATH` often omits them.
 
@@ -78,7 +78,7 @@ Mirli infers a backend and falls back to CPU. To override the guess, or to
 compare backends, force one:
 
 ```bash
-SOUNDBOX_AUDIOCPP_BACKEND=cuda   # cpu | cuda | vulkan | metal | hip | best
+MIRLI_AUDIOCPP_BACKEND=cuda   # cpu | cuda | vulkan | metal | hip | best
 ```
 
 If a generation is far slower than expected, it is usually running on CPU.

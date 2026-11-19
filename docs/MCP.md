@@ -62,8 +62,8 @@ The bridge covers six tools: `generate`, `enhance_prompt`, `list_models`,
 `list_sounds`, `get_sound` and `delete_sound`. For `separate`, speech,
 stories and arrangement, use the HTTP transport.
 
-Set `SOUNDBOX_URL` if the server listens somewhere other than
-`http://127.0.0.1:17494`, and `SOUNDBOX_API_TOKEN` if that server requires an
+Set `MIRLI_URL` if the server listens somewhere other than
+`http://127.0.0.1:17494`, and `MIRLI_API_TOKEN` if that server requires an
 access token. Over HTTP, send the token as a header instead:
 `claude mcp add --transport http soundbox <url>/mcp --header "Authorization: Bearer <token>"`.
 See [Access token](INSTALL.md#access-token).
@@ -325,7 +325,7 @@ Every call the server handles is:
   (`Sound.source = "mcp"`, `Sound.client = "claude-code 2.1.0"`), and the
   Library can filter to what agents made.
 - **Logged.** One line per call in the server's log (`grep mcp
-  ~/.soundbox/soundbox-17494.log`, or whatever port you run on), and persisted to `GET /api/mcp/calls` /
+  ~/.mirli/soundbox-17494.log`, or whatever port you run on), and persisted to `GET /api/mcp/calls` /
   `GET /api/mcp/status` for the app or your own tooling to read.
 - **Optionally exported.** OpenTelemetry export is built in, with nothing extra
   to install. Point it at a collector:

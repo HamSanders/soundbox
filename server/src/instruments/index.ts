@@ -86,12 +86,22 @@ export class InstrumentLibrary {
   /** A function, not a path: the models directory can move with settings. */
   constructor(private readonly modelsDir: () => string) {}
 
-  private dir(id: string): string {
-    return join(this.modelsDir(), "instruments", "vsco2ce", id);
+  /**
+   * An instrument's folder. Takes the manifest entry, never a caller's id:
+   * the request's string only selects an entry, and every path is built from
+   * the entry's own constant fields, so nothing a client sends reaches a path.
+   */
+  private dir(manifest: InstrumentManifest): string {
+    return join(this.modelsDir(), "instruments", "vsco2ce", manifest.id);
+  }
+
+  private installed(manifest: InstrumentManifest): boolean {
+    return existsSync(join(this.dir(manifest), MARKER));
   }
 
   isInstalled(id: string): boolean {
-    return instrumentManifest(id) !== null && existsSync(join(this.dir(id), MARKER));
+    const manifest = instrumentManifest(id);
+    return manifest !== null && this.installed(manifest);
   }
 
   list(): InstrumentInfo[] {
@@ -102,7 +112,7 @@ export class InstrumentLibrary {
       library: "VSCO 2 CE",
       license: VSCO2CE_LICENSE,
       size_bytes: m.files.reduce((sum, [, bytes]) => sum + bytes, 0),
-      installed: this.isInstalled(m.id),
+      installed: this.installed(m),
     }));
   }
 
@@ -118,7 +128,7 @@ export class InstrumentLibrary {
     fetchFile: typeof downloadToFile = downloadToFile,
   ): Promise<void> {
     const manifest = manifestOrThrow(id);
-    const root = this.dir(id);
+    const root = this.dir(manifest);
     await mkdir(root, { recursive: true });
     const total = manifest.files.reduce((sum, [, bytes]) => sum + bytes, 0);
     let done = 0;
@@ -154,17 +164,16 @@ export class InstrumentLibrary {
   }
 
   async remove(id: string): Promise<void> {
-    manifestOrThrow(id);
-    await rm(this.dir(id), { recursive: true, force: true });
+    await rm(this.dir(manifestOrThrow(id)), { recursive: true, force: true });
   }
 
   /** The parsed .sfz, or null when the instrument is not installed. */
   async regions(id: string, filesUrl: string): Promise<InstrumentRegions | null> {
     const manifest = manifestOrThrow(id);
-    if (!this.isInstalled(id)) return null;
-    const text = await readFile(join(this.dir(id), manifest.sfz), "utf-8");
+    if (!this.installed(manifest)) return null;
+    const text = await readFile(join(this.dir(manifest), manifest.sfz), "utf-8");
     const { regions } = parseSfz(text);
-    return { id, files_url: filesUrl, regions };
+    return { id: manifest.id, files_url: filesUrl, regions };
   }
 
   /**
@@ -175,10 +184,12 @@ export class InstrumentLibrary {
    */
   filePath(id: string, path: string): string | null {
     const manifest = instrumentManifest(id);
-    if (!manifest || !this.isInstalled(id)) return null;
-    if (!manifest.files.some(([p]) => p === path)) return null;
-    const root = resolve(this.dir(id));
-    const abs = resolve(root, ...path.split("/"));
+    if (!manifest || !this.installed(manifest)) return null;
+    // The manifest's own string, not the request's, goes into the path.
+    const listed = manifest.files.find(([p]) => p === path)?.[0];
+    if (!listed) return null;
+    const root = resolve(this.dir(manifest));
+    const abs = resolve(root, ...listed.split("/"));
     return abs.startsWith(root + sep) ? abs : null;
   }
 }

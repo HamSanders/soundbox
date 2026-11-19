@@ -55,7 +55,7 @@ fn restart_backend(app: tauri::AppHandle) -> Result<(), String> {
     }
 
     let home = find_server_home(&app).ok_or_else(|| {
-        "Could not find the Soundbox server. Reinstall the app, or set \
+        "Could not find the Mirli server. Reinstall the app, or set \
          SOUNDBOX_PROJECT_ROOT to a checkout."
             .to_string()
     })?;
@@ -160,7 +160,7 @@ fn popout_handler(
         let label = format!("panel-{}", NEXT.fetch_add(1, Ordering::Relaxed));
         let built = WebviewWindowBuilder::new(&app, label, WebviewUrl::External(url))
             .window_features(features)
-            .title("Soundbox")
+            .title("Mirli")
             // The page names itself after the panel ("Timeline · My story"),
             // and the taskbar is where you find which window is which.
             .on_document_title_changed(|window, title| {
@@ -203,7 +203,7 @@ pub fn run() {
                 "main",
                 WebviewUrl::App("index.html".into()),
             )
-            .title("Soundbox")
+            .title("Mirli")
             .inner_size(1200.0, 820.0)
             .min_inner_size(720.0, 560.0)
             .resizable(true)
@@ -227,13 +227,13 @@ pub fn run() {
                 let Some(home) = find_server_home(&handle) else {
                     notify(
                         "error",
-                        "Could not find the Soundbox server. Reinstall the app, or set \
+                        "Could not find the Mirli server. Reinstall the app, or set \
                          SOUNDBOX_PROJECT_ROOT to a checkout.",
                     );
                     return;
                 };
 
-                notify("starting", "Starting the Soundbox server…");
+                notify("starting", "Starting up…");
                 let port = backend::DEFAULT_PORT;
                 match backend::start(&home, port) {
                     Ok(handle_backend) => {
@@ -250,7 +250,7 @@ pub fn run() {
                 if !backend::wait_until_healthy(port, STARTUP_TIMEOUT) {
                     notify(
                         "error",
-                        "The Soundbox server did not start in time. Check the log file in your \
+                        "Mirli did not start in time. Check the log file in your \
                          data directory (docs/INSTALL.md explains where it lives).",
                     );
                     return;
@@ -281,7 +281,7 @@ pub fn run() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("failed to start Soundbox");
+        .expect("failed to start Mirli");
 
     app.run(|handle, event| {
         // Stop the server we started. Without this the server process outlives

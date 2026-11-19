@@ -38,8 +38,18 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "shortDescription": "Local sound effects, music and speech from open-weight models",
-    "longDescription": "Generate sound effects, music and speech locally from open-weight models. Includes an HTTP API and an MCP server so coding agents can generate audio directly."
+    "homepage": "https://mirli.app/",
+    "shortDescription": "Sound, music and voice from open-weight models, on your own machine",
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico",
+        "headerImage": "installer/header.bmp",
+        "sidebarImage": "installer/sidebar.bmp"
+      }
+    },
+    "longDescription": "Generate sound effects, music and voice locally from open-weight models. Includes an HTTP API and an MCP server so coding agents can generate audio directly."
   },
   "plugins": {
     "updater": {

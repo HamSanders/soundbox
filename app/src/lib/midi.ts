@@ -450,3 +450,95 @@ export function parseMidiFile(bytes: ArrayBuffer): MidiNote[] {
 function rank(kind: "on" | "off" | "tempo"): number {
   return kind === "tempo" ? 0 : kind === "off" ? 1 : 2;
 }
+
+/**
+ * Write a take as a Standard MIDI File, format 0: one track, channel 1.
+ *
+ * The other half of `parseMidiFile`, so a part played or drawn here can be
+ * rendered by any instrument that reads `.mid` — a DAW, a sampler, a cloud
+ * tool — and the WAV dragged back onto a lane.
+ *
+ * The take is stored in seconds, so the tempo is only a choice of grid: the
+ * roll's BPM goes in as the file's tempo meta event, and every note lands at
+ * the same time in seconds whatever the number is. Picking the roll's BPM
+ * means the bars a DAW draws are the bars the roll drew.
+ *
+ * No CC 64. The recorder folds the sustain pedal into note lengths as it
+ * records (a pedalled note is held until the pedal lifts), so the take has no
+ * pedal events to write — the lengths already are the pedal.
+ */
+export function writeMidiFile(notes: MidiNote[], bpm: number, ppq = 480): Uint8Array {
+  const ticksPerSecond = (bpm / 60) * ppq;
+  const toTick = (s: number): number => Math.max(0, Math.round(s * ticksPerSecond));
+
+  interface Out {
+    tick: number;
+    on: boolean;
+    note: number;
+    velocity: number;
+  }
+  const out: Out[] = [];
+
+  // Same-pitch notes that overlap cannot both be open in a MIDI file: the
+  // second note-on would be closed by the first note-off. Cut the earlier
+  // one short where the later one starts, which is what a keyboard does too.
+  const byPitch = new Map<number, MidiNote[]>();
+  for (const n of notes) {
+    const list = byPitch.get(n.note) ?? [];
+    list.push(n);
+    byPitch.set(n.note, list);
+  }
+  for (const [note, list] of byPitch) {
+    list.sort((a, b) => a.start_s - b.start_s);
+    list.forEach((n, i) => {
+      const start = toTick(n.start_s);
+      let end = Math.max(start + 1, toTick(n.start_s + n.duration_s));
+      const next = list[i + 1];
+      if (next) end = Math.max(start + 1, Math.min(end, toTick(next.start_s)));
+      // Velocity 0 would read as a note-off, so the floor is 1.
+      const velocity = Math.min(127, Math.max(1, Math.round(n.velocity * 127)));
+      out.push({ tick: start, on: true, note, velocity });
+      out.push({ tick: end, on: false, note, velocity: 64 });
+    });
+  }
+  // Offs ahead of ons at the same tick, matching the parser's ordering.
+  out.sort((a, b) => a.tick - b.tick || Number(a.on) - Number(b.on) || a.note - b.note);
+
+  const track: number[] = [];
+  const vlq = (value: number): void => {
+    const bytes = [value & 0x7f];
+    while ((value >>>= 7) > 0) bytes.unshift((value & 0x7f) | 0x80);
+    track.push(...bytes);
+  };
+
+  const usPerBeat = Math.round(60_000_000 / bpm);
+  vlq(0);
+  track.push(0xff, 0x51, 0x03, (usPerBeat >> 16) & 0xff, (usPerBeat >> 8) & 0xff, usPerBeat & 0xff);
+  // 4/4, which is what the roll's bar lines assume.
+  vlq(0);
+  track.push(0xff, 0x58, 0x04, 4, 2, 24, 8);
+
+  let last = 0;
+  for (const e of out) {
+    vlq(e.tick - last);
+    last = e.tick;
+    track.push(e.on ? 0x90 : 0x80, e.note & 0x7f, e.velocity);
+  }
+  vlq(0);
+  track.push(0xff, 0x2f, 0x00);
+
+  const file = new Uint8Array(14 + 8 + track.length);
+  const view = new DataView(file.buffer);
+  const ascii = (at: number, s: string): void => {
+    for (let i = 0; i < s.length; i++) file[at + i] = s.charCodeAt(i);
+  };
+  ascii(0, "MThd");
+  view.setUint32(4, 6);
+  view.setUint16(8, 0); // format 0
+  view.setUint16(10, 1); // one track
+  view.setUint16(12, ppq);
+  ascii(14, "MTrk");
+  view.setUint32(18, track.length);
+  file.set(track, 22);
+  return file;
+}

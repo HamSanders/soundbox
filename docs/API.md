@@ -198,6 +198,17 @@ rather than failing the import.
 | GET / PATCH / DELETE | `/api/conversations/{id}` | Read, rename (`{ title }`), delete |
 | GET / POST | `/api/conversations/{id}/entries` | Read or append (`{ entries: [{ role, content?, actions?, sound_ids?, job_id? }] }`) |
 
+**Sampled instruments** (`routes/instruments.ts`): the VSCO 2 CE samples the
+Studio's MIDI dry render can play. See `docs/STUDIO.md`.
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/api/instruments` | The eight instruments: label, family, size, whether installed |
+| GET | `/api/instruments/{id}` | An installed instrument's SFZ regions (404 if not installed) |
+| POST | `/api/instruments/{id}/download` | Download its samples → job |
+| DELETE | `/api/instruments/{id}` | Delete its samples |
+| GET | `/api/instruments/{id}/files/{path}` | One sample file, by its path in the instrument's manifest |
+
 **Settings, logs, profiles** (`routes/settings.ts`, `routes/fs.ts`, `routes/profiles.ts`)
 
 | Method | Path | What it does |

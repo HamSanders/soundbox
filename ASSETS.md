@@ -20,6 +20,18 @@ outside Mirli, read the model licences yourself.
 | `site/public/music/artists/*.mp3` | Signature tracks for the fictional "Mirli Records" roster | `scripts/gen-artist-tracks.mjs`, same two models as above, prompts in `app/src/content/music/artists.ts`. | As above. |
 | `site/public/blog/audio/*.mp3` | Narration of a blog post | Read by **Chatterbox** through Mirli (per the commit that added it). | Chatterbox's licence is listed as *Unknown / not checked* in Mirli's own model catalog; treat as unverified. |
 
+## Downloaded on request
+
+Not bundled and not in the repository. The app fetches these only when you ask
+for them, into `<data dir>/models/instruments/`.
+
+| What | Where it comes from | Terms that apply |
+| --- | --- | --- |
+| Sampled instruments for the MIDI dry take (eight sustained patches: solo violin, violin section, cello section, harp, flute, clarinet, trumpet, French horn; manifest in `server/src/instruments/vsco2ce.ts`) | **VSCO 2 Community Edition** by Versilian Studios, <https://versilian-studios.com/vsco-community/>. Downloaded file by file from the `SFZ` branch of <https://github.com/sgossner/VSCO-2-CE>, pinned to commit `6dd651d5`. | **CC0 1.0** (public domain dedication), per the `LICENSE` file at the root of that branch. Free for any use, commercial included; no attribution required, but it is credited here and in the app. |
+
+`server/test/fixtures/vsco2ce/ClarinetSus.sfz` is a copy of one of that
+library's .sfz files (CC0), used to test the parser.
+
 ## Images
 
 | Path | What it is | How it was made | Terms that apply |

@@ -6,6 +6,9 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Sampled instruments for the MIDI dry take.** The piano roll and the MIDI panel can render a take with real orchestral recordings instead of the synth: solo violin, violin section, cello section, harp, flute, clarinet, trumpet and French horn, from VSCO 2 Community Edition (CC0). Each is a separate download of 25-75 MB from **Samples** next to the Instrument menu; nothing is bundled. Place dry and Generate instrument use the samples, and the cover pass keeps the notes better from a real instrument than from the synth. The synth presets stay the default, and a take whose samples are missing renders on the synth and says so.
+
 ### Changed
 - **Soundbox is now Mirli.** The site, page titles, share cards, press kit, blog, README, docs and issue templates use the new name, and the README and docs link to https://mirli.app. Nothing you rely on moves: the `soundbox` command, the `soundbox.*` MCP tools, the Docker image, the GitHub repository and the installer file names keep the old name for now, and existing installs carry on as they were. The home page, the download page, the press kit and the README each say once that Mirli was formerly Soundbox.
 - The app and the server now say Mirli: the sidebar, settings, onboarding, the MCP server name and instructions, tool descriptions, CLI help, log lines and the bundled skills. Environment variables are read as `MIRLI_*` first, and the old `SOUNDBOX_*` names are still accepted, so existing Docker and MCP client configs keep working. A new install keeps its data in `~/.mirli`, and an existing `~/.soundbox` is used as long as there is no `~/.mirli`. Browser settings carry over on their own. The `soundbox.*` MCP tool names and the `soundbox` command stay as they are.

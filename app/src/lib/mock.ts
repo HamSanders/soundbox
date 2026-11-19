@@ -7,6 +7,8 @@
  */
 
 import type {
+  InstrumentInfo,
+  InstrumentRegions,
   Failure,
   AssistantChatRequest,
   AssistantOpenersRequest,
@@ -1392,6 +1394,29 @@ function imageStatusSnapshot(): ImageStatus {
 /* -------------------------------------------------------- prompt assistant */
 
 let llmEngineInstalled = false;
+/** The server's VSCO 2 CE subset (server/src/instruments/vsco2ce.ts), sizes
+ *  rounded. None installed, as on a fresh install. */
+const mockInstruments: InstrumentInfo[] = (
+  [
+    ["violin", "Solo violin", "strings", 74.4],
+    ["violins", "Violin section", "strings", 46.0],
+    ["cellos", "Cello section", "strings", 72.6],
+    ["harp", "Harp", "strings", 35.3],
+    ["flute", "Flute", "woodwinds", 25.2],
+    ["clarinet", "Clarinet", "woodwinds", 59.4],
+    ["trumpet", "Trumpet", "brass", 40.5],
+    ["horn", "French horn", "brass", 50.6],
+  ] as const
+).map(([id, label, family, mb]) => ({
+  id,
+  label,
+  family,
+  library: "VSCO 2 CE",
+  license: "CC0-1.0",
+  size_bytes: Math.round(mb * 1e6),
+  installed: false,
+}));
+
 const llmModels: (Omit<LlmModelEntry, "installed"> & { installed: boolean })[] = [
   {
     id: "qwen3-0.6b",
@@ -3624,6 +3649,55 @@ export const mockApi: MirliApi = {
     const model = llmModels.find((m) => m.id === id);
     if (model) model.installed = false;
   },
+  async listInstruments(): Promise<InstrumentInfo[]> {
+    await wait(60);
+    return mockInstruments.map((i) => ({ ...i }));
+  },
+
+  async getInstrument(id: string): Promise<InstrumentRegions> {
+    await wait(60);
+    // The demo ships no samples, so an "installed" instrument still has none
+    // to play; the dry render falls back to the synth and says so.
+    throw new Error(`The ${id} samples need the Mirli server; the demo has none to play.`);
+  },
+
+  async downloadInstrument(id: string): Promise<JobRef> {
+    await wait(60);
+    const inst = mockInstruments.find((i) => i.id === id);
+    if (!inst) throw new Error(`Unknown instrument '${id}'.`);
+    const job = newJob("download", { model: `instrument:${id}` });
+    void (async () => {
+      job.status = "running";
+      job.phase = "downloading";
+      job.started_at = new Date().toISOString();
+      for (let i = 1; i <= 10; i++) {
+        await wait(150);
+        if (cancelled.has(job.id)) return;
+        job.progress = i / 10;
+        job.message = `${Math.round((i / 10) * (inst.size_bytes / 1e6))} MB / ${Math.round(inst.size_bytes / 1e6)} MB`;
+        emit(job);
+      }
+      inst.installed = true;
+      job.status = "done";
+      job.phase = "done";
+      job.progress = 1;
+      job.message = "Download complete";
+      job.finished_at = new Date().toISOString();
+      emit(job);
+    })();
+    return { job_id: job.id };
+  },
+
+  async deleteInstrument(id: string): Promise<void> {
+    await wait(100);
+    const inst = mockInstruments.find((i) => i.id === id);
+    if (inst) inst.installed = false;
+  },
+
+  async fetchInstrumentFile(): Promise<ArrayBuffer> {
+    throw new Error("The demo has no samples.");
+  },
+
   async getImageStatus(): Promise<ImageStatus> {
     await wait(60);
     return imageStatusSnapshot();

@@ -13,7 +13,7 @@
  */
 
 import { useState } from "react";
-import { WandSparklesIcon } from "lucide-react";
+import { LibraryIcon, WandSparklesIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -23,14 +23,21 @@ import { Slider } from "@/components/ui/slider";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { InstrumentSamplesDialog } from "@/components/instrument-samples-dialog";
+import type { InstrumentInfo } from "@/lib/api";
 import { encodeWav } from "@/lib/audio-file";
-import { INSTRUMENTS, notesDuration, renderNotes } from "@/lib/midi";
+import { DEFAULT_INSTRUMENT, INSTRUMENTS, notesDuration, renderNotes } from "@/lib/midi";
 import { useMidiStore } from "@/lib/midi-store";
 import { formatDuration } from "@/lib/format";
+import { useInstruments } from "@/lib/queries";
+import { libraryId, SamplesUnavailable, sampledId } from "@/lib/sampler";
 
 /** What to ask a model for, once the dry take is placed. */
 export interface CoverRequest {
@@ -70,6 +77,7 @@ export function useTakePlacement(onPlace: TakeActionsProps["onPlace"]): {
   place: (cover: CoverRequest | null) => Promise<void>;
 } {
   const [placing, setPlacing] = useState(false);
+  const { data: sampled } = useInstruments();
   /** Read at call time, not render time: a pad-triggered place happens inside
    *  a listener bound once, and a captured `notes` would be the take as it
    *  was when the mapping was set up. */
@@ -78,9 +86,19 @@ export function useTakePlacement(onPlace: TakeActionsProps["onPlace"]): {
     if (!notes.length || placing) return;
     setPlacing(true);
     try {
-      const buffer = await renderNotes(notes, instrument);
-      const label = INSTRUMENTS.find((i) => i.id === instrument)?.label ?? "MIDI";
-      await onPlace(encodeWav(buffer), `${label} take`, cover);
+      let used = instrument;
+      let buffer: AudioBuffer;
+      try {
+        buffer = await renderNotes(notes, instrument);
+      } catch (error) {
+        // Samples missing (deleted, or a server without them) must not cost
+        // the take: render it on the synth and say so.
+        if (!(error instanceof SamplesUnavailable)) throw error;
+        used = DEFAULT_INSTRUMENT;
+        toast.warning(`${error.message}. Rendered on the synth instead.`);
+        buffer = await renderNotes(notes, used);
+      }
+      await onPlace(encodeWav(buffer), `${instrumentLabel(used, sampled)} take`, cover);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "That take could not be rendered");
     } finally {
@@ -88,6 +106,13 @@ export function useTakePlacement(onPlace: TakeActionsProps["onPlace"]): {
     }
   };
   return { placing, place };
+}
+
+/** "Bowed", or "Solo violin" for a sampled one. */
+function instrumentLabel(id: string, sampled: InstrumentInfo[] | undefined): string {
+  const lib = libraryId(id);
+  if (lib) return sampled?.find((i) => i.id === lib)?.label ?? "Sampled";
+  return INSTRUMENTS.find((i) => i.id === id)?.label ?? "MIDI";
 }
 
 export function TakeActions({
@@ -106,6 +131,9 @@ export function TakeActions({
   const setStrength = useMidiStore((s) => s.setStrength);
 
   const { placing, place } = useTakePlacement(onPlace);
+  const { data: sampled } = useInstruments();
+  const installed = (sampled ?? []).filter((i) => i.installed);
+  const [samplesOpen, setSamplesOpen] = useState(false);
   const duration = notesDuration(notes);
   const disabled = readOnly || busy;
 
@@ -120,18 +148,56 @@ export function TakeActions({
         <div className="grid gap-1">
           <Label className="text-muted-foreground text-[0.7rem]">Instrument</Label>
           <Select value={instrument} onValueChange={setInstrument} disabled={disabled}>
-            <SelectTrigger size="sm" className="w-32">
+            <SelectTrigger size="sm" className="w-36">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {INSTRUMENTS.map((preset) => (
-                <SelectItem key={preset.id} value={preset.id}>
-                  {preset.label}
-                </SelectItem>
-              ))}
+              <SelectGroup>
+                <SelectLabel>Synth</SelectLabel>
+                {INSTRUMENTS.map((preset) => (
+                  <SelectItem key={preset.id} value={preset.id}>
+                    {preset.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+              {/* Only what is installed: picking a sample set that is not on
+                  disk would be a menu item that renders the synth. A selected
+                  one that has since been removed still shows, so the trigger
+                  never goes blank. */}
+              {(installed.length > 0 || libraryId(instrument)) && (
+                <>
+                  <SelectSeparator />
+                  <SelectGroup>
+                    <SelectLabel>Samples · VSCO 2 CE</SelectLabel>
+                    {installed.map((i) => (
+                      <SelectItem key={i.id} value={sampledId(i.id)}>
+                        {i.label}
+                      </SelectItem>
+                    ))}
+                    {libraryId(instrument) &&
+                      !installed.some((i) => sampledId(i.id) === instrument) && (
+                        <SelectItem value={instrument}>
+                          {instrumentLabel(instrument, sampled)} (not installed)
+                        </SelectItem>
+                      )}
+                  </SelectGroup>
+                </>
+              )}
             </SelectContent>
           </Select>
         </div>
+
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8"
+          disabled={disabled}
+          onClick={() => setSamplesOpen(true)}
+        >
+          <LibraryIcon />
+          Samples
+        </Button>
+        <InstrumentSamplesDialog open={samplesOpen} onOpenChange={setSamplesOpen} />
 
         <div className="grid min-w-48 flex-1 gap-1">
           <Label htmlFor="take-prompt" className="text-muted-foreground text-[0.7rem]">

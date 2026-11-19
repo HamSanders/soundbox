@@ -21,13 +21,16 @@
  * it a full harmonic series with an envelope. The dry render is not meant to
  * be listened to — it is meant to be conditioned on.
  *
- * No sample assets. A bundled SoundFont would render more convincingly on its
- * own, but it is tens of megabytes in the app for a stage whose output is
- * about to be replaced, and licensing a sample set is a bigger question than
- * this feature.
+ * Nothing is bundled. Real samples are an opt-in download: the VSCO 2
+ * Community Edition instruments (CC0), played by `sampler.ts`. A sampled
+ * source hands the cover pass a real instrument's spectrum and attack, so it
+ * can keep the notes at a higher strength without them drifting. The synth
+ * presets stay the default, and the fallback when samples are not installed.
  */
 
 import * as Tone from "tone";
+
+import { libraryId, loadInstrument, sampledVoice } from "@/lib/sampler";
 
 /* --------------------------------------------------------------- notes */
 
@@ -205,7 +208,45 @@ function buildVoice(instrumentId: string): Voice {
  * is held open across presses, the render's exists for one offline pass.
  */
 export function liveVoice(instrumentId: string): Voice {
-  return buildVoice(instrumentId);
+  const id = libraryId(instrumentId);
+  return id ? liveSampledVoice(id) : buildVoice(instrumentId);
+}
+
+/**
+ * A sampled voice for playing live, which has to answer the first key at once.
+ *
+ * The whole instrument is loaded in the background, and until it arrives (or
+ * if it never does: not installed, server gone) keys sound on the bowed synth.
+ * Each call is routed when it is made, so a preview scheduled before the
+ * samples land plays on whichever voice was ready at that moment.
+ */
+function liveSampledVoice(id: string): Voice {
+  const fallback = buildVoice(DEFAULT_INSTRUMENT);
+  let sampled: Voice | null = null;
+  let disposed = false;
+  void loadInstrument(id)
+    .then((loaded) => {
+      if (!disposed) sampled = sampledVoice(loaded);
+    })
+    .catch(() => {
+      // Stays on the synth. The render says why when it is asked to place.
+    });
+  const current = (): Voice => sampled ?? fallback;
+  return {
+    play: (...args) => current().play(...args),
+    press: (...args) => current().press(...args),
+    // Release on both: a key pressed on the synth and let go after the
+    // samples arrived must still stop.
+    release: (note) => {
+      fallback.release(note);
+      sampled?.release(note);
+    },
+    dispose: () => {
+      disposed = true;
+      fallback.dispose();
+      sampled?.dispose();
+    },
+  };
 }
 
 /** The live context's clock, for scheduling a preview against. Exported so
@@ -235,9 +276,15 @@ export async function renderNotes(
   if (!notes.length) throw new Error("There are no notes to render.");
   const duration = notesDuration(notes) + tailS;
 
+  // Loaded before the offline pass: Tone.Offline's callback schedules
+  // synchronously, so every sample has to be decoded by the time it runs.
+  // Throws SamplesUnavailable when the instrument is not installed.
+  const id = libraryId(instrumentId);
+  const loaded = id ? await loadInstrument(id, notes) : null;
+
   const rendered = await Tone.Offline(
     () => {
-      const voice = buildVoice(instrumentId);
+      const voice = loaded ? sampledVoice(loaded) : buildVoice(instrumentId);
       for (const n of notes) voice.play(n.note, n.duration_s, n.start_s, n.velocity);
       // Not disposed: the nodes have to still exist while the offline context
       // renders through them, and the context is discarded wholesale after.

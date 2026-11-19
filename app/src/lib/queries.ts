@@ -38,6 +38,7 @@ import {
   type Job,
   type JobRef,
   type ImageStatus,
+  type InstrumentInfo,
   type LlmStatus,
   type McpCallQuery,
   type McpStatus,
@@ -98,6 +99,7 @@ export const qk = {
   storyConversation: (storyId: string) => ["conversation", "story", storyId] as const,
   historyEntries: (id: string) => ["conversation", id, "entries"] as const,
   imageStatus: ["image-status"] as const,
+  instruments: ["instruments"] as const,
   endpoints: ["endpoints"] as const,
   mcpStatus: ["mcp-status"] as const,
   mcpCalls: (query: McpCallQuery) => ["mcp-calls", query] as const,
@@ -362,6 +364,30 @@ export function useLlmModelDelete() {
     mutationFn: (id) => api.deleteLlmModel(id),
     onError: fail("Could not delete the weights"),
     onSuccess: () => void qc.invalidateQueries({ queryKey: qk.llmStatus }),
+  });
+}
+
+/* ---------------------------------------------------- sampled instruments */
+
+/** The VSCO 2 CE instruments and which are installed. Download progress comes
+ *  from `useJobStream`; the row invalidates this when its job finishes. */
+export function useInstruments(): UseQueryResult<InstrumentInfo[]> {
+  return useQuery({ queryKey: qk.instruments, queryFn: () => api.listInstruments() });
+}
+
+export function useInstrumentDownload() {
+  return useMutation<JobRef, Error, string>({
+    mutationFn: (id) => api.downloadInstrument(id),
+    onError: fail("Download failed to start"),
+  });
+}
+
+export function useInstrumentDelete() {
+  const qc = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: (id) => api.deleteInstrument(id),
+    onError: fail("Could not delete the samples"),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: qk.instruments }),
   });
 }
 

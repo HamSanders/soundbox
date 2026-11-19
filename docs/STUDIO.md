@@ -445,14 +445,15 @@ works in seconds.
 ### The instrument is a second pass
 
 No model in the catalogue takes notes as input. The panel renders the notes
-with a plain synth, then a second pass applies the timbre you describe:
+with a synth or with sampled instruments, then a second pass applies the timbre
+you describe:
 
 ```
-notes ──▶ [synth] ──▶ dry clip ──▶ [Cover, ACE-Step] ──▶ "solo violin, large hall"
+notes ──▶ [synth or samples] ──▶ dry clip ──▶ [Cover, ACE-Step] ──▶ "solo violin, large hall"
 ```
 
-The synth gets the pitch and timing exactly right, and the model is only asked
-for timbre over audio whose notes are already correct. The cover is rendered at
+The dry render gets the pitch and timing exactly right, and the model is only
+asked for timbre over audio whose notes are already correct. The cover is rendered at
 the source's own length, so it lines up with the take.
 
 **Generate instrument** does both steps in one press. It places the dry take and
@@ -469,16 +470,62 @@ the clip's right edge to get it back.
 
 - **Keep the notes** is the cover strength. High keeps your synth line and
   changes its sound; low lets the model write its own notes.
-- **Place dry** skips the model and places only the synth render.
+- **Place dry** skips the model and places only the dry render.
 
 These controls are at the bottom of **both** the MIDI panel and the piano roll,
 so you can finish a take from either one: play it in and place it without
 opening the roll, or draw it in the roll without touching the keyboard.
 
-The four **Instrument** presets are bright and harmonically rich, because the
-cover pass works better from a filtered sawtooth than from a sine. The render is
-normalised to -3 dBFS, so the level the model receives does not depend on how
-many notes overlap.
+The four **Synth** presets are bright and harmonically rich, because the cover
+pass works better from a filtered sawtooth than from a sine. Whichever
+instrument renders it, the dry take is 44.1 kHz stereo, runs 1.5 seconds past
+the last note's end so releases are not cut off, and is normalised to a
+-3 dBFS peak, so the level the model receives does not depend on how many notes
+overlap.
+
+#### Sampled instruments
+
+A real recording gives the cover pass a real instrument's spectrum and attack
+to work from, so it can keep your notes at a higher **Keep the notes** setting
+without them drifting or changing. **Samples**, next to the Instrument menu,
+lists eight sustained patches from **VSCO 2 Community Edition** by Versilian
+Studios, which is CC0 and free for any use, commercial included:
+
+| Instrument | Patch | Download |
+| --- | --- | --- |
+| Solo violin | `SViolinVib` | 71 MB |
+| Violin section | `ViolinEnsSusVib` | 44 MB |
+| Cello section | `CelloEnsSusVib` | 69 MB |
+| Harp | `Harp` | 34 MB |
+| Flute | `FluteSusVib` | 24 MB |
+| Clarinet | `ClarinetSus` | 57 MB |
+| Trumpet | `TrumpetSus` | 39 MB |
+| French horn | `FHornSus` | 48 MB |
+
+Each one is a separate download, about 385 MB for all eight. None of them is
+part of the install. They land in `<data dir>/models/instruments/`, next to the
+model weights, so every profile shares them. An installed instrument appears in
+the Instrument menu under **Samples · VSCO 2 CE**, and monitoring, preview and
+the render all play it. While the samples load, keys sound on the Bowed synth.
+
+How the samples are played (the subset of SFZ the library uses):
+
+- Each note plays the region whose key and velocity range it falls in,
+  repitched from the key it was recorded at, plus the region's `tune`. VSCO
+  samples every two to four semitones, so no note is shifted far.
+- Velocity picks the layer (soft or loud recordings) and scales the level by the
+  SFZ default curve, on top of each region's `volume`.
+- The note fades in over `ampeg_attack` and out over `ampeg_release` after it
+  ends. The recordings have no sustain loops, so a note held longer than its
+  recording (the solo violin's run 13 to 16 seconds) stops when the recording
+  does.
+- A note outside the instrument's range is silent, as on the real instrument.
+  The violin's lowest note is G3.
+
+If an instrument is chosen but its samples are gone (removed, or a server that
+does not have them), **Place dry** and **Generate instrument** render the take
+on the Bowed synth and say so. The in-browser demo (`npm run dev:mock`) has no
+samples.
 
 For room sound, use the **Reverb** device instead of the prompt. Asking the
 model for a room smears the note attacks; the rack's reverb can be turned down.

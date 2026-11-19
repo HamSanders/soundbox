@@ -17,7 +17,8 @@
 
 import { create } from "zustand";
 
-import { DEFAULT_INSTRUMENT, quantize } from "@/lib/midi";
+import { DEFAULT_INSTRUMENT, quantize, writeMidiFile } from "@/lib/midi";
+import { saveBlob } from "@/lib/format";
 import type { MidiNote } from "@/lib/midi";
 
 /** A note plus the identity the roll needs to drag it. Notes arrive from a
@@ -121,4 +122,20 @@ export const useMidiStore = create<MidiState>((set) => ({
 /** `quantize` from lib/midi works on plain notes; this keeps the id. */
 function quantizeOne(note: RollNote, gridS: number): { start_s: number } {
   return { start_s: quantize([note], gridS)[0]!.start_s };
+}
+
+/**
+ * Save the take as `take.mid`, at the roll's tempo.
+ *
+ * Both panels offer this, so it reads the store rather than taking props.
+ * The point is a round trip out of the app: render the part on an instrument
+ * somewhere else, then drag the WAV back onto a lane. Returns the note count
+ * for the caller's toast.
+ */
+export function exportTake(): number {
+  const { notes, bpm } = useMidiStore.getState();
+  if (!notes.length) return 0;
+  const file = writeMidiFile(notes, bpm);
+  saveBlob(new Blob([file as BlobPart], { type: "audio/midi" }), "take.mid");
+  return notes.length;
 }

@@ -29,6 +29,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CircleIcon,
+  DownloadIcon,
   KeyboardIcon,
   MagnetIcon,
   PlayIcon,
@@ -51,7 +52,7 @@ import {
 } from "@/components/ui/select";
 import { useMidiInput } from "@/hooks/use-midi-input";
 import type { MidiMessage } from "@/hooks/use-midi-input";
-import { useMidiStore } from "@/lib/midi-store";
+import { exportTake, useMidiStore } from "@/lib/midi-store";
 import { MidiMappingPanel } from "@/components/midi-mapping-panel";
 import { bindingFor, dispatchMidi, useMidiMapping } from "@/lib/midi-mapping";
 import type { MidiTargetId } from "@/lib/midi-mapping";
@@ -634,6 +635,20 @@ export function MidiPanel({
             if (file) void importFile(file);
           }}
         />
+
+        <Button
+          size="sm"
+          variant="outline"
+          // Not gated on readOnly: saving a copy changes nothing here.
+          disabled={!notes.length || recording}
+          onClick={() => {
+            const count = exportTake();
+            if (count) toast.success(`Saved take.mid — ${count} ${count === 1 ? "note" : "notes"}`);
+          }}
+        >
+          <DownloadIcon />
+          Export
+        </Button>
 
       </div>
 

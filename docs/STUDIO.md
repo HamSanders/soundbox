@@ -372,6 +372,15 @@ There are three ways to play:
 | The on-screen keyboard | Always. Click the keys, or focus it and use your computer keyboard |
 | **Import** a `.mid` | To bring in an existing piece of music without playing it |
 
+**Export** saves the take as `take.mid`, so another tool can play it. Render
+the part on an instrument in your DAW, a sampler or a cloud tool, then drag
+the WAV back onto a lane in the studio. The file is one track on channel 1. It
+uses the piano roll's BPM for its tempo, so the bars a DAW draws match the
+roll's bars, and it keeps each note's velocity. It has no sustain pedal
+events: the recorder already folds the pedal into note lengths as you play
+(see below), so a pedalled note is exported as a held note. The piano roll's
+header has the same export button.
+
 ### Knobs, pads and the pedal
 
 Use **Mapping**, at the right of the keyboard row, to make a controller's knobs,

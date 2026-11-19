@@ -18,6 +18,7 @@
 
 import { create } from "zustand";
 import type {
+  ClipMidi,
   EditKind,
   Failure,
   EditOptions,
@@ -79,6 +80,13 @@ export interface TurnInsert {
   durationS?: number;
   /** Set the moment a studio claims the result, so it is placed once. */
   placed?: boolean;
+  /** A MIDI take's notes, stamped on the clip the result lands as — the
+   *  cover of a dry take carries them too, so either clip can be reopened. */
+  midi?: ClipMidi;
+  /** Replace the audio of the clip already holding this take's cover (same
+   *  `midi.take_id`, role "cover") instead of placing a new one. A re-render
+   *  of an edited take; with no such clip left, it places as usual. */
+  replaceTake?: boolean;
 }
 
 export interface Turn {

@@ -1154,6 +1154,11 @@ export class MirliService {
       duration_s: head.duration_s,
       trim_start_s: 0,
       fade_out_s: 0,
+      // A half is no longer the take its notes describe: re-rendering them
+      // would put the whole phrase back into half the space. So the cut
+      // leaves two audio clips, and the notes stay on whichever of the
+      // take's other clip (its cover, or its dry render) was not cut.
+      ...(segment.midi ? { midi: null } : {}),
     });
     const tail = this.db.createSegment(randomUUID(), segment.story_id, now(), {
       speaker: segment.speaker,

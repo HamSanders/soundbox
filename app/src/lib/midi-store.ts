@@ -10,15 +10,29 @@
  * afterwards all live here, and both panels are views of it. Neither is
  * required: closing the roll leaves the recorder working, and vice versa.
  *
- * Not persisted. A take becomes a clip on the timeline the moment it is worth
- * keeping, and that clip is what the story stores — see `midi-panel.tsx` for
- * why the story keeps audio rather than notes.
+ * Not persisted itself. A take becomes a clip on the timeline the moment it is
+ * worth keeping, and that clip stores the notes along with the WAV (`midi` on
+ * the segment). "Edit notes" on such a clip loads them back in here with
+ * `loadTake`, and while `source` is set, rendering replaces that take's clips
+ * instead of placing new ones.
  */
 
 import { create } from "zustand";
 
 import { DEFAULT_INSTRUMENT, quantize } from "@/lib/midi";
 import type { MidiNote } from "@/lib/midi";
+import type { ClipMidi } from "@/lib/api";
+
+/** The placed take the notes were loaded from, while they are being edited.
+ *  Rendering then replaces that take's clips rather than placing new ones. */
+export interface TakeSource {
+  take_id: string;
+  /** The clip "Edit notes" was chosen on — for saying which one, and as the
+   *  fallback when the take's other clip has since been deleted. */
+  segmentId: string;
+  /** Its label on the timeline. */
+  name: string;
+}
 
 /** A note plus the identity the roll needs to drag it. Notes arrive from a
  *  keyboard, a file and a mouse, and "the third one at 1.2s" stops being a
@@ -39,6 +53,8 @@ interface MidiState {
   strength: number;
   /** Which note the roll has selected, for keyboard edits and deletion. */
   selectedId: string | null;
+  /** Set while the notes are a placed take being edited. */
+  source: TakeSource | null;
 
   setInstrument: (id: string) => void;
   setBpm: (bpm: number) => void;
@@ -46,8 +62,15 @@ interface MidiState {
   setStrength: (strength: number) => void;
   select: (id: string | null) => void;
 
-  /** Replace everything — an imported file, or a cleared take. */
+  /** Replace everything — an imported file, or a cleared take. Starts a new
+   *  take: whatever clip was being edited is let go. */
   setNotes: (notes: MidiNote[]) => void;
+  /** Open a placed clip's notes for editing: its notes, tempo, instrument and
+   *  cover settings, with `source` pointing back at it. */
+  loadTake: (midi: ClipMidi, source: TakeSource) => void;
+  /** Stop editing the placed take; the notes stay, and the next render places
+   *  a new clip. */
+  detach: () => void;
   /** Append, keeping the list sorted. Live playing arrives in release order. */
   addNotes: (notes: MidiNote[]) => RollNote[];
   updateNote: (id: string, patch: Partial<MidiNote>) => void;
@@ -87,6 +110,7 @@ export const useMidiStore = create<MidiState>((set) => ({
   prompt: "solo violin, warm vibrato, sustained bowing, large concert hall",
   strength: 0.8,
   selectedId: null,
+  source: null,
 
   setInstrument: (instrument) => set({ instrument }),
   setBpm: (bpm) => set({ bpm: Math.min(240, Math.max(20, Math.round(bpm) || 100)) }),
@@ -94,7 +118,19 @@ export const useMidiStore = create<MidiState>((set) => ({
   setStrength: (strength) => set({ strength }),
   select: (selectedId) => set({ selectedId }),
 
-  setNotes: (notes) => set({ notes: sorted(notes.map(withId)), selectedId: null }),
+  setNotes: (notes) =>
+    set({ notes: sorted(notes.map(withId)), selectedId: null, source: null }),
+  loadTake: (midi, source) =>
+    set((s) => ({
+      notes: sorted(midi.notes.map(withId)),
+      selectedId: null,
+      instrument: midi.instrument,
+      bpm: midi.bpm ?? s.bpm,
+      prompt: midi.cover?.prompt || s.prompt,
+      strength: midi.cover?.strength ?? s.strength,
+      source,
+    })),
+  detach: () => set({ source: null }),
   addNotes: (notes) => {
     const added = notes.map(withId);
     set((s) => ({ notes: sorted([...s.notes, ...added]) }));
@@ -115,10 +151,27 @@ export const useMidiStore = create<MidiState>((set) => ({
         ? s
         : { notes: sorted(s.notes.map((n) => ({ ...n, ...quantizeOne(n, gridS) }))) },
     ),
-  clear: () => set({ notes: [], selectedId: null }),
+  clear: () => set({ notes: [], selectedId: null, source: null }),
 }));
 
 /** `quantize` from lib/midi works on plain notes; this keeps the id. */
 function quantizeOne(note: RollNote, gridS: number): { start_s: number } {
   return { start_s: quantize([note], gridS)[0]!.start_s };
+}
+
+/** What a clip keeps of the take as it stands now, minus the parts only the
+ *  studio knows (which clip it is, and whether it was covered). Notes lose
+ *  their roll ids, which are per-session. */
+export function takeNotes(): Pick<ClipMidi, "notes" | "bpm" | "instrument"> {
+  const { notes, bpm, instrument } = useMidiStore.getState();
+  return {
+    notes: notes.map(({ note, velocity, start_s, duration_s }) => ({
+      note,
+      velocity,
+      start_s,
+      duration_s,
+    })),
+    bpm,
+    instrument,
+  };
 }

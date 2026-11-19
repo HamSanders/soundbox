@@ -13,7 +13,7 @@
  */
 
 import { useState } from "react";
-import { WandSparklesIcon } from "lucide-react";
+import { PencilIcon, WandSparklesIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ import {
 import { encodeWav } from "@/lib/audio-file";
 import { INSTRUMENTS, notesDuration, renderNotes } from "@/lib/midi";
 import { useMidiStore } from "@/lib/midi-store";
+import type { TakeSource } from "@/lib/midi-store";
 import { formatDuration } from "@/lib/format";
 
 /** What to ask a model for, once the dry take is placed. */
@@ -48,9 +49,16 @@ export interface TakeActionsProps {
    *  take can only be placed dry, and the panel says why. */
   canCover?: boolean;
   /** Save the render as a sound and place it as a clip; `cover` additionally
-   *  asks a model for the instrument. Neither panel knows how a story is
-   *  written, or how a generation is submitted; the studio does. */
-  onPlace: (wav: Blob, name: string, cover: CoverRequest | null) => Promise<void>;
+   *  asks a model for the instrument. With `source` set the notes came from a
+   *  placed take ("Edit notes"), and the render replaces that take's clips
+   *  instead. Neither panel knows how a story is written, or how a generation
+   *  is submitted; the studio does. */
+  onPlace: (
+    wav: Blob,
+    name: string,
+    cover: CoverRequest | null,
+    source: TakeSource | null,
+  ) => Promise<void>;
   /** Held while a take is being played in — placing half a performance is not
    *  a thing anyone means to do. */
   busy?: boolean;
@@ -74,13 +82,13 @@ export function useTakePlacement(onPlace: TakeActionsProps["onPlace"]): {
    *  a listener bound once, and a captured `notes` would be the take as it
    *  was when the mapping was set up. */
   const place = async (cover: CoverRequest | null): Promise<void> => {
-    const { notes, instrument } = useMidiStore.getState();
+    const { notes, instrument, source } = useMidiStore.getState();
     if (!notes.length || placing) return;
     setPlacing(true);
     try {
       const buffer = await renderNotes(notes, instrument);
       const label = INSTRUMENTS.find((i) => i.id === instrument)?.label ?? "MIDI";
-      await onPlace(encodeWav(buffer), `${label} take`, cover);
+      await onPlace(encodeWav(buffer), `${label} take`, cover, source);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "That take could not be rendered");
     } finally {
@@ -104,6 +112,8 @@ export function TakeActions({
   const setPrompt = useMidiStore((s) => s.setPrompt);
   const strength = useMidiStore((s) => s.strength);
   const setStrength = useMidiStore((s) => s.setStrength);
+  const source = useMidiStore((s) => s.source);
+  const detach = useMidiStore((s) => s.detach);
 
   const { placing, place } = useTakePlacement(onPlace);
   const duration = notesDuration(notes);
@@ -111,6 +121,22 @@ export function TakeActions({
 
   return (
     <div className="flex flex-col gap-2">
+      {/* Editing a placed take. Said up front because the buttons below stop
+          adding clips and start replacing audio, and that should never be a
+          surprise. The old renders stay in the library, and Undo puts them
+          back. */}
+      {source && (
+        <div className="bg-muted/60 flex flex-wrap items-center gap-2 rounded-md px-2 py-1.5 text-xs">
+          <PencilIcon className="text-muted-foreground size-3.5" />
+          <span className="min-w-0 flex-1">
+            Editing <span className="font-medium">{source.name}</span>. Re-rendering
+            replaces its audio in place; Undo puts the old take back.
+          </span>
+          <Button size="xs" variant="ghost" disabled={disabled} onClick={detach}>
+            Place as new instead
+          </Button>
+        </div>
+      )}
       {/* One press for the whole flow: the dry take is placed, and the cover of
           it is submitted against the next lane. Both clips land — the
           performance and what the model made of it — because the dry one is
@@ -174,7 +200,7 @@ export function TakeActions({
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-muted-foreground text-xs">
           {notes.length
-            ? `${notes.length} ${notes.length === 1 ? "note" : "notes"} · ${formatDuration(duration)} → lands at ${formatDuration(playheadS)}`
+            ? `${notes.length} ${notes.length === 1 ? "note" : "notes"} · ${formatDuration(duration)} → ${source ? "replaces the take in place" : `lands at ${formatDuration(playheadS)}`}`
             : "Nothing to place yet"}
         </span>
         <div className="ml-auto flex items-center gap-2">
@@ -184,7 +210,7 @@ export function TakeActions({
             disabled={disabled || !notes.length || placing}
             onClick={() => void place(null)}
           >
-            {placing ? "Rendering…" : "Place dry"}
+            {placing ? "Rendering…" : source ? "Re-render dry" : "Place dry"}
           </Button>
           <Button
             size="sm"
@@ -192,7 +218,7 @@ export function TakeActions({
             onClick={() => void place({ prompt: prompt.trim(), strength })}
           >
             <WandSparklesIcon />
-            {placing ? "Rendering…" : "Generate instrument"}
+            {placing ? "Rendering…" : source ? "Re-render instrument" : "Generate instrument"}
           </Button>
         </div>
       </div>

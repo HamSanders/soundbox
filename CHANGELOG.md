@@ -8,6 +8,7 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 - **Export a MIDI take as `.mid`.** The MIDI panel and the piano roll can save the current take as a Standard MIDI File, at the roll's tempo and with each note's velocity. Render the part on another instrument, in a DAW or elsewhere, and drag the WAV back onto a lane.
+- **MIDI takes keep their notes.** A take placed from the MIDI panel or the piano roll now stores its notes, tempo, instrument and cover prompt with the clip. Right-click the dry clip or its cover and choose **Edit notes** to open the take in the piano roll, fix it, and **Re-render dry** or **Re-render instrument**. The new audio replaces the old in place, and Undo brings the old take back. Clips placed before this are unchanged and stay audio only. `soundbox.get_story` and the segments API return the notes as `midi`.
 
 ### Changed
 - **Soundbox is now Mirli.** The site, page titles, share cards, press kit, blog, README, docs and issue templates use the new name, and the README and docs link to https://mirli.app. Nothing you rely on moves: the `soundbox` command, the `soundbox.*` MCP tools, the Docker image, the GitHub repository and the installer file names keep the old name for now, and existing installs carry on as they were. The home page, the download page, the press kit and the README each say once that Mirli was formerly Soundbox.

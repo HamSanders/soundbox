@@ -2878,6 +2878,7 @@ export const mockApi: MirliApi = {
       fade_in_s: req.fade_in_s ?? 0,
       fade_out_s: req.fade_out_s ?? 0,
       request_options: req.request_options ?? {},
+      midi: req.midi ?? null,
       sound: null,
       start_s:
         req.start_s ??
@@ -2992,6 +2993,9 @@ export const mockApi: MirliApi = {
     };
     segment.duration_s = atS;
     segment.fade_out_s = 0;
+    // As the server does: half a take no longer matches its notes.
+    segment.midi = null;
+    tail.midi = null;
     segments.push(tail);
     return [{ ...segment }, { ...tail }];
   },

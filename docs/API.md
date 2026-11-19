@@ -165,7 +165,7 @@ rather than failing the import.
 | PATCH | `/api/stories/{id}/tracks/{track_index}` | Body `{ name?, muted?, soloed?, gain_db?, devices? }`. `devices` replaces the lane's chain (`[{ kind, id?, bypassed?, params? }]`); unknown knobs are dropped, values are clamped to range and missing knobs take defaults |
 | DELETE | `/api/stories/{id}/tracks/{track_index}` | Delete the lane and everything on it |
 | GET | `/api/stories/{id}/segments` | Lines and clips |
-| POST | `/api/stories/{id}/segments` | Add one. Body `{ text?, kind?: "line" \| "pause", speaker?, voice_id?, track_index?, start_s?, position?, sound_id?, duration_s?, trim_start_s?, fade_in_s?, fade_out_s?, gain_db?, muted? }` |
+| POST | `/api/stories/{id}/segments` | Add one. Body `{ text?, kind?: "line" \| "pause", speaker?, voice_id?, track_index?, start_s?, position?, sound_id?, duration_s?, trim_start_s?, fade_in_s?, fade_out_s?, gain_db?, muted?, midi? }`. `midi` is a MIDI take's notes: `{ notes: [{ note, velocity, start_s, duration_s }], bpm?, instrument, cover?: { prompt, strength }, role: "dry" \| "cover", take_id }`; a PATCH with `midi: null` forgets them |
 | PUT | `/api/stories/{id}/segments/reorder` | Body `{ segment_ids }` |
 | PATCH / DELETE | `/api/stories/{id}/segments/{segment_id}` | Update (same fields as POST) or delete |
 | POST | `/api/stories/{id}/segments/{segment_id}/generate` | Voice one line. Body `{ model, seed?, steps?, cfg? }` → job |

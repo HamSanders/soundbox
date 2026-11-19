@@ -357,8 +357,9 @@ the record button's tooltip says so. There is no dialog.
 
 ## MIDI
 
-> **Experimental.** The panel works end to end, but a placed take is audio, not
-> notes. See "What this costs" below before relying on it.
+> **Experimental.** The panel works end to end. A placed take keeps its notes,
+> so you can reopen it in the piano roll and render it again; see "Editing a
+> placed take" below.
 
 The **MIDI** panel (`Ctrl/⌘ + N`) sits under the timeline beside the rack. Play
 a line, then press **Place on timeline** to render it and drop it on a new track
@@ -492,10 +493,39 @@ many notes overlap.
 For room sound, use the **Reverb** device instead of the prompt. Asking the
 model for a room smears the note attacks; the rack's reverb can be turned down.
 
-**What this costs:** the story keeps the WAV, not the notes, so a placed take
-cannot be edited as notes afterwards. Play it again instead. Clips are audio
-everywhere else in the studio, and storing notes in a clip would need a change
-to the story document.
+### Editing a placed take
+
+A placed take keeps its notes. The clip plays and exports as audio like any
+other clip, and it also stores the notes, the tempo, the instrument preset and
+the cover prompt and strength. Both clips from **Generate instrument** store
+them, the dry take and its cover, and they share a take id.
+
+Right-click either clip and choose **Edit notes**. The notes open in the piano
+roll and the MIDI panel, with the instrument, tempo, prompt and strength they
+were placed with. A bar above the buttons names the take you are editing, and
+the buttons change:
+
+- **Re-render dry** replaces the dry clip's audio in place. The clip keeps its
+  lane, start, fades and gain. Its cover still plays the old notes until you
+  re-render the instrument too.
+- **Re-render instrument** replaces the dry clip's audio and then the cover
+  clip's audio when the new cover comes back.
+- **Place as new instead** stops editing the take. The next press places a new
+  take at the playhead and leaves the old one alone.
+
+**Undo** puts the old audio and the old notes back. The earlier renders stay in
+the library and nothing is deleted. If you delete the dry clip, a re-render puts
+a new one on a free lane. If you delete both clips, the
+next press places the notes as a new take.
+
+If you had notes in the panel that were not placed yet, **Edit notes** puts
+them away and its toast offers **Bring it back**. Splitting a clip drops its
+notes, because half a take no longer matches them. Clips placed before takes
+kept their notes are audio only, so they have no **Edit notes**.
+
+`soundbox.get_story` and `GET /api/stories/{id}/segments` return the notes as
+`midi` on each clip, so an agent can read what was played. Over MCP the notes
+are read-only.
 
 ## The device rack
 

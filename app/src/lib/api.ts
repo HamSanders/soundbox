@@ -938,11 +938,36 @@ export interface StorySegment {
   /** This line's own delivery knobs, by the model family's option names.
    *  Empty means it follows the story's default. */
   request_options: Record<string, string>;
+  /** The notes a MIDI take was rendered from, so the clip can be reopened in
+   *  the piano roll and rendered again. Null (or absent, from an older
+   *  server) for every clip that is only audio. */
+  midi?: ClipMidi | null;
   /** Left out of both playback and the export mixdown. */
   muted: boolean;
   gain_db: number;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * The notes behind a MIDI take, kept on the clip it became — see the server's
+ * `clipMidiSchema`.
+ *
+ * A take places as two clips, the dry synth render and the ACE-Step cover of
+ * it, and both carry this. `take_id` is what ties them together: not a
+ * segment id, because undo and redo recreate clips under new ids.
+ */
+export interface ClipMidi {
+  /** Seconds from the start of the take. */
+  notes: { note: number; velocity: number; start_s: number; duration_s: number }[];
+  /** The roll's tempo, for its bar grid. */
+  bpm?: number;
+  /** The dry synth preset (lib/midi `INSTRUMENTS`). */
+  instrument: string;
+  /** What the cover asked for; null on a take only placed dry. */
+  cover?: { prompt: string; strength: number } | null;
+  role: "dry" | "cover";
+  take_id: string;
 }
 
 /**
@@ -1001,6 +1026,8 @@ export interface SegmentCreate {
   fade_out_s?: number;
   gain_db?: number;
   muted?: boolean;
+  /** A MIDI take's notes. */
+  midi?: ClipMidi | null;
 }
 
 export interface SegmentPatch {
@@ -1022,6 +1049,8 @@ export interface SegmentPatch {
   fade_out_s?: number;
   /** `{}` clears the override and puts the line back on the story default. */
   request_options?: Record<string, string>;
+  /** New notes for a re-rendered take; null forgets them. */
+  midi?: ClipMidi | null;
 }
 
 /** Model and tuning for one take. Lives on the request rather than the segment

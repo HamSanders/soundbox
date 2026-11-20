@@ -30,8 +30,25 @@
             box-shadow: 0 0 0 calc(6px + var(--lvl) * 46px) color-mix(in srgb, var(--accent) 22%, transparent);
             transition: box-shadow .08s linear; }
   /* Video call: the face fills the stage. */
-  #face { display: none; height: 100%; max-height: 100%; max-width: 100%; aspect-ratio: 1; border-radius: 18px; background: var(--panel); }
-  body.video #face { display: block; }
+  /* Smaller, framed, and dressed like a video feed. The tricks hide the
+     model's soft spots: a touch of blur and grain melts mouth artifacts into
+     "camera noise", the vignette pulls the eye to the eyes, and a slow
+     breathing zoom keeps the frame alive between words. */
+  #faceWrap { display: none; position: relative; width: min(360px, 70vw, 62dvh); aspect-ratio: 1; border-radius: 22px; overflow: hidden;
+              background: var(--panel); box-shadow: 0 18px 60px rgb(0 0 0 / .45), 0 0 0 1px var(--line); }
+  body.video #faceWrap { display: block; }
+  #face { width: 100%; height: 100%; display: block; filter: blur(.35px) contrast(1.04) saturate(1.05);
+          transform-origin: 50% 38%; animation: breathe 7s ease-in-out infinite; }
+  @keyframes breathe { 0%, 100% { transform: scale(1.06); } 50% { transform: scale(1.085) translateY(-.4%); } }
+  #faceWrap::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+                      background: radial-gradient(ellipse 75% 70% at 50% 42%, transparent 55%, rgb(0 0 0 / .42)); }
+  #faceWrap::after { content: ""; position: absolute; inset: -50%; z-index: 1; pointer-events: none; opacity: .09; mix-blend-mode: overlay;
+                     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+                     animation: grain .5s steps(4) infinite; }
+  @keyframes grain { 0% { transform: translate(0, 0); } 25% { transform: translate(-6%, 4%); } 50% { transform: translate(5%, -3%); } 75% { transform: translate(-3%, -6%); } 100% { transform: translate(0, 0); } }
+  #faceWrap .live { position: absolute; z-index: 2; left: 12px; top: 12px; padding: 2px 9px; border-radius: 6px; font-size: 12px; font-weight: 600;
+                    background: rgb(0 0 0 / .5); color: #fff; letter-spacing: .04em; }
+  #faceWrap .live::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--end); margin-right: 6px; vertical-align: 1px; }
   body.video #avatar { display: none; }
   #self { position: absolute; right: 24px; bottom: 12px; display: flex; align-items: center; gap: 8px;
           padding: 8px 12px; border-radius: 12px; background: color-mix(in srgb, var(--panel) 85%, transparent); border: 1px solid var(--line); color: var(--dim); }
@@ -105,7 +122,7 @@
 
 <div id="stage">
   <div id="avatar">M</div>
-  <canvas id="face" width="512" height="512"></canvas>
+  <div id="faceWrap"><canvas id="face" width="512" height="512"></canvas><span class="live">LIVE</span></div>
   <div id="captions"><div class="you" id="ccYou"></div><div id="ccBot"></div></div>
   <div id="self">You <i></i></div>
 </div>

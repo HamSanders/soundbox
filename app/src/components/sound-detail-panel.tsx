@@ -38,7 +38,7 @@ export function SoundDetailPanel() {
   return (
     <aside
       aria-label={`Details for ${sound.name}`}
-      className="bg-background ring-border animate-in fade-in-0 slide-in-from-right-8 fixed inset-x-0 top-0 bottom-(--dock-h,0px) z-30 flex flex-col duration-(--duration-base) md:static md:z-auto md:my-2 md:mr-2 md:-ml-1 md:h-[calc(100svh-1rem-var(--dock-h,0px))] md:w-[26rem] md:shrink-0 md:rounded-xl md:ring-1"
+      className="bg-background ring-border animate-in fade-in-0 slide-in-from-right-8 fixed inset-x-0 top-0 bottom-(--dock-h,0px) z-30 flex flex-col duration-(--duration-base) md:static md:z-auto md:my-2 md:mr-2 md:h-[calc(100svh-1rem-var(--dock-h,0px))] md:w-[26rem] md:shrink-0 md:rounded-xl md:ring-1"
     >
       <div className="border-border flex items-start gap-2 border-b px-4 pt-4 pb-3">
         <div className="grid min-w-0 flex-1 gap-1">

@@ -92,6 +92,7 @@ function SoundForm({ kind }: { kind: "sfx" | "voice" }) {
   const s = useModelForKind(kind);
   return (
     <GenerateComposer
+      panel
       settings={s.settings}
       onChange={s.patch}
       models={s.kindModels}
@@ -161,7 +162,7 @@ export function CreatePanel() {
   return (
     <aside
       aria-label="Create"
-      className="bg-background ring-border my-2 mr-1 hidden h-[calc(100svh-1rem-var(--dock-h,0px))] w-[22rem] shrink-0 flex-col rounded-xl ring-1 md:flex"
+      className="bg-background ring-border my-2 mr-2 hidden h-[calc(100svh-1rem-var(--dock-h,0px))] w-[22rem] shrink-0 flex-col rounded-xl ring-1 md:flex"
     >
       <nav aria-label="Kind" className="border-border flex shrink-0 gap-4 border-b px-4">
         {KINDS.map((k) => (
@@ -181,7 +182,10 @@ export function CreatePanel() {
           </NavLink>
         ))}
       </nav>
-      <div className="min-h-0 flex-1 overflow-y-auto p-3">
+      {/* No bottom padding here: each form's Create bar is sticky to this
+          scroller's bottom edge and carries the gap itself, so nothing shows
+          under it. */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 pt-3">
         {kind === "music" ? <MusicForm /> : <SoundForm kind={kind} />}
       </div>
     </aside>

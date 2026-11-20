@@ -68,6 +68,9 @@ export function registerAudiobookBeds(app: FastifyInstance, svc: MirliService): 
   // The audiobook MCP tools call the audiobook routes through this app.
   setAudiobookRoutes(svc, app);
   const service = () => beds(svc);
+  // Built now, not on first use, so its delete and duplicate hooks are
+  // registered with core before any book is deleted or copied.
+  service();
   const requireBook = (id: string) => {
     if (!audiobooks(svc).getBook(id)) throw new HttpError(404, "Book not found");
   };

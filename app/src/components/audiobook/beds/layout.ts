@@ -38,6 +38,7 @@ export interface LayoutInput {
   fade_out_s: number;
   anchor_s: number;
   offset_s: number;
+  end_s?: number | null;
 }
 
 const MAX_CLIP_S = 600;
@@ -85,6 +86,11 @@ export function layoutBed(input: LayoutInput): ClipPlan[] {
       return fill(0, piece, input);
     case "outro":
       return fill(length - piece, length, input);
+    case "scene": {
+      const from = Math.max(0, input.anchor_s + input.offset_s);
+      const to = input.end_s ?? length;
+      return fill(from, to > from ? to : from + input.sound_s, input);
+    }
     case "intro_outro":
       if (piece * 2 >= length) return fill(0, length, input);
       return [...fill(0, piece, input), ...fill(length - piece, length, input)];

@@ -188,11 +188,11 @@ export function VoiceShelfCard({
 
 /** Column template shared by the header and every row. */
 const ROW_GRID =
-  "grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-3 md:grid-cols-[2.5rem_minmax(0,1fr)_5.5rem_10rem_4rem_auto]";
+  "grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-3 @2xl:grid-cols-[2.5rem_minmax(0,1fr)_5.5rem_10rem_4rem_auto]";
 
 export function VoiceTableHeader() {
   return (
-    <div className={cn(ROW_GRID, "label-caps text-muted-foreground hidden border-b border-border px-2 pb-2 md:grid")}>
+    <div className={cn(ROW_GRID, "label-caps text-muted-foreground hidden border-b border-border px-2 pb-2 @2xl:grid")}>
       <span />
       <span>Voice</span>
       <span>Kind</span>
@@ -246,19 +246,19 @@ export function VoiceRow({
         <p className="text-muted-foreground truncate text-xs" title={sub}>
           {sub}
           {/* On narrow screens the columns fold into this line. */}
-          <span className="readout md:hidden">
+          <span className="readout @2xl:hidden">
             {" · "}
             {voice.kind === "clone" ? "clone" : "built-in"} · {readsLabel(voice)}
           </span>
         </p>
       </div>
-      <span className="hidden md:block">
+      <span className="hidden @2xl:block">
         <KindPill voice={voice} />
       </span>
-      <span className="readout text-muted-foreground hidden truncate md:block" title={voice.model_id ?? undefined}>
+      <span className="readout text-muted-foreground hidden truncate @2xl:block" title={voice.model_id ?? undefined}>
         {modelName ?? voice.model_id ?? "any model"}
       </span>
-      <span className="readout text-muted-foreground hidden text-right tabular-nums md:block">
+      <span className="readout text-muted-foreground hidden text-right tabular-nums @2xl:block">
         {voice.read_count ?? 0}
       </span>
       <div className="flex items-center justify-end">{actions}</div>

@@ -18,7 +18,7 @@
  * no "lab copy" of anything.
  */
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import {
@@ -36,7 +36,6 @@ import {
   UploadIcon,
   UserRoundIcon,
   UsersRoundIcon,
-  XIcon,
 } from "lucide-react";
 
 import { EmptyState } from "@/components/empty-state";
@@ -67,9 +66,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
-import { PLAYER_DOCK_HEIGHT_PX } from "@/components/player-dock";
-import { usePlayerStore } from "@/lib/player-store";
+import { useVoiceDetailStore } from "@/lib/voice-detail-store";
 import { Textarea } from "@/components/ui/textarea";
 
 import {
@@ -87,7 +84,7 @@ import {
 } from "@/components/voice-library";
 import { VoiceAvatar } from "@/components/voice-avatar";
 import { WaveformPlayer } from "@/components/waveform-player";
-import { VoiceClipsDialog, VoiceHistoryDialog, clipsSummary } from "@/components/voice-clips";
+import { VoiceClipsDialog, VoiceHistoryDialog } from "@/components/voice-clips";
 import { useJobStream, useJobStreams } from "@/hooks/use-job-stream";
 import {
   useCancelJob,
@@ -126,113 +123,6 @@ function matchesQuery(voice: Voice, query: string): boolean {
   return (
     voice.name.toLowerCase().includes(q) ||
     (voice.notes ?? "").toLowerCase().includes(q)
-  );
-}
-
-/**
- * The test read, inline under whichever card is being auditioned.
- *
- * One panel with a single open target rather than one panel per card: the model
- * choice and the test line are the same for every voice you try (that is the
- * point — you are comparing voices, not scripts), and N mounted job streams for
- * N cards would each hold their own socket. Keeping the state here and
- * rendering into the selected card's footer means the controls sit next to the
- * voice they belong to while only one read is ever in flight.
- */
-function TryItPanel({
-  voice,
-  models,
-  line,
-  onLineChange,
-  onClose,
-}: {
-  voice: Voice;
-  models: Model[];
-  line: string;
-  onLineChange: (v: string) => void;
-  onClose?: () => void;
-}) {
-  const [jobId, setJobId] = useState<string | null>(null);
-  const speak = useSpeak();
-  const { job } = useJobStream(jobId);
-  const qc = useQueryClient();
-
-  // A finished read is one more thing this voice has said: refresh the
-  // card's History count and any open history list.
-  useEffect(() => {
-    if (job?.status !== "done") return;
-    void qc.invalidateQueries({ queryKey: qk.voices });
-    void qc.invalidateQueries({ queryKey: ["sounds"] });
-  }, [job?.status, qc]);
-
-  // No model picker: a voice names the model it speaks through, so the read
-  // has nothing left to choose. The only voice that still falls back is a
-  // clone saved before voices carried a model — its clip works anywhere, so
-  // the first ready model reads it.
-  const pinned = voice.model_id ?? null;
-  const model = pinned ? models.find((m) => m.id === pinned) : models[0];
-  const referenceError = voiceReferenceError(voice, model);
-
-  const submit = () => {
-    if (!model || !line.trim() || referenceError) return;
-    speak.mutate(
-      { model: model.id, lines: [{ text: line.trim(), voice_id: voice.id }] },
-      { onSuccess: (ref) => setJobId(ref.job_id) },
-    );
-  };
-
-  return (
-    <div className="bg-muted/25 ring-border space-y-2 rounded-lg p-2.5 ring-1 ring-inset">
-      {!model ? (
-        <p className="text-muted-foreground text-xs">
-          {pinned
-            ? `${pinned} isn't installed, so this voice can't be previewed.`
-            : "No text-to-speech model is ready."}{" "}
-          <Link to="/models" className="text-foreground underline underline-offset-4">
-            Go to Models
-          </Link>
-        </p>
-      ) : (
-        <>
-          <div className="flex items-center gap-2">
-            {/* The model is stated, not offered — it came with the voice. */}
-            <p className="text-muted-foreground flex-1 truncate text-xs">
-              Reads through {model.name}
-            </p>
-            {onClose && (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={onClose}
-                aria-label="Close test read"
-              >
-                <XIcon />
-              </Button>
-            )}
-          </div>
-
-          <Textarea
-            className="min-h-14 text-sm"
-            value={line}
-            placeholder="A short line to hear this voice say…"
-            onChange={(e) => onLineChange(e.target.value)}
-          />
-
-          <Button
-            size="sm"
-            className="w-full"
-            disabled={!line.trim() || speak.isPending || Boolean(referenceError)}
-            onClick={submit}
-          >
-            <MicIcon />
-            {speak.isPending ? "Starting…" : "Read it"}
-          </Button>
-
-          {referenceError && <p role="alert" className="text-destructive text-xs">{referenceError}</p>}
-          <JobResult job={job} />
-        </>
-      )}
-    </div>
   );
 }
 
@@ -684,104 +574,6 @@ function familyOf(voice: Voice, models: Map<string, Model>): string | null {
   return voice.model_id ? (models.get(voice.model_id)?.family ?? voice.model_id) : null;
 }
 
-/** The history dialog keeps 50; the panel shows what was said lately. */
-const RECENT_READS = 5;
-
-/**
- * A voice's details in the right-hand panel: who it is, its reference clip,
- * a test read, and what it has said lately. Opened by clicking a row or a
- * shelf card, the way a track row opens `SoundDetailPanel`.
- */
-function VoiceDetails({
-  voice,
-  modelName,
-  models,
-  line,
-  onLineChange,
-  menu,
-  onEdit,
-  onClips,
-}: {
-  voice: Voice;
-  modelName: string | null;
-  models: Model[];
-  line: string;
-  onLineChange: (v: string) => void;
-  menu: ReactNode;
-  onEdit: () => void;
-  onClips: () => void;
-}) {
-  const reads = useSounds({ voice_id: voice.id, limit: RECENT_READS });
-  const items = reads.data?.items ?? [];
-  const total = reads.data?.total ?? 0;
-  const clips = clipsSummary(voice);
-  return (
-    <>
-      <div className="border-border flex items-center gap-3 border-b px-4 pt-4 pb-3 pr-12">
-        <VoiceAvatar voice={voice} className="ring-border size-14 rounded-md ring-1 ring-inset" />
-        <div className="grid min-w-0 gap-1">
-          <SheetTitle className="font-display truncate text-2xl leading-none font-extrabold tracking-[0.01em] uppercase">
-            {voice.name}
-          </SheetTitle>
-          <SheetDescription className="readout text-muted-foreground truncate">
-            {[
-              voice.kind === "clone" ? "Clone" : `Built-in ${voice.voice_id ?? ""}`.trim(),
-              modelName ?? voice.model_id ?? "any model",
-              `${voice.read_count ?? 0} read${voice.read_count === 1 ? "" : "s"}`,
-            ].join(" · ")}
-          </SheetDescription>
-        </div>
-      </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Button variant="outline" size="sm" onClick={onEdit}>
-            <PencilIcon />
-            Edit
-          </Button>
-          {voice.kind === "clone" && (
-            <Button variant="outline" size="sm" onClick={onClips}>
-              <AudioLinesIcon />
-              Clips
-            </Button>
-          )}
-          <span className="ml-auto">{menu}</span>
-        </div>
-
-        {voice.notes && <p className="text-sm">{voice.notes}</p>}
-
-        {voice.kind === "clone" && voice.reference_file && (
-          <section className="grid gap-2">
-            <h3 className="label-caps text-muted-foreground">Reference{clips ? ` · ${clips}` : ""}</h3>
-            <audio controls preload="none" src={voice.reference_file} className="h-8 w-full" />
-          </section>
-        )}
-
-        <section className="grid gap-2">
-          <h3 className="label-caps text-muted-foreground">Try it</h3>
-          <TryItPanel voice={voice} models={models} line={line} onLineChange={onLineChange} />
-        </section>
-
-        <section className="grid gap-2">
-          <h3 className="label-caps text-muted-foreground">
-            Recent reads{total > items.length ? ` · ${items.length} of ${total}` : ""}
-          </h3>
-          {reads.isLoading ? (
-            <Skeleton className="h-12 w-full rounded-md" />
-          ) : items.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Nothing read in this voice yet.</p>
-          ) : (
-            items.map((sound) => (
-              <div key={sound.id} className="border-border/60 grid gap-1 rounded-md border px-2.5 py-2">
-                <p className="readout text-muted-foreground truncate">{sound.name}</p>
-                <WaveformPlayer sound={sound} compact />
-              </div>
-            ))
-          )}
-        </section>
-      </div>
-    </>
-  );
-}
 
 export function VoiceLabPage() {
   const voices = useVoices();
@@ -819,8 +611,10 @@ export function VoiceLabPage() {
 
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<VoiceFilter>("all");
-  /** The voice whose details are open in the right-hand panel. */
-  const [detailId, setDetailId] = useState<string | null>(null);
+  /** The voice whose details are open in the docked panel (App renders it). */
+  const detailId = useVoiceDetailStore((st) => st.voiceId);
+  const setDetailId = useVoiceDetailStore((st) => st.open);
+  const setDetailActions = useVoiceDetailStore((st) => st.setActions);
 
   /** The line shared across every audition. No model: it comes with the
    *  voice. */
@@ -875,8 +669,15 @@ export function VoiceLabPage() {
   const shelf = [...all]
     .sort((a, b) => (b.read_count ?? 0) - (a.read_count ?? 0))
     .slice(0, SHELF_SIZE);
-  const detail = all.find((v) => v.id === detailId) ?? null;
-  const playerOpen = usePlayerStore((st) => st.sound !== null);
+
+  const openEdit = (voice: Voice) => {
+    setNameDraft(voice.name);
+    setNotesDraft(voice.notes ?? "");
+    setTranscriptDrafts(Object.fromEntries(
+      (voice.samples ?? []).map((s) => [s.id, s.reference_text ?? ""]),
+    ));
+    setEditing(voice);
+  };
 
   /** The less-used actions, as the track rows keep them: one ··· menu. */
   const voiceMenu = (voice: Voice) => (
@@ -933,14 +734,14 @@ export function VoiceLabPage() {
     </DropdownMenu>
   );
 
-  const openEdit = (voice: Voice) => {
-    setNameDraft(voice.name);
-    setNotesDraft(voice.notes ?? "");
-    setTranscriptDrafts(Object.fromEntries(
-      (voice.samples ?? []).map((s) => [s.id, s.reference_text ?? ""]),
-    ));
-    setEditing(voice);
-  };
+  // The docked panel lives in the shell; it opens this page's dialogs
+  // through these. Re-registered every render so it never holds a stale
+  // closure, and dropped when the page goes.
+  useEffect(() => {
+    setDetailActions({ edit: openEdit, clips: (v) => setClipsFor(v.id), menu: voiceMenu });
+  });
+  useEffect(() => () => setDetailActions(null), [setDetailActions]);
+
 
   return (
     <div className="@container space-y-5">
@@ -1076,7 +877,7 @@ export function VoiceLabPage() {
             </section>
           )}
 
-          <section className="grid min-w-0 gap-1">
+          <section className="@container grid min-w-0 gap-1">
             <h2 className="label-caps text-muted-foreground mb-1">
               {filter === "all" && !query.trim() ? "All voices" : `${filtered.length} voice${filtered.length === 1 ? "" : "s"}`}
             </h2>
@@ -1126,35 +927,6 @@ export function VoiceLabPage() {
 
       <VoiceConvertPanel models={vcModels} voices={all} />
 
-      {/* ------------------------------------------- details panel */}
-      <Sheet open={detail !== null} onOpenChange={(o) => !o && setDetailId(null)} modal={false}>
-        <SheetContent
-          side="right"
-          className="ring-border gap-0 border-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md data-[side=right]:md:top-2 data-[side=right]:md:right-2 data-[side=right]:md:h-auto md:rounded-xl md:ring-1 md:shadow-none"
-          style={{ bottom: playerOpen ? PLAYER_DOCK_HEIGHT_PX + 8 : 8 }}
-          onInteractOutside={(e) => {
-            const t = e.target as Element | null;
-            // The player, the rows that feed this panel and the dialogs and
-            // menus it opens are not "outside".
-            if (t?.closest('[aria-label="Now playing"], [data-voice-row], [role=dialog], [role=menu]'))
-              e.preventDefault();
-          }}
-        >
-          {detail && (
-            <VoiceDetails
-              key={detail.id}
-              voice={detail}
-              modelName={modelName(detail)}
-              models={readyTts}
-              line={tryLine}
-              onLineChange={setTryLine}
-              menu={voiceMenu(detail)}
-              onEdit={() => openEdit(detail)}
-              onClips={() => setClipsFor(detail.id)}
-            />
-          )}
-        </SheetContent>
-      </Sheet>
 
       <AddVoiceDialog
         open={addOpen}

@@ -18,6 +18,7 @@ import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog";
 import { NowPlayingBar } from "@/components/now-playing-bar";
 import { CreatePanel, CreateRedirect } from "@/components/create-panel";
 import { SoundDetailPanel } from "@/components/sound-detail-panel";
+import { VoiceDetailPanel } from "@/components/voice-detail-panel";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { PLAYER_DOCK_HEIGHT_PX } from "@/components/player-dock";
 import { usePlayerStore } from "@/lib/player-store";
@@ -189,6 +190,7 @@ function AppShell() {
       </SidebarInset>
       {/* Docked beside the page, in the shell's row: see sound-detail-panel.tsx. */}
       <SoundDetailPanel />
+      <VoiceDetailPanel />
       {/* Inside the shell, not the app root: it offers the shell's pages and
           reads the route to know when to stand down. */}
       <AppCommandPalette />

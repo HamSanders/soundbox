@@ -40,6 +40,7 @@ import { toast } from "sonner";
 import { characterById } from "./cast-colors";
 import { CastDot } from "./character-chip";
 import { StatusBadge } from "./paragraph-row";
+import type { BookOps } from "./use-book-ops";
 import { resolveModel, useTts } from "./use-tts";
 
 const BOOK_DEFAULT = "__book__";
@@ -58,10 +59,15 @@ function ParagraphInspector({
   book,
   chapter,
   paragraph,
+  number,
+  ops,
 }: {
   book: BookDetail;
   chapter: ChapterWithStats;
   paragraph: Paragraph;
+  /** 1-based, among the chapter's paragraphs (beds on other tracks aren't counted). */
+  number: number;
+  ops: BookOps;
 }) {
   const qc = useQueryClient();
   const tts = useTts();
@@ -90,7 +96,7 @@ function ParagraphInspector({
   return (
     <div className="space-y-5 p-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-medium">Paragraph {paragraph.position + 1}</h3>
+        <h3 className="text-sm font-medium">Paragraph {number}</h3>
         <StatusBadge status={paragraph.status} />
       </div>
 
@@ -98,7 +104,7 @@ function ParagraphInspector({
         <Select
           value={paragraph.character_id ?? NARRATOR}
           onValueChange={(v) =>
-            update.mutate({ id: paragraph.id, patch: { character_id: v === NARRATOR ? null : v } })
+            void ops.cast([paragraph], v === NARRATOR ? null : v)
           }
         >
           <SelectTrigger size="sm" className="w-full">
@@ -154,7 +160,7 @@ function ParagraphInspector({
           Locked
           <Switch
             checked={paragraph.locked}
-            onCheckedChange={(locked) => update.mutate({ id: paragraph.id, patch: { locked } })}
+            onCheckedChange={(locked) => void ops.setLocked([paragraph], locked)}
           />
         </label>
         <label className="flex items-center justify-between gap-2 text-sm">
@@ -251,14 +257,18 @@ export function Inspector({
   book,
   chapter,
   paragraph,
+  paragraphNumber,
   selectedCount,
   onLockSelection,
+  ops,
 }: {
   book: BookDetail;
   chapter: ChapterWithStats | null;
   paragraph: Paragraph | null;
   selectedCount: number;
   onLockSelection: (locked: boolean) => void;
+  ops: BookOps;
+  paragraphNumber: number;
 }) {
   return (
     <Tabs defaultValue="inspect" className="flex min-h-0 flex-1 flex-col gap-0">
@@ -286,7 +296,13 @@ export function Inspector({
             </div>
           </div>
         ) : paragraph && chapter ? (
-          <ParagraphInspector book={book} chapter={chapter} paragraph={paragraph} />
+          <ParagraphInspector
+            book={book}
+            chapter={chapter}
+            paragraph={paragraph}
+            number={paragraphNumber}
+            ops={ops}
+          />
         ) : chapter ? (
           <ChapterInspector book={book} chapter={chapter} />
         ) : null}

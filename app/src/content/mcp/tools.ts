@@ -22,7 +22,7 @@
  * think about, not every optional field.
  */
 
-export type McpToolGroup = "sounds" | "voices" | "stories" | "arrangement";
+export type McpToolGroup = "sounds" | "voices" | "stories" | "arrangement" | "audiobooks";
 
 export interface McpToolArg {
   name: string;
@@ -70,6 +70,12 @@ export const MCP_TOOL_GROUPS: { id: McpToolGroup; title: string; intro: string }
     title: "Arrangement",
     intro:
       "The timeline underneath a story: which lane a clip is on, how loud it is, and what the studio shows when you open it.",
+  },
+  {
+    id: "audiobooks",
+    title: "Audiobooks",
+    intro:
+      "A book is chapters, and each chapter is a story. Import a manuscript, cast it, fix pronunciations, voice it, lay music under it, then master and export it, all from an agent.",
   },
 ];
 
@@ -435,6 +441,117 @@ export const MCP_TOOLS: McpToolDoc[] = [
     args: [
       { name: "story_id", type: "string", required: true },
       { name: "track_index", type: "integer", required: true, note: "−16 to 16." },
+    ],
+  },
+
+  /* --------------------------------------------------------- audiobooks */
+  {
+    name: "soundbox.create_audiobook",
+    title: "Start an audiobook",
+    blurb: "Creates an empty book with one chapter. Each chapter is a story, so the story tools work on it as well.",
+    group: "audiobooks",
+    args: [
+      { name: "title", type: "string", required: true },
+      { name: "author", type: "string" },
+      { name: "narrator_voice_id", type: "string", note: "The voice that reads everything without a character." },
+      { name: "cast_mode", type: '"single" | "multi"' },
+    ],
+  },
+  {
+    name: "soundbox.import_manuscript",
+    title: "Import a manuscript as a book",
+    blurb:
+      "Builds a book from an EPUB, PDF, DOCX, TXT, Markdown or HTML file, from pasted text, or from a web page, with chapters detected and front and back matter marked.",
+    group: "audiobooks",
+    args: [
+      { name: "path", type: "string", note: "Absolute path to the file. Give one of path, text or url." },
+      { name: "text", type: "string" },
+      { name: "url", type: "string" },
+      { name: "title", type: "string", note: "Overrides the title found in the file." },
+    ],
+  },
+  {
+    name: "soundbox.list_audiobooks",
+    title: "List audiobooks",
+    blurb: "Every book, with how much of it is voiced.",
+    group: "audiobooks",
+    args: [],
+  },
+  {
+    name: "soundbox.get_audiobook",
+    title: "Read an audiobook",
+    blurb:
+      "A book's chapters, cast and progress. With a chapter id, also that chapter's paragraphs and whether each is voiced, stale or locked.",
+    group: "audiobooks",
+    args: [
+      { name: "book_id", type: "string", required: true },
+      { name: "chapter_id", type: "string" },
+    ],
+  },
+  {
+    name: "soundbox.set_character_voice",
+    title: "Cast a character",
+    blurb: "Gives a character a voice, and every paragraph of theirs follows. The name narrator sets the default voice.",
+    group: "audiobooks",
+    args: [
+      { name: "book_id", type: "string", required: true },
+      { name: "character", type: "string", required: true, note: "Name, alias or id, or narrator." },
+      { name: "voice_id", type: "string | null", required: true },
+    ],
+  },
+  {
+    name: "soundbox.add_pronunciation",
+    title: "Add a pronunciation rule",
+    blurb:
+      "Says how a word should be read: a respelling, or IPA or CMU phonemes where the model supports them. Paragraphs it changes are marked stale.",
+    group: "audiobooks",
+    args: [
+      { name: "term", type: "string", required: true },
+      { name: "replacement", type: "string", required: true },
+      { name: "kind", type: '"alias" | "ipa" | "cmu"' },
+      { name: "book_id", type: "string", note: "Omit for a rule every book uses." },
+    ],
+  },
+  {
+    name: "soundbox.render_audiobook",
+    title: "Voice an audiobook",
+    blurb: "Voices every unvoiced paragraph of a book, a chapter, or chosen paragraphs. Locked paragraphs are never redone.",
+    group: "audiobooks",
+    slow: true,
+    args: [
+      { name: "book_id", type: "string", required: true },
+      { name: "chapter_id", type: "string" },
+      { name: "overwrite", type: "boolean", note: "Re-voice paragraphs that already have audio." },
+      { name: "wait", type: "boolean", note: "Default true. False returns the run at once." },
+    ],
+  },
+  {
+    name: "soundbox.master_and_export_audiobook",
+    title: "Master and export an audiobook",
+    blurb:
+      "Masters each chapter, checks it against the ACX numbers, and writes MP3, WAV, FLAC or M4B. Returns the path and any failed checks.",
+    group: "audiobooks",
+    slow: true,
+    args: [
+      { name: "book_id", type: "string", required: true },
+      { name: "format", type: '"mp3" | "wav" | "flac" | "m4b"' },
+      { name: "mastering", type: '"acx" | "podcast" | "none"' },
+      { name: "include_beds", type: "boolean", note: "Off by default when a retail sample is exported." },
+    ],
+  },
+  {
+    name: "soundbox.add_bed",
+    title: "Put music or ambience under a chapter",
+    blurb:
+      "Adds a music or ambience bed, or a sound effect at a paragraph, from a library sound or a prompt. Beds loop to the chapter's length and duck under the narration on export.",
+    group: "audiobooks",
+    args: [
+      { name: "book_id", type: "string", required: true },
+      { name: "chapter_id", type: "string", required: true },
+      { name: "kind", type: '"music" | "ambience" | "sfx"' },
+      { name: "sound_id", type: "string", note: "Give this or prompt." },
+      { name: "prompt", type: "string" },
+      { name: "duck_db", type: "number", note: "How far it dips under narration; 0 turns ducking off." },
     ],
   },
 ];

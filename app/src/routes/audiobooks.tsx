@@ -4,7 +4,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { BookOpenIcon, FileUpIcon, PlusIcon, SearchIcon } from "lucide-react";
 
 import { ImportWizard } from "@/components/audiobook/import";
@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { bookProgress, type BookSummary } from "@/lib/audiobook-api";
-import { useBooks, useCreateBook, useDeleteBook } from "@/lib/audiobook-queries";
+import { useBooks, useCreateBook, useDeleteBook, useDuplicateBook } from "@/lib/audiobook-queries";
 import { formatDuration } from "@/lib/format";
 
 type Filter = "all" | "progress" | "done";
@@ -35,9 +35,13 @@ export function AudiobooksPage() {
   const books = useBooks();
   const create = useCreateBook();
   const remove = useDeleteBook();
+  const duplicate = useDuplicateBook();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
-  const [importing, setImporting] = useState(false);
+  // `?import=1` opens the wizard (the command palette links here).
+  const [params, setParams] = useSearchParams();
+  const importing = params.get("import") === "1";
+  const setImporting = (open: boolean) => setParams(open ? { import: "1" } : {}, { replace: true });
   const [doomed, setDoomed] = useState<BookSummary | null>(null);
 
   const all = useMemo(() => books.data ?? [], [books.data]);
@@ -154,7 +158,13 @@ export function AudiobooksPage() {
       ) : (
         <div className="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {items.map((book, i) => (
-            <BookCard key={book.id} book={book} index={i} onDelete={setDoomed} />
+            <BookCard
+              key={book.id}
+              book={book}
+              index={i}
+              onDelete={setDoomed}
+              onDuplicate={(b) => duplicate.mutate({ id: b.id })}
+            />
           ))}
         </div>
       )}

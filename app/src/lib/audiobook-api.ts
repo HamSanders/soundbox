@@ -40,11 +40,28 @@ export interface BookStats {
   locked: number;
   characters: number;
   duration_s: number;
+  open_notes: number;
 }
 
 export interface ChapterWithStats extends Chapter {
   stats: ChapterStats;
   status: ChapterStatus;
+  /** Unresolved review notes in this chapter. */
+  open_notes: number;
+}
+
+/** A review note on one paragraph. */
+export interface BookNote {
+  id: string;
+  book_id: string;
+  segment_id: string;
+  chapter_id: string;
+  body: string;
+  /** Seconds into the paragraph's audio, or null for the whole paragraph. */
+  at_s: number | null;
+  resolved: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface BookSummary extends Book {
@@ -73,6 +90,16 @@ export interface ChapterCreate {
   paragraphs?: string[];
 }
 
+export interface ChapterFromText {
+  text: string;
+  /** Default: the first heading line in the text, else its first words. */
+  title?: string | null;
+  kind?: ChapterKind;
+  position?: number | null;
+  /** Strip Markdown syntax. */
+  markdown?: boolean;
+}
+
 export interface ChapterPatch {
   title?: string;
   kind?: ChapterKind;
@@ -81,6 +108,9 @@ export interface ChapterPatch {
 
 export interface ParagraphCreate {
   text?: string;
+  /** "pause" adds a beat of silence of `duration_s` instead of a line. */
+  kind?: "line" | "pause";
+  duration_s?: number | null;
   position?: number | null;
   character_id?: string | null;
   is_heading?: boolean;
@@ -92,6 +122,44 @@ export interface ParagraphPatch {
   locked?: boolean;
   is_heading?: boolean;
   model_id?: string | null;
+}
+
+/** A saved version of a book, without its data. */
+export interface SnapshotInfo {
+  id: string;
+  book_id: string;
+  label: string;
+  chapters: number;
+  paragraphs: number;
+  created_at: string;
+}
+
+export type DiffStatus = "added" | "removed" | "changed";
+
+/** What changed from a saved version to now. Paragraphs match by id. */
+export interface SnapshotDiff {
+  snapshot: SnapshotInfo;
+  book: { field: string; before: unknown; after: unknown }[];
+  chapters: {
+    chapter_id: string;
+    title: string;
+    status: DiffStatus | "same";
+    title_before?: string;
+    paragraphs: { segment_id: string; status: DiffStatus; before: string | null; after: string | null }[];
+  }[];
+  summary: { added: number; removed: number; changed: number };
+}
+
+export interface SplitResult {
+  first: Paragraph;
+  second: Paragraph;
+}
+
+export interface MergeResult {
+  paragraph: Paragraph;
+  removed_id: string;
+  /** Where the second half starts in the merged text; split there to undo. */
+  split_at: number;
 }
 
 export interface ReplaceRequest {
@@ -121,6 +189,8 @@ export type AudiobookEvent =
   | { type: "chapters" }
   | { type: "paragraphs"; chapter_id: string; segment_ids?: string[] }
   | { type: "characters" }
+  | { type: "notes"; chapter_id: string }
+  | { type: "snapshots" }
   | { type: "deleted" }
   | ({ type: string } & Record<string, unknown>);
 
@@ -134,7 +204,9 @@ export interface AudiobookApi {
   /** Where the cover image is served, or null when the book has none. */
   coverUrl(book: Pick<Book, "id" | "cover_path">): string | null;
 
+  duplicateBook(id: string, title?: string | null): Promise<BookDetail>;
   addChapter(bookId: string, req?: ChapterCreate): Promise<ChapterWithStats>;
+  addChapterFromText(bookId: string, req: ChapterFromText): Promise<ChapterWithStats>;
   updateChapter(bookId: string, chapterId: string, patch: ChapterPatch): Promise<ChapterWithStats>;
   reorderChapters(bookId: string, ids: string[]): Promise<ChapterWithStats[]>;
   deleteChapter(bookId: string, chapterId: string): Promise<void>;
@@ -144,8 +216,27 @@ export interface AudiobookApi {
   updateParagraph(bookId: string, segmentId: string, patch: ParagraphPatch): Promise<Paragraph>;
   deleteParagraph(bookId: string, segmentId: string): Promise<void>;
   castParagraphs(bookId: string, segmentIds: string[], characterId: string | null): Promise<{ changed: number }>;
+  splitParagraph(bookId: string, segmentId: string, at: number): Promise<SplitResult>;
+  mergeWithNext(bookId: string, segmentId: string, joiner?: string): Promise<MergeResult>;
+  reorderParagraphs(bookId: string, chapterId: string, ids: string[]): Promise<Paragraph[]>;
 
   replace(bookId: string, req: ReplaceRequest): Promise<ReplaceResult>;
+
+  listSnapshots(bookId: string): Promise<SnapshotInfo[]>;
+  saveSnapshot(bookId: string, label?: string | null): Promise<SnapshotInfo>;
+  diffSnapshot(bookId: string, snapshotId: string): Promise<SnapshotDiff>;
+  /** Saves a "Before restoring" version first; returns it as `before`. */
+  restoreSnapshot(bookId: string, snapshotId: string): Promise<{ book: BookDetail; before: SnapshotInfo }>;
+  deleteSnapshot(bookId: string, snapshotId: string): Promise<void>;
+
+  listNotes(bookId: string): Promise<BookNote[]>;
+  addNote(bookId: string, segmentId: string, body: string, atS?: number | null): Promise<BookNote>;
+  updateNote(
+    bookId: string,
+    noteId: string,
+    patch: { body?: string; resolved?: boolean; at_s?: number | null },
+  ): Promise<BookNote>;
+  deleteNote(bookId: string, noteId: string): Promise<void>;
 
   /** Live events for one book. Returns the unsubscribe. */
   subscribe(bookId: string, onEvent: (event: AudiobookEvent) => void): () => void;
@@ -174,6 +265,10 @@ const httpAudiobookApi: AudiobookApi = {
   coverUrl: (book) =>
     book.cover_path ? `${base(book.id)}/cover?v=${encodeURIComponent(book.cover_path)}` : null,
 
+  duplicateBook: (id, title) =>
+    request<BookDetail>(`${base(id)}/duplicate`, { method: "POST", ...json({ title: title ?? null }) }),
+  addChapterFromText: (bookId, req) =>
+    request<ChapterWithStats>(`${base(bookId)}/chapters/from-text`, { method: "POST", ...json(req) }),
   addChapter: (bookId, req = {}) =>
     request<ChapterWithStats>(`${base(bookId)}/chapters`, { method: "POST", ...json(req) }),
   updateChapter: (bookId, chapterId, patch) =>
@@ -213,8 +308,51 @@ const httpAudiobookApi: AudiobookApi = {
       ...json({ segment_ids: segmentIds, character_id: characterId }),
     }),
 
+  splitParagraph: (bookId, segmentId, at) =>
+    request<SplitResult>(`${base(bookId)}/paragraphs/${encodeURIComponent(segmentId)}/split`, {
+      method: "POST",
+      ...json({ at }),
+    }),
+  mergeWithNext: (bookId, segmentId, joiner) =>
+    request<MergeResult>(`${base(bookId)}/paragraphs/${encodeURIComponent(segmentId)}/merge-next`, {
+      method: "POST",
+      ...json(joiner === undefined ? {} : { joiner }),
+    }),
+  reorderParagraphs: (bookId, chapterId, ids) =>
+    request<Paragraph[]>(
+      `${base(bookId)}/chapters/${encodeURIComponent(chapterId)}/paragraphs/reorder`,
+      { method: "POST", ...json({ ids }) },
+    ),
+
   replace: (bookId, req) =>
     request<ReplaceResult>(`${base(bookId)}/replace`, { method: "POST", ...json(req) }),
+
+  listSnapshots: (bookId) => request<SnapshotInfo[]>(`${base(bookId)}/snapshots`),
+  saveSnapshot: (bookId, label) =>
+    request<SnapshotInfo>(`${base(bookId)}/snapshots`, { method: "POST", ...json({ label: label ?? null }) }),
+  diffSnapshot: (bookId, snapshotId) =>
+    request<SnapshotDiff>(`${base(bookId)}/snapshots/${encodeURIComponent(snapshotId)}/diff`),
+  restoreSnapshot: (bookId, snapshotId) =>
+    request<{ book: BookDetail; before: SnapshotInfo }>(
+      `${base(bookId)}/snapshots/${encodeURIComponent(snapshotId)}/restore`,
+      { method: "POST", ...json({}) },
+    ),
+  deleteSnapshot: (bookId, snapshotId) =>
+    request<void>(`${base(bookId)}/snapshots/${encodeURIComponent(snapshotId)}`, { method: "DELETE" }),
+
+  listNotes: (bookId) => request<BookNote[]>(`${base(bookId)}/notes`),
+  addNote: (bookId, segmentId, body, atS = null) =>
+    request<BookNote>(`${base(bookId)}/paragraphs/${encodeURIComponent(segmentId)}/notes`, {
+      method: "POST",
+      ...json({ body, at_s: atS }),
+    }),
+  updateNote: (bookId, noteId, patch) =>
+    request<BookNote>(`${base(bookId)}/notes/${encodeURIComponent(noteId)}`, {
+      method: "PATCH",
+      ...json(patch),
+    }),
+  deleteNote: (bookId, noteId) =>
+    request<void>(`${base(bookId)}/notes/${encodeURIComponent(noteId)}`, { method: "DELETE" }),
 
   subscribe(bookId, onEvent) {
     let source: EventSource | null = null;

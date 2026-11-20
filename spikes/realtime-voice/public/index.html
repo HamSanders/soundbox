@@ -160,7 +160,7 @@ body.live #call { display: grid; }
 /* The video tile: framed like a photograph on a sheet, hairline, 6 px corners.
    The model's soft spots in the mouth are hidden by scale, a hair of blur and a
    fine grain that reads as sensor noise; a slow breathing zoom keeps it alive. */
-.tile { position: relative; width: min(100cqw, calc(100cqh - 60px), 560px); aspect-ratio: 1; border-radius: 24px; overflow: hidden; border: 1px solid var(--rule); background: var(--well); }
+.tile { position: relative; width: min(100cqw, calc(100cqh - 60px), 560px); aspect-ratio: 1; border-radius: 24px; overflow: hidden; overflow: clip; border: 1px solid var(--rule); background: var(--well); }
 .tile canvas, .tile img.still { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; }
 .tile canvas { filter: blur(.3px) contrast(1.03); transform-origin: 50% 40%; animation: breathe 8s ease-in-out infinite; opacity: 0; transition: opacity .4s var(--ease); }
 body.video .tile canvas { opacity: 1; }
@@ -175,12 +175,27 @@ body.video .tile img.still { opacity: 0; }
              background: color-mix(in srgb, var(--paper) 82%, transparent); font: 400 12.5px/1.2 var(--log); color: var(--ink); }
 .tile .tag .dot { width: 7px; height: 7px; display: none; }
 body.speaking .tile .tag .dot { display: inline-block; }
+/* Shape toggle, top right: square with round corners, or a circle. */
+.tile { transition: border-radius .35s var(--ease); }
+body.circle .tile { border-radius: 50%; }
+.shape { position: absolute; right: 12px; top: 12px; z-index: 2; width: 34px; height: 34px; border-radius: 50%; padding: 0; display: grid; place-items: center;
+         border: 1px solid color-mix(in srgb, var(--ink) 30%, transparent); background: color-mix(in srgb, var(--paper) 78%, transparent); cursor: pointer; color: var(--ink);
+         opacity: .75; transition: opacity .15s; }
+.shape:hover { opacity: 1; }
+.shape svg { width: 15px; height: 15px; }
+.shape .sq { display: none; }
+body.circle .shape .ci { display: none; }
+body.circle .shape .sq { display: block; }
+body.circle .shape { right: calc(20% - 17px); top: calc(20% - 17px); }
+body.circle .tile .nofeed { left: 50%; top: 7%; transform: translateX(-50%); }
+body.circle .tile .tag { left: 50%; bottom: 6%; transform: translateX(-50%); }
+body.circle .tile .cc { bottom: 17%; width: 72%; }
 .tile .cc { position: absolute; left: 50%; bottom: 52px; transform: translateX(-50%); z-index: 1; width: min(92%, 640px); text-align: center; pointer-events: none; }
 .tile .cc div { display: inline; padding: 3px 8px; line-height: 1.75; font-size: clamp(14px, 1.6cqw, 18px); font-weight: 500; color: #f1ece0;
                 background: rgb(20 19 15 / .72); box-decoration-break: clone; -webkit-box-decoration-break: clone; border-radius: 4px; }
 .tile .cc div:empty { display: none; }
 body.showlog .tile .cc { display: none; }
-.tile .nofeed { position: absolute; right: 10px; top: 10px; z-index: 1; background: color-mix(in srgb, var(--paper) 82%, transparent); }
+.tile .nofeed { position: absolute; left: 12px; top: 12px; z-index: 1; background: color-mix(in srgb, var(--paper) 82%, transparent); }
 body.video .tile .nofeed { display: none; }
 
 /* The pen line under the tile: one drawn stroke that moves with the voice. */
@@ -300,6 +315,10 @@ td.over { color: var(--rust); font-weight: 700; }
           <canvas id="face" width="512" height="512"></canvas>
           <span class="tag"><span class="dot"></span><span id="who">Mirli</span></span>
           <div class="cc"><div id="ccLine"></div></div>
+          <button class="shape" id="shapeBtn" title="Circle or square" aria-label="Switch between circle and square">
+            <svg class="ci" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6"/></svg>
+            <svg class="sq" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="2.5" width="11" height="11" rx="3"/></svg>
+          </button>
           <span class="pill nofeed" title="The face server is not running, so this is a voice call">voice only</span>
         </div>
         <svg class="penline" viewBox="0 0 420 46" preserveAspectRatio="none" aria-hidden="true"><path id="penPath" d="M2 23 L414 23"/><circle cx="414" cy="23" r="4.5"/></svg>
@@ -608,6 +627,10 @@ function reportPlaying(playing) {
 
 // ---- Controls -----------------------------------------------------------------
 $("mute").onclick = () => { muted = !muted; $("mute").setAttribute("aria-pressed", String(muted)); document.body.classList.toggle("muted", muted); };
+// Tile shape: square or circle, remembered here.
+const setShape = (c) => { document.body.classList.toggle("circle", c); store.set("mirli-call-shape", c ? "circle" : "square"); };
+setShape(store.get("mirli-call-shape") === "circle");
+$("shapeBtn").onclick = () => setShape(!document.body.classList.contains("circle"));
 // The log column is off by default; captions sit on the video instead.
 const setLog = (on) => { document.body.classList.toggle("showlog", on); $("logBtn").setAttribute("aria-pressed", String(on)); store.set("mirli-call-log", on ? "1" : "0"); };
 setLog(store.get("mirli-call-log") === "1");

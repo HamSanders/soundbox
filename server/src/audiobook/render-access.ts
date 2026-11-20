@@ -76,9 +76,9 @@ export function voiceStores(db: Database): VoiceStores {
     const id = () => randomUUID();
     const now = () => new Date().toISOString();
     s = {
-      pronunciations: new PronunciationStore(db.conn, id, now),
-      takes: new TakeStore(db.conn, id, now),
-      renders: new RenderStore(db.conn, id, now),
+      pronunciations: new PronunciationStore(db.sqlite, id, now),
+      takes: new TakeStore(db.sqlite, id, now),
+      renders: new RenderStore(db.sqlite, id, now),
     };
     stores.set(db, s);
   }

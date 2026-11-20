@@ -151,7 +151,7 @@ describe("TakesService", () => {
 
   it("keeps takes in its own table on the shared connection", () => {
     expect(voiceStores(h.svc.db).takes.list("nope")).toEqual([]);
-    const row = h.svc.db.conn.prepare("SELECT name FROM sqlite_master WHERE name = 'segment_takes'").get();
+    const row = h.svc.db.sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'segment_takes'").get();
     expect(row).toBeTruthy();
   });
 });

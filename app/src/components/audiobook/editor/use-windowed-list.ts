@@ -33,8 +33,9 @@ export function useWindowedList({
   scrollRef: RefObject<HTMLElement | null>;
   estimate?: number;
   overscan?: number;
-  /** An index that must stay mounted (the row being edited). */
-  keep?: number | null;
+  /** Indexes that must stay mounted (the row being edited, the selected
+   *  row so keyboard focus is not lost). */
+  keep?: number[] | null;
 }): WindowedList {
   const heights = useRef(new Map<string, number>());
   const [version, bump] = useReducer((x: number) => x + 1, 0);
@@ -133,9 +134,11 @@ export function useWindowedList({
 
   let start = Math.max(0, find(view.top) - overscan);
   let end = Math.min(keys.length, find(view.top + view.height) + 1 + overscan);
-  if (keep !== null && keep >= 0 && keep < keys.length) {
-    start = Math.min(start, keep);
-    end = Math.max(end, keep + 1);
+  for (const k of keep ?? []) {
+    // Only near the window: a far-off index would mount everything between.
+    if (k < 0 || k >= keys.length || k < start - 50 || k > end + 50) continue;
+    start = Math.min(start, k);
+    end = Math.max(end, k + 1);
   }
 
   const scrollToIndex = useCallback(

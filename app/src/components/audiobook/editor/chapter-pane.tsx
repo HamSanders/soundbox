@@ -40,6 +40,7 @@ import { abk, useParagraphs } from "@/lib/audiobook-queries";
 
 import { characterById } from "./cast-colors";
 import { CharacterMenuItems } from "./character-chip";
+import { announce } from "./announce";
 import { FindReplaceBar } from "./find-replace-bar";
 import { NotesButton } from "./notes";
 import { ParagraphRow, type RowActions } from "./paragraph-row";
@@ -131,7 +132,7 @@ export function ChapterPane({
   const win = useWindowedList({
     keys,
     scrollRef,
-    keep: editingId ? keys.indexOf(editingId) : null,
+    keep: [editingId, selectedId].filter((x): x is string => !!x).map((id) => keys.indexOf(id)),
   });
   // A selection off screen (j/k, play to end) scrolls into view; the row's
   // own scrollIntoView handles the fine adjustment once it is mounted.
@@ -282,6 +283,21 @@ export function ChapterPane({
         setDragId(null);
         setDrop(null);
       },
+      move: (id, by) => {
+        const { all, ops, chapter } = latest.current;
+        const before = all.map((p) => p.id);
+        const i = before.indexOf(id);
+        const j = i + by;
+        if (i < 0 || j < 0 || j >= before.length) {
+          announce(by < 0 ? "Already the first paragraph" : "Already the last paragraph");
+          return;
+        }
+        const after = [...before];
+        [after[i], after[j]] = [after[j]!, after[i]!];
+        void ops.reorderParagraphs(chapter.id, before, after).then(() =>
+          announce(`Moved to position ${j + 1} of ${after.length}`),
+        );
+      },
     }),
     [insertAfter],
   );
@@ -309,9 +325,19 @@ export function ChapterPane({
   // Keyboard.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // A control that handled the key itself (a chapter's Alt+arrow, a menu)
+      // has claimed it.
+      if (e.defaultPrevented) return;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f") {
         e.preventDefault();
         onFindOpen(true);
+        return;
+      }
+      // Alt+Up/Down moves the selected paragraph: the keyboard way to do
+      // what the drag handle does.
+      if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown") && selected && !isTyping(e.target)) {
+        e.preventDefault();
+        actions.move(selected.id, e.key === "ArrowUp" ? -1 : 1);
         return;
       }
       if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target)) return;
@@ -395,7 +421,31 @@ export function ChapterPane({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [all, checked, findOpen, generate, insertAfter, lines, onChecked, onFindOpen, onSelect, ops, player, selected]);
+  }, [actions, all, checked, findOpen, generate, insertAfter, lines, onChecked, onFindOpen, onSelect, ops, player, selected]);
+
+  // Status changes that arrive from elsewhere (a render run, a regenerate),
+  // read out once per refresh rather than per paragraph.
+  const lastStatus = useRef<Map<string, string> | null>(null);
+  useEffect(() => {
+    const prev = lastStatus.current;
+    const next = new Map(all.map((p) => [p.id, p.status]));
+    lastStatus.current = next;
+    if (!prev) return;
+    let voiced = 0;
+    let stale = 0;
+    for (const [id, status] of next) {
+      const was = prev.get(id);
+      if (!was || was === status) continue;
+      // Only voicing changes: a new take, or a take going stale. Locking
+      // and unlocking announce themselves.
+      if (status === "voiced" && (was === "unvoiced" || was === "stale")) voiced++;
+      else if (status === "stale" && was === "voiced") stale++;
+    }
+    const parts = [];
+    if (voiced) parts.push(`${voiced} paragraph${voiced === 1 ? "" : "s"} voiced`);
+    if (stale) parts.push(`${stale} now stale`);
+    if (parts.length) announce(parts.join(", "));
+  }, [all]);
 
   const checkedList = all.filter((p) => checked.has(p.id));
 
@@ -490,7 +540,10 @@ export function ChapterPane({
 
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto py-2"
+        id="audiobook-paragraphs"
+        tabIndex={-1}
+        aria-describedby="audiobook-paragraph-keys"
+        className="min-h-0 flex-1 overflow-y-auto py-2 outline-none"
         role="list"
         aria-label={`${chapter.title} paragraphs`}
         onDragLeave={(e) => {
@@ -538,6 +591,7 @@ export function ChapterPane({
               dragging={p.id === dragId}
               dropEdge={drop?.id === p.id && dragId !== p.id ? (drop.after ? "after" : "before") : null}
               highlight={highlight}
+              anySelected={selectedId !== null && keys.includes(selectedId)}
               actions={rowActions}
             />
             </div>
@@ -559,7 +613,10 @@ export function ChapterPane({
         )}
       </div>
 
-      <div className="border-border/60 text-muted-foreground hidden flex-wrap gap-x-3 gap-y-1 border-t px-4 py-1.5 text-[0.7rem] lg:flex">
+      <div
+        id="audiobook-paragraph-keys"
+        className="border-border/60 text-muted-foreground hidden flex-wrap gap-x-3 gap-y-1 border-t px-4 py-1.5 text-[0.7rem] lg:flex"
+      >
         <span><Kbd>j</Kbd>/<Kbd>k</Kbd> move</span>
         <span><Kbd>Enter</Kbd> edit</span>
         <span><Kbd>Alt</Kbd>+<Kbd>Enter</Kbd> split</span>
@@ -568,6 +625,7 @@ export function ChapterPane({
         <span><Kbd>Space</Kbd> play</span>
         <span><Kbd>L</Kbd> lock</span>
         <span><Kbd>G</Kbd> generate</span>
+        <span><Kbd>Alt</Kbd>+<Kbd>↑</Kbd>/<Kbd>↓</Kbd> move</span>
         <span><Kbd>Ctrl</Kbd>+<Kbd>Z</Kbd> undo</span>
         <span><Kbd>Ctrl</Kbd>+<Kbd>F</Kbd> find</span>
       </div>

@@ -279,12 +279,14 @@ export function normalizeLoudness(audio: Audio, sampleRate: number, targetLufs: 
   if (!Number.isFinite(loudness)) return peakNormalize(audio, -1.0);
 
   const gain = Math.pow(10, (targetLufs - loudness) / 20.0);
-  let out = mapChannels(audio, (v) => v * gain);
+  const out = mapChannels(audio, (v) => v * gain);
   const peak = maxAbs(out);
   if (peak > 0.9885) {
     // -0.1 dBFS ceiling
     const scale = 0.9885 / peak;
-    out = mapChannels(out, (v) => v * scale);
+    // In place: `out` is this function's own copy, and a second full copy of
+    // a ten-minute song is 200 MB.
+    for (const ch of out) for (let i = 0; i < ch.length; i++) ch[i] = ch[i] * scale;
   }
   return out;
 }
@@ -390,11 +392,6 @@ export function integratedLoudness(audio: Audio, sampleRate: number): number {
   // Stage 2: RLB high-pass. Both are biquads applied causally, in order.
   const shelf = highShelfCoeffs(sampleRate, 1681.9744509555319, 1 / Math.SQRT2, 3.99984385397);
   const rlb = rlbHighPassCoeffs(sampleRate, 38.13547087602444, 0.5003270373238773);
-  const filtered = audio.map((ch) => {
-    const a = biquad(shelf, Float64Array.from(ch));
-    return biquad(rlb, a);
-  });
-
   // Channel weights: L/R/C unweighted, surrounds +1.5 dB. Anything beyond five
   // channels is weighted 1.0, matching pyloudnorm's default table.
   const G = (i: number): number => (i === 3 || i === 4 ? 1.41 : 1.0);
@@ -404,11 +401,16 @@ export function integratedLoudness(audio: Audio, sampleRate: number): number {
   const T = numSamples / sampleRate;
   const numBlocks = Math.round((T - T_g) / (T_g * step)) + 1;
 
-  // z[i][j]: mean square of channel i over block j.
+  // z[i][j]: mean square of channel i over block j. One channel is filtered at
+  // a time, in place, and dropped once its blocks are summed: holding every
+  // channel's filtered copy (and the copy between the two stages) at once came
+  // to 24 bytes per sample, about 120 MB for a minute of stereo.
   const z: Float64Array[] = [];
   for (let i = 0; i < numChannels; i++) {
     const zi = new Float64Array(numBlocks);
-    const ch = filtered[i];
+    const ch = Float64Array.from(audio[i]);
+    biquadInPlace(shelf, ch);
+    biquadInPlace(rlb, ch);
     for (let j = 0; j < numBlocks; j++) {
       const l = Math.trunc(T_g * (j * step) * sampleRate);
       const u = Math.trunc(T_g * (j * step + 1) * sampleRate);
@@ -493,9 +495,11 @@ function rlbHighPassCoeffs(fs: number, fc: number, Q: number): Biquad {
   };
 }
 
-/** Causal biquad, transposed direct form II, zero initial state (lfilter). */
-function biquad(c: Biquad, x: Float64Array): Float64Array {
-  const y = new Float64Array(x.length);
+/** Causal biquad, transposed direct form II, zero initial state (lfilter),
+ *  written over its input: y[n] depends only on x[n] and the state, so each
+ *  sample is read before it is replaced. */
+function biquadInPlace(c: Biquad, x: Float64Array): void {
+  const y = x;
   let s1 = 0;
   let s2 = 0;
   for (let n = 0; n < x.length; n++) {
@@ -505,7 +509,6 @@ function biquad(c: Biquad, x: Float64Array): Float64Array {
     s2 = c.b2 * xn - c.a2 * yn;
     y[n] = yn;
   }
-  return y;
 }
 
 // ----------------------------------------------------------------- peaks
@@ -554,10 +557,109 @@ export function computePeaks(audio: Audio, buckets = PEAK_BUCKETS): number[] {
  * Split out from `readWav` because audio no longer only arrives as a file:
  * audio.cpp's task API answers with the WAV inline, and round-tripping it
  * through a temp file just to read it straight back would be theatre.
+ *
+ * Plain PCM and float WAV, which is everything Mirli writes and every model
+ * sends, is read straight into one Float32Array per channel. wavefile, which
+ * did this before, goes through two interleaved Float64Array copies and
+ * per-sample function calls: about 20x the file's size in memory and 13 s of
+ * blocked event loop for a one-minute stereo song, which is what ran the 512 MB
+ * web studio out of memory finishing a Mirli Cloud render. The scaling is
+ * wavefile's own (positive over 2^(b-1)-1, negative over 2^(b-1)), so a file
+ * decodes to the same samples either way; anything unusual (compressed,
+ * extensible with a non-PCM subformat, odd block sizes) still goes to
+ * wavefile.
  */
 export function decodeWav(bytes: Buffer | Uint8Array): { audio: Audio; sampleRate: number } {
+  const buf = bytes instanceof Buffer ? bytes : Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  return decodePlainWav(buf) ?? decodeWavSlow(buf);
+}
+
+interface PlainWav {
+  format: 1 | 3;
+  channels: number;
+  sampleRate: number;
+  bits: number;
+  dataStart: number;
+  dataLength: number;
+}
+
+/** The fmt and data chunks of a PCM (1) or IEEE-float (3) WAV, or null. */
+function parsePlainWav(buf: Buffer): PlainWav | null {
+  if (buf.length < 12 || buf.toString("ascii", 0, 4) !== "RIFF" || buf.toString("ascii", 8, 12) !== "WAVE") {
+    return null;
+  }
+  let fmt: Omit<PlainWav, "dataStart" | "dataLength"> | null = null;
+  let off = 12;
+  while (off + 8 <= buf.length) {
+    const id = buf.toString("ascii", off, off + 4);
+    const size = buf.readUInt32LE(off + 4);
+    const body = off + 8;
+    if (id === "fmt ") {
+      if (size < 16 || body + 16 > buf.length) return null;
+      let format = buf.readUInt16LE(body);
+      // WAVE_FORMAT_EXTENSIBLE: the real format is the subformat GUID's first two bytes.
+      if (format === 0xfffe) {
+        if (size < 40 || body + 26 > buf.length) return null;
+        format = buf.readUInt16LE(body + 24);
+      }
+      const channels = buf.readUInt16LE(body + 2);
+      const sampleRate = buf.readUInt32LE(body + 4);
+      const blockAlign = buf.readUInt16LE(body + 12);
+      const bits = buf.readUInt16LE(body + 14);
+      const ok =
+        channels > 0 &&
+        blockAlign === (channels * bits) / 8 &&
+        ((format === 1 && [8, 16, 24, 32].includes(bits)) || (format === 3 && (bits === 32 || bits === 64)));
+      if (!ok) return null;
+      fmt = { format: format as 1 | 3, channels, sampleRate, bits };
+    } else if (id === "data") {
+      if (!fmt) return null;
+      // A streamed WAV may say 0 or 0xFFFFFFFF here: take what is actually there.
+      const available = buf.length - body;
+      const length = size === 0 || size > available ? available : size;
+      return { ...fmt, dataStart: body, dataLength: length - (length % ((fmt.channels * fmt.bits) / 8)) };
+    }
+    off = body + size + (size & 1);
+  }
+  return null;
+}
+
+function decodePlainWav(buf: Buffer): { audio: Audio; sampleRate: number } | null {
+  const wav = parsePlainWav(buf);
+  if (!wav) return null;
+  const { channels, bits, dataStart } = wav;
+  const bytesPer = bits / 8;
+  const frames = wav.dataLength / (channels * bytesPer);
+  const audio: Audio = Array.from({ length: channels }, () => new Float32Array(frames));
+  const max = 2 ** (bits - 1) - 1;
+  const min = 2 ** (bits - 1);
+  let p = dataStart;
+  for (let i = 0; i < frames; i++) {
+    for (let c = 0; c < channels; c++, p += bytesPer) {
+      let v: number;
+      if (wav.format === 3) {
+        v = bits === 32 ? buf.readFloatLE(p) : buf.readDoubleLE(p);
+      } else {
+        const s =
+          bits === 16
+            ? buf.readInt16LE(p)
+            : bits === 24
+              ? buf.readIntLE(p, 3)
+              : bits === 32
+                ? buf.readInt32LE(p)
+                : buf[p] - 128;
+        v = s > 0 ? s / max : s / min;
+      }
+      audio[c][i] = v;
+    }
+  }
+  return { audio, sampleRate: wav.sampleRate };
+}
+
+/** Anything plain decoding does not cover, through wavefile. */
+function decodeWavSlow(buf: Buffer): { audio: Audio; sampleRate: number } {
   const wav = new WaveFile();
-  wav.fromBuffer(bytes instanceof Buffer ? bytes : Buffer.from(bytes));
+  wav.fromBuffer(buf);
   // Ask wavefile for float samples so we get [-1, 1] regardless of the source
   // bit depth, the same guarantee soundfile's dtype="float32" gave us.
   wav.toBitDepth("32f");
@@ -576,18 +678,55 @@ export function readWav(path: string): { audio: Audio; sampleRate: number } {
   return decodeWav(readFileSync(path));
 }
 
+/**
+ * Encode 24-bit PCM WAV bytes: a plain 44-byte header, then interleaved
+ * samples.
+ *
+ * Written directly for the same reason `decodeWav` reads directly: wavefile
+ * needed a JS-array copy of every channel plus two Float64Array copies, over
+ * 300 MB to write one minute of stereo. The scaling matches what wavefile did
+ * (positive times 2^23-1, negative times 2^23, truncated toward zero), with
+ * two differences: out-of-range samples are clamped rather than wrapped, and
+ * values too small to print without an exponent become 0, where wavefile's
+ * `parseInt` turned 1e-14 into 8.
+ */
+export function encodeWav24(audio: Audio, sampleRate: number): Buffer {
+  const channels = audio.length;
+  const frames = channels ? audio[0].length : 0;
+  const dataLength = frames * channels * 3;
+  const out = Buffer.alloc(44 + dataLength);
+  out.write("RIFF", 0, "ascii");
+  out.writeUInt32LE(36 + dataLength, 4);
+  out.write("WAVE", 8, "ascii");
+  out.write("fmt ", 12, "ascii");
+  out.writeUInt32LE(16, 16);
+  out.writeUInt16LE(1, 20);
+  out.writeUInt16LE(channels, 22);
+  out.writeUInt32LE(sampleRate, 24);
+  out.writeUInt32LE(sampleRate * channels * 3, 28);
+  out.writeUInt16LE(channels * 3, 32);
+  out.writeUInt16LE(24, 34);
+  out.write("data", 36, "ascii");
+  out.writeUInt32LE(dataLength, 40);
+  let p = 44;
+  for (let i = 0; i < frames; i++) {
+    for (let c = 0; c < channels; c++, p += 3) {
+      const s = audio[c][i];
+      let v = Math.trunc(s > 0 ? s * 8388607 : s * 8388608);
+      if (v > 8388607) v = 8388607;
+      else if (v < -8388608 || Number.isNaN(v)) v = Number.isNaN(v) ? 0 : -8388608;
+      out.writeIntLE(v, p, 3);
+    }
+  }
+  return out;
+}
+
 /** Write 24-bit PCM WAV. Returns the file size in bytes. */
 export function writeWav(path: string, audio: Audio, sampleRate: number): number {
   mkdirSync(dirname(path), { recursive: true });
-  const wav = new WaveFile();
-  // Build at 32-bit float and convert: wavefile expects integer sample values
-  // for integer bit depths, so letting it do the scaling is both simpler and
-  // the only path that rounds the same way for every depth.
-  const channels = audio.map((ch) => Array.from(ch));
-  wav.fromScratch(audio.length, sampleRate, "32f", channels.length === 1 ? channels[0] : channels);
-  wav.toBitDepth("24");
-  writeFileSync(path, wav.toBuffer());
-  return statSync(path).size;
+  const bytes = encodeWav24(audio, sampleRate);
+  writeFileSync(path, bytes);
+  return bytes.length;
 }
 
 export interface ProcessResult {
@@ -610,7 +749,11 @@ export function processAndWrite(
   if (normalizeLufs !== null && normalizeLufs !== undefined) {
     a = normalizeLoudness(a, sampleRate, normalizeLufs);
   }
-  a = clip(a);
+  // Clipped in place when every channel is already a copy made above, never
+  // the caller's own arrays: one less full copy of the audio.
+  const given = new Set<unknown>(Array.isArray(audio) ? audio : []);
+  if (a.some((ch) => given.has(ch))) a = clip(a);
+  else for (const ch of a) for (let i = 0; i < ch.length; i++) ch[i] = ch[i] > 1 ? 1 : ch[i] < -1 ? -1 : ch[i];
   const sizeBytes = writeWav(path, a, sampleRate);
   return {
     sizeBytes,

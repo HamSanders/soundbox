@@ -5,7 +5,7 @@
 
 import type { Manuscript, ManuscriptSection } from "../types.js";
 import { detectLanguage } from "./lang.js";
-import { classifySection, cleanParagraphs, tidyTitle, type CleanOptions } from "./text.js";
+import { classifySection, cleanSection, tidyTitle, type CleanOptions } from "./text.js";
 
 export type Block =
   | { type: "heading"; level: number; text: string }
@@ -36,10 +36,10 @@ export function makeSection(
   raw: string[],
   opts: ParseOptions = {},
 ): ManuscriptSection | null {
-  const paragraphs = cleanParagraphs(raw, opts);
+  const { paragraphs, breaks } = cleanSection(raw, opts);
   if (!paragraphs.length) return null;
   const tidy = tidyTitle(title);
-  return { title: tidy, ...classifySection(tidy, raw), paragraphs };
+  return { title: tidy, ...classifySection(tidy, raw), paragraphs, ...(breaks.length ? { breaks } : {}) };
 }
 
 /**

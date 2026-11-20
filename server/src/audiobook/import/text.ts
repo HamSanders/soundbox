@@ -117,9 +117,52 @@ export function normaliseWhitespace(text: string): string {
 /** Clean one paragraph for TTS. Returns "" when nothing speakable is left. */
 export function cleanParagraph(text: string): string {
   const s = normaliseWhitespace(stripFootnoteMarkers(text));
-  // Separator rows ("* * *", "###", "~~~") carry no words.
-  if (/^[\s*#~=_\-–—•·.]+$/.test(s)) return "";
+  // Separator rows ("* * *", "###", "~~~", "⁂") carry no words.
+  if (SEPARATOR.test(s)) return "";
   return s;
+}
+
+/** A row of only separator marks: asterisks, hashes, dashes, dots, the
+ *  asterism and common dingbats. */
+const SEPARATOR = /^[\s*#~=_\-–—•·.⁂❧☙✻✽❦◆◇○●†]*$/u;
+
+/** What parsers emit for a scene break they find as markup (`<hr>`, a
+ *  Markdown thematic break), so `cleanSection` sees one form. */
+export const SCENE_BREAK = "* * *";
+
+/** True for a paragraph that is a scene break ("* * *", "#", "⁂", "~~~"). */
+export function isSceneBreak(text: string): boolean {
+  const s = normaliseWhitespace(text);
+  return s.length > 0 && SEPARATOR.test(s);
+}
+
+/**
+ * A section's raw paragraphs into speakable ones plus scene breaks:
+ * `breaks` lists i where a pause goes before `paragraphs[i]` (ascending,
+ * 0 < i < length), counted after long paragraphs are split. Breaks at the
+ * very start or end, and runs of separators, collapse away.
+ */
+export function cleanSection(raw: string[], opts: CleanOptions = {}): { paragraphs: string[]; breaks: number[] } {
+  const max = Math.max(80, opts.maxChars ?? DEFAULT_MAX_CHARS);
+  // Clean first, keeping where the breaks fall among the surviving paragraphs.
+  const texts: string[] = [];
+  const breakBefore = new Set<number>();
+  for (const r of raw) {
+    if (isSceneBreak(r)) {
+      breakBefore.add(texts.length);
+      continue;
+    }
+    const c = cleanParagraph(r);
+    if (c) texts.push(c);
+  }
+  const normalised = opts.dialogue !== false ? normaliseDialogue(texts) : texts;
+  const paragraphs: string[] = [];
+  const breaks: number[] = [];
+  normalised.forEach((t, i) => {
+    if (breakBefore.has(i) && paragraphs.length > 0) breaks.push(paragraphs.length);
+    paragraphs.push(...splitLongParagraph(t, max));
+  });
+  return { paragraphs, breaks };
 }
 
 /** Prose into sentences. Abbreviations, initials and decimals stay whole. */

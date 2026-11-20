@@ -26,6 +26,7 @@ import { qk } from "./queries";
 
 export const abk = {
   books: ["audiobooks"] as const,
+  booksIn: (project: string | null | undefined) => ["audiobooks", project ?? "all"] as const,
   book: (id: string) => ["audiobook", id] as const,
   paragraphs: (bookId: string, chapterId: string) =>
     ["audiobook", bookId, "paragraphs", chapterId] as const,
@@ -39,8 +40,28 @@ const fail = (what: string) => (err: unknown) => {
   toast.error(what, { description: errorMessage(err) });
 };
 
-export function useBooks(enabled = true): UseQueryResult<BookSummary[]> {
-  return useQuery({ queryKey: abk.books, queryFn: () => audiobookApi.listBooks(), enabled });
+/** Every book, or one project's (`project`), the way library pages scope. */
+export function useBooks(enabled = true, project?: string | null): UseQueryResult<BookSummary[]> {
+  return useQuery({
+    queryKey: abk.booksIn(project),
+    queryFn: () => audiobookApi.listBooks(project),
+    enabled,
+  });
+}
+
+export function useMoveBookToProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, project }: { id: string; project: string | null }) =>
+      audiobookApi.updateBook(id, { project_id: project }),
+    onSuccess: (book) => {
+      qc.setQueryData(abk.book(book.id), book);
+      void qc.invalidateQueries({ queryKey: abk.books });
+      void qc.invalidateQueries({ queryKey: qk.stories });
+      void qc.invalidateQueries({ queryKey: qk.projects });
+    },
+    onError: fail("Could not move the book"),
+  });
 }
 
 export function useBook(id: string | null): UseQueryResult<BookDetail> {

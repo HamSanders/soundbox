@@ -14,7 +14,7 @@
  *                                             id maps, so a module can copy its own rows (beds)
  *
  * Books
- *   listBooks(): BookSummary[]
+ *   listBooks(project?): BookSummary[]       undefined = all, null = no project, else that project's
  *   getBook(id): BookDetail | null            book + chapters (with stats) + characters + totals
  *   createBook(fields): BookDetail            blank book with one empty chapter
  *   createBookFromManuscript(manuscript, settings?, opts?): BookDetail   (import)
@@ -284,8 +284,8 @@ export class AudiobookService {
 
   /* ------------------------------------------------------------------ books */
 
-  listBooks(): BookSummary[] {
-    return this.store.listBooks().map((book) => ({ ...book, stats: this.stats(book.id)! }));
+  listBooks(project?: string | null): BookSummary[] {
+    return this.store.listBooks(project).map((book) => ({ ...book, stats: this.stats(book.id)! }));
   }
 
   getBook(id: string): BookDetail | null {
@@ -369,6 +369,13 @@ export class AudiobookService {
     if (!before) return null;
     if (fields.settings?.narrator_voice_id) this.assertVoice(fields.settings.narrator_voice_id);
     const book = this.store.updateBook(id, fields)!;
+    // A book's chapters live in its project too, so the project's library
+    // view finds the book's audio.
+    if ("project_id" in fields && before.project_id !== book.project_id) {
+      for (const chapter of this.store.listChapters(id)) {
+        this.svc.setStoryProject(chapter.story_id, book.project_id);
+      }
+    }
     if (fields.settings?.request_options !== undefined) {
       const options = stringOptions(book.settings.request_options);
       for (const chapter of this.store.listChapters(id)) {

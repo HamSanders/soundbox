@@ -173,6 +173,26 @@ describe("books", () => {
     expect(get.rawPayload.equals(png)).toBe(true);
   });
 
+  it("filters by project and moves chapter stories with the book", async () => {
+    const project = app.soundbox.createProject("Audiobook project");
+    const inside = await json("POST", "/api/audiobooks", { title: "Inside", project_id: project.id });
+    const outside = await json("POST", "/api/audiobooks", { title: "Outside" });
+    expect((await json("GET", `/api/stories/${inside.chapters[0].story_id}`)).project_id).toBe(project.id);
+
+    const scoped = await json<any[]>("GET", `/api/audiobooks?project_id=${project.id}`);
+    expect(scoped.map((b) => b.id)).toEqual([inside.id]);
+    const none = await json<any[]>("GET", "/api/audiobooks?project_id=none");
+    expect(none.some((b) => b.id === outside.id)).toBe(true);
+    expect(none.some((b) => b.id === inside.id)).toBe(false);
+
+    // Moving a book moves its chapters' stories.
+    await json("PATCH", `/api/audiobooks/${outside.id}`, { project_id: project.id });
+    expect((await json("GET", `/api/stories/${outside.chapters[0].story_id}`)).project_id).toBe(project.id);
+    expect((await json<any[]>("GET", `/api/audiobooks?project_id=${project.id}`)).length).toBe(2);
+    await json("PATCH", `/api/audiobooks/${outside.id}`, { project_id: null });
+    expect((await json("GET", `/api/stories/${outside.chapters[0].story_id}`)).project_id ?? null).toBeNull();
+  });
+
   it("deletes a book and its chapter stories", async () => {
     const book = await json("POST", "/api/audiobooks", { title: "Doomed" });
     const storyId = book.chapters[0].story_id;

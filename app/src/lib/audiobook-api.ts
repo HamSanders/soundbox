@@ -195,7 +195,8 @@ export type AudiobookEvent =
   | ({ type: string } & Record<string, unknown>);
 
 export interface AudiobookApi {
-  listBooks(): Promise<BookSummary[]>;
+  /** `project`: omit for every book, null for books in no project. */
+  listBooks(project?: string | null): Promise<BookSummary[]>;
   getBook(id: string): Promise<BookDetail>;
   createBook(fields?: BookPatch): Promise<BookDetail>;
   updateBook(id: string, patch: BookPatch): Promise<BookDetail>;
@@ -246,7 +247,12 @@ const base = (id: string) => `/api/audiobooks/${encodeURIComponent(id)}`;
 const json = (body: unknown): RequestInit => ({ body: JSON.stringify(body) });
 
 const httpAudiobookApi: AudiobookApi = {
-  listBooks: () => request<BookSummary[]>("/api/audiobooks"),
+  listBooks: (project) =>
+    request<BookSummary[]>(
+      project === undefined
+        ? "/api/audiobooks"
+        : `/api/audiobooks?project_id=${encodeURIComponent(project ?? "none")}`,
+    ),
   getBook: (id) => request<BookDetail>(base(id)),
   createBook: (fields = {}) =>
     request<BookDetail>("/api/audiobooks", { method: "POST", ...json(fields) }),

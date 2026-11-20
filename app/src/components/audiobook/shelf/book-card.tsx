@@ -1,15 +1,20 @@
 /** One book on the shelf: cover, title, author and how much of it is voiced. */
 
 import { Link } from "react-router-dom";
-import { CopyIcon, MoreHorizontalIcon, Trash2Icon } from "lucide-react";
+import { CheckIcon, CopyIcon, FolderIcon, MoreHorizontalIcon, Trash2Icon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { Project } from "@/lib/api";
 import { bookProgress, type BookSummary } from "@/lib/audiobook-api";
 import { formatDuration, formatRelative } from "@/lib/format";
 
@@ -19,11 +24,15 @@ export function BookCard({
   book,
   onDelete,
   onDuplicate,
+  onMove,
+  projects = [],
   index = 0,
 }: {
   book: BookSummary;
   onDelete: (book: BookSummary) => void;
   onDuplicate: (book: BookSummary) => void;
+  onMove: (book: BookSummary, project: string | null) => void;
+  projects?: Project[];
   index?: number;
 }) {
   const pct = bookProgress(book);
@@ -65,6 +74,26 @@ export function BookCard({
               <CopyIcon />
               Duplicate
             </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <FolderIcon />
+                Move to project
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-48">
+                <DropdownMenuItem onSelect={() => onMove(book, null)}>
+                  <span className="flex-1">No project</span>
+                  {book.project_id === null && <CheckIcon />}
+                </DropdownMenuItem>
+                {projects.length > 0 && <DropdownMenuSeparator />}
+                {projects.map((p) => (
+                  <DropdownMenuItem key={p.id} onSelect={() => onMove(book, p.id)}>
+                    <span className="flex-1 truncate">{p.name}</span>
+                    {book.project_id === p.id && <CheckIcon />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onSelect={() => onDelete(book)}>
               <Trash2Icon />
               Delete book

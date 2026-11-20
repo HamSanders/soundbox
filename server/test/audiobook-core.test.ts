@@ -642,10 +642,61 @@ describe("duplicate and chapter from text", () => {
     expect(copied[3]!.locked).toBe(true);
     expect(copied[0]!.is_heading).toBe(true);
 
+    expect(copy.chapters[1].stats.paragraphs).toBe(book.chapters[1].stats.paragraphs);
+
     // Deleting the copy keeps the original's shared take.
     await call({ method: "DELETE", url: `/api/audiobooks/${copy.id}` });
     expect(app.soundbox.db.getSound(take)).not.toBeNull();
     expect(svc.getParagraph(paras[1]!.id)!.sound_id).toBe(take);
+  });
+});
+
+describe("duplicate with beds", () => {
+  it("copies bed clips and track settings, and tells onDuplicate hooks", async () => {
+    const svc = audiobooks(app.soundbox);
+    const book = await json("POST", "/api/audiobooks", { title: "Bedded" });
+    const chapter = book.chapters[0];
+    const base = `/api/audiobooks/${book.id}`;
+    await json("POST", `${base}/chapters/${chapter.id}/paragraphs`, { text: "One." });
+    await json("POST", `${base}/chapters/${chapter.id}/paragraphs`, { text: "Two." });
+    const bedSound = fakeSound();
+    const bed = app.soundbox.createSegment(chapter.story_id, {
+      text: "",
+      sound_id: bedSound,
+      track_index: 1,
+      kind: "line",
+      position: 1,
+      start_s: 0.5,
+      gain_db: -12,
+      fade_in_s: 2,
+    });
+    app.soundbox.updateTrack(chapter.story_id, 1, { name: "Music", gain_db: -6, muted: false });
+
+    let seen: { chapters: Map<string, string>; segments: Map<string, string> } | null = null;
+    svc.onDuplicate((scope) => {
+      if (scope.from_book_id === book.id) seen = scope;
+    });
+
+    const copy = await json("POST", `${base}/duplicate`, {});
+    const story = copy.chapters[0].story_id;
+    const segs = app.soundbox.listSegments(story);
+    expect(segs.map((s) => [s.track_index, s.text])).toEqual([
+      [0, "One."],
+      [1, ""],
+      [0, "Two."],
+    ]);
+    expect(segs[1]).toMatchObject({ sound_id: bedSound, start_s: 0.5, gain_db: -12, fade_in_s: 2 });
+    const tracks = app.soundbox.listTracks(story);
+    expect(tracks.find((t) => t.track_index === 1)).toMatchObject({ name: "Music", gain_db: -6 });
+
+    // Paragraph view and stats still ignore the bed.
+    expect(svc.getParagraphs(copy.chapters[0].id)!.map((p) => p.text)).toEqual(["One.", "Two."]);
+    expect(copy.chapters[0].stats.paragraphs).toBe(2);
+
+    expect(seen).not.toBeNull();
+    expect(seen!.chapters.get(chapter.id)).toBe(copy.chapters[0].id);
+    expect(seen!.segments.get(bed.id)).toBe(segs[1]!.id);
+    expect(seen!.segments.size).toBe(3);
   });
 });
 

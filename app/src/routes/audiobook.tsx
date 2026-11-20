@@ -7,7 +7,6 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeftIcon } from "lucide-react";
 
 import { BookHeader } from "@/components/audiobook/editor/book-header";
 import { ChapterList } from "@/components/audiobook/editor/chapter-list";
@@ -15,7 +14,6 @@ import { ChapterPane } from "@/components/audiobook/editor/chapter-pane";
 import { Inspector } from "@/components/audiobook/editor/inspector";
 import { RenderBar } from "@/components/audiobook/render";
 import { EmptyState } from "@/components/empty-state";
-import { PageHeader } from "@/components/header-slot";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBook, useBookEvents, useParagraphs, useUpdateParagraph } from "@/lib/audiobook-queries";
@@ -82,14 +80,6 @@ export function AudiobookPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2 md:pr-2 md:pb-2">
-      <PageHeader>
-        <Button size="xs" variant="ghost" asChild>
-          <Link to="/audiobooks">
-            <ArrowLeftIcon />
-            Audiobooks
-          </Link>
-        </Button>
-      </PageHeader>
       <div className={panel}>
         <BookHeader book={data} findOpen={findOpen} onToggleFind={() => setFindOpen((o) => !o)} />
         <RenderBar bookId={data.id} />

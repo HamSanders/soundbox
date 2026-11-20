@@ -32,8 +32,8 @@ const fail = (what: string) => (err: unknown) => {
   toast.error(what, { description: errorMessage(err) });
 };
 
-export function useBooks(): UseQueryResult<BookSummary[]> {
-  return useQuery({ queryKey: abk.books, queryFn: () => audiobookApi.listBooks() });
+export function useBooks(enabled = true): UseQueryResult<BookSummary[]> {
+  return useQuery({ queryKey: abk.books, queryFn: () => audiobookApi.listBooks(), enabled });
 }
 
 export function useBook(id: string | null): UseQueryResult<BookDetail> {

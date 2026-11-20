@@ -4,7 +4,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { BookOpenIcon, FileUpIcon, PlusIcon, SearchIcon } from "lucide-react";
 
 import { ImportWizard } from "@/components/audiobook/import";
@@ -37,7 +37,10 @@ export function AudiobooksPage() {
   const remove = useDeleteBook();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
-  const [importing, setImporting] = useState(false);
+  // `?import=1` opens the wizard (the command palette links here).
+  const [params, setParams] = useSearchParams();
+  const importing = params.get("import") === "1";
+  const setImporting = (open: boolean) => setParams(open ? { import: "1" } : {}, { replace: true });
   const [doomed, setDoomed] = useState<BookSummary | null>(null);
 
   const all = useMemo(() => books.data ?? [], [books.data]);

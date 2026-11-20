@@ -87,8 +87,18 @@ export class CloudService implements CloudContext {
     };
   }
 
-  /** Fetch the catalog and register it. Offline is fine: no cloud models until next time. */
+  private retry: ReturnType<typeof setTimeout> | null = null;
+  private retryMs = 5_000;
+
+  /**
+   * Fetch the catalog and register it. Offline is fine: the last catalog
+   * stays, and a failed fetch is tried again with backoff (5 s doubling to
+   * 2 min), so a Mirli that started before the gateway was reachable gets its
+   * cloud models without a restart.
+   */
   async refresh(): Promise<void> {
+    if (this.retry) clearTimeout(this.retry);
+    this.retry = null;
     if (!this.enabled) {
       await this.models.setCloudModels([], this);
       return;
@@ -96,8 +106,12 @@ export class CloudService implements CloudContext {
     try {
       const { models } = await new CloudClient(this.baseUrl, null, this.fetchImpl).models();
       this.catalog = models;
+      this.retryMs = 5_000;
     } catch (e) {
-      log.warning(`Mirli Cloud catalog unavailable: ${(e as Error).message}`);
+      log.warning(`Mirli Cloud catalog unavailable, trying again in ${this.retryMs / 1000} s: ${(e as Error).message}`);
+      this.retry = setTimeout(() => void this.refresh(), this.retryMs);
+      this.retry.unref?.();
+      this.retryMs = Math.min(this.retryMs * 2, 120_000);
     }
     await this.models.setCloudModels(this.catalog, this);
   }

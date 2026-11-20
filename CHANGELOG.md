@@ -8,6 +8,8 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 - **Audiobooks.** Build a book from chapters and paragraphs at **Audiobooks**: each chapter is a script you can also open in the studio timeline, each paragraph shows whether it is voiced, unvoiced, stale or locked, and characters give paragraphs their own voices. Find and replace works across the whole book and leaves locked paragraphs alone. The API is under `/api/audiobooks`.
+- **Music and effects under a chapter.** A chapter's **Beds** section adds music, ambience or a sound effect from the library or from a prompt. Beds loop to the chapter's length, fade, can play as an intro or outro only, and duck under the narration with adjustable depth, attack, release and lookahead. Each bed is its own track in the chapter's timeline. The export dialog warns where beds may not belong (ACX retail samples must not contain music) and can leave them out.
+- **Audiobook tools for agents.** Nine MCP tools build a book end to end: `create_audiobook`, `import_manuscript`, `list_audiobooks`, `get_audiobook`, `set_character_voice`, `add_pronunciation`, `render_audiobook`, `add_bed` and `master_and_export_audiobook`. `docs/AUDIOBOOKS.md` is the new user guide.
 
 ## [0.6.0] - 2026-11-20
 

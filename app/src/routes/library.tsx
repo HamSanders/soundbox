@@ -469,11 +469,11 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
             />
           ))}
           {items.length > 0 && (
-            <div role="list" aria-label="Sounds" className="-mx-2 grid">
+            <div role="list" aria-label="Sounds" className="@container -mx-2 grid">
               {/* Column heads, md and up: the same grid as a track row. */}
               <div
                 aria-hidden="true"
-                className="label-caps text-muted-foreground border-border mb-1 hidden grid-cols-[3.25rem_2.5rem_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto] gap-x-3 border-b px-2 pb-1.5 md:grid"
+                className="label-caps text-muted-foreground border-border mb-1 hidden grid-cols-[3.25rem_2.5rem_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto] gap-x-3 border-b px-2 pb-1.5 @2xl:grid"
               >
                 <span className="text-right">No.</span>
                 <span />
@@ -522,6 +522,9 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
           // player; only the narrow, window-scrolled layout needs the offset.
           style={{ bottom: nowPlaying && !isDesktop ? PLAYER_DOCK_HEIGHT_PX : 0 }}
         >
+          {/* Capped and centred: a prompt box the full width of the list is
+              a long line to read and a long way to the Generate button. */}
+          <div className="mx-auto w-full max-w-3xl">
           <GenerateComposer
             settings={settings}
             onChange={patch}
@@ -558,6 +561,7 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
               write: writeLyrics,
             }}
           />
+          </div>
         </div>
       )}
     </div>

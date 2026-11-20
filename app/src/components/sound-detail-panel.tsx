@@ -1,59 +1,63 @@
 /**
- * A sound's details as an artifact panel that slides in from the right.
+ * A sound's details as an artifact panel, docked to the right of the page.
  *
- * The body is `SoundArtifact`, the same panel the Studio shows beside its
- * timeline: waveform editor, stems and generation details. Here it floats
- * over the page as a third panel of the shell, with the same 8px margins,
- * stopping above the player.
+ * Like the Studio's artifact panels (or an artifact pane beside a chat), it
+ * is a third panel of the shell rather than an overlay: it sits in the same
+ * row as the sidebar and the page, with the same margins and 4px gutter,
+ * and the page narrows to make room. The list stays live beside it, so
+ * another row swaps what it shows and the player keeps working.
  *
- * Non-modal on purpose: the list stays live behind it, so clicking another
- * row swaps what the panel shows and the player keeps working. Clicks on the
- * player do not count as "outside" and leave it open.
+ * The body is `SoundArtifact`, the panel the Studio shows beside its
+ * timeline: waveform editor, stems and generation details. On a narrow
+ * window there is no room beside the page, so it covers it instead.
  */
 
+import { useEffect } from "react";
+import { XIcon } from "lucide-react";
 
 import { SoundArtifact } from "@/components/sound-artifact";
-import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
-import { PLAYER_DOCK_HEIGHT_PX } from "@/components/player-dock";
+import { Button } from "@/components/ui/button";
 import { formatBytes, formatDuration, formatRelative } from "@/lib/format";
 import { useDetailStore } from "@/lib/detail-store";
-import { usePlayerStore } from "@/lib/player-store";
 
 export function SoundDetailPanel() {
   const sound = useDetailStore((s) => s.sound);
   const close = useDetailStore((s) => s.close);
-  const playing = usePlayerStore((s) => s.sound !== null);
+
+  useEffect(() => {
+    if (!sound) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !document.querySelector("[role=dialog], [role=menu]")) close();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sound, close]);
+
+  if (!sound) return null;
 
   return (
-    <Sheet open={sound !== null} onOpenChange={(o) => !o && close()} modal={false}>
-      <SheetContent
-        side="right"
-        className="ring-border gap-0 border-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md data-[side=right]:md:top-2 data-[side=right]:md:right-2 data-[side=right]:md:h-auto md:rounded-xl md:ring-1 md:shadow-none"
-        style={{ bottom: playing ? PLAYER_DOCK_HEIGHT_PX + 8 : 8 }}
-        onInteractOutside={(e) => {
-          const t = e.target as Element | null;
-          // The player and the rows that feed this panel are not "outside".
-          if (t?.closest('[aria-label="Now playing"], [data-sound-row]')) e.preventDefault();
-        }}
-      >
-        {sound && (
-          <>
-            <div className="border-border grid gap-1 border-b px-4 pt-4 pb-3 pr-12">
-              <SheetTitle className="font-display truncate text-2xl leading-none font-extrabold tracking-[0.01em] uppercase">
-                {sound.name}
-              </SheetTitle>
-              <SheetDescription className="readout text-muted-foreground truncate">
-                {sound.seed != null ? `No. ${sound.seed} · ` : ""}
-                {formatDuration(sound.duration_s)} · {formatBytes(sound.size_bytes)} ·{" "}
-                {formatRelative(sound.created_at)}
-              </SheetDescription>
-            </div>
-            <div className="flex min-h-0 flex-1 flex-col">
-              <SoundArtifact sound={sound} />
-            </div>
-          </>
-        )}
-      </SheetContent>
-    </Sheet>
+    <aside
+      aria-label={`Details for ${sound.name}`}
+      className="bg-background ring-border animate-in fade-in-0 slide-in-from-right-8 fixed inset-x-0 top-0 bottom-(--dock-h,0px) z-30 flex flex-col duration-(--duration-base) md:static md:z-auto md:my-2 md:mr-2 md:-ml-1 md:h-[calc(100svh-1rem-var(--dock-h,0px))] md:w-[26rem] md:shrink-0 md:rounded-xl md:ring-1"
+    >
+      <div className="border-border flex items-start gap-2 border-b px-4 pt-4 pb-3">
+        <div className="grid min-w-0 flex-1 gap-1">
+          <h2 className="font-display truncate text-2xl leading-none font-extrabold tracking-[0.01em] uppercase">
+            {sound.name}
+          </h2>
+          <p className="readout text-muted-foreground truncate">
+            {sound.seed != null ? `No. ${sound.seed} · ` : ""}
+            {formatDuration(sound.duration_s)} · {formatBytes(sound.size_bytes)} ·{" "}
+            {formatRelative(sound.created_at)}
+          </p>
+        </div>
+        <Button variant="ghost" size="icon-sm" aria-label="Close details" onClick={close}>
+          <XIcon />
+        </Button>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <SoundArtifact key={sound.id} sound={sound} />
+      </div>
+    </aside>
   );
 }

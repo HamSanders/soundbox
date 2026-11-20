@@ -182,8 +182,9 @@ function AppShell() {
             excludes the sidebar's width, so `position="sticky"` here never
             draws over the sidebar the way a viewport-`fixed` dock would. */}
         <NowPlayingBar />
-        <SoundDetailPanel />
       </SidebarInset>
+      {/* Docked beside the page, in the shell's row: see sound-detail-panel.tsx. */}
+      <SoundDetailPanel />
       {/* Inside the shell, not the app root: it offers the shell's pages and
           reads the route to know when to stand down. */}
       <AppCommandPalette />

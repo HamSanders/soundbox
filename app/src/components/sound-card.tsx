@@ -709,7 +709,7 @@ export function SoundCard({
         }}
         className={cn(
           "relative grid cursor-pointer grid-cols-[3.25rem_2.5rem_minmax(0,1fr)_auto] items-center gap-x-3 rounded-md px-2 py-1.5 transition-colors duration-(--duration-fast) hover:bg-muted/60",
-          "md:grid-cols-[3.25rem_2.5rem_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto]",
+          "@2xl:grid-cols-[3.25rem_2.5rem_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto]",
           playing &&
             "bg-muted/60 before:bg-signal before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full",
           fresh && "sb-arrive",
@@ -749,11 +749,11 @@ export function SoundCard({
             {log}
           </p>
         </div>
-        <span className="hidden min-w-0 md:block">{license && <LicenseChip license={license} />}</span>
-        <span className="readout text-muted-foreground hidden truncate md:block" title={recipeLine(sound, modelName)}>
+        <span className="hidden min-w-0 @2xl:block">{license && <LicenseChip license={license} />}</span>
+        <span className="readout text-muted-foreground hidden truncate @2xl:block" title={recipeLine(sound, modelName)}>
           {modelName ?? sound.model}
         </span>
-        <span className="readout text-muted-foreground hidden text-right tabular-nums md:block">
+        <span className="readout text-muted-foreground hidden text-right tabular-nums @2xl:block">
           {formatDuration(sound.duration_s)}
         </span>
         <div className="flex items-center">{actions}</div>

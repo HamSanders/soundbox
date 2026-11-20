@@ -310,3 +310,25 @@ describe.skipIf(!HAS_FFMPEG)("real encodes (ffmpeg present)", () => {
     expect(r.ok, r.error).toBe(true);
   });
 });
+
+describe("lane mixdown", () => {
+  it("summing lane buffers equals mixTimeline on overlapping mono and stereo clips", async () => {
+    const { mixTimeline } = await import("../src/audio/dsp.js");
+    const { layLanes, sumLanes } = await import("../src/service.js");
+    const a = new Float32Array(1000).map((_, i) => 0.6 * Math.sin(i / 9));
+    const b = new Float32Array(800).map((_, i) => 0.7 * Math.sin(i / 4));
+    const placed = [
+      { audio: [a], startS: 0, lane: 0 },
+      { audio: [b, b], startS: 0.05, lane: 1 },
+      { audio: [a], startS: 0.08, lane: 0 },
+    ];
+    const ref = mixTimeline(placed, 10_000);
+    const got = sumLanes(layLanes(placed, 10_000));
+    expect(got.length).toBe(ref.length);
+    for (let c = 0; c < ref.length; c++) {
+      expect(got[c].length).toBe(ref[c].length);
+      for (let i = 0; i < ref[c].length; i++) expect(got[c][i]).toBeCloseTo(ref[c][i], 5);
+    }
+    expect(layLanes(placed, 10_000).size).toBe(2);
+  });
+});

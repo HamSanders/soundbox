@@ -328,6 +328,7 @@ export class AudiobookExportService {
     try {
       mix = this.svc.mixStory(chapter.story_id, undefined, {
         tracks: beds ? undefined : (lane) => lane === NARRATION_TRACK,
+        includeBeds: beds,
       });
     } catch (exc) {
       throw new ModelError(`${chapter.title}: ${exc instanceof Error ? exc.message : String(exc)}`);

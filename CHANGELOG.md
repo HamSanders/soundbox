@@ -8,6 +8,7 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 - **Audiobooks.** Build a book from chapters and paragraphs at **Audiobooks**: each chapter is a script you can also open in the studio timeline, each paragraph shows whether it is voiced, unvoiced, stale or locked, and characters give paragraphs their own voices. Find and replace works across the whole book and leaves locked paragraphs alone. The API is under `/api/audiobooks`.
+- **Audiobook export and ACX check.** Export a book as MP3 (constant bitrate), M4B with chapter markers and cover, FLAC or WAV, as one file or one file per chapter with ACX names. The ACX preset masters each chapter to mono 44.1 kHz at about −20 dB RMS with peaks under −3 dB and room tone at both ends, and a pass/fail check shows each chapter's RMS, peak, noise floor and room tone with hints on what to fix. It can also add opening and closing credits, cut a 1–5 minute retail sample, and write SRT/VTT captions and a read-along JSON. MP3, M4B and FLAC need ffmpeg; the dialog says so when it is missing.
 
 ## [0.6.0] - 2026-11-20
 

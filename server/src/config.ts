@@ -302,12 +302,13 @@ export class Settings {
       image_external_model: this.image_external_model,
       image_external_api_key_set: Boolean(this.image_external_api_key),
       image_auto_artwork: this.image_auto_artwork,
-      onboarded_at: this.onboarded_at,
+      // Hosted mode has nothing to set up: no fork, no downloads.
+      onboarded_at: this.onboarded_at ?? (process.env.MIRLI_HOSTED === "1" ? "1970-01-01T00:00:00.000Z" : null),
       update_check: this.update_check,
-      cloud_signed_in: Boolean(this.cloud_token),
+      cloud_signed_in: Boolean(this.cloud_token) || process.env.MIRLI_HOSTED === "1",
       cloud_max_credits_per_call: this.cloud_max_credits_per_call,
       cloud_max_credits_per_day: this.cloud_max_credits_per_day,
-      run_mode: this.run_mode,
+      run_mode: process.env.MIRLI_HOSTED === "1" ? "cloud" : this.run_mode,
     };
   }
 

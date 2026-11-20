@@ -77,9 +77,11 @@ export function CloudAccountPanel({ status }: { status: CloudStatus }) {
             ))}
           </div>
         </div>
-        <Button variant="ghost" size="sm" disabled={signOut.isPending} onClick={() => signOut.mutate()}>
-          Sign out of Mirli Cloud
-        </Button>
+        {!status.hosted && (
+          <Button variant="ghost" size="sm" disabled={signOut.isPending} onClick={() => signOut.mutate()}>
+            Sign out of Mirli Cloud
+          </Button>
+        )}
       </div>
     );
   }

@@ -1298,6 +1298,8 @@ export type CloudSignIn =
 
 export interface CloudStatus {
   enabled: boolean;
+  /** Mirli on the web: signed in by the host; no sign-in, sign-out or local setup. */
+  hosted?: boolean;
   base_url: string;
   signed_in: boolean;
   sign_in: CloudSignIn;

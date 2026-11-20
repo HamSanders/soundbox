@@ -19,6 +19,7 @@ import { hostname } from "node:os";
 
 import type { Config } from "../config.js";
 import { envVar } from "../env.js";
+import { hostedMode } from "../hosted.js";
 import { ModelError } from "../errors.js";
 import { getLogger } from "../logging.js";
 import type { ModelManager } from "../models/manager.js";
@@ -31,7 +32,7 @@ const log = getLogger("mirli.cloud");
 export const DEFAULT_CLOUD_URL = "https://mirli.app";
 
 export function cloudEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
-  return envVar("MIRLI_CLOUD", env) === "1";
+  return envVar("MIRLI_CLOUD", env) === "1" || hostedMode(env);
 }
 
 export type SignInState =
@@ -41,6 +42,8 @@ export type SignInState =
 
 export interface CloudStatus {
   enabled: boolean;
+  /** Mirli on the web: signed in by the host, so no sign-in or sign-out here. */
+  hosted: boolean;
   base_url: string;
   signed_in: boolean;
   sign_in: SignInState;
@@ -67,7 +70,9 @@ export class CloudService implements CloudContext {
     return (envVar("MIRLI_CLOUD_URL") || DEFAULT_CLOUD_URL).replace(/\/+$/, "");
   }
 
+  /** Hosted mode's sign-in comes from the host and wins over a stored one. */
   private get token(): string | null {
+    if (hostedMode()) return envVar("MIRLI_CLOUD_TOKEN") || null;
     return this.config.settings.cloud_token;
   }
 
@@ -120,6 +125,7 @@ export class CloudService implements CloudContext {
     const caps = this.caps();
     return {
       enabled: this.enabled,
+      hosted: hostedMode(),
       base_url: this.baseUrl,
       signed_in: Boolean(this.client()),
       sign_in: this.signIn,
@@ -134,6 +140,7 @@ export class CloudService implements CloudContext {
 
   async startSignIn(): Promise<SignInState> {
     this.requireEnabled();
+    if (hostedMode()) throw new ModelError("Mirli on the web is already signed in.");
     this.cancelPoll();
     const anon = new CloudClient(this.baseUrl, null, this.fetchImpl);
     const name = `Mirli on ${hostname()}`.slice(0, 80);
@@ -198,6 +205,7 @@ export class CloudService implements CloudContext {
   }
 
   async signOut(): Promise<void> {
+    if (hostedMode()) throw new ModelError("Sign out of Mirli on the web from your account page.");
     const client = this.client();
     if (client) await client.signOut().catch((e) => log.warning(`Mirli Cloud sign-out: ${(e as Error).message}`));
     await this.forget();

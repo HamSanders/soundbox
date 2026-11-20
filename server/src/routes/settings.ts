@@ -6,6 +6,7 @@ import type { FastifyInstance } from "fastify";
 
 import type { SettingsData } from "../config.js";
 import { settingsPatchSchema } from "../schemas.js";
+import { HOSTED_LOCKED_SETTINGS, hostedMode } from "../hosted.js";
 import type { MirliService } from "../service.js";
 import { intQuery } from "./helpers.js";
 
@@ -17,8 +18,10 @@ export function registerSettings(app: FastifyInstance, svc: MirliService): void 
     // `exclude_none=True` in the Python. The service keys its side effects off
     // `"x" in patch`, so an omitted field must not survive as an explicit null.
     const patch: Partial<SettingsData> = {};
+    const locked = hostedMode() ? HOSTED_LOCKED_SETTINGS : [];
     for (const [key, value] of Object.entries(parsed)) {
       if (value === null || value === undefined) continue;
+      if (locked.includes(key)) continue;
       (patch as Record<string, unknown>)[key] = value;
     }
     return svc.updateSettings(patch);

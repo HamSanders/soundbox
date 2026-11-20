@@ -96,6 +96,8 @@ export function SettingsPage() {
         ...(cloud?.enabled ? [] : ["cloud"]),
         // Simple setup: nothing about running models on this machine.
         ...(cloud?.enabled && settings.run_mode === "cloud" ? ["performance", "models", "helpers"] : []),
+        // On the web, folders and updates belong to the server, not the person.
+        ...(cloud?.hosted ? ["storage", "privacy"] : []),
       ]}
     >
       <div className="space-y-8">
@@ -108,9 +110,9 @@ export function SettingsPage() {
           </>
         )}
         {!(cloud?.enabled && settings.run_mode === "cloud") && <HelpersGroup settings={settings} />}
-        <StorageGroup settings={settings} />
+        {!cloud?.hosted && <StorageGroup settings={settings} />}
         <InterfaceGroup />
-        <PrivacyGroup settings={settings} />
+        {!cloud?.hosted && <PrivacyGroup settings={settings} />}
         <DangerGroup settings={settings} />
       </div>
     </SettingsLayout>
@@ -340,6 +342,7 @@ function CloudGroup({ settings, status }: { settings: Settings; status: CloudSta
       <SettingRow id="cloud-account" stack>
         <CloudAccountPanel status={status} />
       </SettingRow>
+      {!status.hosted && (
       <SettingRow
         id="run-mode"
         htmlFor="run-mode"
@@ -351,6 +354,7 @@ function CloudGroup({ settings, status }: { settings: Settings; status: CloudSta
           />
         }
       />
+      )}
       <SettingRow
         id="cloud-cap-call"
         htmlFor="cloud-cap-call"

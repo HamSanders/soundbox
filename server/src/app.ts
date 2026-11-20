@@ -35,6 +35,7 @@ import { registerSpeakStream } from "./routes/speakStream.js";
 import { registerRender } from "./routes/render.js";
 import { registerLlm } from "./routes/llm.js";
 import { registerImage } from "./routes/image.js";
+import { hostedMode, registerHostedGuards } from "./hosted.js";
 import { registerCloud } from "./routes/cloud.js";
 import { registerEndpoints } from "./routes/endpoints.js";
 import { AccessGuard, FAILURE_WINDOW_MS, MAX_FAILURES, registerAuth } from "./auth.js";
@@ -314,6 +315,8 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
       }));
     }
   }
+
+  if (hostedMode()) registerHostedGuards(app, { busy: () => svc.jobs.busy });
 
   // Free VRAM after a period of inactivity so the GPU is usable for other
   // things between bursts of generation.

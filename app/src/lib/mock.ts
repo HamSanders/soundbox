@@ -3776,6 +3776,7 @@ export const mockApi: MirliApi = {
     await wait(30);
     return {
       enabled: false,
+      hosted: false,
       base_url: "https://mirli.app",
       signed_in: false,
       sign_in: { state: "idle" as const },

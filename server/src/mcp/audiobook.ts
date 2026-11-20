@@ -207,6 +207,9 @@ export async function importManuscript(
   let preview: Record<string, unknown>;
   if (args.url) {
     preview = await call(svc, "POST", "/api/audiobooks/import/url", { url: args.url });
+  } else if (args.text !== undefined && (args.format ?? "txt") === "txt") {
+    // Plain pasted text has its own route, which splits chapters on headings.
+    preview = await call(svc, "POST", "/api/audiobooks/import/text", { text: args.text, title: args.title ?? null });
   } else {
     let bytes: Buffer;
     let filename: string;
@@ -238,9 +241,10 @@ export async function importManuscript(
   if (args.model_id) settings.model_id = args.model_id;
   if (args.narrator_voice_id) settings.narrator_voice_id = args.narrator_voice_id;
   if (args.cast_mode) settings.cast_mode = args.cast_mode;
-  const edits: Record<string, unknown> = {};
-  if (args.title) edits.title = args.title;
-  if (args.author) edits.author = args.author;
+  const metadata: Record<string, unknown> = {};
+  if (args.title) metadata.title = args.title;
+  if (args.author) metadata.author = args.author;
+  const edits = Object.keys(metadata).length ? { metadata } : {};
   const committed = await call<BookLike | { book: BookLike }>(svc, "POST", "/api/audiobooks/import/commit", {
     preview_id: previewId,
     edits,

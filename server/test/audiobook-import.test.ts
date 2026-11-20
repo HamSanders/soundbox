@@ -348,6 +348,17 @@ describe("PDF", () => {
     expect(m.warnings.join(" ")).toMatch(/1 of \d+ pages had no text layer/);
   }, 30_000);
 
+  it("takes a full-page image on page 1 as the cover, and ignores a small one", async () => {
+    const pages = [[], [{ x: 72, y: 700, size: 18, text: "Chapter 1" }, { x: 72, y: 670, size: 11, text: "Mr. Bennet replied that he had not." }]];
+    const withCover = await parsePdf(makePdf(pages, {}, { width: 120, height: 180, fill: 1 }));
+    expect(withCover.cover?.mime).toBe("image/png");
+    expect(Array.from(withCover.cover!.bytes.slice(0, 4))).toEqual([0x89, 0x50, 0x4e, 0x47]);
+    const small = await parsePdf(makePdf(pages, {}, { width: 120, height: 180, fill: 0.2 }));
+    expect(small.cover).toBeNull();
+    const none = await parsePdf(makePdf(pages));
+    expect(none.cover).toBeNull();
+  }, 30_000);
+
   it("explains a PDF with no text layer", () => {
     const m = manuscriptFromPdfPages([[], []], {});
     expect(m.warnings[0]).toMatch(/no text layer/);

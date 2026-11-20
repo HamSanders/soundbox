@@ -219,7 +219,12 @@ export interface PdfText {
 
 /** A minimal PDF 1.4 with Helvetica text at the given positions. Pages with
  *  no runs have no text layer (they stand in for scans). */
-export function makePdf(pages: PdfText[][], info: { title?: string; author?: string } = {}): Uint8Array {
+export function makePdf(
+  pages: PdfText[][],
+  info: { title?: string; author?: string } = {},
+  /** Draw a solid RGB image of this size on page 1, scaled to `fill` of the page (0–1). */
+  cover?: { width: number; height: number; fill: number },
+): Uint8Array {
   const esc = (s: string) => s.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
   const objects: string[] = [];
   const add = (body: string) => {
@@ -232,16 +237,30 @@ export function makePdf(pages: PdfText[][], info: { title?: string; author?: str
   const infoObj = add(
     `<< ${info.title ? `/Title (${esc(info.title)})` : ""} ${info.author ? `/Author (${esc(info.author)})` : ""} >>`,
   );
-  const kids: number[] = [];
-  for (const runs of pages) {
-    const stream = runs.map((r) => `BT /F1 ${r.size} Tf ${r.x} ${r.y} Td (${esc(r.text)}) Tj ET`).join("\n");
-    const content = add(`<< /Length ${Buffer.byteLength(stream, "latin1")} >>\nstream\n${stream}\nendstream`);
-    kids.push(
-      add(
-        `<< /Type /Page /Parent ${pagesObj} 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 ${font} 0 R >> >> /Contents ${content} 0 R >>`,
-      ),
+  let image = 0;
+  if (cover) {
+    const px = Buffer.alloc(cover.width * cover.height * 3);
+    for (let i = 0; i < cover.width * cover.height; i++) px.set([70, 90, 140], i * 3);
+    image = add(
+      `<< /Type /XObject /Subtype /Image /Width ${cover.width} /Height ${cover.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Length ${px.length} >>\nstream\n${px.toString("latin1")}\nendstream`,
     );
   }
+  const kids: number[] = [];
+  pages.forEach((runs, i) => {
+    let stream = runs.map((r) => `BT /F1 ${r.size} Tf ${r.x} ${r.y} Td (${esc(r.text)}) Tj ET`).join("\n");
+    const withImage = i === 0 && cover;
+    if (withImage) {
+      const s = Math.sqrt(cover.fill);
+      stream = `q ${(612 * s).toFixed(1)} 0 0 ${(792 * s).toFixed(1)} 0 0 cm /Im1 Do Q\n${stream}`;
+    }
+    const content = add(`<< /Length ${Buffer.byteLength(stream, "latin1")} >>\nstream\n${stream}\nendstream`);
+    const xobject = withImage ? ` /XObject << /Im1 ${image} 0 R >>` : "";
+    kids.push(
+      add(
+        `<< /Type /Page /Parent ${pagesObj} 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 ${font} 0 R >>${xobject} >> /Contents ${content} 0 R >>`,
+      ),
+    );
+  });
   objects[catalog - 1] = `<< /Type /Catalog /Pages ${pagesObj} 0 R >>`;
   objects[pagesObj - 1] = `<< /Type /Pages /Kids [${kids.map((k) => `${k} 0 R`).join(" ")}] /Count ${kids.length} >>`;
   let out = "%PDF-1.4\n";

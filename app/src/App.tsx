@@ -131,7 +131,7 @@ function AppShell() {
           className={
             fullBleed
               ? "flex w-full min-h-0 min-w-0 flex-1 flex-col px-4 py-6"
-              : "mx-auto w-full max-w-6xl flex-1 px-4 py-6"
+              : "w-full flex-1 px-6 py-6 [&_p]:max-w-prose"
           }
         >
           <Suspense fallback={null}>

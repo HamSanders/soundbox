@@ -12,6 +12,7 @@
  * window there is no room beside the page, so it covers it instead.
  */
 
+import { usePanelWidth } from "@/hooks/use-panel-width";
 import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { XIcon } from "lucide-react";
@@ -22,6 +23,7 @@ import { formatBytes, formatDuration, formatRelative } from "@/lib/format";
 import { useDetailStore } from "@/lib/detail-store";
 
 export function SoundDetailPanel() {
+  const panel = usePanelWidth({ id: "sound-detail", initial: 416, min: 320, max: 720, edge: "left" });
   const sound = useDetailStore((s) => s.sound);
   const close = useDetailStore((s) => s.close);
 
@@ -53,8 +55,10 @@ export function SoundDetailPanel() {
   return (
     <aside
       aria-label={`Details for ${sound.name}`}
-      className="bg-background ring-border animate-in fade-in-0 slide-in-from-right-8 fixed inset-x-0 top-0 bottom-(--dock-h,0px) z-30 flex flex-col duration-(--duration-base) md:static md:z-auto md:my-2 md:mr-2 md:h-[calc(100svh-1rem-var(--dock-h,0px))] md:w-[26rem] md:shrink-0 md:rounded-xl md:ring-1"
+      className="bg-background ring-border animate-in fade-in-0 slide-in-from-right-8 fixed inset-x-0 top-0 bottom-(--dock-h,0px) z-30 flex flex-col duration-(--duration-base) md:static md:z-auto md:my-2 md:mr-2 md:relative md:h-[calc(100svh-1rem-var(--dock-h,0px))] md:w-(--panel-w) md:shrink-0 md:rounded-xl md:ring-1"
+      style={panel.style}
     >
+      {panel.handle}
       <div className="border-border flex items-start gap-2 border-b px-4 pt-4 pb-3">
         <div className="grid min-w-0 flex-1 gap-1">
           <h2 className="font-display truncate text-2xl leading-none font-extrabold tracking-[0.01em] uppercase">

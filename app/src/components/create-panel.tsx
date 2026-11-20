@@ -22,6 +22,7 @@ import { useGenerateSession } from "@/hooks/use-generate-session";
 import { useModels } from "@/lib/queries";
 import { clampDuration, preferredModel } from "@/lib/session-store";
 import { cn } from "@/lib/utils";
+import { usePanelWidth } from "@/hooks/use-panel-width";
 
 type Kind = "music" | "sfx" | "voice";
 
@@ -158,12 +159,18 @@ export function CreatePanel() {
     }
   }, [kind]);
   if (!kind) return null;
+  return <CreatePanelBody kind={kind} />;
+}
 
+function CreatePanelBody({ kind }: { kind: Kind }) {
+  const panel = usePanelWidth({ id: "create", initial: 352, min: 288, max: 560, edge: "right" });
   return (
     <aside
       aria-label="Create"
-      className="bg-background ring-border my-2 mr-2 hidden h-[calc(100svh-1rem-var(--dock-h,0px))] w-[22rem] shrink-0 flex-col rounded-xl ring-1 md:flex"
+      style={panel.style}
+      className="bg-background ring-border relative my-2 mr-2 hidden h-[calc(100svh-1rem-var(--dock-h,0px))] w-(--panel-w) shrink-0 flex-col rounded-xl ring-1 md:flex"
     >
+      {panel.handle}
       <nav aria-label="Kind" className="border-border flex shrink-0 gap-4 border-b px-4">
         {KINDS.map((k) => (
           <NavLink

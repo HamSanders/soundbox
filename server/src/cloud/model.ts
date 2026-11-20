@@ -12,9 +12,7 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
-import wavefile from "wavefile";
-
-import { decodeWav } from "../audio/dsp.js";
+import { decodeWav, encodeWav24 } from "../audio/dsp.js";
 import { decodeAudio } from "../endpoints/client.js";
 import { CancelledJob, ModelError } from "../errors.js";
 import type { GenerateOptions, GenerationModel, RenderedAudio, SpeakOptions, VoiceRefInfo } from "../models/types.js";
@@ -37,14 +35,12 @@ export interface CloudContext {
   onSpend?(): void;
 }
 
-const { WaveFile } = wavefile;
-
 const POLL_MS = 1000;
 
 /**
  * A clip as the gateway takes it: WAV, cut to the model's longest reference.
- * Uncut clips go as they are on disk. A cut one is re-encoded as 16-bit PCM,
- * which every speech model reads, from its first `maxS` seconds.
+ * Uncut clips go as they are on disk. A cut one keeps its first `maxS`
+ * seconds, as 24-bit PCM like every WAV Mirli writes.
  */
 export async function clipForUpload(path: string, maxS: number | null): Promise<{ wav: Buffer; trimmed: boolean }> {
   const bytes = await readFile(path);
@@ -53,11 +49,7 @@ export async function clipForUpload(path: string, maxS: number | null): Promise<
   const frames = audio[0]?.length ?? 0;
   const keep = Math.floor(maxS * sampleRate);
   if (frames <= keep) return { wav: bytes, trimmed: false };
-  const wav = new WaveFile();
-  const channels = audio.map((ch) => Array.from(ch.subarray(0, keep)));
-  wav.fromScratch(channels.length, sampleRate, "32f", channels.length === 1 ? channels[0]! : channels);
-  wav.toBitDepth("16");
-  return { wav: Buffer.from(wav.toBuffer()), trimmed: true };
+  return { wav: encodeWav24(audio.map((ch) => ch.subarray(0, keep)), sampleRate), trimmed: true };
 }
 
 export class CloudModel implements GenerationModel {

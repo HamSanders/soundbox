@@ -21,7 +21,7 @@
 
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { mkdtemp, readdir, rm, stat, mkdir } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, stat, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -213,11 +213,13 @@ export interface ModelSpec {
    *            via `--voice-ref` clip or `--voice-id` built-in), speak()
    *    "vc"  — existing audio + target voice → audio in that voice
    *            (`--audio` + `--voice-ref`), convert()
+   *    "asr" — existing speech → its words (`--audio`, `--text-out`),
+   *            transcribe()
    *
    *  The gen/tts split matters beyond the flag name: a gen model reads --text
    *  as "what the sound is like" and needs a duration, while a tts model reads
    *  it as "the words", and its length falls out of the script. */
-  task: "gen" | "sep" | "tts" | "vc";
+  task: "gen" | "sep" | "tts" | "vc" | "asr";
   /**
    * The literal `--task` value to send the binary, when it differs from
    * `task` above. `task` picks the Model *method* (speak() vs convert()) and
@@ -327,7 +329,7 @@ interface RawEntry {
   supports?: Partial<ModelSupports>;
   max_cfg?: number | null;
   gated?: boolean;
-  task?: "gen" | "sep" | "tts" | "vc";
+  task?: "gen" | "sep" | "tts" | "vc" | "asr";
   cli_task?: string;
   voice_ids?: string[];
   requires_voice_reference?: boolean;
@@ -1570,7 +1572,7 @@ export class AudioCppModel {
     options: GenerateOptions = {},
   ): Promise<Awaited<ReturnType<typeof readWav>>> {
     if (this.spec.task !== "gen") {
-      const method = { sep: "separate()", tts: "speak()", vc: "convert()" }[this.spec.task];
+      const method = { sep: "separate()", tts: "speak()", vc: "convert()", asr: "transcribe()" }[this.spec.task];
       throw new ModelError(
         `${this.spec.name} is a --task ${this.spec.task} model; use ${method}, not generate().`,
       );
@@ -2044,7 +2046,7 @@ export class AudioCppModel {
     options: { progress?: ProgressFn } = {},
   ): Promise<{ stemName: string; audio: Awaited<ReturnType<typeof readWav>> }[]> {
     if (this.spec.task !== "sep") {
-      const method = { gen: "generate()", tts: "speak()", vc: "convert()" }[this.spec.task];
+      const method = { gen: "generate()", tts: "speak()", vc: "convert()", asr: "transcribe()" }[this.spec.task];
       throw new ModelError(
         `${this.spec.name} is a --task ${this.spec.task} model; use ${method}, not separate().`,
       );
@@ -2108,6 +2110,77 @@ export class AudioCppModel {
         stems.push({ stemName, audio: await readWav(join(outDir, file)) });
       }
       return stems;
+    } finally {
+      await rm(tmp, { recursive: true, force: true }).catch(() => {});
+    }
+  }
+
+  /**
+   * Speech to text: the words in a clip, and the language they are in.
+   *
+   * Resident first, like separate(); the CLI writes the transcript with
+   * `--text-out` and the per-segment detail (where the detected language
+   * lives) with `--segments-out`.
+   */
+  async transcribe(
+    wavPath: string,
+    options: { language?: string | null; progress?: ProgressFn } = {},
+  ): Promise<Transcript> {
+    if (this.spec.task !== "asr") {
+      const method = { gen: "generate()", sep: "separate()", tts: "speak()", vc: "convert()" }[this.spec.task];
+      throw new ModelError(
+        `${this.spec.name} is a --task ${this.spec.task} model; use ${method}, not transcribe().`,
+      );
+    }
+    if (!this.loaded) await this.load();
+    const weights = this.model!;
+    const { progress } = options;
+    // The hint ends up on the audiocpp_cli command line, so what goes there is
+    // a constant from ASR_LANGUAGES, never the caller's own string.
+    const language = asrLanguage(options.language);
+
+    const body: Record<string, unknown> = { task: "asr", audio: wavPath };
+    if (language) body["language"] = language;
+    const served = await this.serverRun(body, progress);
+    if (served && typeof served.text === "string") {
+      return transcriptFrom(served.text, served.language ?? null, served.segments ?? null);
+    }
+
+    const binary = await findBinary();
+    if (binary === null) throw new ModelError("audiocpp_cli disappeared mid-transcription.");
+    const tmp = await mkdtemp(join(tmpdir(), "soundbox-audiocpp-asr-"));
+    try {
+      const textOut = join(tmp, "transcript.txt");
+      const segOut = join(tmp, "segments.json");
+      const cmd = [
+        binary,
+        "--task", "asr",
+        "--family", this.spec.family,
+        "--model", weights,
+        "--backend", backend(),
+        "--audio", wavPath,
+        "--text-out", textOut,
+        "--segments-out", segOut,
+        "--log",
+      ];
+      if (language) cmd.push("--language", language);
+      progress?.(0.05, "Starting audio.cpp");
+      const tail = await runChild(cmd, progress);
+      let text: string;
+      try {
+        text = await readFile(textOut, "utf8");
+      } catch {
+        throw new ModelError(`audio.cpp finished but wrote no transcript.
+
+${tail}`);
+      }
+      let segments: unknown = null;
+      try {
+        segments = JSON.parse(await readFile(segOut, "utf8"));
+      } catch {
+        // Optional detail; the text is the answer.
+      }
+      return transcriptFrom(text, null, segments);
     } finally {
       await rm(tmp, { recursive: true, force: true }).catch(() => {});
     }
@@ -2310,4 +2383,85 @@ export function fromPcm16(pcm: Buffer, channels: number): Audio {
     }
   }
   return out;
+}
+
+/** What transcribe() answers: the words, and the language if the model said. */
+export interface Transcript {
+  text: string;
+  language: string | null;
+}
+
+/**
+ * Normalise a transcript. Qwen3-ASR prefixes its raw output with
+ * `language English<asr_text>`; strip that and keep the language. A language
+ * can also come from the runtime's own field or from the segments JSON.
+ *
+ * Exported for tests.
+ */
+export function transcriptFrom(raw: string, language: string | null, segments: unknown): Transcript {
+  let text = raw.trim();
+  let lang = language && language.trim() ? language.trim() : null;
+  const tagged = /^language\s+([^<\n]+?)\s*<asr_text>/i.exec(text);
+  if (tagged) {
+    lang = lang ?? tagged[1]!.trim();
+    text = text.slice(tagged[0].length).trim();
+  }
+  if (lang === null && segments && typeof segments === "object") {
+    const found = findLanguage(segments);
+    if (found) lang = found;
+  }
+  if (lang && /^none$/i.test(lang)) lang = null;
+  return { text, language: lang };
+}
+
+function findLanguage(value: unknown, depth = 0): string | null {
+  if (depth > 4 || value === null || typeof value !== "object") return null;
+  if (Array.isArray(value)) {
+    for (const v of value) {
+      const f = findLanguage(v, depth + 1);
+      if (f) return f;
+    }
+    return null;
+  }
+  const rec = value as Record<string, unknown>;
+  for (const key of ["language", "lang", "detected_language"]) {
+    const v = rec[key];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  for (const v of Object.values(rec)) {
+    const f = findLanguage(v, depth + 1);
+    if (f) return f;
+  }
+  return null;
+}
+
+/**
+ * Language hints a transcription may carry, keyed by what a caller may send
+ * (an ISO 639-1 code or the English name, any case) and valued by the code
+ * passed to audio.cpp. The codes are Qwen3-ASR's own list, from audio.cpp's
+ * `model_specs/qwen3_asr.json`. A lookup table rather than a pattern so the
+ * argv only ever holds one of these literals.
+ */
+const ASR_LANGUAGES: Readonly<Record<string, string>> = Object.freeze({
+  zh: "zh", chinese: "zh", en: "en", english: "en", yue: "yue", cantonese: "yue",
+  ar: "ar", arabic: "ar", de: "de", german: "de", fr: "fr", french: "fr",
+  es: "es", spanish: "es", pt: "pt", portuguese: "pt", id: "id", indonesian: "id",
+  it: "it", italian: "it", ko: "ko", korean: "ko", ru: "ru", russian: "ru",
+  th: "th", thai: "th", vi: "vi", vietnamese: "vi", ja: "ja", japanese: "ja",
+  tr: "tr", turkish: "tr", hi: "hi", hindi: "hi", ms: "ms", malay: "ms",
+  nl: "nl", dutch: "nl", sv: "sv", swedish: "sv", da: "da", danish: "da",
+  fi: "fi", finnish: "fi", pl: "pl", polish: "pl", cs: "cs", czech: "cs",
+  fil: "fil", filipino: "fil", fa: "fa", persian: "fa", el: "el", greek: "el",
+  hu: "hu", hungarian: "hu", mk: "mk", macedonian: "mk", ro: "ro", romanian: "ro",
+});
+
+/** The audio.cpp language code for a caller's hint, or null for none.
+ *  Throws for a hint that is not on the list. Exported for tests. */
+export function asrLanguage(hint: string | null | undefined): string | null {
+  const key = hint?.trim().toLowerCase() ?? "";
+  if (key === "") return null;
+  if (!Object.prototype.hasOwnProperty.call(ASR_LANGUAGES, key)) {
+    throw new ModelError(`"${hint}" is not a supported transcription language.`);
+  }
+  return ASR_LANGUAGES[key]!;
 }

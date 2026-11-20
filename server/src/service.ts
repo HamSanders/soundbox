@@ -1987,6 +1987,63 @@ export class MirliService {
       .map((c) => ({ id: c.id, stemName: /\(([^()]*)\)\s*$/.exec(c.name)?.[1] ?? c.name }));
   }
 
+  /* ----------------------------------------------------------- transcribe */
+
+  /** A ready speech-recognition model, preferring one already loaded. */
+  async pickTranscriber(): Promise<string> {
+    const ready = (await this.listModels()).filter(
+      (m) => m.task === "asr" && (m.status === "loaded" || m.status === "installed"),
+    );
+    if (!ready.length) {
+      throw new ModelError(
+        "No transcription model is installed. Download one (e.g. Qwen3-ASR) from the Models tab.",
+      );
+    }
+    return (ready.find((m) => m.status === "loaded") ?? ready[0]).id;
+  }
+
+  /**
+   * Turn a voice clip into its words. Queued like any other GPU job, so it
+   * waits its turn and loads through the manager, which keeps one model
+   * resident at a time.
+   *
+   * The clip is converted to 16 kHz mono first — what speech recognisers are
+   * trained on — so an uploaded 48 kHz stereo file transcribes the same.
+   */
+  submitTranscribe(clip: { audio: dsp.Audio; sampleRate: number }, modelId: string, language: string | null): Job {
+    const model = this.models.get(modelId); // throws ModelError on unknown id
+    const info = model.describe();
+    if (info.task !== "asr" || !model.transcribe) {
+      throw new ModelError(`${info.name} does not transcribe speech.`);
+    }
+    const runner = async (handle: JobHandle): Promise<Record<string, unknown>> => {
+      if (!model.loaded) {
+        handle.phase("loading", `Loading ${info.name}`);
+        await this.models.load(modelId, (f, m) => handle.progress(f * 0.4, m, "loading"));
+      }
+      this.models.touch();
+      handle.checkCancelled();
+      const tmp = await mkdtemp(join(tmpdir(), "soundbox-asr-"));
+      try {
+        const path = join(tmp, "clip.wav");
+        const mono =
+          clip.audio.length > 1
+            ? [clip.audio[0]!.map((_, i) => clip.audio.reduce((t, ch) => t + ch[i]!, 0) / clip.audio.length)]
+            : clip.audio;
+        dsp.writeWav(path, dsp.resampleAudio(mono, clip.sampleRate, 16000), 16000);
+        handle.phase("generating", "Transcribing");
+        const out = await model.transcribe!(path, {
+          language,
+          progress: reporter(handle, 0.4, 0.55, "Transcribing"),
+        });
+        return { text: out.text, language: out.language, model: modelId };
+      } finally {
+        await rm(tmp, { recursive: true, force: true }).catch(() => {});
+      }
+    };
+    return this.jobs.submit("transcribe", { model: modelId, language }, runner);
+  }
+
   /** A ready stem-separation model, preferring one already loaded. Named
    *  rather than inlined so the "none installed" wording lives in one place —
    *  it is the message a user is most likely to see here. */

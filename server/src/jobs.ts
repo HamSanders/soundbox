@@ -52,7 +52,7 @@ const DURATION_HISTORY = 8;
 const MAX_QUEUED_GENERATIONS = 10;
 
 /** Job kinds that run on the generation worker and count toward the cap. */
-const GENERATION_KINDS = new Set(["generate", "speak", "convert", "separate"]);
+const GENERATION_KINDS = new Set(["generate", "speak", "convert", "separate", "transcribe"]);
 
 export type JobRunner = (
   handle: JobHandle,

@@ -46,7 +46,7 @@ export class HttpError extends Error {
 }
 
 /** A query value as Fastify hands it over: absent, a string, or repeated. */
-type RawQuery = string | string[] | undefined;
+export type RawQuery = string | string[] | undefined;
 
 function single(value: RawQuery): string | undefined {
   if (Array.isArray(value)) return value[value.length - 1];

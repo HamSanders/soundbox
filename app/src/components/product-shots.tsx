@@ -9,7 +9,7 @@
  * actually look like*. Only a screenshot answers that.
  *
  * These were captured from the app running in its mock mode (`npm run dev:mock`
- * — no backend, seeded data), at 1600×1000, dark theme. Mock rather than a live
+ * — no backend, seeded data), at 1440×900 (2x), dark theme. Mock rather than a live
  * install because it is reproducible: anyone can re-shoot these and get the same
  * frames, which is what stops them rotting silently.
  *
@@ -31,7 +31,7 @@
  *     resolved for the install it's running on.
  *
  * The images live in `site/public/product/`, the site build's `publicDir`, so
- * they are served from `/product/*.png` on the site and never ship in the app
+ * they are served from `/product/*` on the site and never ship in the app
  * bundle.
  */
 
@@ -55,25 +55,38 @@ const SHOTS: Shot[] = [
   {
     id: "library",
     label: "Library",
-    src: "/product/library.png",
-    alt: "The Mirli library: eight generated sounds in a list, each with a waveform, the prompt that made it, its model, seed, file size and age. Two rows carry a badge showing the agent that generated them.",
+    src: "/product/app-library.webp",
+    alt: "The Mirli library: kind tabs, a search box with tag, model, favourites and agent filters, eight generated sounds each with its tags, licence badge, model and length, and the bottom player playing Door slam 01.",
     caption:
-      "Everything generated, with the prompt, model and seed kept beside it. The badge on a row is the agent that made it.",
+      "Everything generated, in one list, with the prompt, model and seed kept beside it. A row marked with an agent's name was made over MCP.",
   },
   {
-    id: "agents",
-    label: "Agents",
-    src: "/product/agents.png",
-    alt: "The Agents page: stat tiles for calls in the last 24 hours, sounds made over MCP, active agents and errors; a panel of connection commands; a list of connected agents showing claude-code and cursor with their call counts; and a log of recent tool calls with durations.",
-    caption:
-      "Every MCP client that has connected, what it called, whether it worked, and how long it took.",
+    id: "create",
+    label: "Create",
+    src: "/product/app-create-music.webp",
+    alt: "The Create panel on its Music tab: a model picker, an instrumental switch, a styles prompt with suggestion chips, tempo and a Create button, beside the list of tracks.",
+    caption: "Music, SFX and Speech in one panel, beside the takes it has already made.",
   },
   {
-    id: "music-studio",
-    label: "Music studio",
-    src: "/product/music-studio.png",
-    alt: "The music studio: generated tracks with cover art and waveforms, arranged in a workspace.",
-    caption: "Music sits in the same workspace as everything else you generate.",
+    id: "details",
+    label: "Details",
+    src: "/product/app-details.webp",
+    alt: "The details panel docked beside the library: a waveform for Rain on tin roof with trim and effect tools, and its generation settings: model, prompt, seed, steps, CFG and duration.",
+    caption: "Open any take for its waveform, quick edits and the exact settings that made it.",
+  },
+  {
+    id: "voice-clone",
+    label: "Clone a voice",
+    src: "/product/app-voice-clone.webp",
+    alt: "Clone a voice: an area to upload or record up to five clips of one speaker, a clip timer, and fields for the voice's name, model and notes.",
+    caption: "A few seconds of one clear speaker is enough to start a cloned voice.",
+  },
+  {
+    id: "voice-lab",
+    label: "Voice Lab",
+    src: "/product/app-voice-lab.webp",
+    alt: "Voice Lab: your voices as cards, a table of every voice with its kind and model, and a panel to read one line through several voices side by side.",
+    caption: "Every voice you have made or installed, and a way to hear them back to back.",
   },
 ];
 
@@ -110,14 +123,14 @@ export function ProductShots() {
         role="tabpanel"
         className="border-border/60 bg-card/80 mt-4 overflow-hidden rounded-xl border shadow-sm"
       >
-        {/* Every shot is the same 1600×1000 frame, so the aspect ratio is fixed
+        {/* Every shot is the same 1440×900 frame, so the aspect ratio is fixed
             here rather than left to the image: without it the panel resizes as
             each one decodes and the tab row jumps under the pointer. */}
         <img
           src={assetUrl(active.src)}
           alt={active.alt}
-          width={1600}
-          height={1000}
+          width={1440}
+          height={900}
           // The first shot is the one on screen when the section is reached;
           // the others only matter once a tab is clicked.
           loading={active.id === SHOTS[0].id ? "eager" : "lazy"}

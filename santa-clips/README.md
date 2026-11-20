@@ -101,3 +101,15 @@ Cost: 4 × 5 s × $0.06 = $1.20, plus about $0.30 for one accidental duplicate s
 - **Second angle:** `talk_close` is a hard cut, with no clip. It needs its own still, made as an edit of the master.
 - **Still to do:** 14 clips. 12 can render now. `enter_and_sit` and `stand_and_leave` need the `empty` still, which waits on the image
   quota. Cost is 12 × 5 s × $0.06 = $3.60 on fal, or nothing on the local 5080 once the Wan download finishes.
+
+### fal batch 2 (2026-11-20)
+
+12 more clips rendered: talk ↔ cocoa/lean/rest, laugh, shh, think, check_list, sip_cocoa and gag_reindeer. Every seam is between 6.1 and 6.8/255
+(`seam-report.json`). Cost was 12 × $0.30 = $3.60, so the fal total so far is about $5.10. The reindeer renders inside the room rather than
+at the window and needs a redo. `contact_moves.jpg` shows the mid-frames.
+
+### Live face: crop and paste back
+
+FlashHead centre-crops its portrait to a square and outputs 512²; Ditto outputs a 512² face crop. Both lose our 4:5 framing. Instead, give the
+model `poses.talk.faceBox` (a 512² crop of `stills/talk.png` at x 214, y 104), then composite its frames back into the full frame at that box
+with a feathered mask. The clip loop keeps playing underneath. Then the cut to live lines up to the pixel, and the mouth is rendered at 1:1.

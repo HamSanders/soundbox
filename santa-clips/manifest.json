@@ -10,7 +10,13 @@
  "poses": {
   "talk": {
    "label": "Seated, facing camera (master still; live lip-sync pose)",
-   "still": "stills/talk.png"
+   "still": "stills/talk.png",
+   "faceBox": {
+    "x": 214,
+    "y": 104,
+    "size": 512,
+    "note": "Square crop of stills/talk.png given to the live face model; paste its output back here with a feathered mask"
+   }
   },
   "lean": {
    "label": "Lean-in, hands clasped",
@@ -227,7 +233,7 @@
    "durationS": 5,
    "prompt": "A reindeer peers in at the window behind Santa, then wanders off",
    "weight": 0.2,
-   "review": "glowing red nose evokes Rudolph (trademark); use a plain nose"
+   "review": "Reindeer renders inside the room (top right), not at the window; redo with a plain nose and the window named explicitly"
   }
  ]
 }

@@ -34,5 +34,113 @@
   "firstMAD": 6.71,
   "lastMAD": 6.16,
   "seamOK": true
+ },
+ "talk_to_cocoa": {
+  "model": "minimax/h3/image-to-video",
+  "resolution": "768P",
+  "rawDurationS": 5.18,
+  "speedup": 1.04,
+  "firstMAD": 6.52,
+  "lastMAD": 6.79,
+  "seamOK": true
+ },
+ "cocoa_to_talk": {
+  "model": "minimax/h3/image-to-video",
+  "resolution": "768P",
+  "rawDurationS": 5.18,
+  "speedup": 1.04,
+  "firstMAD": 6.68,
+  "lastMAD": 6.4,
+  "seamOK": true
+ },
+ "talk_to_lean": {
+  "model": "minimax/h3/image-to-video",
+  "resolution": "768P",
+  "rawDurationS": 5.18,
+  "speedup": 1.04,
+  "firstMAD": 6.56,
+  "lastMAD": 6.17,
+  "seamOK": true
+ },
+ "lean_to_talk": {
+  "model": "minimax/h3/image-to-video",
+  "resolution": "768P",
+  "rawDurationS": 5.18,
+  "speedup": 1.04,
+  "firstMAD": 6.55,
+  "lastMAD": 6.13,
+  "seamOK": true
+ },
+ "talk_to_rest": {
+  "model": "minimax/h3/image-to-video",
+  "resolution": "768P",
+  "rawDurationS": 5.18,
+  "speedup": 1.04,
+  "firstMAD": 6.39,
+  "lastMAD": 6.55,
+  "seamOK": true
+ },
+ "rest_to_talk": {
+  "model": "minimax/h3/image-to-video",
+  "resolution": "768P",
+  "rawDurationS": 5.18,
+  "speedup": 1.04,
+  "firstMAD": 6.54,
+  "lastMAD": 6.08,
+  "seamOK": true
+ },
+ "laugh": {
+  "model": "minimax/h3/image-to-video",
+  "resolution": "768P",
+  "rawDurationS": 5.18,
+  "speedup": 1.04,
+  "firstMAD": 6.31,
+  "lastMAD": 6.1,
+  "seamOK": true
+ },
+ "shh": {
+  "model": "minimax/h3/image-to-video",
+  "resolution": "768P",
+  "rawDurationS": 5.18,
+  "speedup": 1.04,
+  "firstMAD": 6.37,
+  "lastMAD": 6.18,
+  "seamOK": true
+ },
+ "think": {
+  "model": "minimax/h3/image-to-video",
+  "resolution": "768P",
+  "rawDurationS": 5.18,
+  "speedup": 1.04,
+  "firstMAD": 6.25,
+  "lastMAD": 6.07,
+  "seamOK": true
+ },
+ "check_list": {
+  "model": "minimax/h3/image-to-video",
+  "resolution": "768P",
+  "rawDurationS": 5.18,
+  "speedup": 1.04,
+  "firstMAD": 6.35,
+  "lastMAD": 6.12,
+  "seamOK": true
+ },
+ "sip_cocoa": {
+  "model": "minimax/h3/image-to-video",
+  "resolution": "768P",
+  "rawDurationS": 5.18,
+  "speedup": 1.04,
+  "firstMAD": 6.48,
+  "lastMAD": 6.31,
+  "seamOK": true
+ },
+ "gag_reindeer": {
+  "model": "minimax/h3/image-to-video",
+  "resolution": "768P",
+  "rawDurationS": 5.18,
+  "speedup": 1.04,
+  "firstMAD": 6.34,
+  "lastMAD": 6.17,
+  "seamOK": true
  }
 }

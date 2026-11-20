@@ -75,6 +75,20 @@ export class Conversation {
     if (msg.type === "playback") this.#clientPlaying = !!msg.playing;
     else if (msg.type === "voice") this.#setVoice(msg.id);
     else if (msg.type === "reset") this.#history = [];
+    else if (msg.type === "text") this.#typed(String(msg.text ?? "").trim().slice(0, 2000));
+  }
+
+  /** A message typed in the chat: answered exactly like speech, minus the ASR. */
+  #typed(text) {
+    if (!text || this.#userSpeaking) return;
+    const t = now();
+    if (this.#assistantActive()) this.#bargeIn(t);
+    const turn = { id: ++this.#turnSeq, t: { speechStart: t, eos: t, endpoint: t }, bargedIn: false, speculationsDropped: 0, typed: true };
+    this.#turn = turn;
+    this.#deps.gpu.takePeak();
+    this.#send({ type: "state", state: "thinking", turn: turn.id });
+    this.#active = this.#beginReply(turn, null, t, text);
+    this.#active.confirm();
   }
 
   /** Only ids from Mirli's own voice list are accepted, never a path. */

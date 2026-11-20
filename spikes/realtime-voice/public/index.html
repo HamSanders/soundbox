@@ -2,228 +2,416 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mirli call</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Courier+Prime:wght@400;700&family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap">
 <style>
-  :root {
-    color-scheme: dark;
-    --bg: #0e1014; --panel: #181b22; --line: #2a2f3a; --fg: #eef0f4; --dim: #9aa1ae;
-    --accent: #6ea8ff; --go: #2fbf71; --end: #e5484d;
-    font: 15px/1.45 system-ui, sans-serif;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; height: 100dvh; background: var(--bg); color: var(--fg); display: grid; grid-template-rows: auto 1fr auto; overflow: hidden; }
-  button, select { font: inherit; color: inherit; }
+/* Mirli design language (docs/mirli-brand/guide): dusk by default, day when the
+   system asks for light. Paper, ink, pencil, hairlines, one yellow: the beak dot
+   marks where sound is happening and nowhere else. No glows, no shadows. */
+:root {
+  --paper: #181817; --sheet: #20201e; --ink: #f1ece0; --pencil: #a9a797;
+  --rule: #33332f; --rule-strong: #7c7b74; --well: #121211;
+  --beak: #f2a40c; --rust: #e08a52; --danger: #f08a80;
+  --title: "Big Shoulders Display", "Arial Narrow", "Inter", sans-serif;
+  --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --log: "Courier Prime", "Courier New", ui-monospace, monospace;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --paper: #f1ece0; --sheet: #faf6ec; --ink: #14130f; --pencil: #66625a;
+  --rule: #d9d2c0; --rule-strong: #8c8676; --well: #e7e0d0; --rust: #a8501b; --danger: #b3261e; color-scheme: light; } }
+:root[data-theme="light"] {
+  --paper: #f1ece0; --sheet: #faf6ec; --ink: #14130f; --pencil: #66625a;
+  --rule: #d9d2c0; --rule-strong: #8c8676; --well: #e7e0d0; --rust: #a8501b; --danger: #b3261e; color-scheme: light; }
 
-  header { display: flex; align-items: baseline; gap: 12px; padding: 14px 20px; }
-  header b { font-size: 17px; }
-  header span { color: var(--dim); font-variant-numeric: tabular-nums; }
-  #state { margin-left: auto; padding: 3px 12px; border-radius: 999px; border: 1px solid var(--line); color: var(--dim); }
-  #state[data-s=listening] { color: var(--go); border-color: var(--go); }
-  #state[data-s=speaking] { color: var(--accent); border-color: var(--accent); }
-  #state[data-s=error] { color: var(--end); border-color: var(--end); }
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.55 var(--sans); -webkit-font-smoothing: antialiased; overflow: hidden; }
+button, select, textarea, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.log { font: 400 13px/1.5 var(--log); color: var(--pencil); }
 
-  #stage { position: relative; display: grid; place-items: center; min-height: 0; padding: 0 16px; }
-  /* Voice call: an avatar whose ring follows the voice. */
-  #avatar { --lvl: 0; width: min(200px, 44vw); aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center;
-            font-size: 64px; font-weight: 600; background: linear-gradient(145deg, #3b5bdb, #7048e8);
-            box-shadow: 0 0 0 calc(6px + var(--lvl) * 46px) color-mix(in srgb, var(--accent) 22%, transparent);
-            transition: box-shadow .08s linear; }
-  /* Video call: the face fills the stage. */
-  /* Smaller, framed, and dressed like a video feed. The tricks hide the
-     model's soft spots: a touch of blur and grain melts mouth artifacts into
-     "camera noise", the vignette pulls the eye to the eyes, and a slow
-     breathing zoom keeps the frame alive between words. */
-  #faceWrap { display: none; position: relative; width: min(360px, 70vw, 62dvh); aspect-ratio: 1; border-radius: 22px; overflow: hidden;
-              background: var(--panel); box-shadow: 0 18px 60px rgb(0 0 0 / .45), 0 0 0 1px var(--line); }
-  body.video #faceWrap { display: block; }
-  #face { width: 100%; height: 100%; display: block; filter: blur(.35px) contrast(1.04) saturate(1.05);
-          transform-origin: 50% 38%; animation: breathe 7s ease-in-out infinite; }
-  @keyframes breathe { 0%, 100% { transform: scale(1.06); } 50% { transform: scale(1.085) translateY(-.4%); } }
-  #faceWrap::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
-                      background: radial-gradient(ellipse 75% 70% at 50% 42%, transparent 55%, rgb(0 0 0 / .42)); }
-  #faceWrap::after { content: ""; position: absolute; inset: -50%; z-index: 1; pointer-events: none; opacity: .09; mix-blend-mode: overlay;
-                     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-                     animation: grain .5s steps(4) infinite; }
-  @keyframes grain { 0% { transform: translate(0, 0); } 25% { transform: translate(-6%, 4%); } 50% { transform: translate(5%, -3%); } 75% { transform: translate(-3%, -6%); } 100% { transform: translate(0, 0); } }
-  #faceWrap .live { position: absolute; z-index: 2; left: 12px; top: 12px; padding: 2px 9px; border-radius: 6px; font-size: 12px; font-weight: 600;
-                    background: rgb(0 0 0 / .5); color: #fff; letter-spacing: .04em; }
-  #faceWrap .live::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--end); margin-right: 6px; vertical-align: 1px; }
-  body.video #avatar { display: none; }
-  #self { position: absolute; right: 24px; bottom: 12px; display: flex; align-items: center; gap: 8px;
-          padding: 8px 12px; border-radius: 12px; background: color-mix(in srgb, var(--panel) 85%, transparent); border: 1px solid var(--line); color: var(--dim); }
-  #self i { width: 64px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; display: block; }
-  #self i::after { content: ""; display: block; height: 100%; width: calc(var(--mic, 0) * 100%); background: var(--go); }
-  body.muted #self i::after { background: var(--end); width: 100%; opacity: .5; }
+/* Buttons are ink pills; quiet ones are outlined. */
+.btn { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 18px; border-radius: 999px; cursor: pointer;
+       border: 1px solid var(--rule-strong); background: transparent; font-weight: 500; font-size: 14px; white-space: nowrap;
+       transition: background .15s var(--ease), border-color .15s var(--ease); }
+.btn:hover { background: var(--well); }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn.ink { background: var(--ink); color: var(--paper); border-color: var(--ink); font-weight: 600; }
+.btn.ink:hover { opacity: .9; }
+.btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.btn.end { border-color: var(--danger); color: var(--danger); }
+.btn.end:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.btn svg { width: 16px; height: 16px; flex: none; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--beak); flex: none; }
+.pill { display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 11px; border-radius: 999px; border: 1px solid var(--rule-strong);
+        font: 400 12.5px/1 var(--log); color: var(--pencil); white-space: nowrap; }
+.pill .dot { width: 7px; height: 7px; display: none; }
+.pill[data-s="speaking"] { color: var(--ink); border-color: var(--ink); }
+.pill[data-s="speaking"] .dot { display: inline-block; }
+.pill[data-s="listening"] { color: var(--ink); }
+.pill[data-s="error"] { color: var(--danger); border-color: var(--danger); }
+select.btn { appearance: none; padding-right: 34px; max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+             background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+             background-position: calc(100% - 18px) 17px, calc(100% - 13px) 17px; background-size: 5px 5px; background-repeat: no-repeat; }
+select.btn option { background: var(--sheet); color: var(--ink); }
 
-  #captions { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); width: min(680px, calc(100% - 32px));
-              display: grid; gap: 6px; text-align: center; pointer-events: none; }
-  #captions div { justify-self: center; max-width: 100%; padding: 6px 14px; border-radius: 12px; background: rgb(0 0 0 / .62); }
-  #captions .you { color: var(--dim); }
-  #captions div:empty { display: none; }
-  body.nocc #captions { display: none; }
+/* ---- Header -------------------------------------------------------------- */
+header { height: 60px; display: flex; align-items: center; gap: 14px; padding: 0 max(20px, env(safe-area-inset-left)); border-bottom: 1px solid var(--rule); }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand svg { width: 34px; height: auto; color: var(--ink); overflow: visible; }
+.brand b { font: 800 22px/1 var(--title); letter-spacing: .01em; }
+header .grow { flex: 1; }
+#themeBtn { height: 32px; width: 32px; padding: 0; justify-content: center; }
 
-  footer { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; padding: 14px 16px 18px; }
-  footer button, footer select { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); cursor: pointer; }
-  footer button[aria-pressed=true] { background: var(--fg); color: var(--bg); }
-  #end { background: var(--end); border-color: var(--end); padding-inline: 26px; }
+/* ---- Lobby --------------------------------------------------------------- */
+#lobby { height: calc(100dvh - 60px); overflow: auto; }
+.lobby-in { max-width: 1080px; margin: 0 auto; padding: 48px 20px 64px; display: grid; gap: 34px; }
+.lobby-head { display: grid; gap: 14px; border-bottom: 1.5px solid var(--ink); padding-bottom: 26px; }
+.lobby-head h1 { margin: 0; font: 800 clamp(56px, 10vw, 128px)/.88 var(--title); letter-spacing: .01em; text-transform: uppercase; }
+.lobby-head h1 i { font-style: normal; color: var(--beak); }
+.lobby-head p { margin: 0; max-width: 58ch; font-size: clamp(16px, 1.7vw, 19px); color: var(--pencil); }
+.section-h { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid var(--rule-strong); padding-bottom: 6px; margin-bottom: 16px; }
+.section-h h2 { margin: 0; font: 700 13px/1.4 var(--log); text-transform: uppercase; letter-spacing: .06em; color: var(--pencil); }
 
-  /* Before the call. */
-  #lobby { position: fixed; inset: 0; z-index: 2; background: var(--bg); display: grid; place-content: center; justify-items: center; gap: 18px; padding: 16px; text-align: center; }
-  #lobby .who { overflow: hidden; width: 120px; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; font-size: 44px; font-weight: 600; background: linear-gradient(145deg, #3b5bdb, #7048e8); }
-  #lobby p { margin: 0; color: var(--dim); max-width: 44ch; }
-  #lobby select { padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); }
-  #call { padding: 14px 36px; border-radius: 999px; border: 0; background: var(--go); color: #04130a; font-weight: 600; font-size: 17px; cursor: pointer; }
-  body.live #lobby { display: none; }
-  #notice { color: var(--end); min-height: 1.4em; }
+.faces { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 14px; }
+.face-card { display: grid; gap: 8px; padding: 0; border: 0; background: none; cursor: pointer; text-align: left; min-width: 0; }
+.face-card .ph { position: relative; display: block; aspect-ratio: 1; border-radius: 6px; overflow: hidden; border: 1px solid var(--rule); background: var(--well); }
+.face-card img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s var(--ease), filter .3s; filter: saturate(.92); }
+.face-card:hover img { transform: scale(1.04); filter: none; }
+.face-card .cap { display: flex; align-items: center; gap: 7px; font: 400 13px/1.3 var(--log); color: var(--pencil); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.face-card .cap .dot { display: none; width: 7px; height: 7px; }
+.face-card[aria-pressed="true"] .ph { outline: 2px solid var(--ink); outline-offset: 2px; }
+.face-card[aria-pressed="true"] .cap { color: var(--ink); }
+.face-card[aria-pressed="true"] .cap .dot { display: inline-block; }
+.face-card.busy img { opacity: .45; }
+.face-card.add .ph { display: grid; place-items: center; border-style: dashed; border-color: var(--rule-strong); background: transparent; }
+.face-card.add .ph span { font: 800 44px/1 var(--title); color: var(--pencil); }
+.face-card.add:hover .ph { background: var(--well); }
+#faceHint { min-height: 20px; margin-top: 10px; }
 
-  /* Face picker: in the lobby, and as a sheet during a call. */
-  #faces { display: none; gap: 10px; justify-content: center; flex-wrap: wrap; max-width: 560px; }
-  body.hasface #faces { display: flex; }
-  #faces button { width: 76px; aspect-ratio: 1; padding: 0; border-radius: 50%; overflow: hidden; cursor: pointer;
-                  border: 3px solid transparent; background: var(--panel); color: var(--dim); font-size: 26px; }
-  #faces button img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  #faces button[aria-pressed=true] { border-color: var(--go); }
-  #faces button.busy { opacity: .5; }
-  #faceHint { color: var(--dim); font-size: 13px; min-height: 1.2em; }
-  #faceSheet { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 1; display: none;
-               padding: 14px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); text-align: center; }
-  body.picking #faceSheet { display: block; }
-  #faceBtn { display: none; }
-  body.hasface #faceBtn { display: inline-block; }
+.lobby-foot { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; }
+.lobby-foot label { display: flex; align-items: center; gap: 10px; }
+.lobby-foot .btn.ink { height: 52px; padding: 0 30px; font-size: 16px; }
+#notice { min-height: 20px; }
+#notice.err { color: var(--danger); }
 
-  /* Latency numbers, tucked away. */
-  #stats { position: fixed; right: 12px; top: 56px; bottom: 84px; width: min(560px, calc(100vw - 24px)); z-index: 1; display: none;
-           overflow: auto; padding: 12px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); }
-  body.stats #stats { display: block; }
-  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 12.5px; }
-  th, td { text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--line); }
-  th:first-child, td:first-child { text-align: left; }
-  td.over { font-weight: 700; color: #ffb454; }
-  small { color: var(--dim); }
+/* ---- Call ---------------------------------------------------------------- */
+#call { display: none; height: calc(100dvh - 60px); grid-template-columns: minmax(0, 1fr) minmax(320px, 400px); }
+body.live #lobby { display: none; }
+body.live #call { display: grid; }
+.stage { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0; }
+.stage-main { position: relative; display: grid; place-items: center; padding: 28px 24px 12px; min-height: 0; }
+.stage-col { display: grid; justify-items: center; width: 100%; }
+
+/* The video tile: framed like a photograph on a sheet, hairline, 6 px corners.
+   The model's soft spots in the mouth are hidden by scale, a hair of blur and a
+   fine grain that reads as sensor noise; a slow breathing zoom keeps it alive. */
+.tile { position: relative; width: min(420px, 100%, 56dvh); aspect-ratio: 1; border-radius: 6px; overflow: hidden; border: 1px solid var(--rule); background: var(--well); }
+.tile canvas, .tile img.still { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; }
+.tile canvas { filter: blur(.3px) contrast(1.03); transform-origin: 50% 40%; animation: breathe 8s ease-in-out infinite; opacity: 0; transition: opacity .4s var(--ease); }
+body.video .tile canvas { opacity: 1; }
+.tile img.still { filter: saturate(.9); transition: opacity .4s var(--ease); }
+body.video .tile img.still { opacity: 0; }
+@keyframes breathe { 0%, 100% { transform: scale(1.05); } 50% { transform: scale(1.075) translateY(-.4%); } }
+.tile::after { content: ""; position: absolute; inset: -50%; pointer-events: none; opacity: .07; mix-blend-mode: overlay;
+               background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+               animation: grain .5s steps(4) infinite; }
+@keyframes grain { 25% { transform: translate(-6%, 4%); } 50% { transform: translate(5%, -3%); } 75% { transform: translate(-3%, -6%); } }
+.tile .tag { position: absolute; left: 10px; bottom: 10px; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 999px;
+             background: color-mix(in srgb, var(--paper) 82%, transparent); font: 400 12.5px/1.2 var(--log); color: var(--ink); }
+.tile .tag .dot { width: 7px; height: 7px; display: none; }
+body.speaking .tile .tag .dot { display: inline-block; }
+.tile .nofeed { position: absolute; right: 10px; top: 10px; z-index: 1; background: color-mix(in srgb, var(--paper) 82%, transparent); }
+body.video .tile .nofeed { display: none; }
+
+/* The pen line under the tile: one drawn stroke that moves with the voice. */
+.penline { width: min(420px, 100%); height: 46px; margin-top: 10px; color: var(--ink); display: block; overflow: visible; }
+.penline path { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; opacity: .85; }
+.penline circle { fill: var(--beak); transition: opacity .2s; opacity: 0; }
+body.speaking .penline circle { opacity: 1; }
+
+.controls { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; padding: 14px 20px 20px; border-top: 1px solid var(--rule); }
+.controls .sep { width: 1px; height: 26px; background: var(--rule); margin: 0 4px; }
+.controls select.btn { max-width: 150px; }
+@media (max-width: 1100px) and (min-width: 861px) { .controls .btn { padding: 0 14px; } .controls .sep { display: none; } }
+.mic { display: inline-flex; align-items: center; gap: 8px; }
+.mic i { width: 40px; height: 4px; border-radius: 2px; background: var(--rule); overflow: hidden; display: block; }
+.mic i::after { content: ""; display: block; height: 100%; width: calc(var(--mic, 0) * 100%); background: currentColor; transition: width .06s linear; }
+body.muted .mic i::after { width: 0; }
+
+/* The face picker as a sheet over the stage during a call. */
+#facePop { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 3; width: min(640px, calc(100% - 32px));
+           max-height: calc(100% - 24px); overflow: auto; padding: 16px; border-radius: 6px; background: var(--sheet); border: 1px solid var(--rule-strong); display: none; }
+body.picking #facePop { display: block; }
+#facePop .faces { grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 10px; }
+
+/* ---- Chat: the call's log ------------------------------------------------ */
+.chat { display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; border-left: 1px solid var(--rule); background: var(--sheet); min-height: 0; }
+.chat-h { display: flex; justify-content: space-between; align-items: baseline; padding: 16px 18px 10px; border-bottom: 1px solid var(--rule); }
+.chat-h h2 { margin: 0; font: 800 20px/1 var(--title); letter-spacing: .02em; text-transform: uppercase; }
+#log { overflow-y: auto; padding: 4px 18px 18px; }
+.entry { padding: 12px 0; border-bottom: 1px solid var(--rule); animation: in .35s var(--ease) both; }
+@keyframes in { from { opacity: 0; transform: translateY(4px); } }
+.entry .meta { display: flex; align-items: center; gap: 8px; font: 400 12.5px/1.4 var(--log); color: var(--pencil); margin-bottom: 3px; }
+.entry .meta b { font-weight: 700; color: var(--ink); }
+.entry .meta .dot { width: 6px; height: 6px; display: none; }
+.entry.live .meta .dot { display: inline-block; }
+.entry .txt { white-space: pre-wrap; overflow-wrap: anywhere; }
+.entry.you .txt { color: var(--pencil); }
+.entry.partial .txt { font-style: italic; opacity: .7; }
+.entry.sys { border-bottom-style: dashed; }
+.entry.sys .txt { font: 400 13px/1.5 var(--log); color: var(--pencil); }
+.entry.sys.err .txt { color: var(--danger); }
+.empty { padding: 28px 0; color: var(--pencil); font: 400 13px/1.6 var(--log); }
+.compose { display: flex; gap: 8px; align-items: flex-end; padding: 12px 14px calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid var(--rule); }
+.compose textarea { flex: 1; resize: none; min-height: 42px; max-height: 140px; padding: 10px 14px; border-radius: 6px; border: 1px solid var(--rule-strong);
+                    background: var(--paper); line-height: 1.45; }
+.compose textarea::placeholder { color: var(--pencil); }
+.compose textarea:focus { outline: none; border-color: var(--ink); }
+.compose .btn { height: 42px; }
+
+/* Stats: the latency table, folded away. */
+#stats { display: none; border-top: 1px solid var(--rule); padding: 10px 18px 14px; max-height: 240px; overflow: auto; }
+body.stats #stats { display: block; }
+table { border-collapse: collapse; width: 100%; font: 400 12px/1.4 var(--log); font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 4px 5px; border-bottom: 1px solid var(--rule); }
+th { color: var(--pencil); font-weight: 400; }
+th:first-child, td:first-child { text-align: left; }
+td.over { color: var(--rust); font-weight: 700; }
+
+/* ---- Narrow screens: stage on top, chat below ----------------------------- */
+@media (max-width: 860px) {
+  body { overflow: auto; }
+  #call { height: auto; min-height: calc(100dvh - 60px); grid-template-columns: minmax(0, 1fr); }
+  .stage-main { padding: 18px 16px 6px; }
+  .tile { width: min(340px, 86vw); }
+  .chat { border-left: 0; border-top: 1px solid var(--rule); min-height: 60dvh; }
+  .hide-sm { display: none; }
+  .controls { gap: 8px; }
+  .controls .sep { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .tile canvas, .tile::after, .entry { animation: none; } }
 </style>
 </head>
 <body>
-<div id="lobby">
-  <div class="who" id="who">M</div>
-  <h1 style="margin:0;font-size:24px">Call Mirli</h1>
-  <p>Talk, and it answers in a Mirli voice. Talk over it and it stops. Use headphones, or its own voice may interrupt it.</p>
-  <div id="faceHome"><div id="faces"></div><div id="faceHint"></div></div>
-  <input type="file" id="upload" accept="image/*" hidden>
-  <label>Voice <select id="voice"><option value="">VoxCPM2 default</option></select></label>
-  <button id="call">Start call</button>
-  <div id="notice"></div>
-</div>
-
 <header>
-  <b>Mirli</b><span id="kind">Voice call</span><span id="clock">0:00</span>
-  <span id="state" data-s="off">connecting</span>
+  <div class="brand">
+    <svg id="mark" viewBox="-8 -8 236 144" aria-hidden="true"></svg>
+    <b>MIRLI</b>
+  </div>
+  <span class="log hide-sm" id="hdrLog">call · runs here</span>
+  <span class="grow"></span>
+  <span class="pill" id="state" data-s="off"><span class="dot"></span><span id="stateTxt">not connected</span></span>
+  <button class="btn" id="themeBtn" title="Day or dusk" aria-label="Switch between day and dusk">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5a5.5 5.5 0 0 0 0 11z" fill="currentColor"/></svg>
+  </button>
 </header>
 
-<div id="stage">
-  <div id="avatar">M</div>
-  <div id="faceWrap"><canvas id="face" width="512" height="512"></canvas><span class="live">LIVE</span></div>
-  <div id="captions"><div class="you" id="ccYou"></div><div id="ccBot"></div></div>
-  <div id="self">You <i></i></div>
-</div>
+<!-- Before the call -->
+<main id="lobby">
+  <div class="lobby-in">
+    <div class="lobby-head">
+      <div class="log">No. <span id="callNo">0001</span> · a call · runs on this machine</div>
+      <h1>Call Mirli<i>.</i></h1>
+      <p>Talk and it answers in a Mirli voice. Talk over it and it stops. Type if you'd rather. Use headphones, or it may hear itself.</p>
+    </div>
 
-<footer>
-  <button id="mute" aria-pressed="false">Mute</button>
-  <select id="voice2" title="Voice"></select>
-  <button id="faceBtn" aria-pressed="false">Face</button>
-  <button id="cc" aria-pressed="true">Captions</button>
-  <button id="statsBtn" aria-pressed="false">Stats</button>
-  <button id="end">End call</button>
-</footer>
+    <section id="faceSection">
+      <div class="section-h"><h2>Who you're calling</h2><span class="log" id="faceCount"></span></div>
+      <div id="faceHome"><div class="faces" id="faces"></div><div class="log" id="faceHint"></div></div>
+      <input type="file" id="upload" accept="image/*" hidden>
+    </section>
 
-<div id="faceSheet"></div>
+    <section>
+      <div class="section-h"><h2>Voice and start</h2><span class="log">VoxCPM2 · streamed</span></div>
+      <div class="lobby-foot">
+        <label><span class="log">Voice</span><select class="btn" id="voice"><option value="">VoxCPM2 default</option></select></label>
+        <button class="btn ink" id="callBtn">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3.6 1.5c.5 0 .9.3 1.1.8l.9 2.3c.2.5 0 1-.4 1.3l-1 .8a9 9 0 0 0 5.1 5.1l.8-1c.3-.4.8-.6 1.3-.4l2.3.9c.5.2.8.6.8 1.1V14c0 .8-.7 1.5-1.5 1.5A13 13 0 0 1 .5 3C.5 2.2 1.2 1.5 2 1.5z"/></svg>
+          Start call
+        </button>
+        <span class="log" id="notice"></span>
+      </div>
+    </section>
+  </div>
+</main>
 
-<div id="stats">
-  <small id="info"></small>
-  <table>
-    <thead><tr><th>turn</th><th>wait</th><th>→ text</th><th>→ LLM</th><th>→ audio</th><th>heard</th><th>VRAM</th></tr></thead>
-    <tbody id="turns"></tbody>
-  </table>
-  <p><small>Milliseconds from the last moment the VAD heard speech. Target for "→ audio": 500 ms. "heard" adds the time until the sound left the speaker; in a video call that includes the face model's delay.</small></p>
-</div>
+<!-- The call -->
+<main id="call">
+  <section class="stage">
+    <div class="stage-main">
+      <div class="stage-col">
+        <div class="tile">
+          <img class="still" id="still" alt="">
+          <canvas id="face" width="512" height="512"></canvas>
+          <span class="tag"><span class="dot"></span><span id="who">Mirli</span></span>
+          <span class="pill nofeed" title="The face server is not running, so this is a voice call">voice only</span>
+        </div>
+        <svg class="penline" viewBox="0 0 420 46" preserveAspectRatio="none" aria-hidden="true"><path id="penPath" d="M2 23 L414 23"/><circle cx="414" cy="23" r="4.5"/></svg>
+      </div>
+      <div id="facePop"><div class="section-h" style="margin-bottom:12px"><h2>Change face</h2><button class="btn" id="facePopClose" style="height:28px;padding:0 12px">Done</button></div></div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="mute" aria-pressed="false">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="5.5" y="1.5" width="5" height="8.5" rx="2.5"/><path d="M3 8a5 5 0 0 0 10 0M8 13v2"/></svg>
+        <span class="mic">Mute <i></i></span>
+      </button>
+      <button class="btn" id="faceBtn" aria-pressed="false">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="6" r="3"/><path d="M2.5 15c.6-3 2.8-4.5 5.5-4.5s4.9 1.5 5.5 4.5"/></svg>
+        Face
+      </button>
+      <select class="btn" id="voice2" title="Voice"></select>
+      <span class="sep"></span>
+      <button class="btn" id="statsBtn" aria-pressed="false">Stats</button>
+      <button class="btn end" id="endBtn">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 5.5c2.6 0 5 .8 6.6 2.2.5.4.5 1.1.1 1.5l-1.2 1.2c-.4.4-1 .4-1.4.1l-1.6-1.2c-.3-.2-.4-.5-.4-.8V7.4a9 9 0 0 0-4.2 0v1.1c0 .3-.2.6-.4.8l-1.6 1.2c-.4.3-1 .3-1.4-.1L1.3 9.2c-.4-.4-.4-1.1.1-1.5C3 6.3 5.4 5.5 8 5.5z"/></svg>
+        End
+      </button>
+    </div>
+  </section>
+
+  <aside class="chat">
+    <div class="chat-h"><h2>Log</h2><span class="log" id="clock">0:00</span></div>
+    <div id="log"><div class="empty" id="empty">Nothing said yet. Say hello, or type below.</div></div>
+    <div id="stats">
+      <div class="log" id="info" style="margin-bottom:6px"></div>
+      <table>
+        <thead><tr><th>No.</th><th>wait</th><th>→ text</th><th>→ LLM</th><th>→ audio</th><th>heard</th><th>VRAM</th></tr></thead>
+        <tbody id="turns"></tbody>
+      </table>
+      <div class="log" style="margin-top:6px">ms from the end of your speech. Target → audio: 500.</div>
+    </div>
+    <form class="compose" id="compose">
+      <textarea id="msg" rows="1" placeholder="Type a message" aria-label="Message"></textarea>
+      <button class="btn ink" type="submit">Send</button>
+    </form>
+  </aside>
+</main>
 
 <script>
 const $ = (id) => document.getElementById(id);
-let ctx, ws, player, analyser, micStream, muted = false, callStart = 0;
-let firstChunkAt = null, lastHeard = null, botText = "";
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
 
-function setState(s) { $("state").textContent = s; $("state").dataset.s = s; }
-function notice(text) { $("notice").textContent = text; $("ccBot").textContent = text; }
+// ---- The mark: one pen stroke (brand guide No. 3). Small weight under 96 px, no dot. ----
+const M_PATH = "M0 107.5C1.8 106.9 6.7 105.9 11 104C15.3 102.1 21.1 99.3 26 96C30.9 92.7 36.2 88 40.5 84C44.8 80 48.1 76 51.5 72C54.9 68 58.3 63.3 61 60C63.7 56.7 65.7 54 67.5 52C69.3 50 70.2 50 72 48C73.8 46 75.8 42.1 78 40C80.2 37.9 82.5 36.8 85 35.5C87.5 34.2 90.6 31.9 93 32C95.4 32.1 97.6 34 99.5 36C101.4 38 103.2 41 104.5 44C105.8 47 106.6 50 107.5 54C108.4 58 109.2 63.7 110 68C110.8 72.3 111.3 76 112 80C112.7 84 113.2 88.3 114 92C114.8 95.7 115.5 98.8 116.5 102C117.5 105.2 118.6 108.6 120 111C121.4 113.4 123.5 116.3 125 116.5C126.5 116.7 127.8 114.2 129 112C130.2 109.8 131.1 106.3 132 103C132.9 99.7 133.8 95.3 134.5 92C135.2 88.7 135.8 86.3 136.5 83C137.2 79.7 138.2 75.8 139 72C139.8 68.2 140.3 63.3 141 60C141.7 56.7 142.2 55 143 52C143.8 49 144.4 45.3 145.5 42C146.6 38.7 148.1 34.8 149.5 32C150.9 29.2 152.4 26.9 154 25.5C155.6 24.1 157.2 23.2 159 23.5C160.8 23.8 163.1 25.4 164.5 27.5C165.9 29.6 166.7 31.9 167.5 36C168.3 40.1 168.9 47.3 169.5 52C170.1 56.7 170.5 59.3 171 64C171.5 68.7 172 75.3 172.5 80C173 84.7 173.3 88 174 92C174.7 96 175.6 100.3 176.5 104C177.4 107.7 178.2 111 179.5 114C180.8 117 181.8 119.8 184 122C186.2 124.2 189.8 127.2 192.5 127.5C195.2 127.8 197.6 125.6 200 124C202.4 122.4 204.9 120.5 207 118C209.1 115.5 210.8 112.3 212.5 109C214.2 105.7 215.9 102 217 98C218.1 94 218.9 89.3 219.3 85C219.7 80.7 219.6 76.2 219.2 72C218.8 67.8 218 63.2 217 60C216 56.8 214.2 53.4 213 52.5C211.8 51.6 210.7 52.4 210 54.5C209.3 56.6 209.2 60.8 209 65C208.8 69.2 209.2 75.8 209 80C208.8 84.2 208.2 87 207.5 90C206.8 93 205.8 96.2 204.5 98C203.2 99.8 201.5 101.2 200 101C198.5 100.8 196.8 98.8 195.5 96.5C194.2 94.2 193.4 90.6 192.5 87C191.6 83.4 190.8 79.3 190 75C189.2 70.7 188.7 66.2 188 61C187.3 55.8 186.7 49.2 186 44C185.3 38.8 184.8 34.7 184 30C183.2 25.3 182.5 19.8 181.5 16C180.5 12.2 179.4 9.4 178 7C176.6 4.6 174.8 2.7 173 1.5C171.2 0.3 169.5 -0.1 167.5 0C165.5 0.1 163.2 0.7 161 2C158.8 3.3 156.4 5.7 154.5 8C152.6 10.3 151 13.3 149.5 16C148 18.7 146.8 21.2 145.5 24C144.2 26.8 143 30 142 33C141 36 140.2 38.8 139.5 42C138.8 45.2 138.2 48.3 137.5 52C136.8 55.7 136.2 60.3 135.5 64C134.8 67.7 134.2 71.2 133.5 74C132.8 76.8 131.8 80.2 131 80.5C130.2 80.8 129.2 78.6 128.5 76C127.8 73.4 127.2 68.7 126.5 65C125.8 61.3 125.2 57.7 124.5 54C123.8 50.3 122.8 46.7 122 43C121.2 39.3 120.4 35.8 119.5 32C118.6 28.2 117.5 23.7 116.5 20C115.5 16.3 114.8 12.8 113.5 10C112.2 7.2 110.7 4.7 109 3C107.3 1.3 105.4 0.1 103.5 0C101.6 -0.1 99.4 1.2 97.5 2.5C95.6 3.8 93.7 6.1 92 8C90.3 9.9 88.9 11.7 87.5 14C86.1 16.3 84.8 19.3 83.5 22C82.2 24.7 81 27.5 80 30C79 32.5 78.3 34.7 77.5 37C76.7 39.3 75.8 41.3 75 44C74.2 46.7 73.2 49.8 72.5 53C71.8 56.2 71.2 59.8 70.5 63C69.8 66.2 69.2 68.3 68.5 72C67.8 75.7 67.1 81 66.5 85C65.9 89 65.5 92.2 65 96C64.5 99.8 63.8 104.3 63.5 108C63.2 111.7 63.1 115.2 63 118C62.9 120.8 62.8 123.4 62.8 124.5";
+$("mark").innerHTML = `<path d="${M_PATH}" fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>`;
+
+// ---- Theme: dusk by default, day on request; remembered here. ----
+const applyTheme = (t) => { if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; };
+applyTheme(store.get("mirli-call-theme"));
+$("themeBtn").onclick = () => {
+  const dark = getComputedStyle(document.documentElement).colorScheme.includes("dark");
+  const next = dark ? "light" : "dark";
+  applyTheme(next); store.set("mirli-call-theme", next);
+};
+
+// Every call gets a log number, like every Mirli thing.
+const callNo = Number(store.get("mirli-call-no") || 0) + 1;
+$("callNo").textContent = String(callNo).padStart(4, "0");
+
+let ctx, ws, player, analyser, micStream, muted = false, callStart = 0;
+let firstChunkAt = null, lastHeard = null;
+
+const STATE_WORDS = { off: "not connected", starting: "connecting", idle: "your turn", listening: "listening", thinking: "thinking", speaking: "speaking", error: "error", closed: "call ended" };
+function setState(s) {
+  $("state").dataset.s = s;
+  $("stateTxt").textContent = STATE_WORDS[s] ?? s;
+  document.body.classList.toggle("speaking", s === "speaking");
+}
+function notice(text, err) { $("notice").textContent = text; $("notice").classList.toggle("err", !!err); }
 function fail(err) {
   setState("error");
-  notice(err?.name === "NotAllowedError"
-    ? "Microphone access was refused. Allow it for this page (lock icon in the address bar) and reload."
-    : "Error: " + (err?.message ?? err));
+  const msg = err?.name === "NotAllowedError"
+    ? "Microphone access was refused. Allow it for this page and reload."
+    : String(err?.message ?? err);
+  notice(msg, true);
+  $("callBtn").disabled = false;
+  if (callStart) sys(msg, true);
 }
 
-// ---- Voices: your saved Mirli voices, remembered in this browser. -------
+// ---- The log (chat) -------------------------------------------------------
+const clockStr = () => { const s = callStart ? Math.floor((Date.now() - callStart) / 1000) : 0; return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
+let entryNo = 0, youEl = null, botEl = null, botText = "";
+function entry(kind, text, extra = "") {
+  $("empty")?.remove();
+  const d = document.createElement("div");
+  d.className = `entry ${kind} ${extra}`;
+  const who = kind === "you" ? "You" : kind === "bot" ? esc($("who").textContent) : "note";
+  const no = kind === "sys" ? "" : `No. ${String(++entryNo).padStart(2, "0")} · `;
+  d.innerHTML = `<div class="meta">${kind === "bot" ? '<span class="dot"></span>' : ""}<span>${no}<b>${who}</b> · ${clockStr()}</span></div><div class="txt"></div>`;
+  d.querySelector(".txt").textContent = text;
+  const log = $("log"), stick = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
+  log.append(d);
+  if (stick) log.scrollTop = log.scrollHeight;
+  return d;
+}
+const sys = (text, err) => entry("sys", text, err ? "err" : "");
+function setTxt(el, text) {
+  el.querySelector(".txt").textContent = text;
+  const log = $("log");
+  if (log.scrollHeight - log.scrollTop - log.clientHeight < 120) log.scrollTop = log.scrollHeight;
+}
+
+// ---- Voices ---------------------------------------------------------------
 const sendVoice = () => ws?.readyState === 1 && ws.send(JSON.stringify({ type: "voice", id: $("voice").value }));
 fetch("voices").then((r) => r.json()).then((list) => {
   for (const v of list) $("voice").append(new Option(v.name, v.id));
-  let saved = "";
-  try { saved = localStorage.getItem("spike-voice") ?? ""; } catch {}
+  const saved = store.get("spike-voice") ?? "";
   if (list.some((v) => v.id === saved)) $("voice").value = saved;
 }).catch(() => {}).finally(() => { $("voice2").innerHTML = $("voice").innerHTML; $("voice2").value = $("voice").value; });
 for (const [a, b] of [["voice", "voice2"], ["voice2", "voice"]]) {
-  $(a).onchange = () => {
-    $(b).value = $(a).value;
-    try { localStorage.setItem("spike-voice", $("voice").value); } catch {}
-    sendVoice();
-  };
+  $(a).onchange = () => { $(b).value = $(a).value; store.set("spike-voice", $("voice").value); sendVoice(); };
 }
 
-// ---- Controls ------------------------------------------------------------
-const toggle = (btn, cls, on) => { $(btn).setAttribute("aria-pressed", String(on)); document.body.classList.toggle(cls, cls === "nocc" ? !on : on); };
-$("mute").onclick = () => { muted = !muted; toggle("mute", "muted", muted); };
-$("cc").onclick = () => toggle("cc", "nocc", document.body.classList.contains("nocc"));
-$("statsBtn").onclick = () => toggle("statsBtn", "stats", !document.body.classList.contains("stats"));
-$("end").onclick = () => {
-  try { ws?.close(); face.ws?.close(); micStream?.getTracks().forEach((t) => t.stop()); ctx?.close(); } catch {}
-  location.reload();
-};
-setInterval(() => {
-  if (!callStart) return;
-  const s = Math.floor((Date.now() - callStart) / 1000);
-  $("clock").textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-}, 500);
-
-// ---- Face picker -------------------------------------------------------------
-// Asks the face server for its portraits. Picking one switches the face live
-// (about half a second, no restart); "+" uploads a photo, which the server
-// crops to a square. Hidden when no face server is running.
+// ---- Faces ----------------------------------------------------------------
+// The face server holds the portraits. Picking one switches the face live
+// (about half a second); "+" uploads a photo, cropped square by the server.
+const faceParam = new URLSearchParams(location.search).get("face");
+const FACE_URL = faceParam === "off" ? null : (faceParam || "ws://127.0.0.1:17660/ws");
 const faceHttp = () => FACE_URL && FACE_URL.replace(/^ws/, "http").replace(/\/ws$/, "");
-let currentFace = null;
+const faceSrc = (id) => `${faceHttp()}/faces/${encodeURIComponent(id)}`;
+const isUpload = (f) => /^image\d+|^[0-9a-f]{6,}$|^photo$/i.test(f.name);
+const faceName = (f) => f.id === "girl" ? "Sample" : isUpload(f) ? "Your photo" : f.name.charAt(0).toUpperCase() + f.name.slice(1);
+let currentFace = null, faceList = [];
 async function loadFaces() {
-  if (!FACE_URL) return;
+  if (!FACE_URL) return hideFaces();
   let data;
-  try { data = await (await fetch(faceHttp() + "/faces")).json(); } catch { return; }
-  document.body.classList.add("hasface");
+  try { data = await (await fetch(faceHttp() + "/faces")).json(); } catch { return hideFaces(); }
+  $("faceSection").hidden = false;
+  // Named portraits first, uploads after, the sample last.
+  faceList = [...data.faces].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
   currentFace = data.current;
+  $("faceCount").textContent = `${faceList.length} on file`;
   const box = $("faces");
   box.innerHTML = "";
-  for (const f of data.faces) {
+  faceList.forEach((f, i) => {
     const b = document.createElement("button");
-    b.title = f.name;
-    b.dataset.id = f.id;
+    b.className = "face-card"; b.dataset.id = f.id;
     b.setAttribute("aria-pressed", String(f.id === currentFace));
-    b.innerHTML = `<img alt="${f.name}" src="${faceHttp()}/faces/${encodeURIComponent(f.id)}">`;
+    b.innerHTML = `<span class="ph"><img alt="" loading="lazy" src="${faceSrc(f.id)}"></span><span class="cap"><span class="dot"></span>No. ${String(i + 1).padStart(2, "0")} · ${esc(faceName(f))}</span>`;
     b.onclick = () => pickFace(f.id, b);
     box.append(b);
-  }
+  });
   const add = document.createElement("button");
-  add.textContent = "+"; add.title = "Upload a photo";
+  add.className = "face-card add"; add.title = "Upload a photo";
+  add.innerHTML = `<span class="ph"><span>+</span></span><span class="cap">Upload a photo</span>`;
   add.onclick = () => $("upload").click();
   box.append(add);
-  showWho();
+  showCurrent();
 }
-function showWho() {
-  if (!currentFace) return;
-  $("who").innerHTML = `<img alt="" style="width:100%;height:100%;object-fit:cover" src="${faceHttp()}/faces/${encodeURIComponent(currentFace)}">`;
+const rank = (f) => f.id === "girl" ? 2 : isUpload(f) ? 1 : 0;
+function hideFaces() { $("faceSection").hidden = true; }
+function showCurrent() {
+  const f = faceList.find((x) => x.id === currentFace);
+  if (!f) return;
+  $("still").src = faceSrc(f.id);
+  $("who").textContent = isUpload(f) || f.id === "girl" ? "Mirli" : faceName(f);
 }
 async function pickFace(id, btn) {
   btn?.classList.add("busy");
@@ -232,9 +420,10 @@ async function pickFace(id, btn) {
     const r = await fetch(faceHttp() + "/face", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
     if (!r.ok) throw new Error(await r.text());
     currentFace = id;
-    for (const b of $("faces").querySelectorAll("button[data-id]")) b.setAttribute("aria-pressed", String(b.dataset.id === id));
+    for (const b of $("faces").querySelectorAll(".face-card[data-id]")) b.setAttribute("aria-pressed", String(b.dataset.id === id));
     $("faceHint").textContent = "";
-    showWho();
+    showCurrent();
+    if (callStart) sys(`Now talking to ${$("who").textContent}.`);
   } catch (e) { $("faceHint").textContent = "Could not switch: " + e.message; }
   btn?.classList.remove("busy");
 }
@@ -251,25 +440,20 @@ $("upload").onchange = async () => {
     await pickFace(id, null);
   } catch (e) { $("faceHint").textContent = "Upload failed: " + e.message; }
 };
-// During a call the same picker opens as a sheet above the controls.
-$("faceBtn").onclick = () => {
-  const open = !document.body.classList.contains("picking");
+function togglePicker(open) {
   document.body.classList.toggle("picking", open);
   $("faceBtn").setAttribute("aria-pressed", String(open));
-  (open ? $("faceSheet") : $("faceHome")).append($("faces"), $("faceHint"));
-};
+  (open ? $("facePop") : $("faceHome")).append($("faces"), $("faceHint"));
+}
+$("faceBtn").onclick = () => togglePicker(!document.body.classList.contains("picking"));
+$("facePopClose").onclick = () => togglePicker(false);
+loadFaces();
 
-// ---- Video: the face server ----------------------------------------------
-// When spikes/realtime-face/server.py is running with --tap, it listens to
-// this server's speech and sends back each 0.96 s of audio together with the
-// 24 frames made from it. The call then becomes a video call and the page
-// plays THAT audio instead of its own copy, so mouth and sound share one
-// clock. The price is the face model's delay on every reply.
-// ?face=off keeps it a voice call; ?face=ws://host:port/ws points elsewhere.
-const faceParam = new URLSearchParams(location.search).get("face");
-const FACE_URL = faceParam === "off" ? null : (faceParam || "ws://127.0.0.1:17660/ws");
+// ---- Video from the face server ---------------------------------------------
+// The face server listens to this server's speech and sends back each 0.96 s of
+// audio with the 24 frames made from it. In a video call the page plays THAT
+// audio, so mouth and sound share one clock.
 const face = { ws: null, on: false, gen: 0, next: 0, frames: [], sources: [], speechFrom: Infinity, speechUntil: 0, playing: false };
-
 function faceFlush() {
   face.gen++;
   for (const s of face.sources) try { s.stop(); } catch {}
@@ -280,10 +464,9 @@ function setVideo(on) {
   if (face.on === on) return;
   face.on = on;
   document.body.classList.toggle("video", on);
-  $("kind").textContent = on ? "Video call" : "Voice call";
   player?.port.postMessage("flush");
   faceFlush();
-  if (!on && face.playing) { face.playing = false; ws?.readyState === 1 && ws.send(JSON.stringify({ type: "playback", playing: false })); }
+  if (!on && face.playing) { face.playing = false; reportPlaying(false); }
 }
 function faceConnect() {
   if (!FACE_URL || !ctx || ctx.state === "closed") return;
@@ -292,7 +475,6 @@ function faceConnect() {
   s.onopen = () => { setVideo(true); loadFaces(); };
   s.onmessage = (e) => onFace(e).catch(fail);
   s.onerror = () => {};
-  // No face server (or it went away): stay a voice call and look again later.
   s.onclose = () => { setVideo(false); setTimeout(faceConnect, 4000); };
 }
 async function onFace(ev) {
@@ -309,10 +491,11 @@ async function onFace(ev) {
   const blobs = h.frames.map((n) => { const b = new Blob([new Uint8Array(ev.data, off, n)], { type: "image/jpeg" }); off += n; return b; });
   const gen = face.gen;
   const bitmaps = await Promise.all(blobs.map((b) => createImageBitmap(b)));
-  if (gen !== face.gen || !face.on) return bitmaps.forEach((b) => b.close()); // interrupted while decoding
+  if (gen !== face.gen || !face.on) return bitmaps.forEach((b) => b.close());
   const buf = ctx.createBuffer(1, h.samples, h.rate), ch = buf.getChannelData(0);
   for (let i = 0; i < pcm.length; i++) ch[i] = pcm[i] / 32768;
-  const src = ctx.createBufferSource(); src.buffer = buf; src.connect(ctx.destination);
+  const src = ctx.createBufferSource(); src.buffer = buf;
+  src.connect(analyser); src.connect(ctx.destination);
   if (face.next < ctx.currentTime + 0.03) face.next = ctx.currentTime + 0.06;
   src.start(face.next); face.sources.push(src);
   src.onended = () => { const i = face.sources.indexOf(src); if (i >= 0) face.sources.splice(i, 1); };
@@ -325,8 +508,9 @@ async function onFace(ev) {
   face.next = end;
 }
 
-// ---- One animation loop: frames, levels, and "is it audible" --------------
-const levels = new Uint8Array(256);
+// ---- One loop: frames, the pen line, and "is it audible" ----------------------
+const wave = new Uint8Array(512);
+let penLevel = 0, penPhase = 0;
 function tick() {
   requestAnimationFrame(tick);
   if (!ctx || ctx.state === "closed") return;
@@ -335,16 +519,21 @@ function tick() {
     let f = null;
     while (face.frames.length && face.frames[0].t <= t) { f?.bm.close(); f = face.frames.shift(); }
     if (f) { $("face").getContext("2d").drawImage(f.bm, 0, 0, 512, 512); f.bm.close(); }
-    // Tell the voice server when speech is really audible: it uses this to
-    // decide whether your voice is an interruption or a new turn.
     const playing = ctx.currentTime >= face.speechFrom && ctx.currentTime < face.speechUntil;
     if (playing !== face.playing) { face.playing = playing; reportPlaying(playing); }
-  } else if (analyser) {
-    analyser.getByteTimeDomainData(levels);
-    let peak = 0;
-    for (const v of levels) peak = Math.max(peak, Math.abs(v - 128));
-    $("avatar").style.setProperty("--lvl", Math.min(1, peak / 90).toFixed(2));
   }
+  // The pen line: a hand-drawn stroke that swells with Mirli's voice.
+  let peak = 0;
+  if (analyser) { analyser.getByteTimeDomainData(wave); for (const v of wave) peak = Math.max(peak, Math.abs(v - 128)); }
+  penLevel += (Math.min(1, peak / 70) - penLevel) * 0.25;
+  penPhase += 0.06 + penLevel * 0.12;
+  let d = "M2 23";
+  for (let x = 2; x <= 404; x += 6) {
+    const env = Math.sin((x / 404) * Math.PI);
+    const y = 23 + env * penLevel * 17 * Math.sin(x * 0.045 + penPhase) * (0.75 + 0.25 * Math.sin(x * 0.011 - penPhase * 0.6)) + env * 1.1 * Math.sin(x * 0.02 + penPhase * 0.3);
+    d += ` L${x} ${y.toFixed(1)}`;
+  }
+  $("penPath").setAttribute("d", d + " L414 23");
 }
 function reportPlaying(playing) {
   if (ws?.readyState === 1) ws.send(JSON.stringify({ type: "playback", playing }));
@@ -354,15 +543,36 @@ function reportPlaying(playing) {
   }
 }
 
-// ---- The call --------------------------------------------------------------
-// Everything audio starts inside the click: Chrome keeps an AudioContext
-// made outside a user gesture suspended, and then nothing is captured.
-$("call").onclick = () => {
-  $("call").disabled = true;
-  $("notice").textContent = "Connecting…";
+// ---- Controls -----------------------------------------------------------------
+$("mute").onclick = () => { muted = !muted; $("mute").setAttribute("aria-pressed", String(muted)); document.body.classList.toggle("muted", muted); };
+$("statsBtn").onclick = () => { const on = !document.body.classList.contains("stats"); document.body.classList.toggle("stats", on); $("statsBtn").setAttribute("aria-pressed", String(on)); };
+$("endBtn").onclick = () => {
+  try { ws?.close(); face.ws?.close(); micStream?.getTracks().forEach((t) => t.stop()); ctx?.close(); } catch {}
+  location.reload();
+};
+setInterval(() => { if (callStart) $("clock").textContent = clockStr(); }, 500);
+$("msg").addEventListener("input", () => { const t = $("msg"); t.style.height = "auto"; t.style.height = Math.min(140, t.scrollHeight) + "px"; });
+$("msg").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("compose").requestSubmit(); } });
+$("compose").onsubmit = (e) => {
+  e.preventDefault();
+  const text = $("msg").value.trim();
+  if (!text || ws?.readyState !== 1) return;
+  ws.send(JSON.stringify({ type: "text", text }));
+  entry("you", text);
+  lastTyped = text;
+  youEl = null; botEl = null; botText = "";
+  $("msg").value = ""; $("msg").style.height = "";
+};
+
+// ---- The call -------------------------------------------------------------------
+// Everything audio starts inside the click: Chrome keeps an AudioContext made
+// outside a user gesture suspended, and then nothing is captured.
+$("callBtn").onclick = () => {
+  $("callBtn").disabled = true;
+  notice("Connecting…");
+  setState("starting");
   try {
-    // 48 kHz is VoxCPM2's rate; the hello message checks it.
-    ctx = new AudioContext({ sampleRate: 48000, latencyHint: "interactive" });
+    ctx = new AudioContext({ sampleRate: 48000, latencyHint: "interactive" }); // VoxCPM2's rate
     ctx.resume();
   } catch (err) { return fail(err); }
   ws = new WebSocket(`ws://${location.host}/ws`);
@@ -371,16 +581,16 @@ $("call").onclick = () => {
     if (typeof e.data !== "string") return onPcm(e.data);
     onJson(JSON.parse(e.data)).catch(fail);
   };
-  ws.onerror = () => fail(new Error("could not connect to the spike server"));
-  ws.onclose = () => setState("call ended");
+  ws.onerror = () => fail(new Error("Could not reach the call server on this machine."));
+  ws.onclose = () => { setState("closed"); if (callStart) sys("Call ended."); };
 };
 
+let micLevel = 0, lastTyped = null;
 async function onJson(m) {
   if (m.type === "voice") {
-    $("ccBot").textContent = `Voice: ${m.name}. The first reply in a new voice can take a few seconds.`;
+    if (callStart) sys(`Voice: ${m.name}. The first reply in a new voice can take a few seconds.`);
   } else if (m.type === "hello") {
     sendVoice();
-    if (ctx.sampleRate !== m.tts.sample_rate) notice(`Warning: TTS is ${m.tts.sample_rate} Hz, page plays at ${ctx.sampleRate} Hz`);
     await ctx.audioWorklet.addModule("capture-worklet.js");
     await ctx.audioWorklet.addModule("playback-worklet.js");
     micStream = await navigator.mediaDevices.getUserMedia({
@@ -388,24 +598,26 @@ async function onJson(m) {
     });
     const capture = new AudioWorkletNode(ctx, "capture");
     capture.port.onmessage = (e) => {
-      // Muted: keep the frames coming, but silent, so the server's clock and
-      // voice detector carry on.
+      // Muted: keep frames coming, silent, so the server's clock and VAD carry on.
       const buf = muted ? new ArrayBuffer(e.data.byteLength) : e.data;
       if (ws.readyState === 1) ws.send(buf);
       const s = new Int16Array(buf);
       let peak = 0;
       for (let i = 0; i < s.length; i++) peak = Math.max(peak, Math.abs(s[i]));
       micLevel = Math.max(peak / 32768, micLevel * 0.85);
-      $("self").style.setProperty("--mic", Math.min(1, micLevel * 2).toFixed(2));
+      $("mute").style.setProperty("--mic", Math.min(1, micLevel * 2.2).toFixed(2));
     };
     ctx.createMediaStreamSource(micStream).connect(capture);
+    analyser = ctx.createAnalyser(); analyser.fftSize = 1024;
     player = new AudioWorkletNode(ctx, "playback", { outputChannelCount: [1] });
     player.port.onmessage = (e) => { if (!face.on) reportPlaying(e.data.playing); };
-    analyser = ctx.createAnalyser(); analyser.fftSize = 256;
     player.connect(analyser); player.connect(ctx.destination);
     if (ctx.state !== "running") await ctx.resume();
-    $("info").textContent = `audio ${ctx.state} · TTS ${m.tts.sample_rate} Hz · engines +${m.vram.total} MiB VRAM · endpoint ${m.vad.endpointMs} ms`;
+    $("info").textContent = `TTS ${m.tts.sample_rate} Hz · engines +${m.vram.total} MiB · endpoint ${m.vad.endpointMs} ms`;
     callStart = Date.now();
+    store.set("mirli-call-no", String(callNo));
+    $("hdrLog").textContent = `call No. ${String(callNo).padStart(4, "0")} · runs here`;
+    if (document.body.classList.contains("picking")) togglePicker(false);
     document.body.classList.add("live");
     setState("idle");
     faceConnect();
@@ -413,21 +625,31 @@ async function onJson(m) {
   } else if (m.type === "state") {
     setState(m.state);
     if (m.state === "speaking") firstChunkAt = performance.now();
-  } else if (m.type === "partial" || m.type === "final") {
-    $("ccYou").textContent = m.text;
-    if (m.type === "final") botText = "";
+    if (m.state === "idle") botEl?.classList.remove("live");
+  } else if (m.type === "partial") {
+    youEl ??= entry("you", "", "partial");
+    setTxt(youEl, m.text);
+  } else if (m.type === "final") {
+    if (!m.text) { youEl?.remove(); youEl = null; return; }
+    // A typed message is already in the log; only spoken ones are added here.
+    if (youEl) { youEl.classList.remove("partial"); setTxt(youEl, m.text); }
+    else if (!lastTyped || lastTyped !== m.text) entry("you", m.text);
+    lastTyped = null;
+    youEl = null; botEl = null; botText = "";
   } else if (m.type === "reply_delta") {
+    if (!botEl) { botEl = entry("bot", "", "live"); botText = ""; }
     botText += m.text;
-    // Captions show the tail of the reply, like live subtitles.
-    $("ccBot").textContent = botText.length > 180 ? "…" + botText.slice(-180) : botText;
+    setTxt(botEl, botText);
   } else if (m.type === "flush") {
     player?.port.postMessage("flush");
     faceFlush();
+    if (botEl) { botEl.querySelector(".txt").textContent += " —"; botEl.classList.remove("live"); }
   } else if (m.type === "turn") {
-    if (m.discarded) $("ccYou").textContent = "";
+    if (m.discarded) { youEl?.remove(); youEl = null; }
+    botEl?.classList.remove("live");
     const tr = document.createElement("tr");
     const cells = [
-      m.turn + (m.barged_in ? " (interrupted)" : "") + (m.discarded ? " (dropped)" : ""),
+      String(m.turn).padStart(2, "0") + (m.barged_in ? " ✕" : "") + (m.discarded ? " –" : ""),
       m.endpoint_wait_ms, m.eos_to_transcript_ms, m.eos_to_first_token_ms, m.eos_to_first_audio_ms,
       m.eos_to_first_audio_ms != null && lastHeard != null ? m.eos_to_first_audio_ms + lastHeard : null,
       m.vram_peak_mib,
@@ -441,11 +663,9 @@ async function onJson(m) {
     $("turns").prepend(tr);
     lastHeard = null;
   } else if (m.type === "error") {
-    notice("Error: " + m.message);
+    sys(m.message, true);
   }
 }
-let micLevel = 0;
-loadFaces();
 
 function onPcm(buf) {
   if (face.on) return; // in a video call the face server sends the audio back with its frames

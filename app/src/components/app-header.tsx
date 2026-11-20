@@ -68,7 +68,7 @@ export function AppHeader() {
   const { state: sidebarState } = useSidebar();
 
   return (
-    <header className="bg-sidebar fixed inset-x-0 top-0 z-40 flex h-(--top-h,2.5rem) items-center gap-2 px-3 md:pl-0">
+    <header className="bg-sidebar fixed inset-x-0 top-0 z-40 flex h-(--top-h,3.5rem) items-end gap-2 px-3 pb-2 md:pl-0">
       {/* The logo sits in a cell as wide as the sidebar, centred over the
           icon rail when it is folded; the toggle, back and forward then
           start where the first panel starts. */}
@@ -81,8 +81,8 @@ export function AppHeader() {
         )}
       >
         <NavLink to="/" end aria-label="Mirli home" className="flex items-center gap-2 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
-          <span className="bg-sidebar-primary text-sidebar-primary-foreground flex size-7 items-center justify-center rounded-sm">
-            <BrandMark inset={0.04} className="size-5" />
+          <span className="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 items-center justify-center rounded-sm">
+            <BrandMark inset={0.04} className="size-6" />
           </span>
           {sidebarState !== "collapsed" && (
             <Wordmark className="hidden text-lg leading-none font-extrabold md:inline" />

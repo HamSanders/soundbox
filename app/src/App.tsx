@@ -99,8 +99,8 @@ function AppShell() {
       style={
         {
           "--dock-h": nowPlaying ? `${PLAYER_DOCK_HEIGHT_PX}px` : "0px",
-          "--top-h": "2.5rem",
-          "--panel-h": `calc(100svh - 2.5rem - 1rem - ${nowPlaying ? PLAYER_DOCK_HEIGHT_PX : 0}px)`,
+          "--top-h": "3.5rem",
+          "--panel-h": `calc(100svh - 3.5rem - 1rem - ${nowPlaying ? PLAYER_DOCK_HEIGHT_PX : 0}px)`,
         } as CSSProperties
       }
     >
@@ -126,7 +126,7 @@ function AppShell() {
         // the player strip, and the page scrolls inside it, so the panel's
         // rounded bottom edge always sits just above the player.
         className={`bg-background text-foreground min-w-0 md:h-(--panel-h)${
-          fullBleed ? " max-md:h-[calc(100svh-2.5rem-var(--dock-h,0px))] overflow-hidden" : " md:overflow-y-auto"
+          fullBleed ? " max-md:h-[calc(100svh-3.5rem-var(--dock-h,0px))] overflow-hidden" : " md:overflow-y-auto"
         }`}
       >
         {/* The full-bleed column is a flex column with `min-h-0`, which is

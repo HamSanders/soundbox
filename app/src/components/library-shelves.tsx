@@ -51,7 +51,7 @@ export function LibraryTypeChips({ className }: { className?: string }) {
   );
 }
 
-function Shelf({
+export function Shelf({
   title,
   children,
   more,
@@ -73,7 +73,7 @@ function Shelf({
   );
 }
 
-function ShelfTile({
+export function ShelfTile({
   name,
   count,
   ...rest
@@ -92,7 +92,7 @@ function ShelfTile({
     </>
   );
   const cls =
-    "focus-visible:ring-ring/50 grid gap-1 rounded-md text-left outline-none focus-visible:ring-3 [&:hover>span:first-child]:ring-border-strong";
+    "focus-visible:ring-ring/50 grid w-full gap-1 rounded-md text-left outline-none focus-visible:ring-3 [&:hover>span:first-child]:ring-border-strong";
   return "to" in rest ? (
     <Link to={rest.to} className={cls}>
       {body}
@@ -109,12 +109,19 @@ export function LibraryShelves({
   projects,
   tags,
   onTag,
+  includeEmpty = false,
 }: {
   projects: Project[];
   tags: TagCount[];
-  onTag: (tag: string) => void;
+  /** Filter in place (the Library), or omitted to link to the Library
+   *  with the tag chosen (the Dashboard). */
+  onTag?: (tag: string) => void;
+  /** Show projects with nothing in them yet. The Dashboard does, since a new
+   *  project is where you go next; the Library's shelves only list what has
+   *  sounds to browse. */
+  includeEmpty?: boolean;
 }) {
-  const withSounds = projects.filter((p) => p.sound_count > 0);
+  const withSounds = includeEmpty ? projects : projects.filter((p) => p.sound_count > 0);
   const topTags = [...tags].sort((a, b) => b.count - a.count).slice(0, 12);
   if (withSounds.length === 0 && topTags.length === 0) return null;
   return (
@@ -136,7 +143,11 @@ export function LibraryShelves({
       {topTags.length > 0 && (
         <Shelf title="By tag">
           {topTags.map((t) => (
-            <ShelfTile key={t.tag} name={t.tag} count={t.count} onClick={() => onTag(t.tag)} />
+            onTag ? (
+              <ShelfTile key={t.tag} name={t.tag} count={t.count} onClick={() => onTag(t.tag)} />
+            ) : (
+              <ShelfTile key={t.tag} name={t.tag} count={t.count} to={`/library?tag=${encodeURIComponent(t.tag)}`} />
+            )
           ))}
         </Shelf>
       )}

@@ -68,7 +68,7 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
   const projectId = searchParams.get("project");
 
   const [q, setQ] = useState("");
-  const [tag, setTag] = useState<string>(ALL);
+  const [tag, setTag] = useState<string>(() => searchParams.get("tag") ?? ALL);
   const [modelId, setModelId] = useState<string>(ALL);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [agentsOnly, setAgentsOnly] = useState(false);

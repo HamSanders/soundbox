@@ -72,15 +72,56 @@ export function registerFiles(app: FastifyInstance, config: Config): void {
   });
 }
 
+/**
+ * The byte range a `Range: bytes=…` header asks for, clamped to the file, or
+ * `"unsatisfiable"`, or null for "send the whole file" (no header, a form we
+ * don't serve such as several ranges, or garbage, which RFC 9110 says to
+ * ignore).
+ */
+export function parseRange(header: string | undefined, size: number): { start: number; end: number } | "unsatisfiable" | null {
+  if (!header) return null;
+  const m = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
+  if (!m || (m[1] === "" && m[2] === "")) return null;
+  let start: number;
+  let end: number;
+  if (m[1] === "") {
+    // "bytes=-500": the last 500 bytes.
+    const n = Number(m[2]);
+    if (n === 0) return "unsatisfiable";
+    start = Math.max(0, size - n);
+    end = size - 1;
+  } else {
+    start = Number(m[1]);
+    end = m[2] === "" ? size - 1 : Math.min(Number(m[2]), size - 1);
+  }
+  if (start >= size || start > end) return "unsatisfiable";
+  return { start, end };
+}
+
 function send(
   reply: import("fastify").FastifyReply,
   path: string,
   contentType: string,
   downloadName: string,
 ) {
-  return reply
+  const size = statSync(path).size;
+  // Range support is what lets a player seek: without `Accept-Ranges` and a
+  // 206 for a range, Chromium (the desktop app's WebView2 included) treats the
+  // audio as unseekable and every scrub snaps back to where it was.
+  reply
     .header("Content-Type", contentType)
-    .header("Content-Length", statSync(path).size)
-    .header("Content-Disposition", `attachment; filename="${downloadName}"`)
-    .send(createReadStream(path));
+    .header("Accept-Ranges", "bytes")
+    .header("Content-Disposition", `attachment; filename="${downloadName}"`);
+  const range = parseRange(reply.request.headers.range, size);
+  if (range === "unsatisfiable") {
+    return reply.code(416).header("Content-Range", `bytes */${size}`).send();
+  }
+  if (range) {
+    return reply
+      .code(206)
+      .header("Content-Range", `bytes ${range.start}-${range.end}/${size}`)
+      .header("Content-Length", range.end - range.start + 1)
+      .send(createReadStream(path, { start: range.start, end: range.end }));
+  }
+  return reply.header("Content-Length", size).send(createReadStream(path));
 }

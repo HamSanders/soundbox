@@ -6,6 +6,9 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- **Scrubbing the player works.** Dragging the yellow ball on the player's timeline now moves playback there. The server sent sound files without byte-range support, so the browser (and the desktop app's window) treated them as unseekable and every scrub snapped back. `/files/{name}` now answers `Range` requests with `206 Partial Content`.
+
 ## [0.6.1] - 2026-11-20
 
 ### Changed

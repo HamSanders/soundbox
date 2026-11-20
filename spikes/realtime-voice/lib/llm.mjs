@@ -5,7 +5,7 @@ import { config } from "./config.mjs";
 import { sseJson } from "./tts.mjs";
 
 /** Yields text deltas. `history` is [{role, content}] without the system turn. */
-export async function* chat(llm, history, signal) {
+export async function* chat(llm, history, signal, system = config.llm.system) {
   const headers = { "content-type": "application/json" };
   if (llm.apiKey) headers.authorization = `Bearer ${llm.apiKey}`;
   const body = {
@@ -13,7 +13,7 @@ export async function* chat(llm, history, signal) {
     stream: true,
     temperature: 0.6,
     max_tokens: config.llm.maxTokens,
-    messages: [{ role: "system", content: config.llm.system }, ...history],
+    messages: [{ role: "system", content: system }, ...history],
   };
   // Qwen3 thinks by default, which would put seconds before the first word.
   // llama.cpp reads this; hosted endpoints don't know it, so local only.

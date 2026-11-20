@@ -37,6 +37,7 @@ export class Conversation {
   #active = null; // the confirmed reply in progress
   #clientPlaying = false;
   #history = [];
+  #system = undefined; // the persona for this call; undefined = config default
   #turnSeq = 0;
   #voiceRef = config.tts.voiceRef; // a clip path, or "" for the default voice
 
@@ -75,6 +76,11 @@ export class Conversation {
     if (msg.type === "playback") this.#clientPlaying = !!msg.playing;
     else if (msg.type === "voice") this.#setVoice(msg.id);
     else if (msg.type === "reset") this.#history = [];
+    else if (msg.type === "persona") {
+      // A new face is a new person: forget the old conversation.
+      const text = String(msg.text ?? "").slice(0, 6000).trim();
+      if (text !== this.#system) { this.#system = text || undefined; this.#history = []; }
+    }
     else if (msg.type === "text") this.#typed(String(msg.text ?? "").trim().slice(0, 2000));
   }
 
@@ -298,7 +304,7 @@ export class Conversation {
 
       const chunker = new SentenceChunker();
       try {
-        for await (const delta of chat(llm, history, ac.signal)) {
+        for await (const delta of chat(llm, history, ac.signal, this.#system)) {
           t.firstToken ??= now();
           text += delta;
           emit(() => this.#send({ type: "reply_delta", turn: turn.id, text: delta }));

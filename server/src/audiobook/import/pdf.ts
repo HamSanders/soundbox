@@ -226,6 +226,31 @@ export function manuscriptFromPdfPages(
   return finishManuscript(m);
 }
 
+/** Smallest side, in pixels, an image needs to be taken as the cover. */
+const MIN_COVER_PX = 64;
+
+/**
+ * The cover: the largest image on page 1, when it fills at least half the
+ * page. Extracted as PNG by pdf.js with no canvas. A first page drawn as text
+ * and vector art has no such image; rendering it would need a canvas, which
+ * the server doesn't ship, so those PDFs import without a cover.
+ */
+async function pdfCover(
+  pdf: Awaited<ReturnType<typeof import("unpdf").getDocumentProxy>>,
+): Promise<{ bytes: Uint8Array; mime: string } | null> {
+  if (pdf.numPages < 1) return null;
+  const { extractImages } = await import("unpdf");
+  const page = await pdf.getPage(1);
+  const [x0, y0, x1, y1] = page.view as [number, number, number, number];
+  const pageArea = Math.abs((x1 - x0) * (y1 - y0));
+  const images = await extractImages(pdf, 1, { format: "png" });
+  const best = images
+    .filter((i) => i.width >= MIN_COVER_PX && i.height >= MIN_COVER_PX)
+    .sort((a, b) => b.bounds.width * b.bounds.height - a.bounds.width * a.bounds.height)[0];
+  if (!best || !pageArea || (best.bounds.width * best.bounds.height) / pageArea < 0.5) return null;
+  return { bytes: best.data, mime: "image/png" };
+}
+
 export async function parsePdf(bytes: Uint8Array, opts: ParseOptions = {}): Promise<Manuscript> {
   const { getDocumentProxy, extractTextItems, getMeta } = await import("unpdf");
   let pdf;
@@ -243,7 +268,9 @@ export async function parsePdf(bytes: Uint8Array, opts: ParseOptions = {}): Prom
       getMeta(pdf).catch(() => ({ info: {} as Record<string, unknown> })),
     ]);
     const info = meta.info as { Title?: string; Author?: string; Subject?: string; Language?: string | null };
-    return manuscriptFromPdfPages(items as PdfItem[][], info, opts);
+    const m = manuscriptFromPdfPages(items as PdfItem[][], info, opts);
+    m.cover = await pdfCover(pdf).catch(() => null);
+    return m;
   } finally {
     await pdf.loadingTask.destroy().catch(() => {});
   }

@@ -131,6 +131,13 @@ export interface SettingsData {
    * and nothing else (see `updateCheck.ts`). Off means no request at all.
    */
   update_check: boolean;
+  /** Mirli Cloud device token (`mirli_dev_…`), or null when signed out. Never
+   *  returned by the API, and not settable through PATCH: only the sign-in
+   *  flow writes it. "" clears it. */
+  cloud_token: string | null;
+  /** Mirli Cloud caps, enforced here before a request leaves the machine. */
+  cloud_max_credits_per_call: number;
+  cloud_max_credits_per_day: number;
 }
 
 const DEFAULT_SETTINGS: SettingsData = {
@@ -160,6 +167,9 @@ const DEFAULT_SETTINGS: SettingsData = {
   audio_endpoints: [],
   onboarded_at: null,
   update_check: true,
+  cloud_token: null,
+  cloud_max_credits_per_call: 50,
+  cloud_max_credits_per_day: 300,
 };
 
 /** Every key a client is allowed to set, so an unknown field is ignored rather
@@ -197,6 +207,9 @@ export interface PublicSettings {
   image_auto_artwork: boolean;
   onboarded_at: string | null;
   update_check: boolean;
+  cloud_signed_in: boolean;
+  cloud_max_credits_per_call: number;
+  cloud_max_credits_per_day: number;
 }
 
 export class Settings {
@@ -226,6 +239,9 @@ export class Settings {
   audio_endpoints: AudioEndpoint[] = [];
   onboarded_at: string | null = DEFAULT_SETTINGS.onboarded_at;
   update_check: boolean = DEFAULT_SETTINGS.update_check;
+  cloud_token: string | null = DEFAULT_SETTINGS.cloud_token;
+  cloud_max_credits_per_call: number = DEFAULT_SETTINGS.cloud_max_credits_per_call;
+  cloud_max_credits_per_day: number = DEFAULT_SETTINGS.cloud_max_credits_per_day;
 
   constructor(data: Partial<SettingsData> = {}) {
     Object.assign(this, DEFAULT_SETTINGS, {
@@ -279,6 +295,9 @@ export class Settings {
       image_auto_artwork: this.image_auto_artwork,
       onboarded_at: this.onboarded_at,
       update_check: this.update_check,
+      cloud_signed_in: Boolean(this.cloud_token),
+      cloud_max_credits_per_call: this.cloud_max_credits_per_call,
+      cloud_max_credits_per_day: this.cloud_max_credits_per_day,
     };
   }
 
@@ -344,6 +363,9 @@ export class Settings {
       audio_endpoints: this.audio_endpoints,
       onboarded_at: this.onboarded_at,
       update_check: this.update_check,
+      cloud_token: this.cloud_token,
+      cloud_max_credits_per_call: this.cloud_max_credits_per_call,
+      cloud_max_credits_per_day: this.cloud_max_credits_per_day,
     };
   }
 }
@@ -521,6 +543,10 @@ export class Config {
       // before it ever reached here.
       if (key === "onboarded_at" && typeof value === "string" && !value.trim()) {
         this.settings.onboarded_at = null;
+        continue;
+      }
+      if (key === "cloud_token" && typeof value === "string" && !value.trim()) {
+        this.settings.cloud_token = null;
         continue;
       }
       Object.assign(this.settings, { [key]: value });

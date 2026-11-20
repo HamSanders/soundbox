@@ -58,6 +58,7 @@ import type {
 } from "./llm/assistant.js";
 import { ImageService, type ImageStatus } from "./image/service.js";
 import { EndpointService } from "./endpoints/service.js";
+import { CloudService } from "./cloud/service.js";
 
 /**
  * What `GET /api/models/audiocpp/runtime` answers. Shaped like `LlmStatus`'s
@@ -235,6 +236,8 @@ export class MirliService {
   readonly image: ImageService;
   /** Custom audio endpoints — see endpoints/service.ts. */
   readonly endpoints: EndpointService;
+  /** Mirli Cloud sign-in and models — see cloud/service.ts. Off unless MIRLI_CLOUD=1. */
+  readonly cloud: CloudService;
   readonly telemetry: McpTelemetry;
   /** Live story activity — see story-hub.ts. */
   readonly stories = new StoryHub();
@@ -256,6 +259,7 @@ export class MirliService {
       config.settings.audio_endpoints,
     );
     this.endpoints = new EndpointService(config, this.models);
+    this.cloud = new CloudService(config, this.models);
     this.jobs = new JobManager();
     this.llm = new LlmService(config);
     this.image = new ImageService(config);
@@ -270,6 +274,8 @@ export class MirliService {
     // Tests and the dev server must not phone anyone: the endpoint counts
     // requests, and a contributor's restarts are not installs.
     if (!process.env.VITEST) this.updates.start();
+    // Only when MIRLI_CLOUD=1; otherwise this registers nothing and asks no one.
+    void this.cloud.refresh();
   }
 
   async close(): Promise<void> {
@@ -3214,6 +3220,7 @@ export class MirliService {
     await this.adoptDownloadedModels();
     // Endpoints are per-profile too, and unlike weights nothing is shared.
     await this.endpoints.reload();
+    await this.cloud.reload();
     this.telemetry.otel.reconfigure();
     // Both engines may be running the model the *previous* profile chose.
     this.llm.reconfigure();

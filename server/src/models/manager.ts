@@ -23,6 +23,8 @@ import {
 } from "./audiocpp.js";
 import { AudioCppRuntime } from "./audiocppRuntime.js";
 import type { GenerationModel } from "./types.js";
+import { CloudModel, type CloudContext } from "../cloud/model.js";
+import type { CloudModel as CloudModelInfo } from "../cloud/contract.js";
 import { EndpointModel } from "../endpoints/model.js";
 import { type AudioEndpoint, endpointModelId } from "../endpoints/types.js";
 
@@ -30,7 +32,10 @@ import { type AudioEndpoint, endpointModelId } from "../endpoints/types.js";
  * A registry entry. Tagged so `instantiate()` stays the single place that
  * knows which class runs which kind of entry.
  */
-type Entry = { kind: "local"; spec: ModelSpec } | { kind: "endpoint"; endpoint: AudioEndpoint };
+type Entry =
+  | { kind: "local"; spec: ModelSpec }
+  | { kind: "endpoint"; endpoint: AudioEndpoint }
+  | { kind: "cloud"; model: CloudModelInfo; ctx: CloudContext };
 
 /**
  * audio.cpp runs everything that runs on this machine; every model-specific
@@ -43,6 +48,7 @@ type Entry = { kind: "local"; spec: ModelSpec } | { kind: "endpoint"; endpoint: 
 function registry(
   enabledAudiocppIds: ReadonlySet<string>,
   endpoints: readonly AudioEndpoint[],
+  cloud: { models: readonly CloudModelInfo[]; ctx: CloudContext } | null = null,
 ): Map<string, Entry> {
   const entries = new Map<string, Entry>();
   for (const spec of modelSpecs(enabledAudiocppIds)) {
@@ -50,6 +56,11 @@ function registry(
   }
   for (const endpoint of endpoints) {
     if (endpoint.enabled) entries.set(endpointModelId(endpoint.id), { kind: "endpoint", endpoint });
+  }
+  // Cloud models last of all: "the first installed model" must never be one
+  // that costs money.
+  for (const model of cloud?.models ?? []) {
+    entries.set(model.id, { kind: "cloud", model, ctx: cloud!.ctx });
   }
   return entries;
 }
@@ -92,6 +103,8 @@ export class ModelManager {
   private presentAudiocpp = new Set<string>();
   /** The profile's custom endpoints, as of the last `setEndpoints()`. */
   private endpoints: AudioEndpoint[] = [];
+  /** Mirli Cloud's catalog, as of the last `setCloudModels()`. */
+  private cloud: { models: CloudModelInfo[]; ctx: CloudContext } | null = null;
   private specs: Map<string, Entry>;
   private instances = new Map<string, GenerationModel>();
   private _resident: string | null = null;
@@ -113,7 +126,7 @@ export class ModelManager {
     this.audiocppRoot = audiocppRoot ?? join(modelsDir, "audiocpp");
     this.enabledAudiocpp = new Set(enabledAudiocppModels);
     this.endpoints = [...endpoints];
-    this.specs = registry(this.audiocppEnabled(), this.endpoints);
+    this.specs = registry(this.audiocppEnabled(), this.endpoints, this.cloud);
   }
 
   /**
@@ -163,7 +176,7 @@ export class ModelManager {
     if (!added.length && !dropped.length) return [];
     await this.locked(async () => {
       this.presentAudiocpp = present;
-      const next = registry(this.audiocppEnabled(), this.endpoints);
+      const next = registry(this.audiocppEnabled(), this.endpoints, this.cloud);
       for (const id of this.specs.keys()) {
         if (next.has(id) || !this.instances.has(id)) continue;
         if (this._resident === id) await this.unloadInner(id);
@@ -177,6 +190,7 @@ export class ModelManager {
   /** The one place that knows which class runs which kind of entry. */
   private instantiate(entry: Entry, hfToken = this.hfToken): GenerationModel {
     if (entry.kind === "endpoint") return new EndpointModel(entry.endpoint);
+    if (entry.kind === "cloud") return new CloudModel(entry.model, entry.ctx);
     return new AudioCppModel(entry.spec, this.modelsDir, hfToken, this.audiocppRoot, this.runtime);
   }
 
@@ -187,10 +201,22 @@ export class ModelManager {
    * instance holds its config, so an edited URL or template has to reach the
    * next request, and rebuilding one is free. Local instances are untouched.
    */
+  /** Replace the Mirli Cloud catalog (empty when cloud is off). Like endpoints,
+   *  every cloud instance is dropped so a sign-in change reaches the next call. */
+  async setCloudModels(models: CloudModelInfo[], ctx: CloudContext): Promise<void> {
+    await this.locked(async () => {
+      this.cloud = models.length ? { models: [...models], ctx } : null;
+      this.specs = registry(this.audiocppEnabled(), this.endpoints, this.cloud);
+      for (const [id, model] of this.instances) {
+        if (model instanceof CloudModel) this.instances.delete(id);
+      }
+    });
+  }
+
   async setEndpoints(endpoints: AudioEndpoint[]): Promise<void> {
     await this.locked(async () => {
       this.endpoints = [...endpoints];
-      this.specs = registry(this.audiocppEnabled(), this.endpoints);
+      this.specs = registry(this.audiocppEnabled(), this.endpoints, this.cloud);
       for (const [id, model] of this.instances) {
         if (model instanceof EndpointModel) this.instances.delete(id);
       }
@@ -275,7 +301,7 @@ export class ModelManager {
   async setAudiocppEnabled(enabledIds: string[]): Promise<void> {
     await this.locked(async () => {
       this.enabledAudiocpp = new Set(enabledIds);
-      const next = registry(this.audiocppEnabled(), this.endpoints);
+      const next = registry(this.audiocppEnabled(), this.endpoints, this.cloud);
       for (const id of this.specs.keys()) {
         if (next.has(id) || !this.instances.has(id)) continue;
         if (this._resident === id) await this.unloadInner(id);

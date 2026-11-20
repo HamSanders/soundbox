@@ -27,8 +27,16 @@ export type { ModelParam, ParamGroup, ParamType } from "./models/params.js";
  *
  *   "local"    — weights on this machine, run by audio.cpp.
  *   "endpoint" — a custom endpoint: somebody's server, reached over HTTP.
+ *   "cloud"    — Mirli Cloud: rendered on Mirli's servers, paid in credits.
  */
-export type ModelProvider = "local" | "endpoint";
+export type ModelProvider = "local" | "endpoint" | "cloud";
+
+/** What a Mirli Cloud render costs. 1 credit = $0.01. */
+export interface ModelPrice {
+  unit: "render" | "minute" | "1k_chars" | "10s";
+  credits_per_unit: number;
+  min_credits: number;
+}
 
 export type ModelStatus =
   | "not_installed"
@@ -205,6 +213,8 @@ export interface ModelInfo {
   /** Where this model runs: weights on this machine driven by audio.cpp, or a
    *  custom endpoint. See `ModelProvider`. */
   provider: ModelProvider;
+  /** Mirli Cloud models only: the price, for "≈ 15 credits" by Generate. */
+  price?: ModelPrice | null;
   installed_deps: boolean;
   auto_installable: boolean;
   manual_install_reason?: string | null;
@@ -1279,6 +1289,8 @@ export const settingsPatchSchema = z.object({
   image_external_api_key: z.string().nullish(),
   image_auto_artwork: z.boolean().nullish(),
   update_check: z.boolean().nullish(),
+  cloud_max_credits_per_call: z.number().int().min(1).max(100_000).nullish(),
+  cloud_max_credits_per_day: z.number().int().min(1).max(1_000_000).nullish(),
   // ISO timestamp when first-run setup was finished or skipped. "" clears it,
   // the `sounds_dir` convention — see `Config.updateSettings`.
   onboarded_at: z.string().nullish(),

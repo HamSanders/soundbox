@@ -702,7 +702,9 @@ export function AppSidebar() {
     // asking the question — a dialog mounted inside would go with it.
     <>
       {picker.dialog}
-      <Sidebar collapsible="icon" variant="inset">
+      {/* pr-1: the two panels sit 4px apart, nearly touching, against the
+          8px they keep from the window edges. */}
+      <Sidebar collapsible="icon" variant="inset" className="pr-1.5">
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>

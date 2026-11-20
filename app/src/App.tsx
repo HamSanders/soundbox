@@ -62,6 +62,8 @@ function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
     window.scrollTo(0, 0);
+    // On desktop the page scrolls inside its panel, not the window.
+    document.querySelector('[data-slot="sidebar-inset"]')?.scrollTo(0, 0);
   }, [pathname]);
   return null;
 }
@@ -102,8 +104,11 @@ function AppShell() {
           pages keep their natural height and the document scroll they
           have always had. */}
       <SidebarInset
-        className={`bg-background text-foreground min-w-0${
-          fullBleed ? " h-[calc(100svh-var(--dock-h))] md:h-[calc(100svh-1rem-var(--dock-h))] overflow-hidden" : ""
+        // On desktop the panel is exactly the window less its 8px margins and
+        // the player strip, and the page scrolls inside it, so the panel's
+        // rounded bottom edge always sits just above the player.
+        className={`bg-background text-foreground min-w-0 md:h-[calc(100svh-1rem-var(--dock-h))]${
+          fullBleed ? " h-[calc(100svh-var(--dock-h))] overflow-hidden" : " md:overflow-y-auto"
         }`}
       >
         <AppHeader />

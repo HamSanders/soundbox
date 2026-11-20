@@ -1060,6 +1060,7 @@ export const segmentGenerateSchema = z.object({
    * which is what makes re-reading a story reproduce the delivery you set.
    */
   request_options: requestOptionsSchema.optional(),
+  text: z.string().min(1).max(20000).optional(), // [audiobooks:voice] speak this instead of the line's text (pronunciation applied, or a selection)
 });
 
 export type SegmentGenerate = z.infer<typeof segmentGenerateSchema>;

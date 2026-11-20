@@ -52,6 +52,7 @@ import { registerAudiobookImport } from "./routes/audiobook-import.js"; // [audi
 import { registerAudiobookListen } from "./routes/audiobook-listen.js"; // [audiobooks:listen]
 import { registerAudiobookBeds } from "./routes/audiobook-beds.js"; // [audiobooks:soundscape]
 import { registerAudiobookExport } from "./routes/audiobook-export.js"; // [audiobooks:export]
+import { registerAudiobookVoice } from "./routes/audiobook-voice.js"; // [audiobooks:voice]
 import { MirliService } from "./service.js";
 
 declare module "fastify" {
@@ -255,6 +256,7 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
   registerAudiobookListen(app, svc); // [audiobooks:listen]
   registerAudiobookBeds(app, svc); // [audiobooks:soundscape]
   registerAudiobookExport(app, svc); // [audiobooks:export]
+  registerAudiobookVoice(app, svc); // [audiobooks:voice]
   // Default to the server's own tool list (routes/mcp.ts uses this for
   // GET /api/mcp/status) rather than an empty array — the caller only needs
   // to override this for tests that stub the MCP layer out entirely.

@@ -1,0 +1,103 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Realtime face spike</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: light dark; --bg: Canvas; --fg: CanvasText; --dim: GrayText; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--fg);
+         font: 14px/1.4 system-ui, sans-serif; }
+  main { display: grid; gap: 12px; justify-items: center; padding: 16px; }
+  canvas { width: min(512px, 90vw); aspect-ratio: 1; border-radius: 12px; background: color-mix(in srgb, var(--fg) 8%, var(--bg)); }
+  pre { margin: 0; color: var(--dim); font: 12px/1.5 ui-monospace, monospace; min-width: 44ch; }
+  button { font: inherit; padding: 8px 20px; border-radius: 8px; border: 1px solid var(--dim); background: none; color: inherit; cursor: pointer; }
+</style>
+<main>
+  <canvas id="c" width="512" height="512"></canvas>
+  <div><button id="start">Start</button> <button id="flush">Flush (barge-in)</button></div>
+  <pre id="s">Press Start (the browser needs a click before it will play audio).</pre>
+</main>
+<script>
+const cv = document.getElementById('c'), g = cv.getContext('2d'), statusEl = document.getElementById('s');
+let ctx, ws, nextTime = 0, frames = [], sources = [], lastSeqDrawn = -1;
+// Counters since the last report to the server.
+let st = { drawn: 0, skipped: 0, underruns: 0, lateSum: 0, lateMax: 0, first: [] };
+let totals = { chunks: 0, speech: 0, idle: 0, drawn: 0, skipped: 0, underruns: 0 };
+
+document.getElementById('flush').onclick = () => fetch('/flush', { method: 'POST' });
+// ?autostart=1 is for automated runs in a browser launched with --autoplay-policy=no-user-gesture-required.
+if (new URLSearchParams(location.search).has('autostart')) addEventListener('load', () => document.getElementById('start').click());
+document.getElementById('start').onclick = async () => {
+  if (ctx) return;
+  ctx = new AudioContext({ latencyHint: 'interactive' });
+  ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.binaryType = 'arraybuffer';
+  ws.onmessage = onMessage;
+  ws.onclose = () => statusEl.textContent = 'disconnected';
+  requestAnimationFrame(draw);
+  setInterval(report, 1000);
+};
+
+// Audio is the clock. Each chunk is 0.96 s of PCM plus the 24 frames generated from it; the PCM is
+// scheduled on the AudioContext timeline and every frame gets a presentation time on that same timeline.
+async function onMessage(ev) {
+  if (typeof ev.data === 'string') {
+    const m = JSON.parse(ev.data);
+    if (m.type === 'flush') {
+      for (const s of sources) try { s.stop(); } catch {}
+      sources = []; frames = []; nextTime = 0;
+    }
+    return;
+  }
+  const dv = new DataView(ev.data), hl = dv.getUint32(0, true);
+  const h = JSON.parse(new TextDecoder().decode(new Uint8Array(ev.data, 4, hl)));
+  let off = 4 + hl;
+  const pcm = new Int16Array(ev.data.slice(off, off + h.samples * 2)); off += h.samples * 2;
+  const blobs = h.frames.map(n => { const b = new Blob([new Uint8Array(ev.data, off, n)], { type: 'image/jpeg' }); off += n; return b; });
+  const bitmaps = await Promise.all(blobs.map(b => createImageBitmap(b)));
+
+  const buf = ctx.createBuffer(1, h.samples, h.rate), ch = buf.getChannelData(0);
+  for (let i = 0; i < pcm.length; i++) ch[i] = pcm[i] / 32768;
+  const src = ctx.createBufferSource(); src.buffer = buf; src.connect(ctx.destination);
+  const now = ctx.currentTime;
+  if (nextTime < now + 0.03) { if (nextTime) st.underruns++, totals.underruns++; nextTime = now + 0.06; }
+  src.start(nextTime); sources.push(src); src.onended = () => sources.splice(sources.indexOf(src), 1);
+  bitmaps.forEach((bm, i) => frames.push({ t: nextTime + i / h.fps, bm, seq: h.seq, i, t_audio0: i === 0 ? h.t_audio0 : null }));
+  nextTime += h.samples / h.rate;
+  totals.chunks++; totals[h.kind]++;
+}
+
+function draw() {
+  requestAnimationFrame(draw);
+  if (!ctx) return;
+  // What is audible now left the graph outputLatency ago, so show the frame for that moment.
+  const t = ctx.currentTime - (ctx.outputLatency || 0);
+  let f = null;
+  while (frames.length && frames[0].t <= t) {
+    const prev = f;
+    f = frames.shift();
+    if (prev) { st.skipped++; totals.skipped++; prev.bm.close(); f.t_audio0 ??= prev.t_audio0; }
+  }
+  if (!f) return;
+  g.drawImage(f.bm, 0, 0, cv.width, cv.height); f.bm.close();
+  const late = (t - f.t) * 1000;
+  st.drawn++; totals.drawn++; st.lateSum += late; st.lateMax = Math.max(st.lateMax, late);
+  if (f.t_audio0) st.first.push(Math.round(Date.now() - f.t_audio0 * 1000));
+}
+
+function report() {
+  const queued = Math.max(0, nextTime - ctx.currentTime);
+  const r = { t: Date.now() / 1000, audio_clock: ctx.currentTime, queued_s: +queued.toFixed(3),
+              drawn: st.drawn, skipped: st.skipped, underruns: st.underruns,
+              late_ms_mean: st.drawn ? +(st.lateSum / st.drawn).toFixed(2) : null, late_ms_max: +st.lateMax.toFixed(2),
+              first_frame_ms: st.first, output_latency_ms: Math.round((ctx.outputLatency || 0) * 1000),
+              hidden: document.hidden };
+  if (ws.readyState === 1) ws.send(JSON.stringify(r));
+  statusEl.textContent =
+    `chunks ${totals.chunks} (speech ${totals.speech}, idle ${totals.idle})\n` +
+    `display ${st.drawn} fps, skipped ${totals.skipped}, underruns ${totals.underruns}\n` +
+    `queued ${queued.toFixed(2)} s, frame lateness mean ${r.late_ms_mean ?? '-'} ms, max ${r.late_ms_max} ms\n` +
+    (st.first.length ? `first audio -> first frame on screen: ${st.first.join(', ')} ms\n` : '') +
+    `audio output latency ${r.output_latency_ms} ms`;
+  st = { drawn: 0, skipped: 0, underruns: 0, lateSum: 0, lateMax: 0, first: [] };
+}
+</script>

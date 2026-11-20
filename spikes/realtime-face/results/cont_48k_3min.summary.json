@@ -1,0 +1,50 @@
+{
+ "run_s": 207,
+ "chunks": {
+  "speech": 188,
+  "idle": 30
+ },
+ "step_ms": {
+  "median": 400.9,
+  "p95": 447.1,
+  "max": 661.7
+ },
+ "gen_fps_median": 59.9,
+ "jpeg_ms_median": 34.3,
+ "utterances": 3,
+ "first_audio_to_chunk_sent_ms": {
+  "median": 1236.6,
+  "min": 1229.0,
+  "max": 1249.9
+ },
+ "first_audio_to_frame_on_screen_ms": {
+  "n": 3,
+  "median": 1391.0,
+  "min": 1374,
+  "max": 1440
+ },
+ "display_fps_median": 25.0,
+ "frames": {
+  "drawn": 5174,
+  "skipped": 0
+ },
+ "underruns": 4,
+ "frame_lateness_ms": {
+  "mean": 11.58,
+  "first_30s": 10.49,
+  "last_30s": 12.65,
+  "max": 21.45,
+  "slope_ms_per_min": 0.221
+ },
+ "queued_s": {
+  "median": 0.6,
+  "max": 1.271
+ },
+ "output_latency_ms": 40,
+ "tab_hidden": false,
+ "vram_mib": {
+  "before_start": 1728,
+  "peak": 8239,
+  "delta": 6511
+ }
+}

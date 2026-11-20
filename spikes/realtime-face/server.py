@@ -1,0 +1,269 @@
+"""Real-time talking face server (spike).
+
+  PCM in  : TCP 127.0.0.1:17661, raw mono s16le at --input-rate (default 16000). No framing.
+            Closing the connection, or 250 ms without data, ends the utterance.
+  Browser : http://127.0.0.1:17660/  (WebSocket /ws carries audio + JPEG frames per 0.96 s chunk)
+  Control : POST /flush (barge-in: drop everything queued), GET /stats
+
+The model works in fixed steps of 24 frames = 0.96 s of audio, so that is the unit everywhere.
+"""
+import argparse
+import asyncio
+import json
+import struct
+import subprocess
+import threading
+import time
+from pathlib import Path
+
+import cv2
+import numpy as np
+from aiohttp import web, WSMsgType, ClientSession
+from scipy.signal import resample_poly
+
+import engine as E
+
+ap = argparse.ArgumentParser()
+ap.add_argument("--image", default=str(E.UPSTREAM / "examples" / "girl.png"))
+ap.add_argument("--input-rate", type=int, default=16000, help="sample rate of the PCM socket (48000 for the voice spike)")
+ap.add_argument("--http-port", type=int, default=17660)
+ap.add_argument("--pcm-port", type=int, default=17661)
+ap.add_argument("--tap", default=None, help="also subscribe to the voice spike's WebSocket tap, e.g. ws://127.0.0.1:17650/tap")
+ap.add_argument("--no-idle", action="store_true", help="do not generate silent 'listening' motion between utterances")
+ap.add_argument("--max-lead", type=float, default=3.0, help="stop generating when this many seconds are already queued for playback")
+ap.add_argument("--compile", action="store_true")
+ap.add_argument("--jpeg-quality", type=int, default=85)
+ap.add_argument("--log", default=None, help="append one JSON line per chunk and per browser report")
+args = ap.parse_args()
+
+CHUNK_S = E.CHUNK_FRAMES / E.FPS
+IN_CHUNK = args.input_rate * E.CHUNK_FRAMES // E.FPS  # input samples per model step
+assert IN_CHUNK * E.FPS == args.input_rate * E.CHUNK_FRAMES, "input rate must give a whole number of samples per 0.96 s"
+IDLE_LEAD_S = 0.7      # generate an idle chunk when less than this is queued in the browser
+END_OF_UTTERANCE_S = 0.25
+
+lock = threading.Lock()
+wake = threading.Event()
+pcm_in = np.zeros(0, dtype=np.int16)   # audio waiting to be turned into frames
+last_rx = 0.0                           # when PCM last arrived
+utter_t0 = None                         # arrival time of the first sample of an utterance, until its first chunk is taken
+in_utterance = False
+flush_gen = 0                           # bumped by /flush; a step started before the bump is discarded
+play_head = 0.0                         # wall-clock time at which everything sent so far has finished playing
+clients = set()
+loop = None
+log_f = open(args.log, "a") if args.log else None
+stats = {"chunks": 0, "speech_chunks": 0, "idle_chunks": 0, "step_ms": [], "first_frame_ms": [], "vram_mib": [],
+         "browser": []}
+
+
+def log(obj):
+    if log_f:
+        log_f.write(json.dumps(obj) + "\n")
+        log_f.flush()
+
+
+def feed(samples):
+    """Thread-safe: append int16 mono samples at args.input_rate."""
+    global pcm_in, last_rx, utter_t0, in_utterance
+    with lock:
+        if not in_utterance:
+            in_utterance, utter_t0 = True, time.time()
+        pcm_in = np.concatenate([pcm_in, samples])
+        last_rx = time.time()
+    wake.set()
+
+
+def flush():
+    global pcm_in, utter_t0, in_utterance, flush_gen, play_head
+    with lock:
+        pcm_in = np.zeros(0, dtype=np.int16)
+        utter_t0, in_utterance = None, False
+        flush_gen += 1
+        play_head = 0.0
+    broadcast(json.dumps({"type": "flush"}))
+
+
+def broadcast(msg):
+    async def _send():
+        for ws in list(clients):
+            try:
+                await (ws.send_bytes(msg) if isinstance(msg, bytes) else ws.send_str(msg))
+            except Exception:
+                clients.discard(ws)
+    if loop:
+        asyncio.run_coroutine_threadsafe(_send(), loop)
+
+
+def take_chunk():
+    """Returns (int16 chunk at input rate, kind, t0) or None if there is nothing to do yet."""
+    global pcm_in, utter_t0, in_utterance
+    now = time.time()
+    with lock:
+        queued = play_head - now
+        if queued > args.max_lead:
+            return None
+        if len(pcm_in) >= IN_CHUNK:
+            chunk, pcm_in = pcm_in[:IN_CHUNK], pcm_in[IN_CHUNK:]
+            t0, utter_t0 = utter_t0, None
+            return chunk, "speech", t0
+        if in_utterance and now - last_rx > END_OF_UTTERANCE_S:
+            in_utterance = False
+            if len(pcm_in):
+                chunk = np.concatenate([pcm_in, np.zeros(IN_CHUNK - len(pcm_in), dtype=np.int16)])
+                pcm_in = np.zeros(0, dtype=np.int16)
+                t0, utter_t0 = utter_t0, None
+                return chunk, "speech", t0
+        if not args.no_idle and clients and len(pcm_in) == 0 and queued < IDLE_LEAD_S:
+            return np.zeros(IN_CHUNK, dtype=np.int16), "idle", None
+    return None
+
+
+def engine_thread():
+    global play_head
+    eng = E.FaceEngine(compile_model=args.compile, compile_vae=args.compile)
+    eng.set_image(args.image)
+    for _ in range(2):  # warm-up: the first step is ~1.5 s slower (cuDNN autotune, allocator)
+        eng.step(np.zeros(E.CHUNK_SAMPLES, dtype=np.float32))
+    eng.reset()
+    print(f"ready: model loaded in {eng.load_s:.1f}s, http://127.0.0.1:{args.http_port}/  pcm tcp :{args.pcm_port} "
+          f"({args.input_rate} Hz s16le mono)", flush=True)
+    enc = [cv2.IMWRITE_JPEG_QUALITY, args.jpeg_quality]
+    seq = 0
+    while True:
+        job = take_chunk()
+        if job is None:
+            wake.wait(0.02)
+            wake.clear()
+            continue
+        chunk, kind, t0 = job
+        gen = flush_gen
+        t_start = time.time()
+        f32 = chunk.astype(np.float32) / 32768.0
+        if args.input_rate != E.SAMPLE_RATE:
+            f32 = resample_poly(f32, E.SAMPLE_RATE, args.input_rate).astype(np.float32)
+        frames = eng.step(f32)
+        t_gen = time.time()
+        jpegs = [cv2.imencode(".jpg", cv2.cvtColor(f, cv2.COLOR_RGB2BGR), enc)[1].tobytes() for f in frames]
+        if gen != flush_gen:
+            continue  # barge-in happened while this was generating
+        t_send = time.time()
+        with lock:
+            play_head = max(play_head, t_send) + CHUNK_S
+        head = json.dumps({"type": "chunk", "seq": seq, "kind": kind, "rate": args.input_rate, "fps": E.FPS,
+                           "samples": len(chunk), "frames": [len(j) for j in jpegs],
+                           "t_audio0": t0, "t_send": t_send}).encode()
+        broadcast(struct.pack("<I", len(head)) + head + chunk.tobytes() + b"".join(jpegs))
+        rec = {"ev": "chunk", "seq": seq, "kind": kind, "step_ms": round((t_gen - t_start) * 1000, 1),
+               "jpeg_ms": round((t_send - t_gen) * 1000, 1), "t": t_send}
+        if t0 is not None:
+            rec["audio_to_send_ms"] = round((t_send - t0) * 1000, 1)
+            stats["first_frame_ms"].append(rec["audio_to_send_ms"])
+        stats["chunks"] += 1
+        stats[kind + "_chunks"] += 1
+        stats["step_ms"] = (stats["step_ms"] + [rec["step_ms"]])[-500:]
+        log(rec)
+        seq += 1
+
+
+def vram_thread():
+    while True:
+        try:
+            out = subprocess.run(["nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits"],
+                                 capture_output=True, text=True, timeout=5).stdout.strip()
+            stats["vram_mib"] = (stats["vram_mib"] + [int(out.splitlines()[0])])[-3600:]
+            log({"ev": "vram", "mib": stats["vram_mib"][-1], "t": time.time()})
+        except Exception:
+            pass
+        time.sleep(1)
+
+
+async def pcm_client(reader, writer):
+    odd = b""
+    try:
+        while data := await reader.read(65536):
+            data = odd + data
+            n = len(data) // 2 * 2
+            odd = data[n:]
+            feed(np.frombuffer(data[:n], dtype="<i2"))
+    finally:
+        writer.close()
+
+
+async def tap_client(url):
+    """Subscribe to the voice spike's tap: binary = PCM, text = JSON events (flush = barge-in)."""
+    while True:
+        try:
+            async with ClientSession() as s, s.ws_connect(url, max_msg_size=0) as ws:
+                print("tap connected:", url, flush=True)
+                async for m in ws:
+                    if m.type == WSMsgType.BINARY:
+                        feed(np.frombuffer(m.data[: len(m.data) // 2 * 2], dtype="<i2"))
+                    elif m.type == WSMsgType.TEXT:
+                        ev = json.loads(m.data)
+                        if ev.get("type") == "flush":
+                            flush()
+                        elif ev.get("type") == "format" and ev.get("sample_rate", args.input_rate) != args.input_rate:
+                            print(f"WARNING: tap is {ev.get('sample_rate')} Hz but --input-rate is {args.input_rate}", flush=True)
+        except Exception as e:
+            print("tap:", e, flush=True)
+        await asyncio.sleep(2)
+
+
+async def ws_handler(request):
+    ws = web.WebSocketResponse(max_msg_size=0)
+    await ws.prepare(request)
+    clients.add(ws)
+    wake.set()
+    try:
+        async for m in ws:
+            if m.type == WSMsgType.TEXT:
+                rep = json.loads(m.data)
+                rep["ev"] = "browser"
+                stats["browser"] = (stats["browser"] + [rep])[-3600:]
+                log(rep)
+    finally:
+        clients.discard(ws)
+    return ws
+
+
+async def flush_handler(_request):
+    flush()
+    return web.json_response({"ok": True})
+
+
+async def stats_handler(_request):
+    s = stats["step_ms"]
+    v = stats["vram_mib"]
+    return web.json_response({
+        "chunks": stats["chunks"], "speech_chunks": stats["speech_chunks"], "idle_chunks": stats["idle_chunks"],
+        "step_ms_median": float(np.median(s)) if s else None,
+        "gen_fps": E.CHUNK_FRAMES / (float(np.median(s)) / 1000) if s else None,
+        "audio_to_send_ms": stats["first_frame_ms"][-20:],
+        "vram_mib_now": v[-1] if v else None, "vram_mib_peak": max(v) if v else None,
+        "browser_last": stats["browser"][-1] if stats["browser"] else None,
+    })
+
+
+async def index(_request):
+    return web.FileResponse(Path(__file__).parent / "web" / "index.html")
+
+
+async def main():
+    global loop
+    loop = asyncio.get_running_loop()
+    threading.Thread(target=vram_thread, daemon=True).start()
+    threading.Thread(target=engine_thread, daemon=True).start()
+    await asyncio.start_server(pcm_client, "127.0.0.1", args.pcm_port)
+    if args.tap:
+        asyncio.create_task(tap_client(args.tap))
+    app = web.Application()
+    app.add_routes([web.get("/", index), web.get("/ws", ws_handler), web.post("/flush", flush_handler),
+                    web.get("/stats", stats_handler)])
+    runner = web.AppRunner(app)
+    await runner.setup()
+    await web.TCPSite(runner, "127.0.0.1", args.http_port).start()
+    await asyncio.Event().wait()
+
+
+asyncio.run(main())

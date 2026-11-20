@@ -126,7 +126,10 @@ function AppShell() {
         // the player strip, and the page scrolls inside it, so the panel's
         // rounded bottom edge always sits just above the player.
         className={`bg-background text-foreground min-w-0 md:h-(--panel-h)${
-          fullBleed ? " max-md:h-[calc(100svh-3.5rem-var(--dock-h,0px))] overflow-hidden" : " md:overflow-y-auto"
+          fullBleed
+            ? // The Studio's own panels are the shell's panels here: the page
+              // panel has no fill, frame or padding of its own around them.
+              " max-md:h-[calc(100svh-3.5rem-var(--dock-h,0px))] overflow-hidden md:!bg-transparent md:!ring-0" : " md:overflow-y-auto"
         }`}
       >
         {/* The full-bleed column is a flex column with `min-h-0`, which is
@@ -139,7 +142,7 @@ function AppShell() {
         <main
           className={
             fullBleed
-              ? "flex w-full min-h-0 min-w-0 flex-1 flex-col px-4 py-6"
+              ? "flex w-full min-h-0 min-w-0 flex-1 flex-col px-4 py-6 md:p-0"
               : "w-full flex-1 px-6 py-6 [&_p]:max-w-prose"
           }
         >

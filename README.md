@@ -41,18 +41,23 @@ Everything stays in one SQLite file and a folder of WAVs under `~/.mirli`.
 Profiles give you several libraries in one install, one per game or client,
 switched from the header without a restart; the models are shared.
 
-<details>
-<summary><b>Screenshots</b> · studio, music, SFX, Voice Lab, models</summary>
-<br>
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="site/public/product/app-dashboard-light.webp">
+  <img src="site/public/product/app-dashboard.webp" alt="The Mirli dashboard: a sidebar of icons, Studio, Music and SFX shortcuts, a shelf of tag tiles and a list of recent sounds with licence badges, models and lengths" width="880">
+</picture>
 
-<img src="site/public/product/studio.png" alt="The Mirli studio: a script cast across three speakers above a multi-track timeline holding the spoken lines, an ambient music bed and sound effects, with the library panel on the right" width="880">
+<details>
+<summary><b>More screenshots</b> · library, create, details, voices</summary>
+<br>
 
 | | |
 |---|---|
-| <img src="site/public/product/music-studio.png" alt="The Music page: a request form with model, licence, styles, tempo, key and length beside a shelf of generated takes"> | <img src="site/public/product/sfx.png" alt="The SFX library with waveforms, models and seeds, and the prompt composer"> |
-| **Music.** A style prompt or a lyric sheet in, a shelf of takes out. | **Sound effects.** Every take kept with its prompt, model and seed. |
-| <img src="site/public/product/voice-lab.png" alt="The Voice Lab: saved voices as cards, cloned from a clip or built into a model"> | <img src="site/public/product/models.png" alt="The Models page: each model with its licence badge, size and install state"> |
-| **Voice Lab.** Clone a voice, then cast it onto script lines. | **Models.** Licence and VRAM shown before you download. |
+| <img src="site/public/product/app-library.webp" alt="The Library: kind tabs, a search box with filter pills, eight sounds with their tags, licence and model, and the bottom player playing Door slam 01"> | <img src="site/public/product/app-create-music.webp" alt="The Create panel on its Music tab, with model, lyrics switch, styles, tempo and a Create button, beside the list of tracks"> |
+| **Library.** Every take in one list, with the player along the bottom. | **Create.** Music, SFX and Speech tabs beside the track list. |
+| <img src="site/public/product/app-details.webp" alt="The details panel docked on the right of the Library: a waveform for Rain on tin roof with trim tools and its generation settings: model, prompt, seed, steps and duration"> | <img src="site/public/product/app-voice-lab.webp" alt="Voice Lab: your voices as cards, a table of all voices with kind and model, and a panel for comparing voices on one line"> |
+| **Details.** Waveform, edits and the exact settings that made it. | **Voice Lab.** Your voices, and a side-by-side compare. |
+| <img src="site/public/product/app-voice-new.webp" alt="Voice creation: three cards, Clone from clips, Built-in voice from a model, and Import a voice file"> | <img src="site/public/product/app-voice-clone.webp" alt="Clone a voice: an upload or record area for up to five clips, a clip timer, and name, model and notes fields"> |
+| **New voice.** Clone it, pick a built-in, or import one. | **Clone.** Up to five clips of one speaker, recorded or uploaded. |
 
 </details>
 

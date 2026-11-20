@@ -6,6 +6,9 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **New screenshots.** The README and the mirli.app home page show the 0.6.0 redesign: the dashboard, the library with the player, the Create panel, the docked details panel, Voice Lab and the voice clone page.
+
 ## [0.6.0] - 2026-11-20
 
 ### Added

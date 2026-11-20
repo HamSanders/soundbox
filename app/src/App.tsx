@@ -49,6 +49,8 @@ const ModelsPage = lazy(() => import("@/routes/models").then((m) => ({ default: 
 const AgentsPage = lazy(() => import("@/routes/agents").then((m) => ({ default: m.AgentsPage })));
 const SettingsPage = lazy(() => import("@/routes/settings").then((m) => ({ default: m.SettingsPage })));
 const ActivityPage = lazy(() => import("@/routes/activity").then((m) => ({ default: m.ActivityPage })));
+const AudiobooksPage = lazy(() => import("@/routes/audiobooks").then((m) => ({ default: m.AudiobooksPage }))); // [audiobooks:core]
+const AudiobookPage = lazy(() => import("@/routes/audiobook").then((m) => ({ default: m.AudiobookPage }))); // [audiobooks:core]
 const SoundDetailPage = lazy(() => import("@/routes/sound-detail").then((m) => ({ default: m.SoundDetailPage })));
 
 const queryClient = new QueryClient({
@@ -78,7 +80,7 @@ function ScrollToTop() {
  *  for reading and for grids, but an editor with a timeline beside it wants
  *  every pixel — capping it at 1152px wastes half a wide monitor. */
 function isFullBleed(pathname: string): boolean {
-  return pathname.startsWith("/studio/");
+  return pathname.startsWith("/studio/") || pathname.startsWith("/audiobooks/"); // [audiobooks:core]
 }
 
 /** The app shell: sidebar, header, and the routes that live inside them. */
@@ -193,6 +195,8 @@ function AppShell() {
             <Route path="/library/music" element={<LibraryPage category="music" />} />
             <Route path="/library/speech" element={<SpeechLibraryPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/audiobooks" element={<AudiobooksPage />} /> {/* [audiobooks:core] */}
+            <Route path="/audiobooks/:id" element={<AudiobookPage />} /> {/* [audiobooks:core] */}
             <Route path="/sounds/:id" element={<SoundDetailPage />} />
             <Route path="/models" element={<ModelsPage />} />
             <Route path="/agents" element={<AgentsPage />} />

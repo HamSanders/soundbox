@@ -254,3 +254,9 @@ export const CHAPTER_KIND_LABELS: Record<ChapterKind, string> = {
   closing_credits: "Closing credits",
   retail_sample: "Retail sample",
 };
+
+/** Percent of a book's paragraphs that have a take. */
+export function bookProgress(book: { stats: Pick<BookStats, "paragraphs" | "voiced"> }): number {
+  const { paragraphs, voiced } = book.stats;
+  return paragraphs === 0 ? 0 : Math.round((voiced / paragraphs) * 100);
+}

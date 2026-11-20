@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { BookOpenIcon, FileUpIcon, PlusIcon, SearchIcon } from "lucide-react";
 
 import { ImportWizard } from "@/components/audiobook/import";
-import { BookCard, bookProgress } from "@/components/audiobook/shelf/book-card";
+import { BookCard } from "@/components/audiobook/shelf/book-card";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { BookSummary } from "@/lib/audiobook-api";
+import { bookProgress, type BookSummary } from "@/lib/audiobook-api";
 import { useBooks, useCreateBook, useDeleteBook } from "@/lib/audiobook-queries";
 import { formatDuration } from "@/lib/format";
 
@@ -40,7 +40,7 @@ export function AudiobooksPage() {
   const [importing, setImporting] = useState(false);
   const [doomed, setDoomed] = useState<BookSummary | null>(null);
 
-  const all = books.data ?? [];
+  const all = useMemo(() => books.data ?? [], [books.data]);
   const counts = useMemo(() => {
     const done = all.filter((b) => b.stats.paragraphs > 0 && bookProgress(b) === 100).length;
     return { all: all.length, done, progress: all.length - done };

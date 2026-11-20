@@ -10,15 +10,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { BookSummary } from "@/lib/audiobook-api";
+import { bookProgress, type BookSummary } from "@/lib/audiobook-api";
 import { formatDuration, formatRelative } from "@/lib/format";
 
 import { BookCover } from "./book-cover";
-
-export function bookProgress(book: Pick<BookSummary, "stats">): number {
-  const { paragraphs, voiced } = book.stats;
-  return paragraphs === 0 ? 0 : Math.round((voiced / paragraphs) * 100);
-}
 
 export function BookCard({
   book,

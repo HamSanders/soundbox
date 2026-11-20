@@ -19,7 +19,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { buildApp } from "../src/app.js";
 import * as dsp from "../src/audio/dsp.js";
 import { Config } from "../src/config.js";
-import { transcriptFrom } from "../src/models/audiocpp.js";
+import { asrLanguage, transcriptFrom } from "../src/models/audiocpp.js";
 
 const ASR_ID = "audiocpp-qwen3-asr-0-6b";
 
@@ -168,5 +168,16 @@ describe("transcriptFrom", () => {
   it("prefers the runtime's own language and reads one from segments", () => {
     expect(transcriptFrom("Hi", "fr", null).language).toBe("fr");
     expect(transcriptFrom("Hi", null, { segments: [{ language: "de" }] }).language).toBe("de");
+  });
+});
+
+describe("asrLanguage", () => {
+  it("maps codes and names to a constant code, and refuses anything else", () => {
+    expect(asrLanguage(null)).toBeNull();
+    expect(asrLanguage("  ")).toBeNull();
+    expect(asrLanguage("EN")).toBe("en");
+    expect(asrLanguage("English")).toBe("en");
+    expect(() => asrLanguage("en --out x")).toThrow(/not a supported/);
+    expect(() => asrLanguage("constructor")).toThrow(/not a supported/);
   });
 });

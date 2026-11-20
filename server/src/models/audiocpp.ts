@@ -2135,12 +2135,9 @@ export class AudioCppModel {
     if (!this.loaded) await this.load();
     const weights = this.model!;
     const { progress } = options;
-    // A language name or code only ("English", "en", "zh-CN"): it ends up on
-    // the audiocpp_cli command line, so nothing else gets through.
-    const language = options.language?.trim() || null;
-    if (language !== null && !/^[A-Za-z][A-Za-z _-]{0,31}$/.test(language)) {
-      throw new ModelError(`"${language}" is not a language name or code.`);
-    }
+    // The hint ends up on the audiocpp_cli command line, so what goes there is
+    // a constant from ASR_LANGUAGES, never the caller's own string.
+    const language = asrLanguage(options.language);
 
     const body: Record<string, unknown> = { task: "asr", audio: wavPath };
     if (language) body["language"] = language;
@@ -2436,4 +2433,35 @@ function findLanguage(value: unknown, depth = 0): string | null {
     if (f) return f;
   }
   return null;
+}
+
+/**
+ * Language hints a transcription may carry, keyed by what a caller may send
+ * (an ISO 639-1 code or the English name, any case) and valued by the code
+ * passed to audio.cpp. The codes are Qwen3-ASR's own list, from audio.cpp's
+ * `model_specs/qwen3_asr.json`. A lookup table rather than a pattern so the
+ * argv only ever holds one of these literals.
+ */
+const ASR_LANGUAGES: Readonly<Record<string, string>> = Object.freeze({
+  zh: "zh", chinese: "zh", en: "en", english: "en", yue: "yue", cantonese: "yue",
+  ar: "ar", arabic: "ar", de: "de", german: "de", fr: "fr", french: "fr",
+  es: "es", spanish: "es", pt: "pt", portuguese: "pt", id: "id", indonesian: "id",
+  it: "it", italian: "it", ko: "ko", korean: "ko", ru: "ru", russian: "ru",
+  th: "th", thai: "th", vi: "vi", vietnamese: "vi", ja: "ja", japanese: "ja",
+  tr: "tr", turkish: "tr", hi: "hi", hindi: "hi", ms: "ms", malay: "ms",
+  nl: "nl", dutch: "nl", sv: "sv", swedish: "sv", da: "da", danish: "da",
+  fi: "fi", finnish: "fi", pl: "pl", polish: "pl", cs: "cs", czech: "cs",
+  fil: "fil", filipino: "fil", fa: "fa", persian: "fa", el: "el", greek: "el",
+  hu: "hu", hungarian: "hu", mk: "mk", macedonian: "mk", ro: "ro", romanian: "ro",
+});
+
+/** The audio.cpp language code for a caller's hint, or null for none.
+ *  Throws for a hint that is not on the list. Exported for tests. */
+export function asrLanguage(hint: string | null | undefined): string | null {
+  const key = hint?.trim().toLowerCase() ?? "";
+  if (key === "") return null;
+  if (!Object.prototype.hasOwnProperty.call(ASR_LANGUAGES, key)) {
+    throw new ModelError(`"${hint}" is not a supported transcription language.`);
+  }
+  return ASR_LANGUAGES[key]!;
 }

@@ -314,7 +314,7 @@ describe.skipIf(!HAS_FFMPEG)("real encodes (ffmpeg present)", () => {
 describe("lane mixdown", () => {
   it("summing lane buffers equals mixTimeline on overlapping mono and stereo clips", async () => {
     const { mixTimeline } = await import("../src/audio/dsp.js");
-    const { layLanes, sumLanes } = await import("../src/service.js");
+    const { layLanes, sumLanes } = await import("../src/audiobook/export-mix.js");
     const a = new Float32Array(1000).map((_, i) => 0.6 * Math.sin(i / 9));
     const b = new Float32Array(800).map((_, i) => 0.7 * Math.sin(i / 4));
     const placed = [
@@ -330,5 +330,72 @@ describe("lane mixdown", () => {
       for (let i = 0; i < ref[c].length; i++) expect(got[c][i]).toBeCloseTo(ref[c][i], 5);
     }
     expect(layLanes(placed, 10_000).size).toBe(2);
+  });
+});
+
+describe("fast WAV decoding", () => {
+  it("matches wavefile sample for sample on every PCM and float depth", async () => {
+    const { WaveFile } = await import("wavefile");
+    const { decodeWavFast } = await import("../src/audiobook/export-mix.js");
+    const rand = (await import("../src/audio/master.js")).prng(4);
+    const n = 3000;
+    const left = Array.from({ length: n }, () => rand() * 2 - 1);
+    const right = Array.from({ length: n }, () => rand() * 2 - 1);
+    for (const bits of ["8", "16", "24", "32", "32f", "64"]) {
+      for (const layout of [[left], [left, right]]) {
+        const w = new WaveFile();
+        w.fromScratch(layout.length, 22_050, "32f", layout.length === 1 ? layout[0] : layout);
+        w.toBitDepth(bits);
+        const bytes = Buffer.from(w.toBuffer());
+        const ref = decodeWav(bytes);
+        const got = decodeWavFast(bytes);
+        expect(got.sampleRate).toBe(22_050);
+        expect(got.audio.length).toBe(ref.audio.length);
+        for (let c = 0; c < ref.audio.length; c++) {
+          expect(got.audio[c].length).toBe(ref.audio[c].length);
+          for (let i = 0; i < n; i++) if (got.audio[c][i] !== ref.audio[c][i]) throw new Error(`${bits}-bit ch${c}[${i}]: ${got.audio[c][i]} vs ${ref.audio[c][i]}`);
+        }
+      }
+    }
+  });
+});
+
+describe("planSplit", () => {
+  const paras = (n: number, len: number, headingAt: number[] = []) =>
+    Array.from({ length: n }, (_, i) => ({ start_s: i * (len + 1), end_s: i * (len + 1) + len, is_heading: headingAt.includes(i) }));
+
+  it("leaves a chapter under the limit alone", async () => {
+    const { planSplit } = await import("../src/audiobook/export-split.js");
+    expect(planSplit(paras(10, 9), 100, 7000)).toEqual([]);
+  });
+
+  it("cuts in a gap before the last paragraph that fits, or at a heading", async () => {
+    const { planSplit } = await import("../src/audiobook/export-split.js");
+    const p = paras(30, 9); // 300 s
+    const plain = planSplit(p, 300, 120);
+    expect(plain.length).toBe(2);
+    expect(plain.every((c) => !c.header)).toBe(true);
+    expect(plain[0].at_s).toBe(119.5); // gap between 110-119 and 120-129
+    const withHeading = planSplit(paras(30, 9, [8]), 300, 120);
+    expect(withHeading[0]).toEqual({ at_s: 79.5, header: true });
+    // Every part fits.
+    const bounds = [0, ...withHeading.map((c) => c.at_s), 300];
+    for (let i = 1; i < bounds.length; i++) expect(bounds[i] - bounds[i - 1]).toBeLessThanOrEqual(120);
+  });
+
+  it("flags parts that start without a header", async () => {
+    const { splitChecks } = await import("../src/audiobook/export-qc.js");
+    const checks = splitChecks(
+      [{ id: "max_length", pass: false, message: "" }],
+      [
+        { duration_s: 7000, header: true, from_s: 0 },
+        { duration_s: 4000, header: false, from_s: 7000 },
+      ],
+      "Chapter Twelve",
+    );
+    expect(checks.find((c) => c.id === "max_length")!.pass).toBe(true);
+    const h = checks.find((c) => c.id === "secondary_header")!;
+    expect(h.pass).toBe(false);
+    expect(h.message).toContain("Chapter Twelve, continued");
   });
 });

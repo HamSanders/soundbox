@@ -120,3 +120,40 @@ export function checkBook(
 }
 
 export const qcPassed = (qc: ChapterQc[]): boolean => qc.every((c) => c.checks.every((k) => k.pass));
+
+const clock = (s: number) => {
+  const m = Math.floor(s / 60);
+  return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`;
+};
+
+/**
+ * Checks for a chapter the export splits into several files at ACX's
+ * 120-minute limit: `max_length` is judged per file, and `secondary_header`
+ * fails when a later file doesn't open on a heading paragraph.
+ */
+export function splitChecks(
+  checks: QcCheck[],
+  parts: { duration_s: number; header: boolean; from_s: number }[],
+  title: string,
+): QcCheck[] {
+  if (parts.length < 2) return checks;
+  const longest = Math.max(...parts.map((p) => p.duration_s));
+  const out = checks.map((c) =>
+    c.id === "max_length"
+      ? {
+          id: c.id,
+          pass: longest <= ACX.maxMinutes * 60,
+          message: `Split into ${parts.length} files (${parts.map((p) => `${(p.duration_s / 60).toFixed(0)} min`).join(", ")}); at most ${ACX.maxMinutes} min each.`,
+        }
+      : c,
+  );
+  const missing = parts.map((p, i) => ({ ...p, n: i + 1 })).filter((p, i) => i > 0 && !p.header);
+  out.push({
+    id: "secondary_header",
+    pass: missing.length === 0,
+    message: missing.length
+      ? `${missing.map((p) => `Part ${p.n} (from ${clock(p.from_s)})`).join(", ")} starts without a spoken header. Add a heading paragraph such as "${title}, continued" near there and voice it; the export splits at it.`
+      : "Each part starts with a spoken header.",
+  });
+  return out;
+}

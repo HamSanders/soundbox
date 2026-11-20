@@ -383,6 +383,8 @@ export function fitEdges(
   sampleRate: number,
   headS: number,
   tailS: number,
+  /** "tone" fills added frames with room tone instead of zeros. */
+  fill: "zero" | "tone" = "zero",
 ): { audio: Audio; shiftS: number } {
   const frames = frameCount(audio);
   // Speech is found relative to the file's own level (30 dB under its RMS),
@@ -403,9 +405,13 @@ export function fitEdges(
   const padHead = Math.max(0, headWant - headNow);
   const padTail = Math.max(0, tailWant - tailNow);
   const len = padHead + (to - from) + padTail;
+  const headTone = fill === "tone" && padHead ? roomTone(padHead, ROOM_TONE_DB, 21) : null;
+  const tailTone = fill === "tone" && padTail ? roomTone(padTail, ROOM_TONE_DB, 22) : null;
   const out = audio.map((ch) => {
     const o = new Float32Array(len);
+    if (headTone) o.set(headTone, 0);
     o.set(ch.subarray(from, to), padHead);
+    if (tailTone) o.set(tailTone, padHead + (to - from));
     return o;
   });
   return { audio: out, shiftS: (padHead - from) / sampleRate };

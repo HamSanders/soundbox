@@ -91,13 +91,23 @@ export function SettingsPage() {
   }
 
   return (
-    <SettingsLayout hiddenGroups={cloud?.enabled ? [] : ["cloud"]}>
+    <SettingsLayout
+      hiddenGroups={[
+        ...(cloud?.enabled ? [] : ["cloud"]),
+        // Simple setup: nothing about running models on this machine.
+        ...(cloud?.enabled && settings.run_mode === "cloud" ? ["performance", "models", "helpers"] : []),
+      ]}
+    >
       <div className="space-y-8">
         <SoundGroup settings={settings} />
-        <PerformanceGroup settings={settings} />
-        <ModelsGroup settings={settings} />
         {cloud?.enabled && <CloudGroup settings={settings} status={cloud} />}
-        <HelpersGroup settings={settings} />
+        {!(cloud?.enabled && settings.run_mode === "cloud") && (
+          <>
+            <PerformanceGroup settings={settings} />
+            <ModelsGroup settings={settings} />
+          </>
+        )}
+        {!(cloud?.enabled && settings.run_mode === "cloud") && <HelpersGroup settings={settings} />}
         <StorageGroup settings={settings} />
         <InterfaceGroup />
         <PrivacyGroup settings={settings} />
@@ -330,6 +340,17 @@ function CloudGroup({ settings, status }: { settings: Settings; status: CloudSta
       <SettingRow id="cloud-account" stack>
         <CloudAccountPanel status={status} />
       </SettingRow>
+      <SettingRow
+        id="run-mode"
+        htmlFor="run-mode"
+        control={
+          <Switch
+            id="run-mode"
+            checked={settings.run_mode === "cloud"}
+            onCheckedChange={(on) => save("run-mode", { run_mode: on ? "cloud" : "local" })}
+          />
+        }
+      />
       <SettingRow
         id="cloud-cap-call"
         htmlFor="cloud-cap-call"

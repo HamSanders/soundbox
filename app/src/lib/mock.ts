@@ -1058,6 +1058,7 @@ let settings: Settings = {
   image_auto_artwork: false,
   onboarded_at: null,
   update_check: true,
+  run_mode: "local",
 };
 
 function mockUpdateStatus(): UpdateStatus {

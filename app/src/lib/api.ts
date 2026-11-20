@@ -1284,7 +1284,11 @@ export interface Settings {
   cloud_signed_in?: boolean;
   cloud_max_credits_per_call?: number;
   cloud_max_credits_per_day?: number;
+  /** "cloud": the simple setup for people without a usable GPU. */
+  run_mode?: RunMode;
 }
+
+export type RunMode = "local" | "cloud";
 
 /** GET /api/cloud. See Settings → Mirli Cloud. */
 export type CloudSignIn =
@@ -1361,6 +1365,7 @@ export interface SettingsPatch {
   update_check?: boolean;
   cloud_max_credits_per_call?: number;
   cloud_max_credits_per_day?: number;
+  run_mode?: RunMode;
 }
 
 /**

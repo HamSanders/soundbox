@@ -31,6 +31,11 @@ export const SETTINGS_GROUPS: SettingsGroupMeta[] = [
     description: "How you hear audio here, and what every generated file is like.",
   },
   {
+    id: "cloud",
+    title: "Mirli Cloud",
+    description: "Render on Mirli's servers instead of your GPU, paid in credits. Optional.",
+  },
+  {
     id: "performance",
     title: "Performance",
     description: "Where generation runs and how long it holds onto memory.",
@@ -39,11 +44,6 @@ export const SETTINGS_GROUPS: SettingsGroupMeta[] = [
     id: "models",
     title: "Models & engines",
     description: "Where models come from: audio.cpp, your own servers, Hugging Face.",
-  },
-  {
-    id: "cloud",
-    title: "Mirli Cloud",
-    description: "Render on Mirli's servers instead of your GPU, paid in credits. Optional.",
   },
   {
     id: "helpers",
@@ -81,6 +81,13 @@ export const SETTINGS: SettingMeta[] = [
     label: "Account",
     description: "Sign in, see your balance and buy credits.",
     keywords: ["cloud", "credits", "balance", "buy", "sign in", "login", "account", "gpu", "hosted"],
+  },
+  {
+    id: "run-mode",
+    group: "cloud",
+    label: "Simple setup",
+    description: "Lead with Mirli Cloud and hide the settings for running models on this computer.",
+    keywords: ["cloud", "simple", "mode", "local", "gpu", "advanced", "hide"],
   },
   {
     id: "cloud-cap-call",

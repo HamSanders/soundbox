@@ -1291,6 +1291,7 @@ export const settingsPatchSchema = z.object({
   update_check: z.boolean().nullish(),
   cloud_max_credits_per_call: z.number().int().min(1).max(100_000).nullish(),
   cloud_max_credits_per_day: z.number().int().min(1).max(1_000_000).nullish(),
+  run_mode: z.enum(["local", "cloud"]).nullish(),
   // ISO timestamp when first-run setup was finished or skipped. "" clears it,
   // the `sounds_dir` convention — see `Config.updateSettings`.
   onboarded_at: z.string().nullish(),

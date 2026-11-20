@@ -62,9 +62,11 @@ import {
   useGenerate,
   useProjects,
   useSetSessionProject,
+  useSettings,
   useSpeak,
   useVoices,
 } from "@/lib/queries";
+import { pickerModels } from "@/lib/cloud";
 
 /**
  * How long a run should take, from this model's own recent runs.
@@ -252,9 +254,11 @@ export function useGenerateSession({ hotkey = true }: GenerateSessionOptions = {
   // into stems" action, and the Voice studio's convert tab). Allow-list rather
   // than deny-list, so a task added later can't silently fall through to a
   // composer that can't drive it.
+  const { data: settingsForModels } = useSettings();
+  const runMode = settingsForModels?.run_mode;
   const models = useMemo(
-    () => allModels?.filter((e) => e.task === "gen" || e.task === "tts"),
-    [allModels],
+    () => (allModels ? pickerModels(allModels, runMode).filter((e) => e.task === "gen" || e.task === "tts") : undefined),
+    [allModels, runMode],
   );
 
   const sessionId = useSessionStore((s) => s.sessionId);

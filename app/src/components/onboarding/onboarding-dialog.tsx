@@ -40,8 +40,12 @@ import { StepExtras } from "@/components/onboarding/step-extras";
 import { StepIntent } from "@/components/onboarding/step-intent";
 import { StepModels } from "@/components/onboarding/step-models";
 import { StepUsage } from "@/components/onboarding/step-usage";
+import { StepWhere } from "@/components/onboarding/step-where";
+import { suggestedRunMode } from "@/lib/cloud";
+import { CloudAccountPanel } from "@/components/cloud-settings";
 import {
   useAudioCppCatalog,
+  useCloud,
   useHealth,
   useImageEngineInstall,
   useImageModelDownload,
@@ -61,10 +65,11 @@ import {
   type Intent,
   type Usage,
 } from "@/lib/onboarding";
-import { api, type JobRef } from "@/lib/api";
+import { api, type JobRef, type RunMode } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-const STEPS = ["What you make", "Licence", "Models", "Extras"] as const;
+const LOCAL_STEPS = ["What you make", "Licence", "Models", "Extras"] as const;
+type StepName = (typeof LOCAL_STEPS)[number] | "Where it runs" | "Sign in";
 
 /** Resolve when a job reaches a terminal status, so the engine install can be
  *  sequenced ahead of the model download that needs it. Never rejects: a
@@ -96,6 +101,8 @@ export function OnboardingDialog() {
   const { data: catalog } = useAudioCppCatalog();
   const { data: llm } = useLlmStatus();
   const { data: image } = useImageStatus();
+  const { data: cloud } = useCloud();
+  const cloudOn = Boolean(cloud?.enabled);
 
   const update = useUpdateSettings();
   const { download } = useModelAction();
@@ -112,6 +119,18 @@ export function OnboardingDialog() {
   const [assistant, setAssistant] = useState(false);
   const [artwork, setArtwork] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [runMode, setRunMode] = useState<RunMode | null>(null);
+  const mode: RunMode = runMode ?? suggestedRunMode(health);
+
+  // Mirli Cloud on: the first question is where sounds are made, and the
+  // cloud answer replaces every question about this machine with a sign-in.
+  const STEPS: readonly StepName[] = !cloudOn
+    ? LOCAL_STEPS
+    : mode === "cloud"
+      ? ["Where it runs", "Sign in"]
+      : ["Where it runs", ...LOCAL_STEPS];
+  const current = STEPS[Math.min(step, STEPS.length - 1)]!;
+  const local = !cloudOn || mode === "local";
 
   // Opened from the queries rather than held open by them: once it is up, a
   // refetch that flips `shouldOnboard` (the first download landing, say) must
@@ -182,14 +201,17 @@ export function OnboardingDialog() {
   async function close(finish: boolean) {
     setBusy(true);
     try {
-      await update.mutateAsync({ onboarded_at: new Date().toISOString() });
+      await update.mutateAsync({
+        onboarded_at: new Date().toISOString(),
+        ...(cloudOn && finish ? { run_mode: mode } : {}),
+      });
     } catch {
       // The flag failing to save is not a reason to trap someone in the
       // wizard — the worst case is that it opens once more.
     }
     setBusy(false);
     setOpen(false);
-    if (!finish) return;
+    if (!finish || !local) return;
     void runInstalls();
     if (selectedIds.length || assistant || artwork) {
       toast.success("Downloading in the background", {
@@ -202,7 +224,7 @@ export function OnboardingDialog() {
   // Only the first step can block: every later one has a valid default, and
   // a disabled Next with nothing saying why is worse than a step someone
   // clicks straight through.
-  const canAdvance = step > 0 || intents.length > 0;
+  const canAdvance = current !== "What you make" || intents.length > 0;
 
   return (
     <Dialog
@@ -218,7 +240,9 @@ export function OnboardingDialog() {
         <DialogHeader>
           <DialogTitle>Set up Mirli</DialogTitle>
           <DialogDescription>
-            Four questions, then it downloads in the background.
+            {local
+              ? "A few questions, then it downloads in the background."
+              : "Sign in, buy credits when you need them, and start making sounds."}
           </DialogDescription>
         </DialogHeader>
 
@@ -243,9 +267,19 @@ export function OnboardingDialog() {
         </div>
 
         <div className="min-h-64 py-1">
-          {step === 0 && <StepIntent value={intents} onChange={setIntents} />}
-          {step === 1 && <StepUsage value={usage} onChange={setUsage} />}
-          {step === 2 && (
+          {current === "Where it runs" && <StepWhere value={mode} onChange={setRunMode} health={health} />}
+          {current === "Sign in" && cloud && (
+            <div className="space-y-3">
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Sign in to Mirli Cloud in your browser. New accounts start at 0 credits; packs start at $10, and a
+                render that fails is never charged.
+              </p>
+              <CloudAccountPanel status={cloud} />
+            </div>
+          )}
+          {current === "What you make" && <StepIntent value={intents} onChange={setIntents} />}
+          {current === "Licence" && <StepUsage value={usage} onChange={setUsage} />}
+          {current === "Models" && (
             <StepModels
               recommendations={recommendations}
               missing={missing}
@@ -262,7 +296,7 @@ export function OnboardingDialog() {
               onSwap={(intent, id) => setChosen((prev) => ({ ...prev, [intent]: id }))}
             />
           )}
-          {step === 3 && (
+          {current === "Extras" && (
             <StepExtras
               llm={llm}
               image={image}
@@ -290,9 +324,13 @@ export function OnboardingDialog() {
               </Button>
             ) : (
               <Button disabled={busy} onClick={() => void close(true)}>
-                {selectedIds.length || assistant || artwork
-                  ? "Install and start"
-                  : "Start with nothing"}
+                {!local
+                  ? cloud?.signed_in
+                    ? "Start"
+                    : "Start without signing in"
+                  : selectedIds.length || assistant || artwork
+                    ? "Install and start"
+                    : "Start with nothing"}
               </Button>
             )}
           </div>

@@ -138,7 +138,13 @@ export interface SettingsData {
   /** Mirli Cloud caps, enforced here before a request leaves the machine. */
   cloud_max_credits_per_call: number;
   cloud_max_credits_per_day: number;
+  /** "cloud" is the simple setup chosen at first run by people without a
+   *  usable GPU: the pickers lead with Mirli Cloud models and the app hides
+   *  the local-engine settings. "local" is everything, as before. */
+  run_mode: RunMode;
 }
+
+export type RunMode = "local" | "cloud";
 
 const DEFAULT_SETTINGS: SettingsData = {
   output_format: "wav",
@@ -170,6 +176,7 @@ const DEFAULT_SETTINGS: SettingsData = {
   cloud_token: null,
   cloud_max_credits_per_call: 50,
   cloud_max_credits_per_day: 300,
+  run_mode: "local",
 };
 
 /** Every key a client is allowed to set, so an unknown field is ignored rather
@@ -210,6 +217,7 @@ export interface PublicSettings {
   cloud_signed_in: boolean;
   cloud_max_credits_per_call: number;
   cloud_max_credits_per_day: number;
+  run_mode: RunMode;
 }
 
 export class Settings {
@@ -242,6 +250,7 @@ export class Settings {
   cloud_token: string | null = DEFAULT_SETTINGS.cloud_token;
   cloud_max_credits_per_call: number = DEFAULT_SETTINGS.cloud_max_credits_per_call;
   cloud_max_credits_per_day: number = DEFAULT_SETTINGS.cloud_max_credits_per_day;
+  run_mode: RunMode = DEFAULT_SETTINGS.run_mode;
 
   constructor(data: Partial<SettingsData> = {}) {
     Object.assign(this, DEFAULT_SETTINGS, {
@@ -298,6 +307,7 @@ export class Settings {
       cloud_signed_in: Boolean(this.cloud_token),
       cloud_max_credits_per_call: this.cloud_max_credits_per_call,
       cloud_max_credits_per_day: this.cloud_max_credits_per_day,
+      run_mode: this.run_mode,
     };
   }
 
@@ -366,6 +376,7 @@ export class Settings {
       cloud_token: this.cloud_token,
       cloud_max_credits_per_call: this.cloud_max_credits_per_call,
       cloud_max_credits_per_day: this.cloud_max_credits_per_day,
+      run_mode: this.run_mode,
     };
   }
 }

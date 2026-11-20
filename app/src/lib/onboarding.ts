@@ -231,7 +231,9 @@ export function shouldOnboard(
 ): boolean {
   if (!settings || !models) return false;
   if (settings.onboarded_at) return false;
-  return !models.some((m) => m.category !== "utility" && isInstalled(m));
+  // Being signed in to Mirli Cloud makes its models "installed", but that is
+  // not the same as having set this machine up.
+  return !models.some((m) => m.category !== "utility" && m.provider !== "cloud" && isInstalled(m));
 }
 
 /**
@@ -243,13 +245,16 @@ export function shouldOnboard(
  * you have no models, over the top of the three downloads it just started.
  */
 export function needsModelsBanner(
-  settings: { onboarded_at: string | null } | undefined,
+  settings: { onboarded_at: string | null; run_mode?: string } | undefined,
   models: Model[] | undefined,
 ): boolean {
   if (!settings || !models) return false;
   if (!settings.onboarded_at) return false;
+  // In cloud mode, cloud models are the plan; on a local setup they don't
+  // stand in for having downloaded something.
+  const counts = (m: Model) => settings.run_mode === "cloud" || m.provider !== "cloud";
   return !models.some(
-    (m) => m.category !== "utility" && (isInstalled(m) || Boolean(m.active_job_id)),
+    (m) => m.category !== "utility" && counts(m) && (isInstalled(m) || Boolean(m.active_job_id)),
   );
 }
 

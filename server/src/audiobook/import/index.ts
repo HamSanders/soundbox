@@ -16,6 +16,7 @@ import { parsePlainText } from "./plain.js";
 
 export type { ParseOptions } from "./manuscript.js";
 export { DEFAULT_MAX_CHARS } from "./text.js";
+export { splitManuscriptText, type SplitTextOptions } from "./split.js";
 
 export type ManuscriptFormat = "epub" | "pdf" | "docx" | "html" | "markdown" | "text";
 

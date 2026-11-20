@@ -422,11 +422,12 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
               {/* Column heads, md and up: the same grid as a track row. */}
               <div
                 aria-hidden="true"
-                className="label-caps text-muted-foreground border-border mb-1 hidden grid-cols-[3.25rem_2.5rem_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto] gap-x-3 border-b px-2 pb-1.5 @2xl:grid"
+                className="label-caps text-muted-foreground border-border mb-1 hidden grid-cols-[3.25rem_2.5rem_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto] gap-x-3 border-b px-2 pb-1.5 @2xl:grid @4xl:grid-cols-[3.25rem_2.5rem_minmax(0,16rem)_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto]"
               >
                 <span className="text-right">No.</span>
                 <span />
                 <span>Subject</span>
+                <span className="hidden @4xl:block" />
                 <span>Licence</span>
                 <span>Model</span>
                 <span className="text-right">Length</span>

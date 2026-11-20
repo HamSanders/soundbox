@@ -197,13 +197,14 @@ export function MusicStudioPage() {
               ? "Star a track and it joins your collection."
               : q
                 ? "No tracks match that search."
-                : "Describe a track on the left and press Create — every take is saved automatically."}
+                : "Describe a track in the Create panel and press Create — every take is saved automatically."}
         </EmptyState>
       ) : (
-        <div className="grid gap-2">
+        <div className="@container grid">
           {items.map((sound, i) => (
             <SoundCard
               key={sound.id}
+              track
               sound={sound}
               modelName={modelNames.get(sound.model)}
               className="animate-in fade-in-0 slide-in-from-bottom-1 duration-300 fill-mode-both"

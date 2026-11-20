@@ -40,6 +40,8 @@ export function NowPlayingBar() {
   const claim = usePlayerStore((s) => s.play);
   const release = usePlayerStore((s) => s.stop);
   const sinkId = useOutputStore((s) => s.sinkId);
+  const setPosition = usePlayerStore((s) => s.setPosition);
+  const seekRequest = usePlayerStore((s) => s.seekRequest);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
@@ -78,6 +80,24 @@ export function NowPlayingBar() {
     if (a) void applySink(a, sinkId);
   }, [sinkId]);
 
+  // A row's waveform asked to play from a point: jump there and play. Runs
+  // after the load effect above, so a new sound is already on the element;
+  // before its metadata arrives, the jump waits for it.
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a || !sound || !seekRequest || seekRequest.id !== sound.id) return;
+    const go = () => {
+      a.currentTime = seekRequest.t;
+      setTime(seekRequest.t);
+      setPosition(seekRequest.t);
+      claim(sound.id);
+      void a.play().catch(() => setPlaying(false));
+    };
+    if (a.readyState >= 1) go();
+    else a.addEventListener("loadedmetadata", go, { once: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- a new request is the trigger
+  }, [seekRequest]);
+
   // Another player took over: pause, keep the position.
   useEffect(() => {
     if (sound && playingId !== sound.id) audioRef.current?.pause();
@@ -90,7 +110,10 @@ export function NowPlayingBar() {
     let raf = 0;
     const tick = () => {
       const a = audioRef.current;
-      if (a && !dragging.current) setTime(a.currentTime);
+      if (a && !dragging.current) {
+        setTime(a.currentTime);
+        setPosition(a.currentTime);
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -115,6 +138,7 @@ export function NowPlayingBar() {
     setTime(t);
     // Written live: playback carries on from wherever the pointer is.
     a.currentTime = t;
+    setPosition(t);
   };
 
   if (!sound) return null;

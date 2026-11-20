@@ -16,6 +16,7 @@ import { z } from "zod";
 
 import { BED_KINDS, BED_MODES, beds, type BedKind, type BedMode } from "../audiobook/beds.js";
 import { audiobooks } from "../audiobook/service.js";
+import { setAudiobookRoutes } from "../mcp/audiobook.js";
 import type { MirliService } from "../service.js";
 import { HttpError } from "./helpers.js";
 
@@ -62,6 +63,8 @@ export const bedCreateSchema = z
 export const bedPatchSchema = z.object(bedFields);
 
 export function registerAudiobookBeds(app: FastifyInstance, svc: MirliService): void {
+  // The audiobook MCP tools call the audiobook routes through this app.
+  setAudiobookRoutes(svc, app);
   const service = () => beds(svc);
   const requireBook = (id: string) => {
     if (!audiobooks(svc).getBook(id)) throw new HttpError(404, "Book not found");

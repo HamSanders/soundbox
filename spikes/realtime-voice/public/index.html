@@ -68,50 +68,91 @@ header { height: 60px; display: flex; align-items: center; gap: 14px; padding: 0
 header .grow { flex: 1; }
 #themeBtn { height: 32px; width: 32px; padding: 0; justify-content: center; }
 
-/* ---- Lobby --------------------------------------------------------------- */
-#lobby { height: calc(100dvh - 60px); overflow: auto; }
-.lobby-in { max-width: 1080px; margin: 0 auto; padding: 48px 20px 64px; display: grid; gap: 34px; }
-.lobby-head { display: grid; gap: 14px; border-bottom: 1.5px solid var(--ink); padding-bottom: 26px; }
-.lobby-head h1 { margin: 0; font: 800 clamp(56px, 10vw, 128px)/.88 var(--title); letter-spacing: .01em; text-transform: uppercase; }
-.lobby-head h1 i { font-style: normal; color: var(--beak); }
-.lobby-head p { margin: 0; max-width: 58ch; font-size: clamp(16px, 1.7vw, 19px); color: var(--pencil); }
-.section-h { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid var(--rule-strong); padding-bottom: 6px; margin-bottom: 16px; }
-.section-h h2 { margin: 0; font: 700 13px/1.4 var(--log); text-transform: uppercase; letter-spacing: .06em; color: var(--pencil); }
+/* ---- Lobby: a poster, not a form --------------------------------------- */
+#lobby { height: calc(100dvh - 60px); overflow: auto; overflow-x: hidden; }
+.hero { position: relative; min-height: calc(100dvh - 60px); display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+        align-items: center; gap: 24px; padding: 32px max(20px, 4vw) 96px; }
+.hero-copy { position: relative; z-index: 2; display: grid; gap: 22px; align-content: center; }
+.hero h1 { margin: 0; font: 800 clamp(56px, min(11.5vw, 14.5dvh), 188px)/.84 var(--title); letter-spacing: .005em; text-transform: uppercase; }
+.hero h1 span { display: block; }
+.hero h1 .u { position: relative; display: inline-block; }
+.hero h1 .u svg { position: absolute; left: -2%; bottom: -.1em; width: 104%; height: .22em; overflow: visible; color: var(--ink); }
+.hero h1 .u svg path { fill: none; stroke: currentColor; stroke-width: 5; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: pen 1.1s var(--ease) .5s forwards; }
+.hero h1 .u svg circle { fill: var(--beak); transform-box: fill-box; transform-origin: center; transform: scale(0); animation: pop .3s var(--ease) 1.55s forwards; }
+@keyframes pen { to { stroke-dashoffset: 0; } }
+@keyframes pop { to { transform: scale(1); } }
+.hero .sub { margin: 0; max-width: 34ch; font-size: clamp(17px, 1.9vw, 22px); line-height: 1.4; font-weight: 500; }
+.hero .facts { display: flex; flex-wrap: wrap; gap: 8px; }
+.cta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px; }
+#callBtn { height: 64px; padding: 0 30px 0 10px; font-size: 18px; gap: 14px; }
+#callBtn .av { width: 46px; height: 46px; border-radius: 50%; overflow: hidden; background: var(--well); flex: none; }
+#callBtn .av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cta label { display: flex; align-items: center; gap: 10px; }
+
+/* The wall: big portrait cards, tossed on the table. Hover straightens one;
+   click picks it; the picked one carries the beak dot. */
+#faceSection { position: relative; z-index: 1; }
+#faceSection .section-h { display: none; }
+#faceHome .faces { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; transform: rotate(-3deg); }
+#faceHome .face-card { transition: transform .35s var(--ease); }
+#faceHome .face-card:nth-child(3n+1) { transform: rotate(-2.5deg) translateY(10px); }
+#faceHome .face-card:nth-child(3n+2) { transform: rotate(1.5deg) translateY(-14px); }
+#faceHome .face-card:nth-child(3n) { transform: rotate(3deg) translateY(6px); }
+#faceHome .face-card:hover, #faceHome .face-card[aria-pressed="true"] { transform: rotate(0) translateY(-6px) scale(1.04); z-index: 2; }
+#faceHome .face-card .ph { border-radius: 6px; border: 6px solid var(--sheet); outline: 1px solid var(--rule); }
+#faceHome .face-card[aria-pressed="true"] .ph { border-color: var(--ink); outline: none; }
+#faceHome .face-card .cap { padding-left: 2px; }
+#faceHome .face-card:nth-child(n+9) { display: none; }
+#faceHome.all .face-card:nth-child(n+9) { display: grid; }
+#faceHome .face-card.add { display: grid !important; }
+.more { margin-top: 18px; display: flex; gap: 12px; align-items: center; justify-content: flex-end; }
 
 .faces { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 14px; }
-.face-card { display: grid; gap: 8px; padding: 0; border: 0; background: none; cursor: pointer; text-align: left; min-width: 0; }
+.face-card { position: relative; display: grid; gap: 8px; padding: 0; border: 0; background: none; cursor: pointer; text-align: left; min-width: 0; }
 .face-card .ph { position: relative; display: block; aspect-ratio: 1; border-radius: 6px; overflow: hidden; border: 1px solid var(--rule); background: var(--well); }
 .face-card img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s var(--ease), filter .3s; filter: saturate(.92); }
 .face-card:hover img { transform: scale(1.04); filter: none; }
 .face-card .cap { display: flex; align-items: center; gap: 7px; font: 400 13px/1.3 var(--log); color: var(--pencil); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .face-card .cap .dot { display: none; width: 7px; height: 7px; }
-.face-card[aria-pressed="true"] .ph { outline: 2px solid var(--ink); outline-offset: 2px; }
 .face-card[aria-pressed="true"] .cap { color: var(--ink); }
 .face-card[aria-pressed="true"] .cap .dot { display: inline-block; }
 .face-card.busy img { opacity: .45; }
 .face-card.add .ph { display: grid; place-items: center; border-style: dashed; border-color: var(--rule-strong); background: transparent; }
 .face-card.add .ph span { font: 800 44px/1 var(--title); color: var(--pencil); }
 .face-card.add:hover .ph { background: var(--well); }
-#faceHint { min-height: 20px; margin-top: 10px; }
-
-.lobby-foot { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; }
-.lobby-foot label { display: flex; align-items: center; gap: 10px; }
-.lobby-foot .btn.ink { height: 52px; padding: 0 30px; font-size: 16px; }
+#faceHint { min-height: 20px; }
 #notice { min-height: 20px; }
 #notice.err { color: var(--danger); }
+.section-h { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid var(--rule-strong); padding-bottom: 6px; margin-bottom: 16px; }
+.section-h h2 { margin: 0; font: 700 13px/1.4 var(--log); text-transform: uppercase; letter-spacing: .06em; color: var(--pencil); }
+
+/* A ticker of what you can do, typed like log lines. */
+.ticker { position: absolute; left: 0; right: 0; bottom: 0; border-top: 1.5px solid var(--ink); overflow: hidden; height: 48px; display: flex; align-items: center; }
+.ticker div { display: flex; gap: 40px; white-space: nowrap; animation: tick 38s linear infinite; padding-left: 40px; }
+.ticker span { font: 400 14px/1 var(--log); color: var(--pencil); display: inline-flex; align-items: center; gap: 12px; }
+.ticker span::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ink); opacity: .5; }
+@keyframes tick { to { transform: translateX(-50%); } }
+
+@media (max-width: 900px) {
+  .hero { grid-template-columns: minmax(0, 1fr); padding-top: 24px; gap: 40px; }
+  #faceHome .faces { transform: rotate(-2deg); gap: 10px; }
+}
+@media (prefers-reduced-motion: reduce) { .ticker div, .hero h1 .u svg path, .hero h1 .u svg circle { animation: none; stroke-dashoffset: 0; transform: none; } }
 
 /* ---- Call ---------------------------------------------------------------- */
-#call { display: none; height: calc(100dvh - 60px); grid-template-columns: minmax(0, 1fr) minmax(320px, 400px); }
+#call { display: none; height: calc(100dvh - 60px); grid-template-columns: minmax(0, 1fr); }
+body.showlog #call { grid-template-columns: minmax(0, 1fr) minmax(320px, 400px); }
+body:not(.showlog) .chat { display: none; }
 body.live #lobby { display: none; }
 body.live #call { display: grid; }
 .stage { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0; }
-.stage-main { position: relative; display: grid; place-items: center; padding: 28px 24px 12px; min-height: 0; }
-.stage-col { display: grid; justify-items: center; width: 100%; }
+.stage-main { position: relative; display: grid; place-items: center; padding: 20px 24px 8px; min-height: 0; container-type: size; }
+.stage-col { display: grid; justify-items: center; width: 100%; height: 100%; align-content: center; }
 
 /* The video tile: framed like a photograph on a sheet, hairline, 6 px corners.
    The model's soft spots in the mouth are hidden by scale, a hair of blur and a
    fine grain that reads as sensor noise; a slow breathing zoom keeps it alive. */
-.tile { position: relative; width: min(420px, 100%, 56dvh); aspect-ratio: 1; border-radius: 6px; overflow: hidden; border: 1px solid var(--rule); background: var(--well); }
+.tile { position: relative; width: min(100cqw, calc(100cqh - 60px), 900px); aspect-ratio: 1; border-radius: 6px; overflow: hidden; border: 1px solid var(--rule); background: var(--well); }
 .tile canvas, .tile img.still { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; }
 .tile canvas { filter: blur(.3px) contrast(1.03); transform-origin: 50% 40%; animation: breathe 8s ease-in-out infinite; opacity: 0; transition: opacity .4s var(--ease); }
 body.video .tile canvas { opacity: 1; }
@@ -126,11 +167,16 @@ body.video .tile img.still { opacity: 0; }
              background: color-mix(in srgb, var(--paper) 82%, transparent); font: 400 12.5px/1.2 var(--log); color: var(--ink); }
 .tile .tag .dot { width: 7px; height: 7px; display: none; }
 body.speaking .tile .tag .dot { display: inline-block; }
+.tile .cc { position: absolute; left: 50%; bottom: 52px; transform: translateX(-50%); z-index: 1; width: min(92%, 640px); text-align: center; pointer-events: none; }
+.tile .cc div { display: inline; padding: 3px 8px; line-height: 1.75; font-size: clamp(14px, 1.6cqw, 18px); font-weight: 500; color: #f1ece0;
+                background: rgb(20 19 15 / .72); box-decoration-break: clone; -webkit-box-decoration-break: clone; border-radius: 4px; }
+.tile .cc div:empty { display: none; }
+body.showlog .tile .cc { display: none; }
 .tile .nofeed { position: absolute; right: 10px; top: 10px; z-index: 1; background: color-mix(in srgb, var(--paper) 82%, transparent); }
 body.video .tile .nofeed { display: none; }
 
 /* The pen line under the tile: one drawn stroke that moves with the voice. */
-.penline { width: min(420px, 100%); height: 46px; margin-top: 10px; color: var(--ink); display: block; overflow: visible; }
+.penline { width: min(100cqw, calc(100cqh - 60px), 900px); height: 46px; margin-top: 10px; color: var(--ink); display: block; overflow: visible; }
 .penline path { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; opacity: .85; }
 .penline circle { fill: var(--beak); transition: opacity .2s; opacity: 0; }
 body.speaking .penline circle { opacity: 1; }
@@ -189,7 +235,8 @@ td.over { color: var(--rust); font-weight: 700; }
   body { overflow: auto; }
   #call { height: auto; min-height: calc(100dvh - 60px); grid-template-columns: minmax(0, 1fr); }
   .stage-main { padding: 18px 16px 6px; }
-  .tile { width: min(340px, 86vw); }
+  .stage-main { container-type: normal; }
+  .tile, .penline { width: min(560px, 92vw); }
   .chat { border-left: 0; border-top: 1px solid var(--rule); min-height: 60dvh; }
   .hide-sm { display: none; }
   .controls { gap: 8px; }
@@ -214,31 +261,25 @@ td.over { color: var(--rust); font-weight: 700; }
 
 <!-- Before the call -->
 <main id="lobby">
-  <div class="lobby-in">
-    <div class="lobby-head">
+  <section class="hero">
+    <div class="hero-copy">
       <div class="log">No. <span id="callNo">0001</span> · a call · runs on this machine</div>
-      <h1>Call Mirli<i>.</i></h1>
-      <p>Talk and it answers in a Mirli voice. Talk over it and it stops. Type if you'd rather. Use headphones, or it may hear itself.</p>
-    </div>
-
-    <section id="faceSection">
-      <div class="section-h"><h2>Who you're calling</h2><span class="log" id="faceCount"></span></div>
-      <div id="faceHome"><div class="faces" id="faces"></div><div class="log" id="faceHint"></div></div>
-      <input type="file" id="upload" accept="image/*" hidden>
-    </section>
-
-    <section>
-      <div class="section-h"><h2>Voice and start</h2><span class="log">VoxCPM2 · streamed</span></div>
-      <div class="lobby-foot">
+      <h1><span>Pick a face.</span><span class="u">Say hi<svg viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M4 18C60 8 110 26 170 16S290 6 340 18 380 22 392 14"/><circle cx="392" cy="14" r="7"/></svg></span><span>out loud.</span></h1>
+      <p class="sub">A live video call with someone who isn't there. Talk, interrupt, change their face mid-sentence. All on your own GPU.</p>
+      <div class="facts"><span class="pill">&asymp; 0.5 s to answer</span><span class="pill">interrupt any time</span><span class="pill">any photo becomes a face</span><span class="pill">nothing leaves this machine</span></div>
+      <div class="cta">
+        <button class="btn ink" id="callBtn"><span class="av"><img id="ctaFace" alt=""></span><span id="ctaTxt">Start call</span></button>
         <label><span class="log">Voice</span><select class="btn" id="voice"><option value="">VoxCPM2 default</option></select></label>
-        <button class="btn ink" id="callBtn">
-          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3.6 1.5c.5 0 .9.3 1.1.8l.9 2.3c.2.5 0 1-.4 1.3l-1 .8a9 9 0 0 0 5.1 5.1l.8-1c.3-.4.8-.6 1.3-.4l2.3.9c.5.2.8.6.8 1.1V14c0 .8-.7 1.5-1.5 1.5A13 13 0 0 1 .5 3C.5 2.2 1.2 1.5 2 1.5z"/></svg>
-          Start call
-        </button>
-        <span class="log" id="notice"></span>
       </div>
-    </section>
-  </div>
+      <span class="log" id="notice">Use headphones, or it may hear itself.</span>
+    </div>
+    <div id="faceSection">
+      <div class="section-h"><h2>Who you're calling</h2><span class="log" id="faceCount"></span></div>
+      <div id="faceHome"><div class="faces" id="faces"></div><div class="more"><span class="log" id="faceHint"></span><button class="btn" id="moreBtn" hidden>Show all faces</button></div></div>
+      <input type="file" id="upload" accept="image/*" hidden>
+    </div>
+    <div class="ticker" aria-hidden="true"><div id="ticker"></div></div>
+  </section>
 </main>
 
 <!-- The call -->
@@ -250,6 +291,7 @@ td.over { color: var(--rust); font-weight: 700; }
           <img class="still" id="still" alt="">
           <canvas id="face" width="512" height="512"></canvas>
           <span class="tag"><span class="dot"></span><span id="who">Mirli</span></span>
+          <div class="cc"><div id="ccLine"></div></div>
           <span class="pill nofeed" title="The face server is not running, so this is a voice call">voice only</span>
         </div>
         <svg class="penline" viewBox="0 0 420 46" preserveAspectRatio="none" aria-hidden="true"><path id="penPath" d="M2 23 L414 23"/><circle cx="414" cy="23" r="4.5"/></svg>
@@ -267,6 +309,10 @@ td.over { color: var(--rust); font-weight: 700; }
       </button>
       <select class="btn" id="voice2" title="Voice"></select>
       <span class="sep"></span>
+      <button class="btn" id="logBtn" aria-pressed="false">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 4h10M3 8h10M3 12h6"/></svg>
+        Log
+      </button>
       <button class="btn" id="statsBtn" aria-pressed="false">Stats</button>
       <button class="btn end" id="endBtn">
         <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 5.5c2.6 0 5 .8 6.6 2.2.5.4.5 1.1.1 1.5l-1.2 1.2c-.4.4-1 .4-1.4.1l-1.6-1.2c-.3-.2-.4-.5-.4-.8V7.4a9 9 0 0 0-4.2 0v1.1c0 .3-.2.6-.4.8l-1.6 1.2c-.4.3-1 .3-1.4-.1L1.3 9.2c-.4-.4-.4-1.1.1-1.5C3 6.3 5.4 5.5 8 5.5z"/></svg>
@@ -403,13 +449,22 @@ async function loadFaces() {
   add.innerHTML = `<span class="ph"><span>+</span></span><span class="cap">Upload a photo</span>`;
   add.onclick = () => $("upload").click();
   box.append(add);
+  $("moreBtn").hidden = faceList.length < 9;
   showCurrent();
+}
+$("moreBtn").onclick = () => { const all = $("faceHome").classList.toggle("all"); $("moreBtn").textContent = all ? "Show fewer" : "Show all faces"; };
+{
+  const lines = ["say hi", "talk over it and it stops", "type if you'd rather", "upload any photo", "switch faces mid-call", "pick any Mirli voice",
+                 "runs on your GPU", "nothing leaves this machine", "≈ 0.5 s to the first word", "headphones help"];
+  $("ticker").innerHTML = [...lines, ...lines].map((l) => `<span>${l}</span>`).join("");
 }
 const rank = (f) => f.id === "girl" ? 2 : isUpload(f) ? 1 : 0;
 function hideFaces() { $("faceSection").hidden = true; }
 function showCurrent() {
   const f = faceList.find((x) => x.id === currentFace);
   if (!f) return;
+  $("ctaFace").src = faceSrc(f.id);
+  $("ctaTxt").textContent = isUpload(f) || f.id === "girl" ? "Start call" : `Call ${faceName(f)}`;
   $("still").src = faceSrc(f.id);
   $("who").textContent = isUpload(f) || f.id === "girl" ? "Mirli" : faceName(f);
 }
@@ -545,7 +600,11 @@ function reportPlaying(playing) {
 
 // ---- Controls -----------------------------------------------------------------
 $("mute").onclick = () => { muted = !muted; $("mute").setAttribute("aria-pressed", String(muted)); document.body.classList.toggle("muted", muted); };
-$("statsBtn").onclick = () => { const on = !document.body.classList.contains("stats"); document.body.classList.toggle("stats", on); $("statsBtn").setAttribute("aria-pressed", String(on)); };
+// The log column is off by default; captions sit on the video instead.
+const setLog = (on) => { document.body.classList.toggle("showlog", on); $("logBtn").setAttribute("aria-pressed", String(on)); store.set("mirli-call-log", on ? "1" : "0"); };
+setLog(store.get("mirli-call-log") === "1");
+$("logBtn").onclick = () => setLog(!document.body.classList.contains("showlog"));
+$("statsBtn").onclick = () => { if (!document.body.classList.contains("showlog")) setLog(true); const on = !document.body.classList.contains("stats"); document.body.classList.toggle("stats", on); $("statsBtn").setAttribute("aria-pressed", String(on)); };
 $("endBtn").onclick = () => {
   try { ws?.close(); face.ws?.close(); micStream?.getTracks().forEach((t) => t.stop()); ctx?.close(); } catch {}
   location.reload();
@@ -626,6 +685,7 @@ async function onJson(m) {
     setState(m.state);
     if (m.state === "speaking") firstChunkAt = performance.now();
     if (m.state === "idle") botEl?.classList.remove("live");
+    if (m.state === "listening") $("ccLine").textContent = "";
   } else if (m.type === "partial") {
     youEl ??= entry("you", "", "partial");
     setTxt(youEl, m.text);
@@ -640,6 +700,7 @@ async function onJson(m) {
     if (!botEl) { botEl = entry("bot", "", "live"); botText = ""; }
     botText += m.text;
     setTxt(botEl, botText);
+    $("ccLine").textContent = botText.length > 160 ? "…" + botText.slice(-160) : botText;
   } else if (m.type === "flush") {
     player?.port.postMessage("flush");
     faceFlush();

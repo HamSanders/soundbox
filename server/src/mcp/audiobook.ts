@@ -235,7 +235,8 @@ export async function importManuscript(
     });
   }
 
-  const previewId = (preview.preview_id ?? preview.id) as string | undefined;
+  // The preview's own id field; commit takes it back as `preview_id`.
+  const previewId = preview.id as string | undefined;
   if (!previewId) throw new Error("The importer returned no preview id.");
   const settings: Record<string, unknown> = {};
   if (args.model_id) settings.model_id = args.model_id;

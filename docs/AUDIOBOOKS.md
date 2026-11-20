@@ -172,15 +172,19 @@ when it is missing, Mirli says so and how to install it.
 
 ## Listen
 
-**Listen** is a shelf for the books you have made, grouped by genre and
-series, with search and filters. Each book has a detail page with its cover,
-description, length, narrator, table of contents and a preview.
+**Listen** is a shelf for the books you have made: continue listening first,
+then finished books, then a shelf per genre and per series. Search and the
+genre, tag, language and length filters switch to a grid of matches. Each book
+has a detail page with its cover, description, length, narrator, table of
+contents and a preview.
 
 The player has chapters, speeds from 0.25x to 4x, a sleep timer (including
 "end of chapter"), bookmarks with notes, and remembers where you stopped. It
-highlights the paragraph being read, and the word where a local speech
-recognition model has aligned it. You can start from any paragraph. A book can
-also be published as a self-contained web player or a podcast RSS feed.
+highlights the paragraph being read and the current word: aligned timings
+where they exist, otherwise estimated from the paragraph's timing. Tap any
+voiced paragraph to play from there. A book can also be published as a
+self-contained web player or a podcast RSS feed, with a checklist of what each
+store needs.
 
 ## Compared with ElevenLabs
 

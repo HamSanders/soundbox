@@ -10,6 +10,8 @@
  * Events
  *   hub                                       AudiobookHub: publish(bookId, event), subscribe
  *   onDelete(cb)                              cleanup before a book's or chapter's stories go
+ *   onDuplicate(cb)                           after duplicateBook, with old->new chapter and segment
+ *                                             id maps, so a module can copy its own rows (beds)
  *
  * Books
  *   listBooks(): BookSummary[]
@@ -201,6 +203,15 @@ export interface SnapshotDiff {
   summary: { added: number; removed: number; changed: number };
 }
 
+export interface DuplicateScope {
+  from_book_id: string;
+  to_book_id: string;
+  /** Original chapter id -> copy's chapter id. */
+  chapters: Map<string, string>;
+  /** Original segment id -> copy's segment id, every track. */
+  segments: Map<string, string>;
+}
+
 export type DeleteScope = { book_id: string; chapter_ids: string[]; story_ids: string[] };
 
 const NARRATOR_SPEAKER = "Narrator";
@@ -251,6 +262,7 @@ export function replacePattern(req: ReplaceRequest): RegExp {
 export class AudiobookService {
   readonly hub = new AudiobookHub();
   private readonly deleteHooks: ((scope: DeleteScope) => void | Promise<void>)[] = [];
+  private readonly duplicateHooks: ((scope: DuplicateScope) => void | Promise<void>)[] = [];
 
   constructor(private readonly svc: MirliService) {}
 
@@ -262,6 +274,12 @@ export class AudiobookService {
    *  drop rows that point at their segments or sounds (takes, renders). */
   onDelete(cb: (scope: DeleteScope) => void | Promise<void>): void {
     this.deleteHooks.push(cb);
+  }
+
+  /** Run after a book is duplicated, so a module can copy rows that point
+   *  at the original's chapters or segments (the soundscape's beds). */
+  onDuplicate(cb: (scope: DuplicateScope) => void | Promise<void>): void {
+    this.duplicateHooks.push(cb);
   }
 
   /* ------------------------------------------------------------------ books */
@@ -553,9 +571,11 @@ export class AudiobookService {
 
   /**
    * Copy a book: metadata, settings, cover, cast, chapters and paragraphs
-   * with their casting, lock, heading, model, delivery and takes. The copy
-   * shares the take audio with the original (deleting either keeps audio
-   * the other still uses). Notes and versions are not copied.
+   * with their casting, lock, heading, model, delivery and takes, plus every
+   * other clip on the chapter stories (soundscape beds) and the stories'
+   * track settings. The copy shares audio with the original (deleting
+   * either keeps audio the other still uses). Notes and versions are not
+   * copied. `onDuplicate` hooks run last, with the id maps.
    */
   async duplicateBook(bookId: string, title?: string | null): Promise<BookDetail> {
     const src = this.store.getBook(bookId);
@@ -572,38 +592,57 @@ export class AudiobookService {
       characters.set(id, this.store.createCharacter(copy.id, rest).id);
     }
     const now = new Date().toISOString();
+    const chapterMap = new Map<string, string>();
+    const segmentMap = new Map<string, string>();
     for (const chapter of this.store.listChapters(bookId)) {
-      const paragraphs = this.paragraphsOf(chapter);
+      const meta = new Map(this.paragraphsOf(chapter).map((p) => [p.id, p]));
+      // Every clip in story order, beds included, so positions carry over.
+      const segments = this.svc.db.listSegments(chapter.story_id);
+      const tracks = this.svc.db.listTracks(chapter.story_id);
       const srcStory = this.svc.db.getStory(chapter.story_id);
       this.store.transaction(() => {
         const story = this.svc.db.createStory(randomUUID(), chapter.title, now, src.project_id, "script");
         if (srcStory && Object.keys(srcStory.request_options).length > 0) {
           this.svc.db.setStoryOptions(story.id, srcStory.request_options);
         }
-        this.store.createChapter(copy.id, story.id, {
+        for (const t of tracks) {
+          this.svc.db.updateTrack(story.id, t.track_index, {
+            name: t.name,
+            muted: t.muted,
+            soloed: t.soloed,
+            gain_db: t.gain_db,
+            devices: t.devices,
+          });
+        }
+        const made = this.store.createChapter(copy.id, story.id, {
           title: chapter.title,
           kind: chapter.kind,
           included: chapter.included,
         });
+        chapterMap.set(chapter.id, made.id);
         const stale: string[] = [];
-        for (const p of paragraphs) {
+        for (const s of segments) {
+          const p = meta.get(s.id);
           const segment = this.svc.db.createSegment(randomUUID(), story.id, now, {
-            text: p.text,
-            kind: p.kind,
-            speaker: p.speaker ?? null,
-            voice_id: p.voice_id ?? null,
-            language: p.language ?? null,
-            sound_id: p.sound_id ?? null,
-            durationS: p.duration_s ?? null,
-            track_index: p.track_index,
-            start_s: p.start_s,
-            trim_start_s: p.trim_start_s,
-            fade_in_s: p.fade_in_s,
-            fade_out_s: p.fade_out_s,
-            gain_db: p.gain_db,
-            muted: p.muted,
-            request_options: p.request_options,
+            text: s.text,
+            kind: s.kind,
+            speaker: s.speaker ?? null,
+            voice_id: s.voice_id ?? null,
+            language: s.language ?? null,
+            sound_id: s.sound_id ?? null,
+            durationS: s.duration_s ?? null,
+            track_index: s.track_index,
+            start_s: s.start_s,
+            trim_start_s: s.trim_start_s,
+            fade_in_s: s.fade_in_s,
+            fade_out_s: s.fade_out_s,
+            gain_db: s.gain_db,
+            muted: s.muted,
+            request_options: s.request_options,
+            midi: s.midi ?? null,
           });
+          segmentMap.set(s.id, segment.id);
+          if (!p) continue; // a bed: no paragraph state
           this.store.setMeta(segment.id, {
             character_id: p.character_id ? (characters.get(p.character_id) ?? null) : null,
             locked: p.locked,
@@ -621,6 +660,9 @@ export class AudiobookService {
     if (cover_path) {
       const bytes = await this.coverBytes(bookId);
       if (bytes) await this.setCover(copy.id, bytes.bytes, bytes.mime);
+    }
+    for (const hook of this.duplicateHooks) {
+      await hook({ from_book_id: bookId, to_book_id: copy.id, chapters: chapterMap, segments: segmentMap });
     }
     return this.getBook(copy.id)!;
   }

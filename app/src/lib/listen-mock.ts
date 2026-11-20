@@ -641,7 +641,7 @@ export const mockListenApi: ListenApi = {
   },
 
   async publishWebPlayer(id) {
-    return fakePublish(await anyBook(id), "webplayer", ["index.html", "readalong.json", "book.jsonld"]);
+    return fakePublish(await anyBook(id), "webplayer", ["index.html", "read-along.json", "book.jsonld"]);
   },
 
   async publishRss(id) {

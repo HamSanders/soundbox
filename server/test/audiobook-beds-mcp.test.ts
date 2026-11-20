@@ -6,6 +6,7 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,9 +14,14 @@ import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import type { FastifyInstance } from "fastify";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+
+vi.setConfig({ testTimeout: 60_000 });
 
 import { buildApp } from "../src/app.js";
+import { readWav, writeWav } from "../src/audio/dsp.js";
+import { audiobookExports } from "../src/audiobook/export.js";
+import { audiobooks } from "../src/audiobook/service.js";
 import { Config } from "../src/config.js";
 import { call as routeCall } from "../src/mcp/audiobook.js";
 import { MCP_TOOLS, buildMcp } from "../src/mcp/server.js";
@@ -73,10 +79,40 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await audiobookExports(svc).idle();
   await client.close();
   await app.close();
   await rm(dataDir, { recursive: true, force: true });
 });
+
+/** A real WAV in the library: a quiet tone, or `amp` 0 for silence. */
+function wavSound(seconds: number, hz: number, amp: number): string {
+  const rate = 24000;
+  const out = new Float32Array(Math.round(seconds * rate));
+  for (let i = 0; i < out.length; i++) out[i] = amp * Math.sin((2 * Math.PI * hz * i) / rate);
+  const id = randomUUID();
+  writeWav(join(svc.config.paths.sounds, `${id}.wav`), [out], rate);
+  svc.db.insertSound(
+    {
+      id,
+      created_at: new Date().toISOString(),
+      model: "test",
+      prompt: "",
+      duration_s: seconds,
+      sample_rate: rate,
+      channels: 1,
+      file: "",
+      peaks: [],
+      favorite: false,
+      tags: [],
+      name: "wav",
+      size_bytes: 0,
+      source: "api",
+    } as Sound,
+    `${id}.wav`,
+  );
+  return id;
+}
 
 const AUDIOBOOK_TOOLS = [
   "soundbox.create_audiobook",
@@ -203,5 +239,67 @@ describe("audiobook MCP tools", () => {
       /not available in this version/,
     );
     await expect(routeCall(svc, "GET", "/api/audiobooks/nope")).rejects.toThrow(/Book not found/);
+  });
+
+  it("masters and exports through the real export routes, with the bed mixed in", async () => {
+    const created = await tool("soundbox.create_audiobook", { title: "Export Book" });
+    const chapterId = created.chapters[0].chapter_id;
+    for (const text of ["First line.", "Second line."]) {
+      await app.inject({
+        method: "POST",
+        url: `/api/audiobooks/${created.book_id}/chapters/${chapterId}/paragraphs`,
+        headers: { "x-soundbox": "1" },
+        payload: { text },
+      });
+    }
+    const ps = audiobooks(svc).getParagraphs(chapterId)!.filter((p) => p.kind === "line" && p.text.trim());
+    ps.forEach((p, i) => svc.updateSegment(p.id, { sound_id: wavSound(4, 220, 0.1), start_s: i * 4.5, duration_s: 4 }));
+    const bed = await tool("soundbox.add_bed", {
+      book_id: created.book_id,
+      chapter_id: chapterId,
+      kind: "ambience",
+      sound_id: wavSound(3, 90, 0.05),
+    });
+    expect(bed.bed.status).toBe("ready");
+
+    const out = await tool("soundbox.master_and_export_audiobook", {
+      book_id: created.book_id,
+      format: "wav",
+      layout: "single",
+      mastering: "none",
+      include_cover: false,
+    });
+    expect(out.status).toBe("done");
+    expect(out.request).toMatchObject({ format: "wav", layout: "single", include_beds: true });
+    expect(existsSync(out.path)).toBe(true);
+    expect(out.download_url).toContain(`/exports/${out.export_id}/download`);
+    expect(out.bed_warnings.length).toBeGreaterThan(0);
+    expect(Array.isArray(out.qc_failures)).toBe(true);
+
+    const dl = await app.inject({ method: "GET", url: `/api/audiobooks/${created.book_id}/exports/${out.export_id}/download` });
+    expect(dl.statusCode).toBe(200);
+
+    // The same export without beds: the gap between paragraphs is quieter.
+    const dry = await tool("soundbox.master_and_export_audiobook", {
+      book_id: created.book_id,
+      format: "wav",
+      layout: "single",
+      mastering: "none",
+      include_cover: false,
+      include_beds: false,
+    });
+    expect(dry.request.include_beds).toBe(false);
+    expect(dry.bed_warnings).toEqual([]);
+    const gapEnergy = (path: string) => {
+      const { audio, sampleRate } = readWav(path);
+      let peak = 0;
+      // Narration ends at 8.5 s; the bed (3 s long, looped over 8.5 s) is the
+      // only thing in the gap at 4.0–4.5 s.
+      for (let i = Math.round(4.1 * sampleRate); i < Math.round(4.4 * sampleRate); i++) {
+        peak = Math.max(peak, Math.abs(audio[0]![i] ?? 0));
+      }
+      return peak;
+    };
+    expect(gapEnergy(out.path)).toBeGreaterThan(gapEnergy(dry.path));
   });
 });

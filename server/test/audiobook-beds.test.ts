@@ -360,3 +360,48 @@ describe("export side", () => {
     expect(sInfo.warnings.map((w: any) => w.id)).toEqual(["distribution", "retail_sample"]);
   });
 });
+
+describe("duplicating a book", () => {
+  it("copies the bed rows onto the copy's chapters and clips", async () => {
+    const { book, chapter, paragraphs } = await voicedBook();
+    const sfx = await json("POST", `/api/audiobooks/${book.id}/chapters/${chapter.id}/beds`, {
+      kind: "sfx",
+      sound_id: fakeSound(1.5),
+      anchor_segment_id: paragraphs[1].id,
+    });
+    const scene = await json("POST", `/api/audiobooks/${book.id}/chapters/${chapter.id}/beds`, {
+      kind: "ambience",
+      sound_id: fakeSound(6),
+      mode: "scene",
+      anchor_segment_id: paragraphs[0].id,
+      end_segment_id: paragraphs[1].id,
+    });
+
+    const copy = await json("POST", `/api/audiobooks/${book.id}/duplicate`, {});
+    const copyChapter = copy.chapters[0];
+    const copied = await json("GET", `/api/audiobooks/${copy.id}/beds`);
+    expect(copied).toHaveLength(2);
+    const copyParagraphs = audiobooks(app.soundbox).getParagraphs(copyChapter.id)!;
+    const copyClips = new Set(app.soundbox.listSegments(copyChapter.story_id).map((s) => s.id));
+    for (const bed of copied) {
+      expect(bed.book_id).toBe(copy.id);
+      expect(bed.chapter_id).toBe(copyChapter.id);
+      expect([sfx.id, scene.id]).not.toContain(bed.id);
+      expect(bed.segment_ids.length).toBeGreaterThan(0);
+      for (const sid of bed.segment_ids) expect(copyClips.has(sid)).toBe(true);
+    }
+    const copiedSfx = copied.find((b: any) => b.kind === "sfx");
+    const copiedScene = copied.find((b: any) => b.mode === "scene");
+    expect(copiedSfx.anchor_segment_id).toBe(copyParagraphs[1].id);
+    expect(copiedSfx.track_index).toBe(sfx.track_index);
+    expect(copiedScene.anchor_segment_id).toBe(copyParagraphs[0].id);
+    expect(copiedScene.end_segment_id).toBe(copyParagraphs[1].id);
+
+    // The original is untouched, and editing the copy leaves it alone.
+    const original = await json("GET", `/api/audiobooks/${book.id}/beds`);
+    expect(original.map((b: any) => b.id).sort()).toEqual([sfx.id, scene.id].sort());
+    await json("PATCH", `/api/audiobooks/${copy.id}/beds/${copiedScene.id}`, { gain_db: -30 });
+    const after = await json("GET", `/api/audiobooks/${book.id}/beds`);
+    expect(after.find((b: any) => b.id === scene.id).segment_ids).toEqual(scene.segment_ids);
+  });
+});

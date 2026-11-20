@@ -1,11 +1,12 @@
 /** react-query wiring for the listening side. */
 
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { errorMessage } from "./api";
 import { listenApi } from "./listen-api";
-import { useListenPlayer } from "./listen-player-store";
+import { onProgressSaved, useListenPlayer } from "./listen-player-store";
 import type { AudioEncoding, Bookmark, ChecklistTarget, ListenManifest, RssRequest, ShelfBook } from "./listen-types";
 
 export const lk = {
@@ -19,11 +20,32 @@ const fail = (what: string) => (err: unknown) => {
 };
 
 export function useShelf(): UseQueryResult<ShelfBook[]> {
+  useLiveProgress();
   // Progress changes while you listen elsewhere; always refetch on return.
   return useQuery({ queryKey: lk.shelf, queryFn: () => listenApi.shelf(), staleTime: 0, refetchOnMount: "always" });
 }
 
+/**
+ * Keep cached progress current while the player runs: every save the player
+ * makes is written into the shelf and that book's manifest in place, so
+ * "Continue listening", the progress bars and Resume move without a refetch.
+ */
+export function useLiveProgress(): void {
+  const qc = useQueryClient();
+  useEffect(
+    () =>
+      onProgressSaved((progress) => {
+        qc.setQueryData<ShelfBook[]>(lk.shelf, (list) =>
+          list?.map((b) => (b.id === progress.book_id ? { ...b, progress } : b)),
+        );
+        qc.setQueryData<ListenManifest>(lk.manifest(progress.book_id), (m) => (m ? { ...m, progress } : m));
+      }),
+    [qc],
+  );
+}
+
 export function useListenManifest(id: string | null): UseQueryResult<ListenManifest> {
+  useLiveProgress();
   return useQuery({
     queryKey: lk.manifest(id ?? ""),
     queryFn: () => listenApi.manifest(id!),

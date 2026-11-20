@@ -8,7 +8,7 @@ import { IS_MOCK, api, request, type GenerateRequest, type Model } from "@/lib/a
 import { audiobookApi } from "@/lib/audiobook-api";
 
 import { DEFAULT_DUCK, layoutBed, narrationLength } from "./layout";
-import type { Bed, BedExportInfo, BedInput, BedKind, BedPatch, DuckOptions } from "./types";
+import type { Bed, BedExportInfo, BedInput, BedKind, BedPatch, DuckOptions, SoundscapeResult, SoundscapeSuggestion } from "./types";
 
 export interface BedsApi {
   list(bookId: string, chapterId?: string | null): Promise<Bed[]>;
@@ -17,6 +17,8 @@ export interface BedsApi {
   remove(bookId: string, bedId: string): Promise<void>;
   layoutChapter(bookId: string, chapterId: string): Promise<Bed[]>;
   exportInfo(bookId: string, chapterIds?: string[] | null): Promise<BedExportInfo>;
+  /** Propose beds from the chapter's text. Creates nothing. */
+  suggest(bookId: string, chapterId: string): Promise<SoundscapeResult>;
 }
 
 /** react-query keys. Exported for the export dialog and anyone else that shows beds. */
@@ -43,6 +45,10 @@ const httpBedsApi: BedsApi = {
     request<void>(`${base(bookId)}/beds/${encodeURIComponent(bedId)}`, { method: "DELETE" }),
   layoutChapter: (bookId, chapterId) =>
     request<Bed[]>(`${base(bookId)}/chapters/${encodeURIComponent(chapterId)}/beds/layout`, { method: "POST" }),
+  suggest: (bookId, chapterId) =>
+    request<SoundscapeResult>(`${base(bookId)}/chapters/${encodeURIComponent(chapterId)}/beds/suggest`, {
+      method: "POST",
+    }),
   exportInfo: (bookId, chapterIds) =>
     request<BedExportInfo>(
       `${base(bookId)}/beds/export-info${chapterIds?.length ? `?chapter_ids=${chapterIds.map(encodeURIComponent).join(",")}` : ""}`,
@@ -76,7 +82,9 @@ async function mockLayout(bed: Bed): Promise<Bed> {
   if (bed.status === "ready" && bed.sound_id) {
     const sound = await api.getSound(bed.sound_id);
     const anchor = bed.anchor_segment_id ? (segments.find((s) => s.id === bed.anchor_segment_id)?.start_s ?? 0) : 0;
-    const plan = layoutBed({ ...bed, sound_s: sound.duration_s, chapter_s: length, anchor_s: anchor });
+    const endSeg = bed.mode === "scene" && bed.end_segment_id ? segments.find((s) => s.id === bed.end_segment_id) : null;
+    const end_s = endSeg ? endSeg.start_s + (endSeg.duration_s ?? 0) : null;
+    const plan = layoutBed({ ...bed, sound_s: sound.duration_s, chapter_s: length, anchor_s: anchor, end_s });
     for (const clip of plan) {
       const seg = await api.createSegment(story, {
         text: "",
@@ -133,6 +141,7 @@ async function watchMock(bed: Bed): Promise<void> {
 }
 
 const mockBedsApi: BedsApi = {
+  suggest: (bookId, chapterId) => mockSuggest(bookId, chapterId),
   async list(bookId, chapterId) {
     const out: Bed[] = [];
     for (const bed of mockBeds.values()) {
@@ -174,6 +183,7 @@ const mockBedsApi: BedsApi = {
       mode: input.mode ?? "full",
       intro_s: input.intro_s ?? null,
       anchor_segment_id: input.anchor_segment_id ?? null,
+      end_segment_id: input.end_segment_id ?? null,
       offset_s: input.offset_s ?? 0,
       duck,
       status: sound ? "ready" : "generating",
@@ -273,5 +283,68 @@ const mockBedsApi: BedsApi = {
     return { has_beds: withBeds.length > 0, include_beds_default: samples.length === 0, warnings };
   },
 };
+
+/** The mock's stand-in for the server's keyword lexicon: a few rules, enough to
+ *  exercise the review list offline. */
+const MOCK_RULES: { kind: BedKind; label: string; test: RegExp; prompt: string }[] = [
+  { kind: "ambience", label: "Night by the sea", test: /\b(night|lamp|bay|sea|waves?)\b/i, prompt: "calm sea waves at night, soft wind, no music" },
+  { kind: "music", label: "Tense score", test: /\b(dark|afraid|nobody|shadow)\b/i, prompt: "sparse tense underscore, low strings, slow, instrumental" },
+];
+const MOCK_SFX: { label: string; test: RegExp; prompt: string }[] = [
+  { label: "Door slam", test: /\bdoor\b[^.]{0,30}\bslamm?\w*|\bslamm?\w*\b[^.]{0,20}\bdoor\b/i, prompt: "heavy wooden door slamming shut" },
+  { label: "Footsteps", test: /\bfootsteps?\b|\bstairs\b/i, prompt: "slow footsteps on wooden stairs" },
+  { label: "Coat", test: /\bcoat\b/i, prompt: "rustle of a heavy coat being picked up" },
+];
+
+async function mockSuggest(bookId: string, chapterId: string): Promise<SoundscapeResult> {
+  await new Promise((r) => setTimeout(r, 400));
+  const lines = (await audiobookApi.listParagraphs(bookId, chapterId)).filter(
+    (p) => p.track_index === 0 && p.kind === "line" && !p.is_heading && p.text.trim(),
+  );
+  if (!lines.length) return { source: "heuristic", suggestions: [], note: "This chapter has no text to read yet." };
+  const all = lines.map((p) => p.text).join(" ");
+  const out: SoundscapeSuggestion[] = [];
+  const base = { mood: null, setting: null, source: "heuristic" as const };
+  for (const r of MOCK_RULES) {
+    if (!r.test.test(all)) continue;
+    out.push({
+      ...base,
+      id: `mock-${r.kind}-${chapterId}`,
+      kind: r.kind,
+      label: r.label,
+      prompt: r.prompt,
+      start_paragraph_id: lines[0]!.id,
+      end_paragraph_id: lines[lines.length - 1]!.id,
+      reason: `Keywords across paragraphs 1–${lines.length}`,
+      gain_db: r.kind === "music" ? -24 : -28,
+      duck_db: r.kind === "music" ? 12 : 8,
+      duration_s: 30,
+    });
+    break;
+  }
+  lines.forEach((p, i) => {
+    const r = MOCK_SFX.find((x) => x.test.test(p.text));
+    if (!r) return;
+    out.push({
+      ...base,
+      id: `mock-sfx-${p.id}`,
+      kind: "sfx",
+      label: r.label,
+      prompt: r.prompt,
+      start_paragraph_id: p.id,
+      end_paragraph_id: p.id,
+      reason: `“${p.text.match(r.test)![0]}” (paragraph ${i + 1})`,
+      gain_db: -12,
+      duck_db: 0,
+      duration_s: 4,
+    });
+  });
+  return {
+    source: "heuristic",
+    suggestions: out,
+    note: "Suggested from keywords in the text. Turn on the prompt assistant in Settings for suggestions that follow each scene.",
+  };
+}
+
 
 export const bedsApi: BedsApi = IS_MOCK ? mockBedsApi : httpBedsApi;

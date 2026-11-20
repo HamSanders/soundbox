@@ -6,6 +6,7 @@
 
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -19,6 +20,7 @@ import { buildApp } from "../src/app.js";
 import { decodeWav, writeWav } from "../src/audio/dsp.js";
 import { prng } from "../src/audio/master.js";
 import { audiobookExports } from "../src/audiobook/export.js";
+import { exportedAudio } from "../src/audiobook/publish/manifest.js";
 import { audiobooks } from "../src/audiobook/service.js";
 import type { ChapterQc, Manuscript } from "../src/audiobook/types.js";
 import { Config } from "../src/config.js";
@@ -206,6 +208,15 @@ describe("export", () => {
 
     const history = await json<any[]>("GET", `/api/audiobooks/${book.id}/exports`);
     expect(history[0].id).toBe(done.id);
+
+    // Listen's player gets the mastered chapter files and their timings.
+    const served = exportedAudio(app.soundbox, book.id);
+    expect([...served.keys()].sort()).toEqual(book.chapters.map((c) => c.id).sort());
+    const first = served.get(book.chapters[0].id)!;
+    expect(first.mime).toBe("audio/wav");
+    expect(decodeWav(readFileSync(first.path)).sampleRate).toBe(44_100);
+    expect(first.timings!.length).toBeGreaterThan(0);
+    expect(first.duration_s).toBeGreaterThan(30);
   });
 
   it("refuses formats that need ffmpeg when it is missing, with the reason", async () => {
@@ -295,3 +306,116 @@ function* zipEntries(z: Buffer): Generator<{ name: string; data: Buffer }> {
 
 const zipNames = (z: Buffer) => [...zipEntries(z)].map((e) => e.name);
 const zipFile = (z: Buffer, name: string) => [...zipEntries(z)].find((e) => e.name === name)!.data;
+
+describe("beds in the export", () => {
+  const BED_HZ = 100;
+
+  /** A WAV sound of `fn(t)` for `seconds`, registered in the library. */
+  function toneSound(seconds: number, fn: (t: number) => number): string {
+    const out = new Float32Array(Math.round(seconds * RATE)).map((_, i) => fn(i / RATE));
+    const id = randomUUID();
+    writeWav(join(app.soundbox.config.paths.sounds, `${id}.wav`), [out], RATE);
+    app.soundbox.db.insertSound(
+      {
+        id,
+        created_at: new Date().toISOString(),
+        model: "test",
+        prompt: "",
+        duration_s: seconds,
+        sample_rate: RATE,
+        channels: 1,
+        file: "",
+        peaks: [],
+        favorite: false,
+        tags: [],
+        name: "tone",
+        size_bytes: 0,
+        source: "api",
+      },
+      `${id}.wav`,
+    );
+    return id;
+  }
+
+  /** Amplitude of the `hz` component over [from, to) seconds (Goertzel). */
+  function toneDb(ch: Float32Array, rate: number, hz: number, from: number, to: number): number {
+    const a = Math.round(from * rate);
+    const b = Math.round(to * rate);
+    const w = (2 * Math.PI * hz) / rate;
+    const coeff = 2 * Math.cos(w);
+    let s1 = 0;
+    let s2 = 0;
+    for (let i = a; i < b; i++) {
+      const s0 = ch[i] + coeff * s1 - s2;
+      s2 = s1;
+      s1 = s0;
+    }
+    const power = s1 * s1 + s2 * s2 - coeff * s1 * s2;
+    return 20 * Math.log10((2 * Math.sqrt(power)) / (b - a) + 1e-12);
+  }
+
+  /** Narration 0-8 s and 16-24 s (1 kHz), a 100 Hz bed under it all, ducked 12 dB. */
+  async function bedBook() {
+    const book = await audiobooks(app.soundbox).createBookFromManuscript({
+      ...manuscript,
+      sections: [{ title: "Bedded", kind: "chapter", included: true, paragraphs: ["First.", "Second."] }],
+    });
+    const chapter = book.chapters[0];
+    const [p1, p2] = audiobooks(app.soundbox).getParagraphs(chapter.id)!.filter((p) => p.text !== "Bedded");
+    const voice = () => toneSound(8, (t) => 0.3 * Math.sin(2 * Math.PI * 1000 * t));
+    app.soundbox.updateSegment(p1.id, { sound_id: voice(), start_s: 0, duration_s: 8 });
+    app.soundbox.updateSegment(p2.id, { sound_id: voice(), start_s: 16, duration_s: 8 });
+    const bedSound = toneSound(30, (t) => 0.1 * Math.sin(2 * Math.PI * BED_HZ * t));
+    await json("POST", `/api/audiobooks/${book.id}/chapters/${chapter.id}/beds`, {
+      sound_id: bedSound,
+      kind: "music",
+      loop: true,
+      gain_db: 0,
+      fade_in_s: 0,
+      fade_out_s: 0,
+      duck: { depth_db: 12 },
+    });
+    return { book, chapter };
+  }
+
+  async function exportWav(bookId: string, chapterId: string, includeBeds: boolean) {
+    const { id } = await json("POST", `/api/audiobooks/${bookId}/exports`, {
+      format: "wav",
+      layout: "files",
+      chapter_ids: [chapterId],
+      mastering: "none",
+      include_cover: false,
+      include_transcripts: false,
+      include_beds: includeBeds,
+    });
+    const done = await finished(bookId, id);
+    expect(done.status, done.error).toBe("done");
+    return decodeWav(readFileSync(done.path));
+  }
+
+  it("ducks the bed about depth dB under narration and leaves it up in gaps", async () => {
+    const { book, chapter } = await bedBook();
+    const { audio, sampleRate } = await exportWav(book.id, chapter.id, true);
+    const under = toneDb(audio[0], sampleRate, BED_HZ, 3, 6);
+    const gap = toneDb(audio[0], sampleRate, BED_HZ, 11, 13);
+    expect(gap).toBeCloseTo(-20, 0); // 0.1 amplitude, untouched in the gap
+    expect(gap - under).toBeGreaterThan(10.5);
+    expect(gap - under).toBeLessThan(13.5);
+    // Narration itself is not ducked.
+    expect(toneDb(audio[0], sampleRate, 1000, 3, 6)).toBeCloseTo(20 * Math.log10(0.3), 0);
+  });
+
+  it("include_beds:false drops the bed", async () => {
+    const { book, chapter } = await bedBook();
+    const { audio, sampleRate } = await exportWav(book.id, chapter.id, false);
+    expect(toneDb(audio[0], sampleRate, BED_HZ, 11, 13)).toBeLessThan(-80);
+    expect(toneDb(audio[0], sampleRate, 1000, 3, 6)).toBeCloseTo(20 * Math.log10(0.3), 0);
+  });
+
+  it("a retail_sample chapter never carries the bed", async () => {
+    const { book, chapter } = await bedBook();
+    await json("PATCH", `/api/audiobooks/${book.id}/chapters/${chapter.id}`, { kind: "retail_sample" });
+    const { audio, sampleRate } = await exportWav(book.id, chapter.id, true);
+    expect(toneDb(audio[0], sampleRate, BED_HZ, 11, 13)).toBeLessThan(-80);
+  });
+});

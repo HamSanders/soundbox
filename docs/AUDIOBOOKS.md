@@ -97,12 +97,27 @@ The **Beds** section of a chapter's inspector puts sound under the narration.
 - Each bed is clips on its own track in the chapter's story, named after the
   bed, so the timeline shows it and you can edit it there.
 
+**Suggest soundscape** reads the chapter and proposes beds for you to review:
+
+- a music or ambience bed for each scene (scenes are split at `* * *` style
+  breaks), with its mood, its setting and a prompt, laid under just that
+  scene's paragraphs;
+- a sound effect at each paragraph whose text names a sound happening ("the
+  door slammed", "thunder rolled", footsteps), placed at that paragraph.
+
+With the prompt assistant on (Settings → Prompt assistant) the model reads the
+text; otherwise Mirli matches keywords for places, moods and sounds, and says
+so. Each suggestion shows why it was made. Edit its prompt, accept it (the
+sound is generated and placed), or reject it. Nothing is added until you
+accept. Suggestions start quiet: ambience at −28 dB ducked 8 dB, music at
+−24 dB ducked 12 dB, effects at −12 dB.
+
 For each bed you can set:
 
 | Setting | What it does |
 |---|---|
 | Gain | The bed's level. Defaults: −18 dB music, −24 dB ambience, −6 dB SFX. |
-| Plays | Whole chapter, intro only, outro only, or intro and outro. |
+| Plays | Whole chapter, intro only, outro only, or intro and outro. A suggested scene bed plays under its scene. |
 | Intro/outro length | How long the intro and outro pieces last. |
 | Loop to fill | Repeats the sound to cover its span, with a short crossfade at each seam. On by default for music and ambience. |
 | Fade in, fade out | At the start and end of the bed. |
@@ -172,15 +187,19 @@ when it is missing, Mirli says so and how to install it.
 
 ## Listen
 
-**Listen** is a shelf for the books you have made, grouped by genre and
-series, with search and filters. Each book has a detail page with its cover,
-description, length, narrator, table of contents and a preview.
+**Listen** is a shelf for the books you have made: continue listening first,
+then finished books, then a shelf per genre and per series. Search and the
+genre, tag, language and length filters switch to a grid of matches. Each book
+has a detail page with its cover, description, length, narrator, table of
+contents and a preview.
 
 The player has chapters, speeds from 0.25x to 4x, a sleep timer (including
 "end of chapter"), bookmarks with notes, and remembers where you stopped. It
-highlights the paragraph being read, and the word where a local speech
-recognition model has aligned it. You can start from any paragraph. A book can
-also be published as a self-contained web player or a podcast RSS feed.
+highlights the paragraph being read and the current word: aligned timings
+where they exist, otherwise estimated from the paragraph's timing. Tap any
+voiced paragraph to play from there. A book can also be published as a
+self-contained web player or a podcast RSS feed, with a checklist of what each
+store needs.
 
 ## Compared with ElevenLabs
 

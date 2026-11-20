@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ProjectThumb } from "@/components/project-thumb";
+import { ShelfTile } from "@/components/library-shelves";
 
 import { SearchInput } from "@/components/search-input";
 import { useCreateProject, useDeleteProject, useProjects } from "@/lib/queries";
@@ -96,9 +96,9 @@ export function ProjectsPage() {
       )}
 
       {isLoading ? (
-        <div className="grid gap-3">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-4">
           {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-16 w-full" />
+            <Skeleton key={i} className="aspect-square w-full rounded-md" />
           ))}
         </div>
       ) : isError ? (
@@ -115,39 +115,27 @@ export function ProjectsPage() {
             : "Projects group sounds and sessions together — create one to get started."}
         </EmptyState>
       ) : (
-        <div className="grid gap-3">
+        /* The same square tiles as the Library and Dashboard shelves, laid
+           out as a wrapping grid: a project reads as a collection to open,
+           not a folder row. Delete shows on hover, as before. */
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-4">
           {shown.map((p, i) => (
-            <button
+            <div
               key={p.id}
-              type="button"
-              onClick={() => open(p)}
-              className="group border-border/70 bg-card hover:border-border hover:bg-accent/40 animate-in fade-in-0 slide-in-from-bottom-1 flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left duration-300 fill-mode-both"
+              className="group animate-in fade-in-0 slide-in-from-bottom-1 relative duration-300 fill-mode-both"
               style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}
             >
-              <div className="flex items-center gap-3">
-                <div className="ring-foreground/10 size-11 shrink-0 overflow-hidden rounded-lg ring-1">
-                  <ProjectThumb name={p.name} className="size-full" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">{p.name}</p>
-                  <p className="text-muted-foreground text-xs">
-                    {p.sound_count} sound{p.sound_count === 1 ? "" : "s"}
-                  </p>
-                </div>
-              </div>
+              <ShelfTile name={p.name} count={p.sound_count} onClick={() => open(p)} />
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="icon-sm"
                 aria-label={`Delete project ${p.name}`}
-                className="opacity-0 group-hover:opacity-100"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPendingDelete(p);
-                }}
+                className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                onClick={() => setPendingDelete(p)}
               >
                 <Trash2Icon />
               </Button>
-            </button>
+            </div>
           ))}
         </div>
       )}

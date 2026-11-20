@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, useEffect, type CSSProperties } from "react";
 import {
   Navigate,
   Route,
@@ -16,7 +16,12 @@ import { HeaderSlotProvider } from "@/components/header-slot";
 import { AppSidebar } from "@/components/app-sidebar";
 import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog";
 import { NowPlayingBar } from "@/components/now-playing-bar";
+import { CreatePanel, CreateRedirect } from "@/components/create-panel";
+import { SoundDetailPanel } from "@/components/sound-detail-panel";
+import { VoiceDetailPanel } from "@/components/voice-detail-panel";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { PLAYER_DOCK_HEIGHT_PX } from "@/components/player-dock";
+import { usePlayerStore } from "@/lib/player-store";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { DashboardPage } from "@/routes/dashboard";
@@ -36,6 +41,9 @@ const MusicStudioPage = lazy(() => import("@/routes/music-studio").then((m) => (
 const ProjectsPage = lazy(() => import("@/routes/projects").then((m) => ({ default: m.ProjectsPage })));
 const StudioIndexPage = lazy(() => import("@/routes/studio-index").then((m) => ({ default: m.StudioIndexPage })));
 const StudioPage = lazy(() => import("@/routes/studio").then((m) => ({ default: m.StudioPage })));
+const VoiceCreatePage = lazy(() => import("@/routes/voice-create").then((m) => ({ default: m.VoiceCreatePage })));
+const VoiceCloneCreatePage = lazy(() => import("@/routes/voice-create").then((m) => ({ default: m.VoiceCloneCreatePage })));
+const VoiceBuiltinCreatePage = lazy(() => import("@/routes/voice-create").then((m) => ({ default: m.VoiceBuiltinCreatePage })));
 const VoiceLabPage = lazy(() => import("@/routes/voice-lab").then((m) => ({ default: m.VoiceLabPage })));
 const ModelsPage = lazy(() => import("@/routes/models").then((m) => ({ default: m.ModelsPage })));
 const AgentsPage = lazy(() => import("@/routes/agents").then((m) => ({ default: m.AgentsPage })));
@@ -60,6 +68,8 @@ function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
     window.scrollTo(0, 0);
+    // On desktop the page scrolls inside its panel, not the window.
+    document.querySelector('[data-slot="sidebar-inset"]')?.scrollTo(0, 0);
   }, [pathname]);
   return null;
 }
@@ -75,9 +85,20 @@ function isFullBleed(pathname: string): boolean {
 function AppShell() {
   const { pathname } = useLocation();
   const fullBleed = isFullBleed(pathname);
+  const nowPlaying = usePlayerStore((s) => s.sound !== null);
   return (
-    <SidebarProvider defaultOpen={false}>
+    // Floating shell: the sidebar and the page are two panels on the
+    // sidebar's ground (the `inset` variant), and the player runs full width
+    // along the bottom under both, outside either panel. `--dock-h` is how
+    // much room that strip takes, so both panels stop above it.
+    <SidebarProvider
+      defaultOpen={false}
+      className="pb-(--dock-h)"
+      style={{ "--dock-h": nowPlaying ? `${PLAYER_DOCK_HEIGHT_PX}px` : "0px" } as CSSProperties}
+    >
       <AppSidebar />
+      {/* Between the sidebar and the page on the kind pages: see create-panel.tsx. */}
+      <CreatePanel />
       {/* The header and the page it belongs to share a provider so a page can
           render controls into the bar above it — see `header-slot`. */}
       <HeaderSlotProvider>
@@ -91,8 +112,11 @@ function AppShell() {
           pages keep their natural height and the document scroll they
           have always had. */}
       <SidebarInset
-        className={`bg-background text-foreground min-w-0${
-          fullBleed ? " h-svh overflow-hidden" : ""
+        // On desktop the panel is exactly the window less its 8px margins and
+        // the player strip, and the page scrolls inside it, so the panel's
+        // rounded bottom edge always sits just above the player.
+        className={`bg-background text-foreground min-w-0 md:h-[calc(100svh-1rem-var(--dock-h))]${
+          fullBleed ? " h-[calc(100svh-var(--dock-h))] overflow-hidden" : " md:overflow-y-auto"
         }`}
       >
         <AppHeader />
@@ -143,10 +167,14 @@ function AppShell() {
                 what comes out of it is an input to the Script Builder rather
                 than a piece of work in it. */}
             <Route path="/voice/lab" element={<VoiceLabPage />} />
+            <Route path="/voice/new" element={<VoiceCreatePage />} />
+            <Route path="/voice/new/clone" element={<VoiceCloneCreatePage />} />
+            <Route path="/voice/new/builtin" element={<VoiceBuiltinCreatePage />} />
             {/* The unfiltered library still exists, unlinked from the nav —
                 it's where a Projects sidebar/list entry deep-links to
                 (`/library?project=…`), spanning every category rather than
                 just one. */}
+            <Route path="/create" element={<CreateRedirect />} />
             <Route path="/library" element={<LibraryPage />} />
             <Route path="/library/sfx" element={<SfxLibraryPage />} />
             <Route path="/library/music" element={<MusicStudioPage />} />
@@ -166,6 +194,9 @@ function AppShell() {
             draws over the sidebar the way a viewport-`fixed` dock would. */}
         <NowPlayingBar />
       </SidebarInset>
+      {/* Docked beside the page, in the shell's row: see sound-detail-panel.tsx. */}
+      <SoundDetailPanel />
+      <VoiceDetailPanel />
       {/* Inside the shell, not the app root: it offers the shell's pages and
           reads the route to know when to stand down. */}
       <AppCommandPalette />

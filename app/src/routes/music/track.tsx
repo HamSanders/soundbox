@@ -22,16 +22,23 @@
  * way to show that diffusion models treat length as a target, not a contract.
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { DownloadIcon, MicVocalIcon, MusicIcon } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { CopyButton } from "@/components/docs-primitives";
-import { WaveformPlayer } from "@/components/waveform-player";
-import { PlayerDock } from "@/components/player-dock";
+import {
+  SiteCollectionHeader,
+  SiteDock,
+  SiteFactLog,
+  SitePlayButton,
+  SiteTrackList,
+  SiteTrackRow,
+  useSiteAudio,
+} from "@/components/site/site-tracks";
+import { getModelByCatalogId } from "@/content/models/models";
+import { formatDuration } from "@/lib/format";
 import { MarketingLink } from "@/components/marketing-link";
 import { SeoHead, breadcrumbJsonLd } from "@/components/seo-head";
 import { MusicCover } from "@/components/music-cover";
@@ -43,21 +50,11 @@ import {
   parseScript,
   sungCount,
   trackAudioUrl,
-  trackToSound,
   useMusicManifest,
 } from "@/lib/music-track";
 import { siteUrl } from "@/lib/asset-url";
 import { GENERATOR_HREF } from "@/lib/marketing-links";
 import { cn } from "@/lib/utils";
-
-function Spec({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="border-border/60 border-t py-2">
-      <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className="mt-0.5 text-sm">{value}</dd>
-    </div>
-  );
-}
 
 function TrackBody({ track }: { track: MusicTrack }) {
   const { manifest, failed } = useMusicManifest();
@@ -76,6 +73,21 @@ function TrackBody({ track }: { track: MusicTrack }) {
   // Fires on every playhead move, mid-drag included. The line index is worked
   // out here and state is set only when it changes, so a scrub repaints two
   // list items instead of the page sixty times a second.
+  const id = `music-${track.slug}`;
+  // This track first, then its siblings, so the rows under "More" play here too.
+  const audio = useSiteAudio(
+    [track, ...siblings].map((t) => ({
+      id: `music-${t.slug}`,
+      title: t.title,
+      sub: `${t.genre} · ${MUSIC_MODEL_NAMES[t.model]}`,
+      url: trackAudioUrl(t.slug),
+      href: t.slug === track.slug ? undefined : `/music/${t.slug}`,
+      tile: <MusicCover track={t} className="bg-muted size-full object-cover" fallbackTextClassName="text-sm" />,
+      durationS: manifest?.[t.slug]?.durationS ?? t.durationS,
+    })),
+    id,
+  );
+  const isPlaying = audio.current?.id === id && audio.playing;
   const handleTime = useCallback(
     (seconds: number) => {
       if (!totalLines || !meta) return;
@@ -86,6 +98,9 @@ function TrackBody({ track }: { track: MusicTrack }) {
     },
     [totalLines, meta],
   );
+  useEffect(() => {
+    if (audio.current?.id === id) handleTime(audio.time);
+  }, [audio.time, audio.current?.id, id, handleTime]);
 
   return (
     <>
@@ -126,60 +141,54 @@ function TrackBody({ track }: { track: MusicTrack }) {
           <span className="text-foreground">{track.title}</span>
         </nav>
 
-        <header className="flex flex-col gap-6 py-8 sm:flex-row sm:items-end">
-          <MusicCover
-            track={track}
-            className="bg-muted size-32 shrink-0 rounded-2xl object-cover shadow-sm sm:size-40"
-            fallbackTextClassName="text-5xl"
-          />
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="gap-1 text-[11px] font-normal">
-                {track.lyrics ? (
-                  <MicVocalIcon className="size-3" aria-hidden="true" />
-                ) : (
-                  <MusicIcon className="size-3" aria-hidden="true" />
-                )}
-                {track.genre}
-              </Badge>
-              {/* Only when the scene is narrower than the genre — "Corridos
-                  tumbados" inside "Regional Mexican" earns a second badge,
-                  "Phonk" inside "Phonk" would just be the same word twice. */}
-              {track.scene && track.scene !== track.genre && (
-                <Badge variant="secondary" className="text-[11px] font-normal">
-                  {track.scene}
-                </Badge>
+        <SiteCollectionHeader
+          tile={<MusicCover track={track} className="bg-muted size-full object-cover" fallbackTextClassName="text-5xl" />}
+          kicker={
+            <span className="inline-flex items-center gap-1.5">
+              {track.lyrics ? (
+                <MicVocalIcon className="size-3" aria-hidden="true" />
+              ) : (
+                <MusicIcon className="size-3" aria-hidden="true" />
               )}
-              <span className="text-muted-foreground text-xs">
-                {MUSIC_MODEL_NAMES[track.model]}
-              </span>
-            </div>
-            <h1 className="font-heading mt-2 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-              {track.title}
-            </h1>
-            <p className="text-muted-foreground mt-3 max-w-2xl leading-relaxed">
+              {track.lyrics ? "Sung track" : "Instrumental"}
+            </span>
+          }
+          title={track.title}
+          log={[
+            track.genre,
+            // Only when the scene is narrower than the genre.
+            track.scene && track.scene !== track.genre ? track.scene : null,
+            MUSIC_MODEL_NAMES[track.model],
+            meta ? formatDuration(meta.durationS) : `${track.durationS}s requested`,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+          lede={
+            <>
               {track.lyrics
                 ? "A sung track: the prompt below set the arrangement and the script is what the model was given to sing."
                 : "An instrumental track, generated in a single pass on one desktop GPU."}{" "}
               Copy the prompt, change a word and render your own.
-            </p>
-            <div className="mt-5 flex flex-wrap items-center gap-2">
-              <Button variant="outline" size="sm" asChild>
-                <a href={trackAudioUrl(track.slug)} download>
-                  <DownloadIcon />
-                  Download MP3
-                </a>
-              </Button>
-              <Button size="sm" asChild>
-                <MarketingLink href={GENERATOR_HREF}>Generate a variation</MarketingLink>
-              </Button>
-            </div>
-          </div>
-        </header>
+            </>
+          }
+        >
+          <SitePlayButton playing={isPlaying} onClick={() => audio.toggle(id)} label={track.title} size="icon-lg" />
+          <Button variant="outline" size="sm" asChild>
+            <a href={trackAudioUrl(track.slug)} download>
+              <DownloadIcon />
+              Download MP3
+            </a>
+          </Button>
+          <Button size="sm" variant="outline" asChild>
+            <MarketingLink href={GENERATOR_HREF}>Generate a variation</MarketingLink>
+          </Button>
+        </SiteCollectionHeader>
+
+        {failed && <p className="text-muted-foreground mb-8 text-sm">This track could not be loaded.</p>}
 
         {track.lyrics && (
           <section aria-labelledby="script" className="border-border/60 border-t py-10">
-            <h2 id="script" className="font-heading text-xl font-semibold tracking-tight">
+            <h2 id="script" className="font-display text-2xl leading-none font-extrabold uppercase">
               The script
             </h2>
             <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
@@ -201,7 +210,7 @@ function TrackBody({ track }: { track: MusicTrack }) {
                     className={cn(
                       "rounded-md px-2 py-1 transition-colors",
                       line.sungIndex === activeLine
-                        ? "bg-primary/15 text-foreground font-medium"
+                        ? "bg-muted text-foreground font-medium"
                         : "text-muted-foreground",
                     )}
                   >
@@ -222,7 +231,7 @@ function TrackBody({ track }: { track: MusicTrack }) {
         )}
 
         <section aria-labelledby="prompt" className="border-border/60 border-t py-10">
-          <h2 id="prompt" className="font-heading text-xl font-semibold tracking-tight">
+          <h2 id="prompt" className="font-display text-2xl leading-none font-extrabold uppercase">
             The prompt
           </h2>
           <div className="bg-muted/50 ring-border mt-4 min-w-0 overflow-hidden rounded-xl ring-1 ring-inset">
@@ -235,23 +244,24 @@ function TrackBody({ track }: { track: MusicTrack }) {
         </section>
 
         <section aria-labelledby="spec" className="border-border/60 border-t py-10">
-          <h2 id="spec" className="font-heading text-xl font-semibold tracking-tight">
+          <h2 id="spec" className="font-display text-2xl leading-none font-extrabold uppercase">
             How it was rendered
           </h2>
-          <dl className="mt-4 grid gap-x-8 sm:grid-cols-2">
-            <Spec label="Model" value={`${MUSIC_MODEL_NAMES[track.model]} (${track.model})`} />
-            <Spec label="Licence" value={licence.name} />
-            <Spec label="Duration requested" value={`${track.durationS} s`} />
-            <Spec
-              label="Duration rendered"
-              value={meta ? `${meta.durationS.toFixed(2)} s` : "—"}
+          <div className="mt-4">
+            <SiteFactLog
+              facts={[
+                { label: "Model", value: `${MUSIC_MODEL_NAMES[track.model]} (${track.model})` },
+                { label: "Licence", value: licence.name },
+                { label: "Duration requested", value: `${track.durationS} s` },
+                { label: "Duration rendered", value: meta ? `${meta.durationS.toFixed(2)} s` : "—" },
+                { label: "Sample rate", value: meta ? `${meta.sampleRate} Hz` : "—" },
+                {
+                  label: "File",
+                  value: meta ? `MP3, ${(meta.sizeBytes / 1024 / 1024).toFixed(1)} MB` : "MP3",
+                },
+              ]}
             />
-            <Spec label="Sample rate" value={meta ? `${meta.sampleRate} Hz` : "—"} />
-            <Spec
-              label="File"
-              value={meta ? `MP3, ${(meta.sizeBytes / 1024 / 1024).toFixed(1)} MB` : "MP3"}
-            />
-          </dl>
+          </div>
           <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
             {licence.note} Mirli itself is MIT and imposes no terms of its own on what you
             generate.
@@ -260,18 +270,30 @@ function TrackBody({ track }: { track: MusicTrack }) {
 
         {siblings.length > 0 && (
           <section aria-labelledby="more" className="border-border/60 border-t py-10">
-            <h2 id="more" className="font-heading text-xl font-semibold tracking-tight">
+            <h2 id="more" className="font-display text-2xl leading-none font-extrabold uppercase">
               More {track.collection === "vocal" ? "sung tracks" : "instrumentals"}
             </h2>
-            <ul className="mt-4 flex flex-wrap gap-2">
-              {siblings.map((t) => (
-                <li key={t.slug}>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={`/music/${t.slug}`}>{t.title}</Link>
-                  </Button>
-                </li>
-              ))}
-            </ul>
+            <SiteTrackList className="mt-4">
+              {siblings.map((t, i) => {
+                const sid = `music-${t.slug}`;
+                return (
+                  <SiteTrackRow
+                    key={t.slug}
+                    no={String(i + 1).padStart(2, "0")}
+                    tile={<MusicCover track={t} className="bg-muted size-full object-cover" fallbackTextClassName="text-sm" />}
+                    title={t.title}
+                    href={`/music/${t.slug}`}
+                    log={[t.genre, MUSIC_MODEL_LICENSES[t.model].name].join(" · ")}
+                    license={getModelByCatalogId(t.model)?.license.commercial}
+                    model={MUSIC_MODEL_NAMES[t.model]}
+                    length={manifest?.[t.slug] ? formatDuration(manifest[t.slug]!.durationS) : `${t.durationS}s`}
+                    isCurrent={audio.current?.id === sid}
+                    playing={audio.playing}
+                    onPlay={() => audio.toggle(sid)}
+                  />
+                );
+              })}
+            </SiteTrackList>
             <Link
               to="/music"
               className="text-muted-foreground hover:text-foreground mt-4 inline-block text-sm underline-offset-4 hover:underline"
@@ -282,26 +304,9 @@ function TrackBody({ track }: { track: MusicTrack }) {
         )}
       </div>
 
-      {/* The dock. Full width, pinned to the bottom, the only player here. */}
-      <PlayerDock
-        cover={
-          <MusicCover
-            track={track}
-            className="bg-muted size-11 shrink-0 rounded-md object-cover"
-            fallbackTextClassName="text-sm"
-          />
-        }
-        title={track.title}
-        subtitle={`${track.genre} · ${MUSIC_MODEL_NAMES[track.model]}`}
-        player={
-          failed ? (
-            <p className="text-muted-foreground text-sm">This track could not be loaded.</p>
-          ) : meta ? (
-            <WaveformPlayer sound={trackToSound(track, meta)} onTime={handleTime} />
-          ) : (
-            <Skeleton className="h-14 w-full rounded-lg" />
-          )
-        }
+      {/* The dock, as the app's: pinned to the bottom, the only player here. */}
+      <SiteDock
+        audio={audio}
         trailing={
           <Button variant="ghost" size="icon-sm" asChild>
             <a href={trackAudioUrl(track.slug)} download aria-label={`Download ${track.title}`}>
@@ -310,6 +315,7 @@ function TrackBody({ track }: { track: MusicTrack }) {
           </Button>
         }
       />
+      {audio.element}
     </>
   );
 }

@@ -11,7 +11,6 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import {
   ActivityIcon,
-  AudioLinesIcon,
   BotIcon,
   ChevronDownIcon,
   CpuIcon,
@@ -19,15 +18,14 @@ import {
   FolderIcon,
   InfoIcon,
   LibraryIcon,
-  MessageSquareTextIcon,
   MessagesSquareIcon,
   MicIcon,
   MoonIcon,
-  MusicIcon,
   PanelLeftIcon,
   PlusIcon,
   SearchIcon,
   SettingsIcon,
+  SquarePenIcon,
   SunIcon,
   Trash2Icon,
   XIcon,
@@ -129,9 +127,17 @@ const NAV_STUDIO: NavItem[] = [
  *  turns up a music track or a spoken read. Browsing, not doing — which is why
  *  it is a group of its own rather than more entries under Studio. */
 const NAV_SAMPLES: NavItem[] = [
-  { to: "/library/speech", label: "Text to Speech", icon: MessageSquareTextIcon, end: false, hue: "voice" },
-  { to: "/library/sfx", label: "SFX", icon: AudioLinesIcon, end: false, hue: "sfx" },
-  { to: "/library/music", label: "Music", icon: MusicIcon, end: false, hue: "music" },
+  // Create is the create panel beside one kind's list (Music / SFX / Speech
+  // are tabs in that panel); Library is everything made, in one list.
+  {
+    to: "/create",
+    label: "Create",
+    icon: SquarePenIcon,
+    end: false,
+    hue: "sfx",
+    match: /^\/(create|library\/(music|sfx|speech))(\/|$)/,
+  },
+  { to: "/library", label: "Library", icon: LibraryIcon, end: true, hue: "sfx" },
 ];
 
 /** App-level nav — not content you're working in, so it lives in the sticky
@@ -391,6 +397,9 @@ interface NavItem {
   except?: string;
   /** Area tint for the icon. Omitted for the neutral footer utilities. */
   hue?: NavHue;
+  /** Lit by any path this matches, for an item that stands for several
+   *  routes (Create covers the three kind pages). */
+  match?: RegExp;
 }
 
 /**
@@ -458,7 +467,7 @@ function NavGroup({
               <NavLink to={item.to} end={item.end} onClick={onNavigate}>
                 {({ isActive }) => (
                   <SidebarMenuButton
-                    isActive={isActive && !matchesExcept(item, pathname)}
+                    isActive={item.match ? item.match.test(pathname) : isActive && !matchesExcept(item, pathname)}
                     tooltip={item.label}
                     className={cn(
                       "transition-colors duration-(--duration-fast)",
@@ -702,7 +711,9 @@ export function AppSidebar() {
     // asking the question — a dialog mounted inside would go with it.
     <>
       {picker.dialog}
-      <Sidebar collapsible="icon">
+      {/* pr-2.5: panels sit 8px apart, the same as their margin from the
+          window edges. */}
+      <Sidebar collapsible="icon" variant="inset" className="pr-2.5">
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
@@ -750,7 +761,7 @@ export function AppSidebar() {
 
         <SidebarContent>
           <NavGroup label="Studio" items={NAV_STUDIO} onNavigate={() => setOpenMobile(false)} />
-          <NavGroup label="Samples" items={NAV_SAMPLES} onNavigate={() => setOpenMobile(false)} />
+          <NavGroup label="Sounds" items={NAV_SAMPLES} onNavigate={() => setOpenMobile(false)} />
 
           <RecentSessions />
 

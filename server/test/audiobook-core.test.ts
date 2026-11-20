@@ -379,6 +379,28 @@ describe("paragraphs", () => {
     expect(back.speaker).toBe("Narrator");
   });
 
+  it("stores a per-paragraph model override", async () => {
+    const book = await json("POST", "/api/audiobooks", {
+      title: "Models",
+      settings: { model_id: "book-model" },
+    });
+    const cid = book.chapters[0].id;
+    const p = await json("POST", `/api/audiobooks/${book.id}/chapters/${cid}/paragraphs`, {
+      text: "Hi.",
+    });
+    expect(p.model_id).toBeNull();
+    expect(audiobooks(app.soundbox).modelFor(p.id)).toBe("book-model");
+    const set = await json("PATCH", `/api/audiobooks/${book.id}/paragraphs/${p.id}`, {
+      model_id: "own-model",
+    });
+    expect(set.model_id).toBe("own-model");
+    expect(audiobooks(app.soundbox).modelFor(p.id)).toBe("own-model");
+    const cleared = await json("PATCH", `/api/audiobooks/${book.id}/paragraphs/${p.id}`, {
+      model_id: null,
+    });
+    expect(cleared.model_id).toBeNull();
+  });
+
   it("adds and deletes paragraphs", async () => {
     const book = await json("POST", "/api/audiobooks", { title: "Add" });
     const cid = book.chapters[0].id;

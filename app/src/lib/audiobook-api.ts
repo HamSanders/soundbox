@@ -28,6 +28,8 @@ export type ParagraphStatus = "unvoiced" | "voiced" | "stale" | "locked";
 export type Paragraph = StorySegment &
   ParagraphMeta & {
     status: ParagraphStatus;
+    /** This paragraph's own model, or null to use the character's or book's. */
+    model_id: string | null;
   };
 
 export interface BookStats {
@@ -89,6 +91,7 @@ export interface ParagraphPatch {
   character_id?: string | null;
   locked?: boolean;
   is_heading?: boolean;
+  model_id?: string | null;
 }
 
 export interface ReplaceRequest {

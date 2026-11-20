@@ -35,7 +35,8 @@
  *   getParagraphs(chapterId): Paragraph[] | null
  *   getParagraph(segmentId): Paragraph | null
  *   addParagraph(chapterId, { text, position?, character_id?, is_heading? }): Paragraph
- *   updateParagraph(segmentId, { text?, character_id?, locked?, is_heading? }): Paragraph | null
+ *   updateParagraph(segmentId, { text?, character_id?, locked?, is_heading?, model_id? }): Paragraph | null
+ *   modelFor(segmentId): string | null        paragraph override, else character's, else book's
  *   deleteParagraph(segmentId): boolean
  *   setParagraphCharacter(segmentIds | segmentId, characterId | null): number
  *   markStale(segmentIds): number             e.g. a pronunciation rule changed
@@ -84,6 +85,8 @@ export type { BookStats, ChapterWithStats, ParagraphStatus } from "./store.js";
 export type Paragraph = StorySegment &
   ParagraphMeta & {
     status: ParagraphStatus;
+    /** This paragraph's own model, or null to use the character's or book's. */
+    model_id: string | null;
   };
 
 export interface BookSummary extends Book {
@@ -493,7 +496,13 @@ export class AudiobookService {
    */
   updateParagraph(
     segmentId: string,
-    fields: { text?: string; character_id?: string | null; locked?: boolean; is_heading?: boolean },
+    fields: {
+      text?: string;
+      character_id?: string | null;
+      locked?: boolean;
+      is_heading?: boolean;
+      model_id?: string | null;
+    },
   ): Paragraph | null {
     const chapter = this.store.chapterForSegment(segmentId);
     if (!chapter) return null;
@@ -507,9 +516,10 @@ export class AudiobookService {
       this.store.syncVoiced([chapter.story_id]);
       this.svc.updateSegment(segmentId, { text: fields.text });
     }
-    const meta: { locked?: boolean; is_heading?: boolean } = {};
+    const meta: { locked?: boolean; is_heading?: boolean; model_id?: string | null } = {};
     if (fields.locked !== undefined) meta.locked = fields.locked;
     if (fields.is_heading !== undefined) meta.is_heading = fields.is_heading;
+    if ("model_id" in fields) meta.model_id = fields.model_id ?? null;
     if (Object.keys(meta).length > 0) this.store.setMeta(segmentId, meta);
     if ("character_id" in fields) this.setParagraphCharacter([segmentId], fields.character_id ?? null);
     this.publishParagraphs(chapter, [segmentId]);
@@ -683,6 +693,20 @@ export class AudiobookService {
     this.syncVoices(character.book_id, segments);
     this.hub.publish(character.book_id, { type: "characters" });
     return true;
+  }
+
+  /** The model a paragraph should be generated on: its own override, else
+   *  its character's (multi cast), else the book's. Null = caller picks
+   *  (usually the voice's own model). */
+  modelFor(segmentId: string): string | null {
+    const p = this.getParagraph(segmentId);
+    const chapter = this.store.chapterForSegment(segmentId);
+    if (!p || !chapter) return null;
+    if (p.model_id) return p.model_id;
+    const book = this.store.getBook(chapter.book_id)!;
+    const character = p.character_id ? this.store.getCharacter(p.character_id) : null;
+    if (book.settings.cast_mode === "multi" && character?.model_id) return character.model_id;
+    return book.settings.model_id;
   }
 
   /** The voice a paragraph cast as `characterId` is read with. */

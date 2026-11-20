@@ -25,6 +25,7 @@ interface Meta {
   character_id: string | null;
   locked: boolean;
   is_heading: boolean;
+  model_id: string | null;
   voiced_sound_id: string | null;
   voiced_text: string | null;
   stale_sound_id: string | null;
@@ -63,6 +64,7 @@ function metaOf(segmentId: string): Meta {
       character_id: null,
       locked: false,
       is_heading: false,
+      model_id: null,
       voiced_sound_id: null,
       voiced_text: null,
       stale_sound_id: null,
@@ -131,6 +133,7 @@ async function paragraphsOf(chapter: Chapter): Promise<Paragraph[]> {
       character_id: m.character_id,
       locked: m.locked,
       is_heading: m.is_heading,
+      model_id: m.model_id,
       status: statusOf(segment, m),
     };
   });
@@ -550,6 +553,7 @@ export const mockAudiobookApi: AudiobookApi = {
     }
     if (patch.locked !== undefined) m.locked = patch.locked;
     if (patch.is_heading !== undefined) m.is_heading = patch.is_heading;
+    if ("model_id" in patch) m.model_id = patch.model_id ?? null;
     if ("character_id" in patch) await this.castParagraphs(bookId, [segmentId], patch.character_id ?? null);
     emit(bookId, { type: "paragraphs", chapter_id: chapter.id, segment_ids: [segmentId] });
     return (await paragraphsOf(chapter)).find((p) => p.id === segmentId)!;

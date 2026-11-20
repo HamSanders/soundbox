@@ -95,6 +95,7 @@ const paragraphPatchSchema = z.object({
   character_id: z.string().nullish(),
   locked: z.boolean().optional(),
   is_heading: z.boolean().optional(),
+  model_id: z.string().max(200).nullish(),
 });
 
 const castSchema = z.object({
@@ -276,6 +277,9 @@ function routes(app: FastifyInstance, svc: MirliService): void {
     if (body.is_heading !== undefined) fields.is_heading = body.is_heading;
     if (request.body && typeof request.body === "object" && "character_id" in request.body) {
       fields.character_id = body.character_id ?? null;
+    }
+    if (request.body && typeof request.body === "object" && "model_id" in request.body) {
+      fields.model_id = body.model_id ?? null;
     }
     if (Object.keys(fields).length === 0) throw new HttpError(422, "Nothing to update");
     return books().updateParagraph(request.params.sid, fields);

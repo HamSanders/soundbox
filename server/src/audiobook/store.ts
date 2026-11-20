@@ -90,6 +90,8 @@ CREATE TABLE IF NOT EXISTS book_paragraphs (
     character_id    TEXT REFERENCES book_characters(id) ON DELETE SET NULL,
     locked          INTEGER NOT NULL DEFAULT 0,
     is_heading      INTEGER NOT NULL DEFAULT 0,
+    -- This paragraph's own model, over the character's and the book's.
+    model_id        TEXT,
     voiced_sound_id TEXT,
     voiced_text     TEXT,
     stale_sound_id  TEXT
@@ -188,6 +190,7 @@ interface MetaRow {
   character_id: string | null;
   locked: number;
   is_heading: number;
+  model_id: string | null;
 }
 
 interface StatsRow {
@@ -328,6 +331,13 @@ export class AudiobookStore {
     private readonly now: () => string,
   ) {
     this.conn.exec(SCHEMA);
+    // Columns added after the first build of this table.
+    const columns = this.conn.prepare("PRAGMA table_info(book_paragraphs)").all() as {
+      name: string;
+    }[];
+    if (!columns.some((c) => c.name === "model_id")) {
+      this.conn.exec("ALTER TABLE book_paragraphs ADD COLUMN model_id TEXT");
+    }
   }
 
   /** Run `fn` in one transaction. The service uses this to keep a story and
@@ -606,7 +616,7 @@ export class AudiobookStore {
       const chunk = segmentIds.slice(i, i + 500);
       const rows = this.conn
         .prepare(
-          `SELECT segment_id, character_id, locked, is_heading FROM book_paragraphs
+          `SELECT segment_id, character_id, locked, is_heading, model_id FROM book_paragraphs
             WHERE segment_id IN (${chunk.map(() => "?").join(",")})`,
         )
         .all(...chunk) as MetaRow[];
@@ -631,7 +641,12 @@ export class AudiobookStore {
   /** Upsert one paragraph's audiobook state. Only the given fields change. */
   setMeta(
     segmentId: string,
-    fields: { character_id?: string | null; locked?: boolean; is_heading?: boolean },
+    fields: {
+      character_id?: string | null;
+      locked?: boolean;
+      is_heading?: boolean;
+      model_id?: string | null;
+    },
   ): void {
     this.conn
       .prepare("INSERT INTO book_paragraphs (segment_id) VALUES (?) ON CONFLICT DO NOTHING")
@@ -650,6 +665,11 @@ export class AudiobookStore {
       this.conn
         .prepare("UPDATE book_paragraphs SET is_heading=? WHERE segment_id=?")
         .run(fields.is_heading ? 1 : 0, segmentId);
+    }
+    if ("model_id" in fields) {
+      this.conn
+        .prepare("UPDATE book_paragraphs SET model_id=? WHERE segment_id=?")
+        .run(fields.model_id ?? null, segmentId);
     }
   }
 
@@ -774,8 +794,13 @@ export class AudiobookStore {
   }
 
   /** The ParagraphMeta for a row, with defaults for a segment with no row. */
-  static meta(segmentId: string, chapterId: string, row: MetaRow | undefined): ParagraphMeta {
+  static meta(
+    segmentId: string,
+    chapterId: string,
+    row: MetaRow | undefined,
+  ): ParagraphMeta & { model_id: string | null } {
     return {
+      model_id: row?.model_id ?? null,
       segment_id: segmentId,
       chapter_id: chapterId,
       character_id: row?.character_id ?? null,

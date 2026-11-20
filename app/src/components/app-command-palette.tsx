@@ -81,7 +81,8 @@ function hasComposer(pathname: string): boolean {
  * would miss.
  */
 function pageOwnsTheKey(pathname: string): boolean {
-  return pathname.startsWith("/studio/");
+  // Settings uses Ctrl/Cmd+K for its own search box.
+  return pathname.startsWith("/studio/") || pathname === "/settings";
 }
 
 /** What the row for a model offers, by its state. Null when nothing applies

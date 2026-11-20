@@ -180,6 +180,7 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
     writeLyrics,
     writingLyrics,
     lyricsError,
+    startEdit,
   } = useGenerateSession();
 
   // The renders still in flight, as rows at the top of the list they are
@@ -437,6 +438,9 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
             <SoundCard
               key={sound.id}
               track
+              // Music keeps Extend / Cover in the row's menu, as the old
+              // Music studio list had them.
+              onEdit={listCategory === "music" ? startEdit : undefined}
               sound={sound}
               modelName={modelNames.get(sound.model)}
               className="animate-in fade-in-0 slide-in-from-bottom-1 duration-300 fill-mode-both"

@@ -65,7 +65,7 @@ export function AppHeader() {
   const builder = /^\/studio\/(script|music)\//.exec(pathname)?.[1] ?? null;
 
   return (
-    <header className="bg-background/85 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 border-b px-3 backdrop-blur">
+    <header className="bg-sidebar fixed inset-x-0 top-0 z-40 flex h-(--top-h,2.5rem) items-center gap-2 px-3">
       <SidebarTrigger className="-ml-1" />
       <HistoryButtons />
       <nav aria-label="Breadcrumb" className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-sm">

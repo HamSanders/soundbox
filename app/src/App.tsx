@@ -37,7 +37,6 @@ const ConsolePage = lazy(() => import("@/routes/console").then((m) => ({ default
 const LibraryPage = lazy(() => import("@/routes/library").then((m) => ({ default: m.LibraryPage })));
 const SfxLibraryPage = lazy(() => import("@/routes/sfx-library").then((m) => ({ default: m.SfxLibraryPage })));
 const SpeechLibraryPage = lazy(() => import("@/routes/speech-library").then((m) => ({ default: m.SpeechLibraryPage })));
-const MusicStudioPage = lazy(() => import("@/routes/music-studio").then((m) => ({ default: m.MusicStudioPage })));
 const ProjectsPage = lazy(() => import("@/routes/projects").then((m) => ({ default: m.ProjectsPage })));
 const StudioIndexPage = lazy(() => import("@/routes/studio-index").then((m) => ({ default: m.StudioIndexPage })));
 const StudioPage = lazy(() => import("@/routes/studio").then((m) => ({ default: m.StudioPage })));
@@ -78,7 +77,7 @@ function ScrollToTop() {
  *  for reading and for grids, but an editor with a timeline beside it wants
  *  every pixel — capping it at 1152px wastes half a wide monitor. */
 function isFullBleed(pathname: string): boolean {
-  return pathname.startsWith("/studio/") || pathname === "/library/music";
+  return pathname.startsWith("/studio/");
 }
 
 /** The app shell: sidebar, header, and the routes that live inside them. */
@@ -93,9 +92,20 @@ function AppShell() {
     // much room that strip takes, so both panels stop above it.
     <SidebarProvider
       defaultOpen={false}
-      className="pb-(--dock-h)"
-      style={{ "--dock-h": nowPlaying ? `${PLAYER_DOCK_HEIGHT_PX}px` : "0px" } as CSSProperties}
+      // --top-h: the slim header bar above every panel. --panel-h: what is
+      // left for a panel between that bar and the player, less the panels'
+      // own 8px margins. Every panel's height reads it.
+      className="pt-(--top-h) pb-(--dock-h)"
+      style={
+        {
+          "--dock-h": nowPlaying ? `${PLAYER_DOCK_HEIGHT_PX}px` : "0px",
+          "--top-h": "2.5rem",
+          "--panel-h": `calc(100svh - 2.5rem - 1rem - ${nowPlaying ? PLAYER_DOCK_HEIGHT_PX : 0}px)`,
+        } as CSSProperties
+      }
     >
+      {/* A slim bar across the window, above the panels, not inside one. */}
+      <AppHeader />
       <AppSidebar />
       {/* Between the sidebar and the page on the kind pages: see create-panel.tsx. */}
       <CreatePanel />
@@ -115,11 +125,10 @@ function AppShell() {
         // On desktop the panel is exactly the window less its 8px margins and
         // the player strip, and the page scrolls inside it, so the panel's
         // rounded bottom edge always sits just above the player.
-        className={`bg-background text-foreground min-w-0 md:h-[calc(100svh-1rem-var(--dock-h))]${
-          fullBleed ? " h-[calc(100svh-var(--dock-h))] overflow-hidden" : " md:overflow-y-auto"
+        className={`bg-background text-foreground min-w-0 md:h-(--panel-h)${
+          fullBleed ? " max-md:h-[calc(100svh-2.5rem-var(--dock-h,0px))] overflow-hidden" : " md:overflow-y-auto"
         }`}
       >
-        <AppHeader />
         {/* The full-bleed column is a flex column with `min-h-0`, which is
             what lets a studio page fill the window: `h-full` cannot do it,
             because this element's own height comes from `flex-1` rather than
@@ -177,7 +186,7 @@ function AppShell() {
             <Route path="/create" element={<CreateRedirect />} />
             <Route path="/library" element={<LibraryPage />} />
             <Route path="/library/sfx" element={<SfxLibraryPage />} />
-            <Route path="/library/music" element={<MusicStudioPage />} />
+            <Route path="/library/music" element={<LibraryPage category="music" />} />
             <Route path="/library/speech" element={<SpeechLibraryPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/sounds/:id" element={<SoundDetailPage />} />

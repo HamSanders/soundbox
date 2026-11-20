@@ -415,6 +415,387 @@ describe("paragraphs", () => {
   });
 });
 
+describe("paragraph operations", () => {
+  it("splits, merges back and reorders", async () => {
+    const book = await json("POST", "/api/audiobooks", { title: "Ops" });
+    const cid = book.chapters[0].id;
+    const base = `/api/audiobooks/${book.id}`;
+    const a = await json("POST", `${base}/chapters/${cid}/paragraphs`, {
+      text: "First half. Second half.",
+    });
+    app.soundbox.updateSegment(a.id, { sound_id: fakeSound() });
+
+    const split = await json("POST", `${base}/paragraphs/${a.id}/split`, { at: 11 });
+    expect(split.first.text).toBe("First half.");
+    expect(split.first.status).toBe("stale");
+    expect(split.second.text).toBe("Second half.");
+    expect(split.second.status).toBe("unvoiced");
+    let list = await json<any[]>("GET", `${base}/chapters/${cid}/paragraphs`);
+    expect(list.map((p) => p.text)).toEqual(["First half.", "Second half."]);
+
+    const bad = await call({ method: "POST", url: `${base}/paragraphs/${a.id}/split`, payload: { at: 0 } });
+    expect(bad.statusCode).toBe(422);
+
+    const merged = await json("POST", `${base}/paragraphs/${a.id}/merge-next`, {});
+    expect(merged.paragraph.text).toBe("First half. Second half.");
+    expect(merged.removed_id).toBe(split.second.id);
+    expect(merged.split_at).toBe(12);
+    list = await json<any[]>("GET", `${base}/chapters/${cid}/paragraphs`);
+    expect(list).toHaveLength(1);
+
+    const last = await call({ method: "POST", url: `${base}/paragraphs/${a.id}/merge-next`, payload: {} });
+    expect(last.statusCode).toBe(400);
+
+    const b = await json("POST", `${base}/chapters/${cid}/paragraphs`, { text: "B" });
+    const pause = await json("POST", `${base}/chapters/${cid}/paragraphs`, {
+      kind: "pause",
+      duration_s: 2,
+    });
+    expect(pause.kind).toBe("pause");
+    expect(pause.duration_s).toBe(2);
+    const order = await json<any[]>("POST", `${base}/chapters/${cid}/paragraphs/reorder`, {
+      ids: [pause.id, b.id, a.id],
+    });
+    expect(order.map((p) => p.id)).toEqual([pause.id, b.id, a.id]);
+    const wrong = await call({
+      method: "POST",
+      url: `${base}/chapters/${cid}/paragraphs/reorder`,
+      payload: { ids: [a.id] },
+    });
+    expect(wrong.statusCode).toBe(422);
+  });
+
+  it("refuses to split a locked paragraph", async () => {
+    const book = await json("POST", "/api/audiobooks", { title: "Locked ops" });
+    const base = `/api/audiobooks/${book.id}`;
+    const p = await json("POST", `${base}/chapters/${book.chapters[0].id}/paragraphs`, { text: "One two." });
+    await json("PATCH", `${base}/paragraphs/${p.id}`, { locked: true });
+    const res = await call({ method: "POST", url: `${base}/paragraphs/${p.id}/split`, payload: { at: 4 } });
+    expect(res.statusCode).toBe(400);
+  });
+});
+
+describe("review notes", () => {
+  it("adds, resolves, filters, counts and follows a merge", async () => {
+    const book = await json("POST", "/api/audiobooks", { title: "Notes" });
+    const cid = book.chapters[0].id;
+    const base = `/api/audiobooks/${book.id}`;
+    const a = await json("POST", `${base}/chapters/${cid}/paragraphs`, { text: "One." });
+    const b = await json("POST", `${base}/chapters/${cid}/paragraphs`, { text: "Two." });
+
+    const n1 = await json("POST", `${base}/paragraphs/${a.id}/notes`, { body: "Too fast", at_s: 1.5 });
+    expect(n1).toMatchObject({ body: "Too fast", at_s: 1.5, resolved: false, chapter_id: cid });
+    const n2 = await json("POST", `${base}/paragraphs/${b.id}/notes`, { body: "Wrong name" });
+    expect((await json("GET", base)).chapters[0].open_notes).toBe(2);
+    expect((await json("GET", base)).stats.open_notes).toBe(2);
+
+    const resolved = await json("PATCH", `${base}/notes/${n1.id}`, { resolved: true });
+    expect(resolved.resolved).toBe(true);
+    expect((await json<any[]>("GET", `${base}/notes?status=open`)).map((n) => n.id)).toEqual([n2.id]);
+    expect((await json<any[]>("GET", `${base}/notes?status=resolved`)).map((n) => n.id)).toEqual([n1.id]);
+    expect(await json<any[]>("GET", `${base}/notes?segment_id=${b.id}`)).toHaveLength(1);
+    expect((await json("GET", base)).chapters[0].open_notes).toBe(1);
+
+    // Merging b into a keeps b's note, now on a.
+    await json("POST", `${base}/paragraphs/${a.id}/merge-next`, {});
+    const all = await json<any[]>("GET", `${base}/notes`);
+    expect(all.every((n) => n.segment_id === a.id)).toBe(true);
+    expect(all).toHaveLength(2);
+
+    await json("DELETE", `${base}/notes/${n2.id}`);
+    expect(await json<any[]>("GET", `${base}/notes`)).toHaveLength(1);
+    const bad = await call({ method: "POST", url: `${base}/paragraphs/${a.id}/notes`, payload: { body: " " } });
+    expect(bad.statusCode).toBe(422);
+  });
+});
+
+describe("snapshots", () => {
+  it("saves, diffs and restores a version", async () => {
+    const narrator = addVoice("snap-narrator");
+    const book = await json("POST", "/api/audiobooks", {
+      title: "Versions",
+      settings: { narrator_voice_id: narrator, cast_mode: "multi" },
+    });
+    const base = `/api/audiobooks/${book.id}`;
+    const cid = book.chapters[0].id;
+    const a = await json("POST", `${base}/chapters/${cid}/paragraphs`, { text: "Alpha." });
+    const b = await json("POST", `${base}/chapters/${cid}/paragraphs`, { text: "Beta." });
+    const takeA = fakeSound();
+    app.soundbox.updateSegment(a.id, { sound_id: takeA });
+    const hero = audiobooks(app.soundbox).createCharacter(book.id, { name: "Hero" });
+    await json("PATCH", `${base}/paragraphs/${b.id}`, { character_id: hero.id, locked: true });
+
+    const snap = await json("POST", `${base}/snapshots`, { label: "Draft 1" });
+    expect(snap).toMatchObject({ label: "Draft 1", chapters: 1, paragraphs: 2 });
+
+    // Change things after the snapshot.
+    await json("PATCH", base, { title: "Versions, revised" });
+    await json("PATCH", `${base}/paragraphs/${a.id}`, { text: "Alpha, revised." });
+    await json("PATCH", `${base}/paragraphs/${b.id}`, { locked: false });
+    await json("DELETE", `${base}/paragraphs/${b.id}`);
+    const c = await json("POST", `${base}/chapters/${cid}/paragraphs`, { text: "Gamma." });
+    const extra = await json("POST", `${base}/chapters`, { title: "Added later" });
+    audiobooks(app.soundbox).deleteCharacter(hero.id);
+    app.soundbox.updateSegment(a.id, { sound_id: fakeSound() });
+
+    const diff = await json(`GET`, `${base}/snapshots/${snap.id}/diff`);
+    expect(diff.book).toEqual([{ field: "title", before: "Versions", after: "Versions, revised" }]);
+    expect(diff.summary).toEqual({ added: 1, removed: 1, changed: 1 });
+    const ch = diff.chapters.find((x: any) => x.chapter_id === cid);
+    expect(ch.paragraphs).toEqual([
+      { segment_id: a.id, status: "changed", before: "Alpha.", after: "Alpha, revised." },
+      { segment_id: c.id, status: "added", before: null, after: "Gamma." },
+      { segment_id: b.id, status: "removed", before: "Beta.", after: null },
+    ]);
+    expect(diff.chapters.find((x: any) => x.chapter_id === extra.id).status).toBe("added");
+
+    const restored = await json("POST", `${base}/snapshots/${snap.id}/restore`, {});
+    expect(restored.before.label).toBe("Before restoring “Draft 1”");
+    expect(restored.book.title).toBe("Versions");
+    expect(restored.book.chapters.map((x: any) => x.id)).toEqual([cid]);
+    expect(restored.book.characters.map((x: any) => x.id)).toEqual([hero.id]);
+    const paras = await json<any[]>("GET", `${base}/chapters/${cid}/paragraphs`);
+    expect(paras.map((p) => [p.id, p.text])).toEqual([
+      [a.id, "Alpha."],
+      [b.id, "Beta."],
+    ]);
+    expect(paras[0].sound_id).toBe(takeA);
+    expect(paras[0].status).toBe("voiced");
+    expect(paras[1]).toMatchObject({ character_id: hero.id, locked: true, speaker: "Hero" });
+
+    // Nothing differs any more; the pre-restore version is listed.
+    const again = await json(`GET`, `${base}/snapshots/${snap.id}/diff`);
+    expect(again.summary).toEqual({ added: 0, removed: 0, changed: 0 });
+    const list = await json<any[]>("GET", `${base}/snapshots`);
+    expect(list.map((s) => s.label)).toEqual(["Before restoring “Draft 1”", "Draft 1"]);
+
+    await json("DELETE", `${base}/snapshots/${snap.id}`);
+    expect(await json<any[]>("GET", `${base}/snapshots`)).toHaveLength(1);
+  });
+});
+
+describe("duplicate and chapter from text", () => {
+  it("makes a chapter from pasted text with the importer's cleanup", async () => {
+    const book = await json("POST", "/api/audiobooks", { title: "Pasted" });
+    const base = `/api/audiobooks/${book.id}`;
+    const text = [
+      "CHAPTER TWO",
+      "",
+      "The tide came in at",
+      "dusk, and the harbour went quiet as a held breath.",
+      "",
+      "Nobody spoke. The bell rang once, a thin and tremu-",
+      "lous note over the water.",
+      "",
+      "",
+      "Part the Second",
+      "",
+      "Morning.",
+    ].join("\n");
+    const chapter = await json("POST", `${base}/chapters/from-text`, { text });
+    expect(chapter.title).toBe("Chapter Two");
+    const paras = await json<any[]>("GET", `${base}/chapters/${chapter.id}/paragraphs`);
+    expect(paras.map((p) => p.text)).toEqual([
+      "Chapter Two",
+      "The tide came in at dusk, and the harbour went quiet as a held breath.",
+      "Nobody spoke. The bell rang once, a thin and tremulous note over the water.",
+      "Part the Second",
+      "Morning.",
+    ]);
+    expect(paras.map((p) => p.is_heading)).toEqual([true, false, false, true, false]);
+
+    const titled = await json("POST", `${base}/chapters/from-text`, {
+      text: "Just one line of text that goes on for a little while.",
+      title: "Interlude",
+      position: 0,
+    });
+    expect(titled.title).toBe("Interlude");
+    expect((await json("GET", base)).chapters[0].id).toBe(titled.id);
+
+    const empty = await call({ method: "POST", url: `${base}/chapters/from-text`, payload: { text: "  \n\n " } });
+    expect(empty.statusCode).toBe(400);
+  });
+
+  it("duplicates a book with its cast, casting and takes", async () => {
+    const book = await audiobooks(app.soundbox).createBookFromManuscript(manuscript, { cast_mode: "multi" });
+    const svc = audiobooks(app.soundbox);
+    const mara = svc.createCharacter(book.id, { name: "Mara" });
+    const paras = svc.getParagraphs(book.chapters[1].id)!;
+    svc.setParagraphCharacter([paras[2]!.id], mara.id);
+    const take = fakeSound();
+    app.soundbox.updateSegment(paras[1]!.id, { sound_id: take });
+    svc.updateParagraph(paras[3]!.id, { locked: true });
+
+    const copy = await json("POST", `/api/audiobooks/${book.id}/duplicate`, {});
+    expect(copy.title).toBe("The Lighthouse Keeper (copy)");
+    expect(copy.id).not.toBe(book.id);
+    expect(copy.chapters.map((c: any) => [c.title, c.kind, c.included])).toEqual(
+      book.chapters.map((c) => [c.title, c.kind, c.included]),
+    );
+    expect(copy.characters.map((c: any) => c.name)).toEqual(["Mara"]);
+    expect(copy.characters[0].id).not.toBe(mara.id);
+    const copied = svc.getParagraphs(copy.chapters[1].id)!;
+    expect(copied.map((p) => p.text)).toEqual(paras.map((p) => p.text));
+    expect(copied[2]!.character_id).toBe(copy.characters[0].id);
+    expect(copied[1]!.sound_id).toBe(take);
+    expect(copied[1]!.status).toBe("voiced");
+    expect(copied[3]!.locked).toBe(true);
+    expect(copied[0]!.is_heading).toBe(true);
+
+    expect(copy.chapters[1].stats.paragraphs).toBe(book.chapters[1].stats.paragraphs);
+
+    // Deleting the copy keeps the original's shared take.
+    await call({ method: "DELETE", url: `/api/audiobooks/${copy.id}` });
+    expect(app.soundbox.db.getSound(take)).not.toBeNull();
+    expect(svc.getParagraph(paras[1]!.id)!.sound_id).toBe(take);
+  });
+});
+
+describe("duplicate with beds", () => {
+  it("copies bed clips and track settings, and tells onDuplicate hooks", async () => {
+    const svc = audiobooks(app.soundbox);
+    const book = await json("POST", "/api/audiobooks", { title: "Bedded" });
+    const chapter = book.chapters[0];
+    const base = `/api/audiobooks/${book.id}`;
+    await json("POST", `${base}/chapters/${chapter.id}/paragraphs`, { text: "One." });
+    await json("POST", `${base}/chapters/${chapter.id}/paragraphs`, { text: "Two." });
+    const bedSound = fakeSound();
+    const bed = app.soundbox.createSegment(chapter.story_id, {
+      text: "",
+      sound_id: bedSound,
+      track_index: 1,
+      kind: "line",
+      position: 1,
+      start_s: 0.5,
+      gain_db: -12,
+      fade_in_s: 2,
+    });
+    app.soundbox.updateTrack(chapter.story_id, 1, { name: "Music", gain_db: -6, muted: false });
+
+    let seen: { chapters: Map<string, string>; segments: Map<string, string> } | null = null;
+    svc.onDuplicate((scope) => {
+      if (scope.from_book_id === book.id) seen = scope;
+    });
+
+    const copy = await json("POST", `${base}/duplicate`, {});
+    const story = copy.chapters[0].story_id;
+    const segs = app.soundbox.listSegments(story);
+    expect(segs.map((s) => [s.track_index, s.text])).toEqual([
+      [0, "One."],
+      [1, ""],
+      [0, "Two."],
+    ]);
+    expect(segs[1]).toMatchObject({ sound_id: bedSound, start_s: 0.5, gain_db: -12, fade_in_s: 2 });
+    const tracks = app.soundbox.listTracks(story);
+    expect(tracks.find((t) => t.track_index === 1)).toMatchObject({ name: "Music", gain_db: -6 });
+
+    // Paragraph view and stats still ignore the bed.
+    expect(svc.getParagraphs(copy.chapters[0].id)!.map((p) => p.text)).toEqual(["One.", "Two."]);
+    expect(copy.chapters[0].stats.paragraphs).toBe(2);
+
+    expect(seen).not.toBeNull();
+    expect(seen!.chapters.get(chapter.id)).toBe(copy.chapters[0].id);
+    expect(seen!.segments.get(bed.id)).toBe(segs[1]!.id);
+    expect(seen!.segments.size).toBe(3);
+  });
+});
+
+describe("bed clips on other tracks", () => {
+  it("are never paragraphs: not listed, counted, cast, replaced, reordered, noted, captured or restored away", async () => {
+    const narrator = addVoice("bed-narrator");
+    const book = await json("POST", "/api/audiobooks", {
+      title: "Beds",
+      settings: { narrator_voice_id: narrator },
+    });
+    const base = `/api/audiobooks/${book.id}`;
+    const chapter = book.chapters[0];
+    const a = await json("POST", `${base}/chapters/${chapter.id}/paragraphs`, { text: "The lamp turned." });
+    const b = await json("POST", `${base}/chapters/${chapter.id}/paragraphs`, { text: "The sea was calm." });
+
+    // A soundscape bed: a line clip with audio on track 1. Its text holds a
+    // word find/replace would otherwise match.
+    const bedSound = fakeSound();
+    const bed = app.soundbox.createSegment(chapter.story_id, {
+      text: "lamp",
+      sound_id: bedSound,
+      track_index: 1,
+      kind: "line",
+      position: 1,
+    });
+    const segments = () => app.soundbox.listSegments(chapter.story_id);
+    const bedPosition = () => segments().findIndex((s) => s.id === bed.id);
+    expect(bedPosition()).toBe(1);
+
+    // Not listed.
+    let list = await json<any[]>("GET", `${base}/chapters/${chapter.id}/paragraphs`);
+    expect(list.map((p) => p.id)).toEqual([a.id, b.id]);
+
+    // Not counted.
+    let detail = await json("GET", base);
+    expect(detail.chapters[0].stats).toMatchObject({ paragraphs: 2, voiced: 0, duration_s: 0 });
+    expect(detail.chapters[0].status).toBe("empty");
+
+    // Not a paragraph for the paragraph routes.
+    for (const req of [
+      { method: "PATCH", url: `${base}/paragraphs/${bed.id}`, payload: { locked: true } },
+      { method: "POST", url: `${base}/paragraphs/${bed.id}/notes`, payload: { body: "x" } },
+      { method: "POST", url: `${base}/paragraphs/${bed.id}/split`, payload: { at: 2 } },
+      { method: "POST", url: `${base}/paragraphs/cast`, payload: { segment_ids: [bed.id], character_id: null } },
+    ]) {
+      expect((await call(req as any)).statusCode).toBe(404);
+    }
+
+    // Not cast: the narrator's voice and speaker never reach it.
+    await json("PATCH", base, { settings: { narrator_voice_id: addVoice("bed-narrator-2") } });
+    const after = segments().find((s) => s.id === bed.id)!;
+    expect(after.voice_id ?? null).toBeNull();
+    expect(after.speaker ?? null).toBeNull();
+
+    // Not replaced.
+    const replaced = await json("POST", `${base}/replace`, { find: "lamp", replace: "beacon" });
+    expect(replaced.matches).toBe(1);
+    expect(segments().find((s) => s.id === bed.id)!.text).toBe("lamp");
+
+    // Not reordered: paragraph ids alone are the whole order, and the bed
+    // keeps its slot.
+    const reordered = await json<any[]>("POST", `${base}/chapters/${chapter.id}/paragraphs/reorder`, {
+      ids: [b.id, a.id],
+    });
+    expect(reordered.map((p) => p.id)).toEqual([b.id, a.id]);
+    expect(bedPosition()).toBe(1);
+    const withBed = await call({
+      method: "POST",
+      url: `${base}/chapters/${chapter.id}/paragraphs/reorder`,
+      payload: { ids: [a.id, bed.id, b.id] },
+    });
+    expect(withBed.statusCode).toBe(422);
+
+    // Merge skips over it: the next paragraph is b's neighbour on track 0.
+    const merged = await json("POST", `${base}/paragraphs/${b.id}/merge-next`, {});
+    expect(merged.removed_id).toBe(a.id);
+    expect(segments().some((s) => s.id === bed.id)).toBe(true);
+
+    // Not captured, and not removed by a restore.
+    const snap = await json("POST", `${base}/snapshots`, { label: "With bed" });
+    expect(snap.paragraphs).toBe(1);
+    const full = await json("GET", `${base}/snapshots/${snap.id}`);
+    expect(full.data.chapters[0].paragraphs.map((p: any) => p.segment_id)).toEqual([b.id]);
+    await json("POST", `${base}/chapters/${chapter.id}/paragraphs`, { text: "Added later." });
+    const diff = await json("GET", `${base}/snapshots/${snap.id}/diff`);
+    expect(diff.summary).toEqual({ added: 1, removed: 0, changed: 0 });
+    await json("POST", `${base}/snapshots/${snap.id}/restore`, {});
+    const bedAfter = segments().find((s) => s.id === bed.id);
+    expect(bedAfter).toMatchObject({ track_index: 1, sound_id: bedSound, text: "lamp" });
+    list = await json<any[]>("GET", `${base}/chapters/${chapter.id}/paragraphs`);
+    expect(list.map((p) => p.id)).toEqual([b.id]);
+
+    // Still not counted after all that.
+    detail = await json("GET", base);
+    expect(detail.chapters[0].stats.paragraphs).toBe(1);
+    expect(detail.chapters[0].stats.duration_s).toBe(0);
+  });
+});
+
 describe("find and replace", () => {
   it("replaces across chapters, skips locked paragraphs and reports counts", async () => {
     const book = await audiobooks(app.soundbox).createBookFromManuscript(manuscript);

@@ -70,7 +70,8 @@ See [Access token](INSTALL.md#access-token).
 
 ## Tools
 
-Twenty-one tools in four groups: sounds, voices, stories, arrangement. The
+Thirty-three tools in five groups: sounds, voices, stories, arrangement,
+audiobooks. The
 authority is `server/src/mcp/server.ts`: the `MCP_TOOLS` table for names and
 descriptions, and the zod `inputSchema` on each `registerTool` call for
 arguments. Where this file and that one disagree, that one is right.
@@ -297,6 +298,87 @@ shows each change as it lands.
 
 > Devices are heard in the studio's timeline playback. `export_story` mixes
 > dry, without them.
+
+### Audiobooks
+
+A book is a list of chapters, and each chapter is a story, so the story and
+arrangement tools above also work on a chapter (its `story_id` is in every
+book summary). [AUDIOBOOKS.md](./AUDIOBOOKS.md) is the user guide. These tools
+call the audiobook HTTP API in-process, so they validate exactly as the app
+does. Every one returns ids for the next step and an `open_in_app` link.
+
+A typical run: `import_manuscript` → `set_character_voice` for the narrator
+and each character → `add_pronunciation` for names → `render_audiobook` →
+`add_bed` → `master_and_export_audiobook`.
+
+#### `soundbox.create_audiobook` / `soundbox.import_manuscript`
+
+`create_audiobook` takes `title` and optionally `author`, `narrator` (the
+credited name), `language`, `model_id`, `narrator_voice_id` and `cast_mode`
+(`single` or `multi`). It makes an empty book with one chapter.
+
+`import_manuscript` takes exactly one of `path` (an absolute path to an
+`.epub`, `.pdf`, `.docx`, `.txt`, `.md` or `.html` file, at most 200 MB),
+`text` (with `format` `txt`, `md` or `html`), or `url`. `title` and `author`
+override what the file says; the book settings are as for `create_audiobook`.
+Chapters, front and back matter, the cover and metadata are detected as the
+app's import does. The result includes the parser's `warnings`.
+
+#### `soundbox.list_audiobooks` / `soundbox.get_audiobook`
+
+`list_audiobooks` takes nothing. `get_audiobook` takes `book_id` and returns
+chapters (with `chapter_id`, `story_id`, kind, whether it is included, and
+voiced counts), the cast, settings and stats. With `chapter_id` it adds that
+chapter's paragraphs (`offset`, `limit` up to 500): text, character, status
+(`unvoiced`, `voiced`, `stale`, `locked`) and timing.
+
+#### `soundbox.set_character_voice`
+
+Takes `book_id`, `character` (a name, alias or id) and `voice_id` (from
+`list_voices`, or `null` to clear it). Every paragraph of that character
+follows. `character: "narrator"` sets the book's narrator voice instead.
+`create: true` adds the character if the book has none by that name.
+`model_id` reads the character on another model; usually leave it off, since
+a voice has its own.
+
+#### `soundbox.add_pronunciation`
+
+Takes `term`, `replacement`, `kind` (`alias`, the default, `ipa` or `cmu`),
+`case_sensitive` (default false) and `whole_word` (default true). With
+`book_id` the rule belongs to that book; without, it is global. Rules apply
+top to bottom and the first match wins. Paragraphs the rule changes become
+`stale`.
+
+#### `soundbox.render_audiobook`
+
+Takes `book_id` and, to narrow it, `chapter_id` or `paragraph_ids`.
+`overwrite` re-voices paragraphs that already have audio; locked paragraphs
+are never redone. **Blocks** until the run finishes, reporting progress per
+paragraph, unless `wait` is false. After `timeout_s` (default 3600) it stops
+waiting and returns the run, which carries on in the app.
+
+#### `soundbox.add_bed`
+
+Takes `book_id`, `chapter_id`, `kind` (`music`, the default, `ambience` or
+`sfx`) and either `sound_id` (a library sound) or `prompt` (generated on
+`model`, or an installed music or SFX model). Optional: `gain_db`, `mode`
+(`full`, `intro`, `outro`, `intro_outro`), `intro_s`, `loop`, `fade_in_s`,
+`fade_out_s`, and for SFX `paragraph_id` and `offset_s`. `duck_db` sets how far
+the bed dips under the narration; `0` turns ducking off. A prompt **blocks**
+while the bed is generated. The bed lands on its own track in the chapter's
+story; the result has the bed, its clip count and an `open_in_studio` link.
+
+#### `soundbox.master_and_export_audiobook`
+
+Takes `book_id`, `format` (`mp3`, the default, `wav`, `flac`, `m4b`),
+`layout` (`files`: one per chapter, zipped, ACX names; `single`: one file;
+M4B is always single), `mastering` (`acx`, the default, `podcast`, `none`),
+`bitrate_kbps` (MP3; default 192), `chapter_ids`, `include_cover`,
+`include_transcripts` (SRT, VTT and read-along JSON) and `include_beds`.
+`include_beds` defaults on, and off when a retail sample is exported, since
+ACX samples must not contain music. **Blocks** until the export is written,
+and returns its absolute `path`, `qc_failures` (each failed ACX check by
+chapter), and any bed warnings.
 
 ### Delivery
 

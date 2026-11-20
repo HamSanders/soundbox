@@ -16,6 +16,7 @@ import { HeaderSlotProvider } from "@/components/header-slot";
 import { AppSidebar } from "@/components/app-sidebar";
 import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog";
 import { NowPlayingBar } from "@/components/now-playing-bar";
+import { ListenPlayerHost } from "@/components/listen/mini-player"; // [audiobooks:listen]
 import { CreatePanel, CreateRedirect } from "@/components/create-panel";
 import { SoundDetailPanel } from "@/components/sound-detail-panel";
 import { VoiceDetailPanel } from "@/components/voice-detail-panel";
@@ -51,6 +52,8 @@ const SettingsPage = lazy(() => import("@/routes/settings").then((m) => ({ defau
 const ActivityPage = lazy(() => import("@/routes/activity").then((m) => ({ default: m.ActivityPage })));
 const AudiobooksPage = lazy(() => import("@/routes/audiobooks").then((m) => ({ default: m.AudiobooksPage }))); // [audiobooks:core]
 const AudiobookPage = lazy(() => import("@/routes/audiobook").then((m) => ({ default: m.AudiobookPage }))); // [audiobooks:core]
+const ListenPage = lazy(() => import("@/routes/listen").then((m) => ({ default: m.ListenPage }))); // [audiobooks:listen]
+const ListenBookPage = lazy(() => import("@/routes/listen-book").then((m) => ({ default: m.ListenBookPage }))); // [audiobooks:listen]
 const SoundDetailPage = lazy(() => import("@/routes/sound-detail").then((m) => ({ default: m.SoundDetailPage })));
 
 const queryClient = new QueryClient({
@@ -197,6 +200,8 @@ function AppShell() {
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/audiobooks" element={<AudiobooksPage />} /> {/* [audiobooks:core] */}
             <Route path="/audiobooks/:id" element={<AudiobookPage />} /> {/* [audiobooks:core] */}
+            <Route path="/listen" element={<ListenPage />} /> {/* [audiobooks:listen] */}
+            <Route path="/listen/:id" element={<ListenBookPage />} /> {/* [audiobooks:listen] */}
             <Route path="/sounds/:id" element={<SoundDetailPage />} />
             <Route path="/models" element={<ModelsPage />} />
             <Route path="/agents" element={<AgentsPage />} />
@@ -210,6 +215,7 @@ function AppShell() {
             excludes the sidebar's width, so `position="sticky"` here never
             draws over the sidebar the way a viewport-`fixed` dock would. */}
         <NowPlayingBar />
+        <ListenPlayerHost /> {/* [audiobooks:listen] */}
       </SidebarInset>
       {/* Docked beside the page, in the shell's row: see sound-detail-panel.tsx. */}
       <SoundDetailPanel />

@@ -90,3 +90,14 @@ Seam check (mean absolute difference against the still, 0–255): talk_idle_a 6.
 list_to_talk 6.71/6.16. All are under 8. The difference is encoding and colour drift, not pose drift. `seam-report.json` has the details.
 Cost: 4 × 5 s × $0.06 = $1.20, plus about $0.30 for one accidental duplicate submit of talk_idle_b.
 `preview_talk_list_talk.mp4` is the talk→list→talk proof (two clips joined).
+
+## Replan (2026-11-20): moves, not idles
+
+- **Talk-pose idle:** the live face model (Ditto or FlashHead) keeps running on silence, which gives blinks, breathing and small head
+  motion. A short looped fire patch keeps the fire moving. `talk_idle_a/b` stay in the manifest only as low-weight fallbacks.
+- **Clips are for real moves, 5 s each, at natural speed:** enter and sit, stand and leave, talk ↔ list/cocoa/lean/rest, and the
+  laugh/shh/think reactions as single talk→talk clips with the action in the prompt. Also check_list, sip_cocoa, and the reindeer gag
+  (to be redone with a plain nose).
+- **Second angle:** `talk_close` is a hard cut, with no clip. It needs its own still, made as an edit of the master.
+- **Still to do:** 14 clips. 12 can render now. `enter_and_sit` and `stand_and_leave` need the `empty` still, which waits on the image
+  quota. Cost is 12 × 5 s × $0.06 = $3.60 on fal, or nothing on the local 5080 once the Wan download finishes.

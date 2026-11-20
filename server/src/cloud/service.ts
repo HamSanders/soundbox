@@ -29,7 +29,7 @@ import type { CloudCaps, CloudContext } from "./model.js";
 
 const log = getLogger("mirli.cloud");
 
-export const DEFAULT_CLOUD_URL = "https://mirli.app";
+export const DEFAULT_CLOUD_URL = "https://cloud.mirli.app";
 
 export function cloudEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
   return envVar("MIRLI_CLOUD", env) === "1" || hostedMode(env);

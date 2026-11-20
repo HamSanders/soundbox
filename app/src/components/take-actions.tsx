@@ -13,7 +13,7 @@
  */
 
 import { useState } from "react";
-import { WandSparklesIcon } from "lucide-react";
+import { LibraryIcon, PencilIcon, WandSparklesIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -23,14 +23,22 @@ import { Slider } from "@/components/ui/slider";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { InstrumentSamplesDialog } from "@/components/instrument-samples-dialog";
+import type { InstrumentInfo } from "@/lib/api";
 import { encodeWav } from "@/lib/audio-file";
-import { INSTRUMENTS, notesDuration, renderNotes } from "@/lib/midi";
+import { DEFAULT_INSTRUMENT, INSTRUMENTS, notesDuration, renderNotes } from "@/lib/midi";
 import { useMidiStore } from "@/lib/midi-store";
+import type { TakeSource } from "@/lib/midi-store";
 import { formatDuration } from "@/lib/format";
+import { useInstruments } from "@/lib/queries";
+import { libraryId, SamplesUnavailable, sampledId } from "@/lib/sampler";
 
 /** What to ask a model for, once the dry take is placed. */
 export interface CoverRequest {
@@ -48,9 +56,16 @@ export interface TakeActionsProps {
    *  take can only be placed dry, and the panel says why. */
   canCover?: boolean;
   /** Save the render as a sound and place it as a clip; `cover` additionally
-   *  asks a model for the instrument. Neither panel knows how a story is
-   *  written, or how a generation is submitted; the studio does. */
-  onPlace: (wav: Blob, name: string, cover: CoverRequest | null) => Promise<void>;
+   *  asks a model for the instrument. With `source` set the notes came from a
+   *  placed take ("Edit notes"), and the render replaces that take's clips
+   *  instead. Neither panel knows how a story is written, or how a generation
+   *  is submitted; the studio does. */
+  onPlace: (
+    wav: Blob,
+    name: string,
+    cover: CoverRequest | null,
+    source: TakeSource | null,
+  ) => Promise<void>;
   /** Held while a take is being played in — placing half a performance is not
    *  a thing anyone means to do. */
   busy?: boolean;
@@ -70,17 +85,28 @@ export function useTakePlacement(onPlace: TakeActionsProps["onPlace"]): {
   place: (cover: CoverRequest | null) => Promise<void>;
 } {
   const [placing, setPlacing] = useState(false);
+  const { data: sampled } = useInstruments();
   /** Read at call time, not render time: a pad-triggered place happens inside
    *  a listener bound once, and a captured `notes` would be the take as it
    *  was when the mapping was set up. */
   const place = async (cover: CoverRequest | null): Promise<void> => {
-    const { notes, instrument } = useMidiStore.getState();
+    const { notes, instrument, source } = useMidiStore.getState();
     if (!notes.length || placing) return;
     setPlacing(true);
     try {
-      const buffer = await renderNotes(notes, instrument);
-      const label = INSTRUMENTS.find((i) => i.id === instrument)?.label ?? "MIDI";
-      await onPlace(encodeWav(buffer), `${label} take`, cover);
+      let used = instrument;
+      let buffer: AudioBuffer;
+      try {
+        buffer = await renderNotes(notes, instrument);
+      } catch (error) {
+        // Samples missing (deleted, or a server without them) must not cost
+        // the take: render it on the synth and say so.
+        if (!(error instanceof SamplesUnavailable)) throw error;
+        used = DEFAULT_INSTRUMENT;
+        toast.warning(`${error.message}. Rendered on the synth instead.`);
+        buffer = await renderNotes(notes, used);
+      }
+      await onPlace(encodeWav(buffer), `${instrumentLabel(used, sampled)} take`, cover, source);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "That take could not be rendered");
     } finally {
@@ -88,6 +114,13 @@ export function useTakePlacement(onPlace: TakeActionsProps["onPlace"]): {
     }
   };
   return { placing, place };
+}
+
+/** "Bowed", or "Solo violin" for a sampled one. */
+function instrumentLabel(id: string, sampled: InstrumentInfo[] | undefined): string {
+  const lib = libraryId(id);
+  if (lib) return sampled?.find((i) => i.id === lib)?.label ?? "Sampled";
+  return INSTRUMENTS.find((i) => i.id === id)?.label ?? "MIDI";
 }
 
 export function TakeActions({
@@ -104,13 +137,34 @@ export function TakeActions({
   const setPrompt = useMidiStore((s) => s.setPrompt);
   const strength = useMidiStore((s) => s.strength);
   const setStrength = useMidiStore((s) => s.setStrength);
+  const source = useMidiStore((s) => s.source);
+  const detach = useMidiStore((s) => s.detach);
 
   const { placing, place } = useTakePlacement(onPlace);
+  const { data: sampled } = useInstruments();
+  const installed = (sampled ?? []).filter((i) => i.installed);
+  const [samplesOpen, setSamplesOpen] = useState(false);
   const duration = notesDuration(notes);
   const disabled = readOnly || busy;
 
   return (
     <div className="flex flex-col gap-2">
+      {/* Editing a placed take. Said up front because the buttons below stop
+          adding clips and start replacing audio, and that should never be a
+          surprise. The old renders stay in the library, and Undo puts them
+          back. */}
+      {source && (
+        <div className="bg-muted/60 flex flex-wrap items-center gap-2 rounded-md px-2 py-1.5 text-xs">
+          <PencilIcon className="text-muted-foreground size-3.5" />
+          <span className="min-w-0 flex-1">
+            Editing <span className="font-medium">{source.name}</span>. Re-rendering
+            replaces its audio in place; Undo puts the old take back.
+          </span>
+          <Button size="xs" variant="ghost" disabled={disabled} onClick={detach}>
+            Place as new instead
+          </Button>
+        </div>
+      )}
       {/* One press for the whole flow: the dry take is placed, and the cover of
           it is submitted against the next lane. Both clips land — the
           performance and what the model made of it — because the dry one is
@@ -120,18 +174,56 @@ export function TakeActions({
         <div className="grid gap-1">
           <Label className="text-muted-foreground text-[0.7rem]">Instrument</Label>
           <Select value={instrument} onValueChange={setInstrument} disabled={disabled}>
-            <SelectTrigger size="sm" className="w-32">
+            <SelectTrigger size="sm" className="w-36">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {INSTRUMENTS.map((preset) => (
-                <SelectItem key={preset.id} value={preset.id}>
-                  {preset.label}
-                </SelectItem>
-              ))}
+              <SelectGroup>
+                <SelectLabel>Synth</SelectLabel>
+                {INSTRUMENTS.map((preset) => (
+                  <SelectItem key={preset.id} value={preset.id}>
+                    {preset.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+              {/* Only what is installed: picking a sample set that is not on
+                  disk would be a menu item that renders the synth. A selected
+                  one that has since been removed still shows, so the trigger
+                  never goes blank. */}
+              {(installed.length > 0 || libraryId(instrument)) && (
+                <>
+                  <SelectSeparator />
+                  <SelectGroup>
+                    <SelectLabel>Samples · VSCO 2 CE</SelectLabel>
+                    {installed.map((i) => (
+                      <SelectItem key={i.id} value={sampledId(i.id)}>
+                        {i.label}
+                      </SelectItem>
+                    ))}
+                    {libraryId(instrument) &&
+                      !installed.some((i) => sampledId(i.id) === instrument) && (
+                        <SelectItem value={instrument}>
+                          {instrumentLabel(instrument, sampled)} (not installed)
+                        </SelectItem>
+                      )}
+                  </SelectGroup>
+                </>
+              )}
             </SelectContent>
           </Select>
         </div>
+
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8"
+          disabled={disabled}
+          onClick={() => setSamplesOpen(true)}
+        >
+          <LibraryIcon />
+          Samples
+        </Button>
+        <InstrumentSamplesDialog open={samplesOpen} onOpenChange={setSamplesOpen} />
 
         <div className="grid min-w-48 flex-1 gap-1">
           <Label htmlFor="take-prompt" className="text-muted-foreground text-[0.7rem]">
@@ -174,7 +266,7 @@ export function TakeActions({
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-muted-foreground text-xs">
           {notes.length
-            ? `${notes.length} ${notes.length === 1 ? "note" : "notes"} · ${formatDuration(duration)} → lands at ${formatDuration(playheadS)}`
+            ? `${notes.length} ${notes.length === 1 ? "note" : "notes"} · ${formatDuration(duration)} → ${source ? "replaces the take in place" : `lands at ${formatDuration(playheadS)}`}`
             : "Nothing to place yet"}
         </span>
         <div className="ml-auto flex items-center gap-2">
@@ -184,7 +276,7 @@ export function TakeActions({
             disabled={disabled || !notes.length || placing}
             onClick={() => void place(null)}
           >
-            {placing ? "Rendering…" : "Place dry"}
+            {placing ? "Rendering…" : source ? "Re-render dry" : "Place dry"}
           </Button>
           <Button
             size="sm"
@@ -192,7 +284,7 @@ export function TakeActions({
             onClick={() => void place({ prompt: prompt.trim(), strength })}
           >
             <WandSparklesIcon />
-            {placing ? "Rendering…" : "Generate instrument"}
+            {placing ? "Rendering…" : source ? "Re-render instrument" : "Generate instrument"}
           </Button>
         </div>
       </div>

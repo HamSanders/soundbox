@@ -149,6 +149,8 @@ import { toWav } from "@/lib/audio-file";
 import { laneIsFree, lanesFor, nextFreeTrack } from "@/lib/lanes";
 import { MidiPanel } from "@/components/midi-panel";
 import type { CoverRequest } from "@/components/take-actions";
+import { takeNotes, useMidiStore } from "@/lib/midi-store";
+import type { TakeSource } from "@/lib/midi-store";
 import { PianoRoll, PianoRollTitle } from "@/components/piano-roll";
 import { ttsVoices, useGenerateSession } from "@/hooks/use-generate-session";
 import { MusicRequestForm } from "@/components/music-request-form";
@@ -159,6 +161,7 @@ import { voiceReferenceError } from "@/lib/voice-reference";
 import { useTransportStore } from "@/lib/transport-store";
 import { usePlayerStore } from "@/lib/player-store";
 import type {
+  ClipMidi,
   Job,
   SegmentCreate,
   SegmentPatch,
@@ -197,6 +200,21 @@ type ClipMove = { id: string; patch: { start_s: number; track_index: number } };
 
 /** Everything needed to put a deleted clip back as it was — not just its
  *  words and place, but its trim, fades, gain and delivery. */
+/** Where an insert from this studio lands, and what it carries with it. */
+interface InsertAt {
+  startS: number;
+  trackIndex: number;
+  durationS?: number;
+  midi?: ClipMidi;
+  replaceTake?: boolean;
+}
+
+/** Ties a take's dry clip to its cover. Random, not a segment id: undo and
+ *  redo recreate clips under new ids. */
+function newTakeId(): string {
+  return `take-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function restorable(seg: StorySegment): SegmentCreate {
   return {
     text: seg.text,
@@ -215,6 +233,7 @@ function restorable(seg: StorySegment): SegmentCreate {
     gain_db: seg.gain_db,
     muted: seg.muted,
     request_options: seg.request_options,
+    midi: seg.midi ?? null,
   };
 }
 
@@ -863,17 +882,15 @@ export function StudioEditor({
    *  back longer than the take; the extra is silence at the tail, and
    *  trimming the clip to the take's length keeps the lanes lined up. The
    *  audio past the trim stays on disk — drag the clip's edge to get it. */
-  const insertTarget = (target?: {
-    startS: number;
-    trackIndex: number;
-    durationS?: number;
-  }): TurnInsert => ({
+  const insertTarget = (target?: InsertAt): TurnInsert => ({
     storyId,
     startS:
       target?.startS ??
       (playing ? useTransportStore.getState().at : (selected?.start_s ?? 0)),
     trackIndex: target?.trackIndex ?? rackLane,
     durationS: target?.durationS,
+    ...(target?.midi ? { midi: target.midi } : {}),
+    ...(target?.replaceTake ? { replaceTake: true } : {}),
   });
 
   /**
@@ -882,10 +899,7 @@ export function StudioEditor({
    * rather than patch-then-submit, which would silently render the *previous*
    * prompt (see the hook).
    */
-  const insertGenerate = (
-    overrides: Partial<ComposerSettings>,
-    target?: { startS: number; trackIndex: number; durationS?: number },
-  ): void => {
+  const insertGenerate = (overrides: Partial<ComposerSettings>, target?: InsertAt): void => {
     musicSession.submitWith(overrides, { insert: insertTarget(target) });
   };
 
@@ -902,7 +916,9 @@ export function StudioEditor({
     wav: Blob,
     name: string,
     cover: CoverRequest | null,
+    source: TakeSource | null,
   ): Promise<void> => {
+    if (source) return rerenderTake(wav, name, cover, source);
     try {
       // Both clips land at the same start, on two adjacent lanes: the dry take
       // and what the model made of it are the same performance, and stacking
@@ -910,16 +926,27 @@ export function StudioEditor({
       const startS = Math.round(useTransportStore.getState().at * 1000) / 1000;
       const lane = nextFreeTrack(lines);
       const sound = await api.uploadSound(name, wav, "midi");
+      // The notes go on both clips, so either one can be reopened in the roll
+      // and the take rendered again — see `ClipMidi`.
+      const takeId = newTakeId();
+      const covered = cover !== null && coverModel !== null ? cover : null;
+      const midi = (role: ClipMidi["role"]): ClipMidi => ({
+        ...takeNotes(),
+        cover: covered,
+        role,
+        take_id: takeId,
+      });
       addClip("place take", {
         sound_id: sound.id,
         speaker: sound.name,
         start_s: startS,
         track_index: lane,
+        midi: midi("dry"),
       });
       void qc.invalidateQueries({ queryKey: ["sounds"] });
 
-      if (cover === null || coverModel === null) {
-        toast.success("Placed on a new track — right-click it to Cover.");
+      if (covered === null || coverModel === null) {
+        toast.success("Placed on a new track — right-click it to edit its notes.");
         return;
       }
       // The composer's own cover, submitted without it: same request, same
@@ -928,18 +955,154 @@ export function StudioEditor({
       insertGenerate(
         {
           modelId: coverModel.id,
-          prompt: cover.prompt,
+          prompt: covered.prompt,
           edit: "cover",
           sourceSound: sound,
-          editOptions: { cover_strength: cover.strength },
+          editOptions: { cover_strength: covered.strength },
           duration: sound.duration_s,
           variations: 1,
         },
-        { startS, trackIndex: lane + 1, durationS: sound.duration_s },
+        { startS, trackIndex: lane + 1, durationS: sound.duration_s, midi: midi("cover") },
       );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "That take could not be saved");
     }
+  };
+
+  /**
+   * An edited take, rendered again into the clips it came from.
+   *
+   * The dry clip's audio is swapped in place — same lane, same start, its
+   * fades and gain kept — as one undoable edit, the way a repaint lands. The
+   * render it replaces stays in the library, so Undo has something to put
+   * back. A cover is submitted against the new dry render and, when it
+   * settles, replaces the take's cover clip the same way (`replaceTake`).
+   *
+   * Re-rendering dry only leaves the cover playing the old notes. That is
+   * said rather than fixed silently: a cover is a minute of GPU, and you may
+   * want to hear the dry edit before paying for it.
+   */
+  const rerenderTake = async (
+    wav: Blob,
+    name: string,
+    cover: CoverRequest | null,
+    source: TakeSource,
+  ): Promise<void> => {
+    const live = linesRef.current;
+    const ofTake = live.filter((l) => l.midi?.take_id === source.take_id);
+    const dry = ofTake.find((l) => l.midi?.role === "dry");
+    const coverClip = ofTake.find((l) => l.midi?.role === "cover");
+    const anchor = dry ?? coverClip;
+    if (!anchor) {
+      // Both clips were deleted since "Edit notes". The notes are still
+      // here, so the next press places them as a new take.
+      useMidiStore.getState().detach();
+      toast.error("That take is no longer on the timeline — press again to place it as new.");
+      return;
+    }
+    try {
+      const sound = await api.uploadSound(name, wav, "midi");
+      void qc.invalidateQueries({ queryKey: ["sounds"] });
+      const covered = cover !== null && coverModel !== null ? cover : null;
+      const midi = (role: ClipMidi["role"]): ClipMidi => ({
+        ...takeNotes(),
+        cover: covered ?? anchor.midi?.cover ?? null,
+        role,
+        take_id: source.take_id,
+      });
+      if (dry) {
+        editClip("re-render take", dry.id, {
+          sound_id: sound.id,
+          duration_s: sound.duration_s,
+          trim_start_s: 0,
+          midi: midi("dry"),
+        });
+      } else {
+        // Only the cover is left; the dry render comes back on a lane of its
+        // own, lined up with it.
+        addClip("re-render take", {
+          sound_id: sound.id,
+          speaker: sound.name,
+          start_s: anchor.start_s,
+          track_index: nextFreeTrack(live),
+          midi: midi("dry"),
+        });
+      }
+      if (covered === null || coverModel === null) {
+        toast.success(
+          coverClip
+            ? "Dry take re-rendered. Its cover still plays the old notes — Re-render instrument to update it."
+            : "Dry take re-rendered.",
+        );
+        return;
+      }
+      insertGenerate(
+        {
+          modelId: coverModel.id,
+          prompt: covered.prompt,
+          edit: "cover",
+          sourceSound: sound,
+          editOptions: { cover_strength: covered.strength },
+          duration: sound.duration_s,
+          variations: 1,
+        },
+        {
+          startS: anchor.start_s,
+          trackIndex: coverClip?.track_index ?? anchor.track_index + 1,
+          durationS: sound.duration_s,
+          midi: midi("cover"),
+          replaceTake: true,
+        },
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "That take could not be saved");
+    }
+  };
+
+  /**
+   * "Edit notes" on a clip: its take, back in the roll.
+   *
+   * Loading replaces whatever take the panels held. If that was notes not yet
+   * placed anywhere, the toast offers them back — they exist nowhere else.
+   */
+  const editNotes = (segment: StorySegment): void => {
+    const midi = segment.midi;
+    if (!midi) return;
+    const store = useMidiStore.getState();
+    const unplaced =
+      store.source === null && store.notes.length > 0
+        ? {
+            notes: store.notes,
+            instrument: store.instrument,
+            bpm: store.bpm,
+            prompt: store.prompt,
+            strength: store.strength,
+          }
+        : null;
+    store.loadTake(midi, {
+      take_id: midi.take_id,
+      segmentId: segment.id,
+      name: segment.speaker?.trim() || "this take",
+    });
+    showPanel("roll", true);
+    const count = `${midi.notes.length} ${midi.notes.length === 1 ? "note" : "notes"}`;
+    toast.success(`Editing ${count} in the piano roll`, {
+      description: unplaced ? "The take you had not placed was put away." : undefined,
+      action: unplaced
+        ? {
+            label: "Bring it back",
+            onClick: () => {
+              useMidiStore.getState().setNotes(unplaced.notes);
+              useMidiStore.setState({
+                instrument: unplaced.instrument,
+                bpm: unplaced.bpm,
+                prompt: unplaced.prompt,
+                strength: unplaced.strength,
+              });
+            },
+          }
+        : undefined,
+    });
   };
 
   // Clips this studio has asked the server for but not yet seen come back,
@@ -986,6 +1149,40 @@ export function StudioEditor({
         })),
         ...landingRef.current,
       ];
+      // A re-rendered take's cover goes back into the clip holding the old
+      // one, as one undoable swap — the same bargain as the dry clip's.
+      const takeId = insert.replaceTake ? insert.midi?.take_id : undefined;
+      const replacing = takeId
+        ? (segments.data ?? []).find(
+            (seg) => seg.midi?.take_id === takeId && seg.midi.role === "cover",
+          )
+        : undefined;
+      if (replacing) {
+        const sound = turn.sounds[0]!;
+        const length =
+          insert.durationS !== undefined
+            ? Math.min(insert.durationS, sound.duration_s)
+            : sound.duration_s;
+        const before: SegmentPatch = {
+          sound_id: replacing.sound_id,
+          duration_s: replacing.duration_s ?? undefined,
+          trim_start_s: replacing.trim_start_s,
+          midi: replacing.midi ?? null,
+        };
+        const after: SegmentPatch = {
+          sound_id: sound.id,
+          duration_s: length,
+          trim_start_s: 0,
+          midi: insert.midi,
+        };
+        const write = (patch: SegmentPatch) => () =>
+          updateSegment.mutate({ id: history.resolve(replacing.id), patch });
+        write(after)();
+        history.push({ label: "re-render instrument", undo: write(before), redo: write(after) });
+        toast.success("Instrument re-rendered from the edited notes.");
+        continue;
+      }
+
       parts.forEach((sound, i) => {
         // Only the first part is trimmed to the asked-for length: the others
         // are stems or variations of it, not the same span of time. Clamped
@@ -1016,6 +1213,8 @@ export function StudioEditor({
             start_s: insert.startS,
             track_index: lane,
             ...(length !== sound.duration_s ? { duration_s: length } : {}),
+            // Only the first part is the take's cover; stems of it are not.
+            ...(i === 0 && insert.midi ? { midi: insert.midi } : {}),
           })
           .catch(() => undefined) // the mutation's own toast says what went wrong
           .finally(() => {
@@ -1023,7 +1222,7 @@ export function StudioEditor({
           });
       });
     }
-  }, [musicSession.turns, storyId, createSegment, segments.data]);
+  }, [musicSession.turns, storyId, createSegment, updateSegment, history, segments.data]);
 
   /**
    * The clips being generated for this story, drawn on the lanes they will
@@ -2253,6 +2452,7 @@ export function StudioEditor({
               setRepaintTarget({ segment, window });
             }}
             canRepaint={canRepaintSound}
+            onEditNotes={editNotes}
             onResize={(id, patch) => editClip("trim", id, patch)}
             // A take from the microphone: converted to the WAV the server can
             // read, stored as a library sound so the export can find it on

@@ -79,17 +79,22 @@ export async function downloadSound(
   if (!res.ok) throw new Error(`Download failed (${res.status})`);
   const fellBack = res.headers.get("X-Soundbox-Format-Fallback") === "wav";
   const delivered: "wav" | "mp3" = format === "mp3" && !fellBack ? "mp3" : "wav";
-  const blob = await res.blob();
+  saveBlob(await res.blob(), soundDownloadName(name, delivered));
+  return delivered;
+}
+
+/** Hand a blob to the browser (or the desktop webview) as a file download:
+ *  the anchor trick every export here uses. */
+export function saveBlob(blob: Blob, fileName: string): void {
   const url = URL.createObjectURL(blob);
   try {
     const a = document.createElement("a");
     a.href = url;
-    a.download = soundDownloadName(name, delivered);
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     a.remove();
   } finally {
     URL.revokeObjectURL(url);
   }
-  return delivered;
 }

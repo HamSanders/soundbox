@@ -124,6 +124,7 @@ import { StoryHub } from "./story-hub.js";
 import { McpTelemetry } from "./telemetry.js";
 import { UpdateChecker } from "./updateCheck.js";
 import { envVar } from "./env.js";
+import { InstrumentLibrary, instrumentManifest } from "./instruments/index.js";
 
 const log = getLogger("mirli.service");
 
@@ -237,6 +238,9 @@ export class MirliService {
   readonly telemetry: McpTelemetry;
   /** Live story activity — see story-hub.ts. */
   readonly stories = new StoryHub();
+  /** Sampled instruments for the MIDI dry render — see instruments/index.ts.
+   *  Reads the models directory at call time, like everything under `paths`. */
+  readonly instruments = new InstrumentLibrary(() => this.config.paths.models);
 
   /** The daily "is there a newer version?" question — see updateCheck.ts. */
   readonly updates: UpdateChecker;
@@ -1154,6 +1158,11 @@ export class MirliService {
       duration_s: head.duration_s,
       trim_start_s: 0,
       fade_out_s: 0,
+      // A half is no longer the take its notes describe: re-rendering them
+      // would put the whole phrase back into half the space. So the cut
+      // leaves two audio clips, and the notes stay on whichever of the
+      // take's other clip (its cover, or its dry render) was not cut.
+      ...(segment.midi ? { midi: null } : {}),
     });
     const tail = this.db.createSegment(randomUUID(), segment.story_id, now(), {
       speaker: segment.speaker,
@@ -3350,6 +3359,24 @@ export class MirliService {
 
   async deleteLlmModel(modelId: string): Promise<void> {
     await this.llm.deleteModel(modelId);
+  }
+
+  /* ------------------------------------------------------------ instruments */
+
+  submitInstrumentDownload(id: string): Job {
+    const manifest = instrumentManifest(id);
+    if (!manifest) throw new ModelError(`Unknown instrument '${id}'.`);
+    const jobModel = `instrument:${id}`;
+    const active = this.jobs.findActive("download", jobModel);
+    if (active !== null) return active;
+    const runner = async (handle: JobHandle): Promise<Record<string, unknown>> => {
+      handle.phase("downloading", `Downloading ${manifest.label} samples`);
+      await this.instruments.install(id, (fraction, message) =>
+        handle.progress(fraction, message, "downloading"),
+      );
+      return { model: jobModel };
+    };
+    return this.jobs.submit("download", { model: jobModel }, runner);
   }
 
   /* ------------------------------------------------------------------ image */

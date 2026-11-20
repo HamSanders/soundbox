@@ -401,8 +401,10 @@ export const MCP_TOOLS: McpToolInfo[] = [
     title: "Read a story",
     description:
       "Fetch a story with every line: text, voice, timing, and whether it has " +
-      "been voiced yet, plus each touched track's mix and device chain. This " +
-      "is how you inspect what you have built.",
+      "been voiced yet, plus each touched track's mix and device chain. A clip " +
+      "placed from the MIDI panel also carries `midi`: its notes, tempo, " +
+      "instrument and cover prompt (read-only). This is how you inspect what " +
+      "you have built.",
     calls: 0,
   },
   {
@@ -907,6 +909,10 @@ function lineView(seg: StorySegment) {
     // its own is following the story's, and saying so with an empty object in
     // every line of a forty-line script is noise.
     delivery: Object.keys(seg.request_options).length > 0 ? seg.request_options : undefined,
+    // A MIDI take's notes, read-only: the studio's piano roll is where they
+    // are edited and rendered again. Omitted for every clip that is only
+    // audio, which is nearly all of them.
+    midi: seg.midi ?? undefined,
   };
 }
 

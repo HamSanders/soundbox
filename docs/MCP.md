@@ -210,8 +210,12 @@ Takes `title` and `delivery`. Returns a summary with a `story_id` and an
 
 `list_stories` takes `limit` (1–200, default 20), most recently worked on
 first. `get_story` takes a `story_id` and returns every line: text, voice,
-track, start, and whether it has been voiced yet. The summary the other tools
-return omits the lines; use `get_story` to read them.
+track, start, and whether it has been voiced yet. A clip placed from the
+studio's MIDI panel also carries `midi`: its notes, tempo, dry instrument,
+cover prompt and strength, whether it is the dry render or the cover, and the
+`take_id` the two share. The notes are read-only over MCP; they are edited in
+the studio's piano roll. The summary the other tools return omits the lines;
+use `get_story` to read them.
 
 #### `soundbox.add_lines`
 

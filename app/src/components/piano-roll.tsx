@@ -9,7 +9,8 @@
  *
  * Both halves read `midi-store`, so the notes here are the notes the recorder
  * captured and the notes Place will render. There is no import/export between
- * the two panels because there are not two documents.
+ * the two panels because there are not two documents; the header's export
+ * button saves the take as a `.mid` for use outside the app.
  *
  * Gestures, deliberately the timeline's rather than a second vocabulary:
  *
@@ -39,8 +40,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { ZoomInIcon, ZoomOutIcon } from "lucide-react";
-import { useMidiStore } from "@/lib/midi-store";
+import { DownloadIcon, ZoomInIcon, ZoomOutIcon } from "lucide-react";
+import { toast } from "sonner";
+import { exportTake, useMidiStore } from "@/lib/midi-store";
 import type { RollNote } from "@/lib/midi-store";
 import { isBlackKey, liveVoice, noteLabel, unmuteAudio } from "@/lib/midi";
 import type { Voice } from "@/lib/midi";
@@ -108,6 +110,19 @@ export function PianoRollTitle() {
       <span className="text-muted-foreground truncate text-xs">
         {noteCount === 0 ? "empty" : `${noteCount} ${noteCount === 1 ? "note" : "notes"}`}
       </span>
+      <Button
+        size="icon-xs"
+        variant="ghost"
+        aria-label="Export take as .mid"
+        title="Export take as .mid"
+        disabled={noteCount === 0}
+        onClick={() => {
+          const count = exportTake();
+          if (count) toast.success(`Saved take.mid — ${count} ${count === 1 ? "note" : "notes"}`);
+        }}
+      >
+        <DownloadIcon />
+      </Button>
     </div>
   );
 }

@@ -19,8 +19,10 @@ import type { Database as Sqlite, Statement } from "better-sqlite3";
 import type { DeviceSpec } from "./devices.js";
 import { catalogById } from "./models/audiocpp.js";
 import { HistoryStore } from "./history.js";
+import { clipMidiSchema } from "./schemas.js";
 
 import type {
+  ClipMidi,
   McpCall,
   McpClient,
   Project,
@@ -356,6 +358,7 @@ interface SegmentRow {
   fade_in_s: number;
   fade_out_s: number;
   request_options: string | null;
+  midi?: string | null;
   muted: number;
   gain_db: number;
   created_at: string;
@@ -560,6 +563,11 @@ export class Database {
       // lanes are renumbered, which is what keeps a reverb on the part it was
       // put on.
       "ALTER TABLE story_tracks ADD COLUMN devices TEXT",
+      // The notes a MIDI take was rendered from, as JSON (schemas.ts
+      // `clipMidiSchema`). Null for every clip that is only audio, which is
+      // every clip stored before takes kept their notes — so an old story
+      // reads exactly as it did.
+      "ALTER TABLE story_segments ADD COLUMN midi TEXT",
     ]) {
       try {
         this.conn.exec(ddl);
@@ -1104,6 +1112,8 @@ export class Database {
       fade_out_s?: number;
       gain_db?: number;
       muted?: boolean;
+      /** The notes of a MIDI take. */
+      midi?: ClipMidi | null;
     },
   ): StorySegment {
     const create = this.conn.transaction(() => {
@@ -1133,8 +1143,8 @@ export class Database {
       this.prep(
         `INSERT INTO story_segments (id, story_id, position, track_index, speaker, voice_id,
              text, language, sound_id, kind, start_s, duration_s, trim_start_s,
-             fade_in_s, fade_out_s, muted, gain_db, request_options, created_at, updated_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+             fade_in_s, fade_out_s, muted, gain_db, request_options, midi, created_at, updated_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       ).run(
         segmentId,
         storyId,
@@ -1156,6 +1166,7 @@ export class Database {
         values.request_options && Object.keys(values.request_options).length > 0
           ? JSON.stringify(values.request_options)
           : null,
+        values.midi ? JSON.stringify(values.midi) : null,
         now,
         now,
       );
@@ -1259,6 +1270,7 @@ export class Database {
       const options = patch.request_options ?? {};
       set("request_options", Object.keys(options).length === 0 ? null : JSON.stringify(options));
     }
+    if (patch.midi !== undefined) set("midi", patch.midi ? JSON.stringify(patch.midi) : null);
     if (fields.length === 0) return this.getSegment(segmentId);
 
     const stamp = isoNow();
@@ -2048,6 +2060,20 @@ export function parseOptions(raw: string | null | undefined): Record<string, str
   }
 }
 
+/** A stored take's notes, or null. A blob that no longer validates — hand
+ *  edited, or written by a version with a different shape — reads as "no
+ *  notes", which leaves the clip playing its audio, rather than failing the
+ *  whole story. */
+export function parseMidi(raw: string | null | undefined): ClipMidi | null {
+  if (!raw) return null;
+  try {
+    const parsed = clipMidiSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
 function rowToSegment(row: SegmentRow): StorySegment {
   return {
     id: row.id,
@@ -2064,6 +2090,7 @@ function rowToSegment(row: SegmentRow): StorySegment {
     fade_in_s: row.fade_in_s ?? 0,
     fade_out_s: row.fade_out_s ?? 0,
     request_options: parseOptions(row.request_options),
+    midi: parseMidi(row.midi),
     sound: null,
     start_s: row.start_s,
     duration_s: row.duration_s,

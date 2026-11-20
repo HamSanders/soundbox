@@ -788,7 +788,7 @@ export function MusicRequestForm({
           stays in reach however far the style and lyric fields run. The
           page-coloured band and the fade above it let the fields scroll under
           it without a hard edge. */}
-      <div className="bg-background before:from-background sticky bottom-0 z-10 flex items-center gap-2 pt-2 pb-1 before:pointer-events-none before:absolute before:inset-x-0 before:-top-4 before:h-4 before:bg-gradient-to-t before:to-transparent">
+      <div className="bg-background before:from-background sticky bottom-0 z-10 flex items-center gap-2 pt-2 pb-3 before:pointer-events-none before:absolute before:inset-x-0 before:-top-4 before:h-4 before:bg-gradient-to-t before:to-transparent">
         <div className="border-border/60 flex shrink-0 items-center gap-1 rounded-md border px-2 py-1">
           <span className="text-muted-foreground text-xs">Quantity:</span>
           <Button

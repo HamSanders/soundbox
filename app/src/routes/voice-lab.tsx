@@ -29,13 +29,13 @@ import {
   Loader2Icon,
   MicIcon,
   MoreHorizontalIcon,
+  PencilIcon,
   PlusIcon,
   SquareIcon,
   Trash2Icon,
   UploadIcon,
   UserRoundIcon,
   UsersRoundIcon,
-  XIcon,
 } from "lucide-react";
 
 import { EmptyState } from "@/components/empty-state";
@@ -66,16 +66,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useVoiceDetailStore } from "@/lib/voice-detail-store";
 import { Textarea } from "@/components/ui/textarea";
 
 import {
   AddVoiceDialog,
   ErrorPanel,
   JobResult,
-  VoiceCard,
   isReady,
 } from "@/components/voice-shared";
+import {
+  VoiceChips,
+  VoiceRow,
+  VoiceShelfCard,
+  VoiceTableHeader,
+  type VoiceChip,
+} from "@/components/voice-library";
 import { VoiceAvatar } from "@/components/voice-avatar";
 import { WaveformPlayer } from "@/components/waveform-player";
 import { VoiceClipsDialog, VoiceHistoryDialog } from "@/components/voice-clips";
@@ -103,7 +109,11 @@ import { voiceReferenceError } from "@/lib/voice-reference";
  *  at once, so filtering costs a row of UI and saves nothing. */
 const SEARCH_THRESHOLD = 6;
 
-type KindFilter = "all" | "clone" | "builtin";
+/** "all", "clone", "builtin" or "family:<family>". */
+type VoiceFilter = string;
+
+/** How many voices the "Your voices" shelf holds. */
+const SHELF_SIZE = 8;
 
 /** Case-insensitive match against the two fields a voice actually carries any
  *  memorable words in. */
@@ -113,144 +123,6 @@ function matchesQuery(voice: Voice, query: string): boolean {
   return (
     voice.name.toLowerCase().includes(q) ||
     (voice.notes ?? "").toLowerCase().includes(q)
-  );
-}
-
-/** Search box + kind tabs. Deliberately a local twin of models.tsx's
- *  `SearchFilterBar` rather than an import: that one is typed to a model's
- *  `category` and lives with the model list's column geometry. Copying the
- *  20 lines keeps the two pages looking identical without coupling them. */
-function SearchFilterBar({
-  query,
-  onQueryChange,
-  kind,
-  onKindChange,
-  showKinds,
-}: {
-  query: string;
-  onQueryChange: (q: string) => void;
-  kind: KindFilter;
-  onKindChange: (k: KindFilter) => void;
-  showKinds: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-2 @sm:flex-row @sm:items-center">
-      <SearchInput value={query} onChange={onQueryChange} placeholder="Search voices…" />
-      {showKinds && (
-        <Tabs value={kind} onValueChange={(v) => onKindChange(v as KindFilter)}>
-          <TabsList>
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="clone">Cloned</TabsTrigger>
-            <TabsTrigger value="builtin">Built-in</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      )}
-    </div>
-  );
-}
-
-/**
- * The test read, inline under whichever card is being auditioned.
- *
- * One panel with a single open target rather than one panel per card: the model
- * choice and the test line are the same for every voice you try (that is the
- * point — you are comparing voices, not scripts), and N mounted job streams for
- * N cards would each hold their own socket. Keeping the state here and
- * rendering into the selected card's footer means the controls sit next to the
- * voice they belong to while only one read is ever in flight.
- */
-function TryItPanel({
-  voice,
-  models,
-  line,
-  onLineChange,
-  onClose,
-}: {
-  voice: Voice;
-  models: Model[];
-  line: string;
-  onLineChange: (v: string) => void;
-  onClose: () => void;
-}) {
-  const [jobId, setJobId] = useState<string | null>(null);
-  const speak = useSpeak();
-  const { job } = useJobStream(jobId);
-  const qc = useQueryClient();
-
-  // A finished read is one more thing this voice has said: refresh the
-  // card's History count and any open history list.
-  useEffect(() => {
-    if (job?.status !== "done") return;
-    void qc.invalidateQueries({ queryKey: qk.voices });
-    void qc.invalidateQueries({ queryKey: ["sounds"] });
-  }, [job?.status, qc]);
-
-  // No model picker: a voice names the model it speaks through, so the read
-  // has nothing left to choose. The only voice that still falls back is a
-  // clone saved before voices carried a model — its clip works anywhere, so
-  // the first ready model reads it.
-  const pinned = voice.model_id ?? null;
-  const model = pinned ? models.find((m) => m.id === pinned) : models[0];
-  const referenceError = voiceReferenceError(voice, model);
-
-  const submit = () => {
-    if (!model || !line.trim() || referenceError) return;
-    speak.mutate(
-      { model: model.id, lines: [{ text: line.trim(), voice_id: voice.id }] },
-      { onSuccess: (ref) => setJobId(ref.job_id) },
-    );
-  };
-
-  return (
-    <div className="bg-muted/25 ring-border mt-2 space-y-2 rounded-lg p-2.5 ring-1 ring-inset">
-      {!model ? (
-        <p className="text-muted-foreground text-xs">
-          {pinned
-            ? `${pinned} isn't installed, so this voice can't be previewed.`
-            : "No text-to-speech model is ready."}{" "}
-          <Link to="/models" className="text-foreground underline underline-offset-4">
-            Go to Models
-          </Link>
-        </p>
-      ) : (
-        <>
-          <div className="flex items-center gap-2">
-            {/* The model is stated, not offered — it came with the voice. */}
-            <p className="text-muted-foreground flex-1 truncate text-xs">
-              Reads through {model.name}
-            </p>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={onClose}
-              aria-label="Close test read"
-            >
-              <XIcon />
-            </Button>
-          </div>
-
-          <Textarea
-            className="min-h-14 text-sm"
-            value={line}
-            placeholder="A short line to hear this voice say…"
-            onChange={(e) => onLineChange(e.target.value)}
-          />
-
-          <Button
-            size="sm"
-            className="w-full"
-            disabled={!line.trim() || speak.isPending || Boolean(referenceError)}
-            onClick={submit}
-          >
-            <MicIcon />
-            {speak.isPending ? "Starting…" : "Read it"}
-          </Button>
-
-          {referenceError && <p role="alert" className="text-destructive text-xs">{referenceError}</p>}
-          <JobResult job={job} />
-        </>
-      )}
-    </div>
   );
 }
 
@@ -693,6 +565,16 @@ function VoiceConvertPanel({ models, voices }: { models: Model[]; voices: Voice[
   );
 }
 
+/* --------------------------------------------------------------- details */
+
+/** A voice's model family, or its model id when the catalogue doesn't know
+ *  the model (not installed, or still loading). Null for a clone saved
+ *  before voices carried a model. */
+function familyOf(voice: Voice, models: Map<string, Model>): string | null {
+  return voice.model_id ? (models.get(voice.model_id)?.family ?? voice.model_id) : null;
+}
+
+
 export function VoiceLabPage() {
   const voices = useVoices();
   const models = useModels();
@@ -728,11 +610,14 @@ export function VoiceLabPage() {
   const importInput = useRef<HTMLInputElement>(null);
 
   const [query, setQuery] = useState("");
-  const [kind, setKind] = useState<KindFilter>("all");
+  const [filter, setFilter] = useState<VoiceFilter>("all");
+  /** The voice whose details are open in the docked panel (App renders it). */
+  const detailId = useVoiceDetailStore((st) => st.voiceId);
+  const setDetailId = useVoiceDetailStore((st) => st.open);
+  const setDetailActions = useVoiceDetailStore((st) => st.setActions);
 
-  /** Which card's test read is open, plus the line shared across every
-   *  audition. No model here any more: it comes with the voice. */
-  const [trying, setTrying] = useState<string | null>(null);
+  /** The line shared across every audition. No model: it comes with the
+   *  voice. */
   const [tryLine, setTryLine] = useState("The quick brown fox jumps over the lazy dog.");
 
   const ttsModels = useMemo(
@@ -745,11 +630,45 @@ export function VoiceLabPage() {
     [models.data],
   );
 
-  const all = voices.data ?? [];
-  const filtered = all.filter(
-    (v) => (kind === "all" || v.kind === kind) && matchesQuery(v, query),
+  const all = useMemo(() => voices.data ?? [], [voices.data]);
+  const modelsById = useMemo(
+    () => new Map((models.data ?? []).map((m) => [m.id, m])),
+    [models.data],
   );
+  const modelName = (voice: Voice) =>
+    voice.model_id ? (modelsById.get(voice.model_id)?.name ?? null) : null;
+
+  const chips: VoiceChip[] = useMemo(() => {
+    const families = new Map<string, number>();
+    for (const v of all) {
+      const f = familyOf(v, modelsById);
+      if (f) families.set(f, (families.get(f) ?? 0) + 1);
+    }
+    return [
+      { value: "all", label: "All", count: all.length },
+      { value: "clone", label: "Cloned", count: all.filter((v) => v.kind === "clone").length },
+      { value: "builtin", label: "Built-in", count: all.filter((v) => v.kind === "builtin").length },
+      ...[...families.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([f, count]) => ({
+          value: `family:${f}`,
+          label: f.charAt(0).toUpperCase() + f.slice(1),
+          count,
+        })),
+    ];
+  }, [all, modelsById]);
+
+  const filtered = all.filter((v) => {
+    if (!matchesQuery(v, query)) return false;
+    if (filter === "all") return true;
+    if (filter.startsWith("family:")) return familyOf(v, modelsById) === filter.slice(7);
+    return v.kind === filter;
+  });
   const showFilters = all.length >= SEARCH_THRESHOLD;
+  /** The most-read voices first: the ones you actually cast. */
+  const shelf = [...all]
+    .sort((a, b) => (b.read_count ?? 0) - (a.read_count ?? 0))
+    .slice(0, SHELF_SIZE);
 
   const openEdit = (voice: Voice) => {
     setNameDraft(voice.name);
@@ -759,6 +678,70 @@ export function VoiceLabPage() {
     ));
     setEditing(voice);
   };
+
+  /** The less-used actions, as the track rows keep them: one ··· menu. */
+  const voiceMenu = (voice: Voice) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon-sm" aria-label={`More for ${voice.name}`}>
+          <MoreHorizontalIcon />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onSelect={() => setDetailId(voice.id)}>
+          <MicIcon />
+          Try it
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => openEdit(voice)}>
+          <PencilIcon />
+          Edit
+        </DropdownMenuItem>
+        {voice.kind === "clone" && (
+          <DropdownMenuItem onSelect={() => setClipsFor(voice.id)}>
+            <AudioLinesIcon />
+            Clips
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem onSelect={() => setHistoryFor(voice)}>
+          <HistoryIcon />
+          History{voice.read_count ? ` (${voice.read_count})` : ""}
+        </DropdownMenuItem>
+        {/* Only offered when artwork is configured — a button that always
+            fails is worse than none. The avatar is drawn from the notes. */}
+        {imageReady && (
+          <DropdownMenuItem
+            disabled={drawing.isPending}
+            onSelect={() => drawing.mutate(voice.id)}
+          >
+            {drawing.isPending && drawing.variables === voice.id ? (
+              <Loader2Icon className="animate-spin" />
+            ) : (
+              <ImageIcon />
+            )}
+            {voice.artwork ? "Redraw avatar" : "Draw avatar"}
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => exporter.mutate(voice)}>
+          <DownloadIcon />
+          Export voice file
+        </DropdownMenuItem>
+        <DropdownMenuItem variant="destructive" onSelect={() => setDeleting(voice)}>
+          <Trash2Icon />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  // The docked panel lives in the shell; it opens this page's dialogs
+  // through these. Re-registered every render so it never holds a stale
+  // closure, and dropped when the page goes.
+  useEffect(() => {
+    setDetailActions({ edit: openEdit, clips: (v) => setClipsFor(v.id), menu: voiceMenu });
+  });
+  useEffect(() => () => setDetailActions(null), [setDetailActions]);
+
 
   return (
     <div className="@container space-y-5">
@@ -800,9 +783,11 @@ export function VoiceLabPage() {
             <UploadIcon />
             {importer.isPending ? "Importing…" : "Import"}
           </Button>
-          <Button onClick={() => setAddOpen(true)}>
-            <PlusIcon />
-            Add voice
+          <Button asChild>
+            <Link to="/voice/new">
+              <PlusIcon />
+              Add voice
+            </Link>
           </Button>
         </div>
       </div>
@@ -825,20 +810,17 @@ export function VoiceLabPage() {
         </p>
       )}
 
-      {showFilters && (
-        <SearchFilterBar
-          query={query}
-          onQueryChange={setQuery}
-          kind={kind}
-          onKindChange={setKind}
-          showKinds
-        />
+      {all.length > 0 && (
+        <div className="grid gap-3">
+          {showFilters && <SearchInput value={query} onChange={setQuery} placeholder="Search voices…" />}
+          <VoiceChips chips={chips} value={filter} onChange={setFilter} />
+        </div>
       )}
 
       {voices.isLoading ? (
-        <div className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
+        <div className="grid gap-2">
           {[0, 1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-32 w-full rounded-xl" />
+            <Skeleton key={i} className="h-12 w-full rounded-md" />
           ))}
         </div>
       ) : voices.isError ? (
@@ -848,9 +830,11 @@ export function VoiceLabPage() {
           icon={UsersRoundIcon}
           title="No voices yet"
           action={
-            <Button onClick={() => setAddOpen(true)}>
-              <PlusIcon />
-              Add your first voice
+            <Button asChild>
+              <Link to="/voice/new">
+                <PlusIcon />
+                Add your first voice
+              </Link>
             </Button>
           }
         >
@@ -868,7 +852,7 @@ export function VoiceLabPage() {
             type="button"
             onClick={() => {
               setQuery("");
-              setKind("all");
+              setFilter("all");
             }}
             className="text-foreground underline underline-offset-4"
           >
@@ -877,102 +861,56 @@ export function VoiceLabPage() {
           .
         </EmptyState>
       ) : (
-        <div className="grid items-start gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
-          {filtered.map((voice) => (
-            <VoiceCard
-              key={voice.id}
-              voice={voice}
-              actions={
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-expanded={trying === voice.id}
-                    onClick={() =>
-                      setTrying((current) => (current === voice.id ? null : voice.id))
-                    }
-                  >
-                    <MicIcon />
-                    Try it
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => openEdit(voice)}>
-                    Edit
-                  </Button>
-                  {voice.kind === "clone" && (
-                    <Button variant="ghost" size="sm" onClick={() => setClipsFor(voice.id)}>
-                      <AudioLinesIcon />
-                      Clips
-                    </Button>
-                  )}
-                  <Button variant="ghost" size="sm" onClick={() => setHistoryFor(voice)}>
-                    <HistoryIcon />
-                    {/* The count is the reason to click — "History (0)" saves
-                        a trip to an empty dialog. */}
-                    History{voice.read_count ? ` (${voice.read_count})` : ""}
-                  </Button>
-                  {/* Only offered when artwork is actually configured — a
-                      button that always fails is worse than no button. The
-                      avatar is drawn from the voice's notes, which is also why
-                      the empty-notes case falls back to the name. */}
-                  {imageReady && (
+        <>
+          {/* The shelf is the browse view: only on the unfiltered page, and
+              only once there are enough voices that a shortlist helps. */}
+          {filter === "all" && !query.trim() && shelf.length >= 2 && (
+            <section className="grid min-w-0 gap-2">
+              <h2 className="label-caps text-muted-foreground">Your voices</h2>
+              <div className="-mx-1 grid auto-cols-[minmax(13rem,15rem)] grid-flow-col gap-2 overflow-x-auto px-1 pb-2">
+                {shelf.map((voice) => (
+                  <VoiceShelfCard
+                    key={voice.id}
+                    voice={voice}
+                    modelName={modelName(voice)}
+                    selected={detailId === voice.id}
+                    onOpen={() => setDetailId(voice.id)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="@container grid min-w-0 gap-1">
+            <h2 className="label-caps text-muted-foreground mb-1">
+              {filter === "all" && !query.trim() ? "All voices" : `${filtered.length} voice${filtered.length === 1 ? "" : "s"}`}
+            </h2>
+            <VoiceTableHeader />
+            {filtered.map((voice) => (
+              <VoiceRow
+                key={voice.id}
+                voice={voice}
+                modelName={modelName(voice)}
+                selected={detailId === voice.id}
+                onOpen={() => setDetailId(voice.id)}
+                actions={
+                  <>
                     <Button
                       variant="ghost"
                       size="sm"
-                      disabled={drawing.isPending}
-                      onClick={() => drawing.mutate(voice.id)}
+                      className="hidden @lg:inline-flex"
+                      onClick={() => setDetailId(voice.id)}
                     >
-                      {drawing.isPending && drawing.variables === voice.id ? (
-                        <Loader2Icon className="animate-spin" />
-                      ) : (
-                        <ImageIcon />
-                      )}
-                      {voice.artwork ? "Redraw" : "Avatar"}
+                      <MicIcon />
+                      Try it
                     </Button>
-                  )}
-                  {/* Export and delete are the rare, deliberate ones, so they
-                      share a menu rather than a row the card has run out of. */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className="ml-auto"
-                        aria-label={`More for ${voice.name}`}
-                      >
-                        <MoreHorizontalIcon />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => exporter.mutate(voice)}>
-                        <DownloadIcon />
-                        Export voice file
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onSelect={() => setDeleting(voice)}
-                      >
-                        <Trash2Icon />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </>
-              }
-              footer={
-                trying === voice.id ? (
-                  <TryItPanel
-                    voice={voice}
-                    models={readyTts}
-                    line={tryLine}
-                    onLineChange={setTryLine}
-                    onClose={() => setTrying(null)}
-                  />
-                ) : null
-              }
-            />
-          ))}
-        </div>
+                    {voiceMenu(voice)}
+                  </>
+                }
+              />
+            ))}
+          </section>
+        </>
       )}
 
       {/* Conversion lives here rather than in the Studio because it is a
@@ -992,6 +930,7 @@ export function VoiceLabPage() {
       )}
 
       <VoiceConvertPanel models={vcModels} voices={all} />
+
 
       <AddVoiceDialog
         open={addOpen}

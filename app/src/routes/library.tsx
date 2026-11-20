@@ -9,20 +9,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { BotIcon, ChevronDownIcon, SearchIcon, SlidersHorizontalIcon, StarIcon, XIcon } from "lucide-react";
+import { BotIcon, ChevronDownIcon, SearchIcon, StarIcon, XIcon } from "lucide-react";
 
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { GenerateComposer } from "@/components/generate-composer";
@@ -33,7 +32,6 @@ import { SoundCard } from "@/components/sound-card";
 import {
   CollectionHeader,
   LibraryKindChips,
-  LibraryTabs,
   type KindFilter,
 } from "@/components/library-shelves";
 import { useGenerateSession } from "@/hooks/use-generate-session";
@@ -86,10 +84,6 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
   const [modelId, setModelId] = useState<string>(ALL);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [agentsOnly, setAgentsOnly] = useState(false);
-  /** The filter controls fold away behind a summary line that names what is
-   *  set, so a page with a tag and a model chosen still reads at a glance
-   *  without three dropdowns taking the width. */
-  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const { data: models } = useModels();
   const { data: tags } = useTags();
@@ -294,137 +288,77 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
               {data ? `${items.length} sound${items.length === 1 ? "" : "s"}` : " "}
             </p>
           </div>
-          {!category && (
-            <LibraryKindChips
-              value={kindFilter}
-              onChange={(k) => {
-                setKindFilter(k);
-                setModelId(ALL);
-              }}
-            />
-          )}
         </div>
       )}
-      {!category && !project && <LibraryTabs />}
 
       {/* ------------------------------------------------------------ filters */}
-      {/* Search stays out in the open: it is the filter people reach for. The
-          rest sit behind a disclosure whose summary lists what is chosen, each
-          value a chip that clears just itself. */}
-      <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen} className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-56 flex-1">
-            <SearchIcon
-              className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
-              aria-hidden="true"
-            />
-            <Label htmlFor="library-search" className="sr-only">
-              Search
-            </Label>
-            <Input
-              id="library-search"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search names, prompts and tags"
-              className="pl-8"
-            />
-          </div>
-          <CollapsibleTrigger asChild>
-            <Button
-              variant={filtersOpen ? "secondary" : "outline"}
-              aria-expanded={filtersOpen}
-              className="gap-1.5"
-            >
-              <SlidersHorizontalIcon />
-              Filters
-              <ChevronDownIcon
-                className={cn("size-3.5 transition-transform", filtersOpen && "rotate-180")}
-                aria-hidden="true"
-              />
-            </Button>
-          </CollapsibleTrigger>
-          {/* The summary: what is chosen, as chips, each clearing itself. */}
-          {tag !== ALL && (
-            <FilterChip label={`Tag: ${tag}`} onClear={() => setTag(ALL)} />
-          )}
-          {modelId !== ALL && (
-            <FilterChip
-              label={`Model: ${categoryModels.find((m: Model) => m.id === modelId)?.name ?? modelId}`}
-              onClear={() => setModelId(ALL)}
-            />
-          )}
-          {favoritesOnly && <FilterChip label="Favourites" onClear={() => setFavoritesOnly(false)} />}
-          {agentsOnly && <FilterChip label="By agents" onClear={() => setAgentsOnly(false)} />}
-          {project && (
-            <FilterChip
-              label={`Project: ${project.name}`}
-              onClear={() => setSearchParams({}, { replace: true })}
-            />
-          )}
-          {filtered && (
-            <Button variant="ghost" size="sm" onClick={clear} aria-label="Clear all filters">
-              <XIcon />
-              Clear
-            </Button>
-          )}
-        </div>
-
-        <CollapsibleContent className="flex flex-wrap items-end gap-3">
-        <div className="w-40 space-y-1.5">
-          <Label htmlFor="library-tag">Tag</Label>
-          <Select value={tag} onValueChange={setTag}>
-            <SelectTrigger id="library-tag" className="w-full">
-              <SelectValue placeholder="All tags" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All tags</SelectItem>
-              {(tags ?? []).map((t) => (
-                <SelectItem key={t.tag} value={t.tag}>
-                  {t.tag} ({t.count})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="w-48 space-y-1.5">
-          <Label htmlFor="library-model">Model</Label>
-          <Select value={modelId} onValueChange={setModelId}>
-            <SelectTrigger id="library-model" className="w-full">
-              <SelectValue placeholder="All models" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All models</SelectItem>
-              {categoryModels.map((e: Model) => (
-                <SelectItem key={e.id} value={e.id}>
-                  {e.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <Button
-          variant={favoritesOnly ? "secondary" : "outline"}
-          aria-pressed={favoritesOnly}
-          onClick={() => setFavoritesOnly((f) => !f)}
-        >
-          <StarIcon
-            className={favoritesOnly ? "fill-foreground text-foreground" : ""}
+      {/* One row: search, then each filter as a small pill. A dropdown pill
+          names its choice once one is made ("Tag · door"); a toggle pill is
+          filled when on. No panel to open first. */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <div className="relative min-w-56 flex-1">
+          <SearchIcon
+            className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
+            aria-hidden="true"
           />
-          Favourites
-        </Button>
-
-        <Button
-          variant={agentsOnly ? "secondary" : "outline"}
-          aria-pressed={agentsOnly}
-          onClick={() => setAgentsOnly((a) => !a)}
-        >
-          <BotIcon />
-          By agents
-        </Button>
-        </CollapsibleContent>
-      </Collapsible>
+          <Label htmlFor="library-search" className="sr-only">
+            Search
+          </Label>
+          <Input
+            id="library-search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search names, prompts and tags"
+            className="h-9 pl-8"
+          />
+        </div>
+        {/* Kind sits in the same row as the other filters on the combined
+            Library: one place to narrow the list, not a second tab bar. */}
+        {!category && (
+          <LibraryKindChips
+            value={kindFilter}
+            onChange={(k) => {
+              setKindFilter(k);
+              setModelId(ALL);
+            }}
+          />
+        )}
+        <FilterMenu
+          label="Tag"
+          value={tag === ALL ? null : tag}
+          anyLabel="Any tag"
+          options={(tags ?? []).map((t) => ({ value: t.tag, label: t.tag, hint: String(t.count) }))}
+          onChange={(v) => setTag(v ?? ALL)}
+        />
+        <FilterMenu
+          label="Model"
+          value={modelId === ALL ? null : modelId}
+          valueLabel={categoryModels.find((m: Model) => m.id === modelId)?.name}
+          anyLabel="Any model"
+          options={categoryModels.map((m: Model) => ({ value: m.id, label: m.name }))}
+          onChange={(v) => setModelId(v ?? ALL)}
+        />
+        <TogglePill
+          pressed={favoritesOnly}
+          onToggle={() => setFavoritesOnly((f) => !f)}
+          icon={<StarIcon className={favoritesOnly ? "fill-current" : ""} />}
+          label="Favourites"
+        />
+        <TogglePill
+          pressed={agentsOnly}
+          onToggle={() => setAgentsOnly((a) => !a)}
+          icon={<BotIcon />}
+          label="By agents"
+        />
+        {project && (
+          <FilterChip label={`Project: ${project.name}`} onClear={() => setSearchParams({}, { replace: true })} />
+        )}
+        {filtered && (
+          <Button variant="ghost" size="sm" onClick={clear} aria-label="Clear all filters" className="h-8">
+            Clear
+          </Button>
+        )}
+      </div>
 
       {/* -------------------------------------------------------------- list */}
       {isLoading || !modelsReady ? (
@@ -488,11 +422,11 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
               {/* Column heads, md and up: the same grid as a track row. */}
               <div
                 aria-hidden="true"
-                className="label-caps text-muted-foreground border-border mb-1 hidden grid-cols-[3.25rem_2.5rem_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto] gap-x-3 border-b px-2 pb-1.5 @2xl:grid"
+                className="label-caps text-muted-foreground border-border mb-1 hidden grid-cols-[2.5rem_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto] gap-x-3 border-b px-2 pb-1.5 @2xl:grid @4xl:grid-cols-[2.5rem_minmax(0,16rem)_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto]"
               >
-                <span className="text-right">No.</span>
                 <span />
-                <span>Subject</span>
+                <span>Title</span>
+                <span className="hidden @4xl:block" />
                 <span>Licence</span>
                 <span>Model</span>
                 <span className="text-right">Length</span>
@@ -580,6 +514,75 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
         </div>
       )}
     </div>
+  );
+}
+
+const PILL =
+  "focus-visible:ring-ring/50 inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium outline-none transition-colors focus-visible:ring-3 [&_svg]:size-3.5";
+const PILL_OFF = "border-border text-muted-foreground hover:text-foreground hover:bg-muted";
+const PILL_ON = "bg-primary text-primary-foreground border-primary";
+
+/** A filter with a list of values, as a pill that opens a menu. */
+function FilterMenu({
+  label,
+  value,
+  valueLabel,
+  anyLabel,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string | null;
+  valueLabel?: string;
+  anyLabel: string;
+  options: { value: string; label: string; hint?: string }[];
+  onChange: (v: string | null) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className={cn(PILL, value ? PILL_ON : PILL_OFF)}
+          aria-label={value ? `${label}: ${valueLabel ?? value}. Change.` : `Filter by ${label.toLowerCase()}`}
+        >
+          {label}
+          {value && <span className="max-w-32 truncate font-normal opacity-80">· {valueLabel ?? value}</span>}
+          <ChevronDownIcon aria-hidden="true" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="max-h-80 w-56 overflow-y-auto">
+        <DropdownMenuRadioGroup value={value ?? ""} onValueChange={(v) => onChange(v || null)}>
+          <DropdownMenuRadioItem value="">{anyLabel}</DropdownMenuRadioItem>
+          {options.map((o) => (
+            <DropdownMenuRadioItem key={o.value} value={o.value}>
+              <span className="truncate">{o.label}</span>
+              {o.hint && <span className="readout text-muted-foreground ml-auto pl-2">{o.hint}</span>}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/** An on/off filter, as a pill that is filled when on. */
+function TogglePill({
+  pressed,
+  onToggle,
+  icon,
+  label,
+}: {
+  pressed: boolean;
+  onToggle: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <button type="button" aria-pressed={pressed} onClick={onToggle} className={cn(PILL, pressed ? PILL_ON : PILL_OFF)}>
+      {icon}
+      {label}
+    </button>
   );
 }
 

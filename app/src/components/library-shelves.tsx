@@ -18,29 +18,70 @@ import { usePlayerStore } from "@/lib/player-store";
 import { cn } from "@/lib/utils";
 import type { Project, Sound, TagCount } from "@/lib/api";
 
-const TYPES = [
-  { to: "/library", label: "All", end: true },
-  { to: "/library/sfx", label: "SFX", end: false },
-  { to: "/library/speech", label: "Speech", end: false },
-  { to: "/library/music", label: "Music", end: false },
+const KIND_CHIPS = [
+  { value: "all", label: "All" },
+  { value: "music", label: "Music" },
+  { value: "sfx", label: "SFX" },
+  { value: "voice", label: "Speech" },
 ] as const;
 
-/** All / SFX / Speech / Music, as chips. The sidebar has one Library entry,
- *  so this row is where the kinds are chosen. */
-export function LibraryTypeChips({ className }: { className?: string }) {
+export type KindFilter = (typeof KIND_CHIPS)[number]["value"];
+
+/** All / Music / SFX / Speech as a filter on the combined Library. */
+export function LibraryKindChips({
+  value,
+  onChange,
+  className,
+}: {
+  value: KindFilter;
+  onChange: (v: KindFilter) => void;
+  className?: string;
+}) {
   return (
-    <nav aria-label="Library type" className={cn("flex flex-wrap gap-1.5", className)}>
-      {TYPES.map((t) => (
+    <div role="radiogroup" aria-label="Kind" className={cn("flex flex-wrap gap-1.5", className)}>
+      {KIND_CHIPS.map((c) => (
+        <button
+          key={c.value}
+          type="button"
+          role="radio"
+          aria-checked={value === c.value}
+          onClick={() => onChange(c.value)}
+          className={cn(
+            "focus-visible:ring-ring/50 inline-flex h-8 items-center rounded-full border px-3 text-xs font-medium outline-none transition-colors focus-visible:ring-3",
+            value === c.value
+              ? "bg-primary text-primary-foreground border-primary"
+              : "border-border text-muted-foreground hover:text-foreground hover:bg-muted",
+          )}
+        >
+          {c.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const LIBRARY_TABS = [
+  { to: "/library", label: "Sounds", end: true },
+  { to: "/projects", label: "Projects", end: false },
+  { to: "/voice/lab", label: "Voices", end: false },
+] as const;
+
+/** Sounds / Projects / Voices: the Library's sections, as a music app's
+ *  library has Songs / Playlists / Workspaces. */
+export function LibraryTabs() {
+  return (
+    <nav aria-label="Library sections" className="border-border flex gap-5 border-b">
+      {LIBRARY_TABS.map((t) => (
         <NavLink
           key={t.to}
           to={t.to}
           end={t.end}
           className={({ isActive }) =>
             cn(
-              "focus-visible:ring-ring/50 inline-flex h-8 items-center rounded-full border px-3 text-xs font-medium outline-none transition-colors focus-visible:ring-3",
+              "focus-visible:ring-ring/50 -mb-px border-b-2 pb-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2",
               isActive
-                ? "bg-primary text-primary-foreground border-primary"
-                : "border-border text-muted-foreground hover:text-foreground hover:bg-muted",
+                ? "border-foreground text-foreground"
+                : "text-muted-foreground hover:text-foreground border-transparent",
             )
           }
         >

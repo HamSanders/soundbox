@@ -16,6 +16,7 @@ import { HeaderSlotProvider } from "@/components/header-slot";
 import { AppSidebar } from "@/components/app-sidebar";
 import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog";
 import { NowPlayingBar } from "@/components/now-playing-bar";
+import { CreatePanel, CreateRedirect } from "@/components/create-panel";
 import { SoundDetailPanel } from "@/components/sound-detail-panel";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { PLAYER_DOCK_HEIGHT_PX } from "@/components/player-dock";
@@ -92,6 +93,8 @@ function AppShell() {
       style={{ "--dock-h": nowPlaying ? `${PLAYER_DOCK_HEIGHT_PX}px` : "0px" } as CSSProperties}
     >
       <AppSidebar />
+      {/* Between the sidebar and the page on the kind pages: see create-panel.tsx. */}
+      <CreatePanel />
       {/* The header and the page it belongs to share a provider so a page can
           render controls into the bar above it — see `header-slot`. */}
       <HeaderSlotProvider>
@@ -164,6 +167,7 @@ function AppShell() {
                 it's where a Projects sidebar/list entry deep-links to
                 (`/library?project=…`), spanning every category rather than
                 just one. */}
+            <Route path="/create" element={<CreateRedirect />} />
             <Route path="/library" element={<LibraryPage />} />
             <Route path="/library/sfx" element={<SfxLibraryPage />} />
             <Route path="/library/music" element={<MusicStudioPage />} />
@@ -182,8 +186,9 @@ function AppShell() {
             excludes the sidebar's width, so `position="sticky"` here never
             draws over the sidebar the way a viewport-`fixed` dock would. */}
         <NowPlayingBar />
-        <SoundDetailPanel />
       </SidebarInset>
+      {/* Docked beside the page, in the shell's row: see sound-detail-panel.tsx. */}
+      <SoundDetailPanel />
       {/* Inside the shell, not the app root: it offers the shell's pages and
           reads the route to know when to stand down. */}
       <AppCommandPalette />

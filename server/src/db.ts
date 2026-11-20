@@ -19,6 +19,7 @@ import type { Database as Sqlite, Statement } from "better-sqlite3";
 import type { DeviceSpec } from "./devices.js";
 import { catalogById } from "./models/audiocpp.js";
 import { HistoryStore } from "./history.js";
+import { AudiobookStore } from "./audiobook/store.js"; // [audiobooks:core]
 import { clipMidiSchema } from "./schemas.js";
 
 import type {
@@ -470,6 +471,7 @@ export class Database {
    *  Its own store rather than more methods here: two tables nothing else
    *  joins against, and this file is long enough already. */
   readonly history: HistoryStore;
+  readonly audiobooks: AudiobookStore; // [audiobooks:core]
   private readonly conn: Sqlite;
   /** Statement cache keyed by SQL text — the filter combinations in listSounds
    *  and listMcpCalls generate a small, bounded set of distinct queries. */
@@ -494,6 +496,7 @@ export class Database {
       () => randomUUID(),
       () => new Date().toISOString(),
     );
+    this.audiobooks = new AudiobookStore(this.conn, () => randomUUID(), () => new Date().toISOString()); // [audiobooks:core]
   }
 
   /** Databases written before the engine->model rename still have the old

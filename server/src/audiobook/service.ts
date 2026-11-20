@@ -1,0 +1,769 @@
+/**
+ * The audiobook service: the one API every audiobook module calls.
+ *
+ * Get it with `audiobooks(svc)`; there is one per `MirliService`. It reads the
+ * store through `svc.db.audiobooks` at call time, so a profile switch (which
+ * reopens the database) needs nothing from here.
+ *
+ * Public methods
+ * --------------
+ * Events
+ *   hub                                       AudiobookHub: publish(bookId, event), subscribe
+ *   onDelete(cb)                              cleanup before a book's or chapter's stories go
+ *
+ * Books
+ *   listBooks(): BookSummary[]
+ *   getBook(id): BookDetail | null            book + chapters (with stats) + characters + totals
+ *   createBook(fields): BookDetail            blank book with one empty chapter
+ *   createBookFromManuscript(manuscript, settings?, opts?): BookDetail   (import)
+ *   updateBook(id, fields): BookDetail | null  settings merge; narrator change re-voices nothing,
+ *                                              it updates segment voices and marks takes stale
+ *   deleteBook(id, deleteSounds = true): Promise<boolean>
+ *   setCover(id, bytes, mime): Promise<BookDetail | null>
+ *   coverFile(id): { path, mime } | null
+ *   stats(id): BookStats | null
+ *
+ * Chapters
+ *   addChapter(bookId, { title, kind?, included?, position?, paragraphs?, headings? }): ChapterWithStats
+ *   updateChapter(chapterId, { title?, kind?, included? }): Chapter | null
+ *   reorderChapters(bookId, ids): boolean
+ *   deleteChapter(chapterId, deleteSounds = true): Promise<boolean>
+ *   getChapter(chapterId): Chapter | null
+ *   chapterForSegment(segmentId): Chapter | null
+ *
+ * Paragraphs (one paragraph = one story_segments row)
+ *   getParagraphs(chapterId): Paragraph[] | null
+ *   getParagraph(segmentId): Paragraph | null
+ *   addParagraph(chapterId, { text, position?, character_id?, is_heading? }): Paragraph
+ *   updateParagraph(segmentId, { text?, character_id?, locked?, is_heading? }): Paragraph | null
+ *   deleteParagraph(segmentId): boolean
+ *   setParagraphCharacter(segmentIds | segmentId, characterId | null): number
+ *   markStale(segmentIds): number             e.g. a pronunciation rule changed
+ *   markVoiced(segmentId, spokenText): void   the render path records what it spoke
+ *   replace(bookId, ReplaceRequest): ReplaceResult   find/replace, skips locked paragraphs
+ *
+ * Characters (table owned here; routes and detection belong to the voice area)
+ *   listCharacters(bookId), getCharacter(id), createCharacter(bookId, fields),
+ *   updateCharacter(id, fields), deleteCharacter(id)
+ *   syncVoices(bookId, segmentIds?): number   write each paragraph's voice/speaker from the cast;
+ *                                             a changed voice marks its take stale
+ *   voiceFor(bookId, characterId): string | null   the voice a paragraph is read with
+ */
+
+import { randomUUID } from "node:crypto";
+import { mkdirSync } from "node:fs";
+import { readFile, unlink, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+
+import { ModelError } from "../errors.js";
+import type { StorySegment } from "../schemas.js";
+import type { MirliService } from "../service.js";
+import { AudiobookHub } from "./hub.js";
+import {
+  AudiobookStore,
+  chapterStatus,
+  type BookFields,
+  type BookStats,
+  type ChapterWithStats,
+  type CharacterFields,
+  type ParagraphStatus,
+  type SettingsPatch,
+} from "./store.js";
+import type {
+  Book,
+  Chapter,
+  ChapterKind,
+  Character,
+  Manuscript,
+  ParagraphMeta,
+} from "./types.js";
+
+export type { BookStats, ChapterWithStats, ParagraphStatus } from "./store.js";
+
+/** A paragraph: the story segment, its audiobook state, and a status. */
+export type Paragraph = StorySegment &
+  ParagraphMeta & {
+    status: ParagraphStatus;
+  };
+
+export interface BookSummary extends Book {
+  stats: BookStats;
+}
+
+export interface BookDetail extends Book {
+  chapters: ChapterWithStats[];
+  characters: Character[];
+  stats: BookStats;
+}
+
+export interface ReplaceRequest {
+  find: string;
+  replace: string;
+  case_sensitive?: boolean;
+  whole_word?: boolean;
+  /** Treat `find` as a regular expression; `replace` may use $1 etc. */
+  regex?: boolean;
+  /** Limit to these chapters. Default: every chapter. */
+  chapter_ids?: string[];
+  /** Count only; change nothing. */
+  dry_run?: boolean;
+}
+
+export interface ReplaceResult {
+  /** Matches found in unlocked paragraphs (replaced unless dry_run). */
+  matches: number;
+  /** Paragraphs whose text changed (or would change). */
+  paragraphs: number;
+  /** Locked paragraphs that matched and were left alone. */
+  skipped_locked: number;
+  /** Matches inside those locked paragraphs. */
+  skipped_matches: number;
+  changed: { chapter_id: string; segment_id: string }[];
+  dry_run: boolean;
+}
+
+export type DeleteScope = { book_id: string; chapter_ids: string[]; story_ids: string[] };
+
+const NARRATOR_SPEAKER = "Narrator";
+const COVER_MIME: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+
+function emptyTotals(): BookStats {
+  return { chapters: 0, paragraphs: 0, voiced: 0, stale: 0, locked: 0, characters: 0, duration_s: 0 };
+}
+
+function stringOptions(options: Record<string, unknown>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(options)) {
+    if (v === null || v === undefined || v === "") continue;
+    out[k] = typeof v === "string" ? v : JSON.stringify(v);
+  }
+  return out;
+}
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** The pattern for a find/replace request. Throws ModelError on a bad regex. */
+export function replacePattern(req: ReplaceRequest): RegExp {
+  let source = req.regex ? req.find : escapeRegex(req.find);
+  if (req.whole_word) source = `(?<![\\p{L}\\p{N}_])(?:${source})(?![\\p{L}\\p{N}_])`;
+  try {
+    return new RegExp(source, `gu${req.case_sensitive ? "" : "i"}`);
+  } catch (exc) {
+    throw new ModelError(`Invalid pattern: ${exc instanceof Error ? exc.message : String(exc)}`);
+  }
+}
+
+export class AudiobookService {
+  readonly hub = new AudiobookHub();
+  private readonly deleteHooks: ((scope: DeleteScope) => void | Promise<void>)[] = [];
+
+  constructor(private readonly svc: MirliService) {}
+
+  private get store(): AudiobookStore {
+    return this.svc.db.audiobooks;
+  }
+
+  /** Run before a book's or chapter's stories are deleted, so a module can
+   *  drop rows that point at their segments or sounds (takes, renders). */
+  onDelete(cb: (scope: DeleteScope) => void | Promise<void>): void {
+    this.deleteHooks.push(cb);
+  }
+
+  /* ------------------------------------------------------------------ books */
+
+  listBooks(): BookSummary[] {
+    return this.store.listBooks().map((book) => ({ ...book, stats: this.stats(book.id)! }));
+  }
+
+  getBook(id: string): BookDetail | null {
+    const book = this.store.getBook(id);
+    if (!book) return null;
+    const stats = this.store.chapterStats(id);
+    const totals = emptyTotals();
+    const chapters: ChapterWithStats[] = this.store.listChapters(id).map((chapter) => {
+      const s = stats.get(chapter.id)!;
+      totals.chapters++;
+      totals.paragraphs += s.paragraphs;
+      totals.voiced += s.voiced;
+      totals.stale += s.stale;
+      totals.locked += s.locked;
+      totals.characters += s.characters;
+      totals.duration_s += s.duration_s;
+      const { stale: _stale, ...chapterStats } = s;
+      return { ...chapter, stats: chapterStats, status: chapterStatus(chapterStats) };
+    });
+    totals.duration_s = Math.round(totals.duration_s * 100) / 100;
+    return { ...book, chapters, characters: this.store.listCharacters(id), stats: totals };
+  }
+
+  stats(id: string): BookStats | null {
+    return this.getBook(id)?.stats ?? null;
+  }
+
+  createBook(fields: BookFields & { title?: string | null }): BookDetail {
+    const book = this.store.createBook({ ...fields, title: fields.title?.trim() || "Untitled book" });
+    this.addChapter(book.id, { title: "Chapter 1" });
+    return this.getBook(book.id)!;
+  }
+
+  /**
+   * Build a whole book from a parsed manuscript. Each section becomes a
+   * chapter; each paragraph a segment. With `headings` (default on), a
+   * chapter's title is spoken as its first paragraph, marked as a heading,
+   * unless the section already starts with it.
+   */
+  async createBookFromManuscript(
+    manuscript: Manuscript,
+    settings: SettingsPatch = {},
+    opts: { headings?: boolean; project_id?: string | null } = {},
+  ): Promise<BookDetail> {
+    const book = this.store.createBook({
+      title: manuscript.title?.trim() || "Untitled book",
+      subtitle: manuscript.subtitle,
+      author: manuscript.author,
+      description: manuscript.description,
+      language: manuscript.language || "en",
+      isbn: manuscript.isbn,
+      publisher: manuscript.publisher,
+      publication_date: manuscript.publication_date,
+      project_id: opts.project_id ?? null,
+      settings,
+    });
+    for (const section of manuscript.sections) {
+      this.addChapterQuiet(book.id, {
+        title: section.title || "Untitled",
+        kind: section.kind,
+        included: section.included,
+        paragraphs: section.paragraphs,
+        headings: opts.headings ?? true,
+      });
+    }
+    if (manuscript.cover) await this.setCover(book.id, manuscript.cover.bytes, manuscript.cover.mime);
+    this.hub.publish(book.id, { type: "chapters" });
+    return this.getBook(book.id)!;
+  }
+
+  updateBook(id: string, fields: BookFields): BookDetail | null {
+    const before = this.store.getBook(id);
+    if (!before) return null;
+    if (fields.settings?.narrator_voice_id) this.assertVoice(fields.settings.narrator_voice_id);
+    const book = this.store.updateBook(id, fields)!;
+    if (fields.settings?.request_options !== undefined) {
+      const options = stringOptions(book.settings.request_options);
+      for (const chapter of this.store.listChapters(id)) {
+        this.svc.setStoryOptions(chapter.story_id, options);
+      }
+    }
+    if (
+      before.settings.narrator_voice_id !== book.settings.narrator_voice_id ||
+      before.settings.cast_mode !== book.settings.cast_mode
+    ) {
+      this.syncVoices(id);
+    }
+    this.hub.publish(id, { type: "book" });
+    return this.getBook(id);
+  }
+
+  async deleteBook(id: string, deleteSounds = true): Promise<boolean> {
+    const book = this.store.getBook(id);
+    if (!book) return false;
+    const chapters = this.store.listChapters(id);
+    await this.runDeleteHooks({
+      book_id: id,
+      chapter_ids: chapters.map((c) => c.id),
+      story_ids: chapters.map((c) => c.story_id),
+    });
+    for (const chapter of chapters) await this.svc.deleteStory(chapter.story_id, deleteSounds);
+    this.store.deleteBook(id);
+    if (book.cover_path) await unlinkQuiet(join(this.svc.config.paths.artwork, book.cover_path));
+    this.hub.publish(id, { type: "deleted" });
+    return true;
+  }
+
+  async setCover(id: string, bytes: Uint8Array, mime: string): Promise<BookDetail | null> {
+    const book = this.store.getBook(id);
+    if (!book) return null;
+    const ext = COVER_MIME[mime.toLowerCase()];
+    if (!ext) throw new ModelError(`Unsupported cover type '${mime}'. Use PNG, JPEG, WebP or GIF.`);
+    const dir = this.svc.config.paths.artwork;
+    mkdirSync(dir, { recursive: true });
+    const filename = `book-${id}-${randomUUID().slice(0, 8)}.${ext}`;
+    await writeFile(join(dir, filename), bytes);
+    this.store.updateBook(id, { cover_path: filename });
+    if (book.cover_path) await unlinkQuiet(join(dir, book.cover_path));
+    this.hub.publish(id, { type: "book" });
+    return this.getBook(id);
+  }
+
+  coverFile(id: string): { path: string; mime: string } | null {
+    const book = this.store.getBook(id);
+    if (!book?.cover_path) return null;
+    const ext = book.cover_path.split(".").pop() ?? "";
+    const mime = Object.entries(COVER_MIME).find(([, e]) => e === ext)?.[0] ?? "image/png";
+    return { path: join(this.svc.config.paths.artwork, book.cover_path), mime };
+  }
+
+  /** Cover bytes, for exporters that embed it. */
+  async coverBytes(id: string): Promise<{ bytes: Buffer; mime: string } | null> {
+    const file = this.coverFile(id);
+    if (!file) return null;
+    try {
+      return { bytes: await readFile(file.path), mime: file.mime };
+    } catch {
+      return null;
+    }
+  }
+
+  /* --------------------------------------------------------------- chapters */
+
+  getChapter(chapterId: string): Chapter | null {
+    return this.store.getChapter(chapterId);
+  }
+
+  chapterForSegment(segmentId: string): Chapter | null {
+    return this.store.chapterForSegment(segmentId);
+  }
+
+  addChapter(
+    bookId: string,
+    fields: {
+      title: string;
+      kind?: ChapterKind;
+      included?: boolean;
+      position?: number | null;
+      paragraphs?: string[];
+      headings?: boolean;
+    },
+  ): ChapterWithStats {
+    const chapter = this.addChapterQuiet(bookId, fields);
+    this.hub.publish(bookId, { type: "chapters" });
+    return this.getBook(bookId)!.chapters.find((c) => c.id === chapter.id)!;
+  }
+
+  private addChapterQuiet(
+    bookId: string,
+    fields: {
+      title: string;
+      kind?: ChapterKind;
+      included?: boolean;
+      position?: number | null;
+      paragraphs?: string[];
+      headings?: boolean;
+    },
+  ): Chapter {
+    const book = this.store.getBook(bookId);
+    if (!book) throw new ModelError(`Book '${bookId}' not found.`);
+    const title = fields.title.trim() || "Untitled";
+    const narrator = this.existingVoice(book.settings.narrator_voice_id);
+    const now = new Date().toISOString();
+    return this.store.transaction(() => {
+      const story = this.svc.db.createStory(randomUUID(), title, now, book.project_id, "script");
+      const options = stringOptions(book.settings.request_options);
+      if (Object.keys(options).length > 0) this.svc.db.setStoryOptions(story.id, options);
+      const chapter = this.store.createChapter(bookId, story.id, { ...fields, title });
+      const paragraphs = (fields.paragraphs ?? []).map((p) => p.trim()).filter(Boolean);
+      const heading =
+        fields.headings === true &&
+        (fields.kind ?? "chapter") === "chapter" &&
+        paragraphs[0]?.toLowerCase() !== title.toLowerCase();
+      const lines = heading ? [title, ...paragraphs] : paragraphs;
+      lines.forEach((text, i) => {
+        const segment = this.svc.db.createSegment(randomUUID(), story.id, now, {
+          text,
+          voice_id: narrator,
+          speaker: NARRATOR_SPEAKER,
+          language: book.language,
+        });
+        if (i === 0 && (heading || paragraphs[0]?.toLowerCase() === title.toLowerCase())) {
+          this.store.setMeta(segment.id, { is_heading: true });
+        }
+      });
+      return chapter;
+    });
+  }
+
+  updateChapter(
+    chapterId: string,
+    fields: { title?: string; kind?: ChapterKind; included?: boolean },
+  ): Chapter | null {
+    const chapter = this.store.updateChapter(chapterId, {
+      ...fields,
+      title: fields.title?.trim() || undefined,
+    });
+    if (!chapter) return null;
+    if (fields.title?.trim()) this.svc.renameStory(chapter.story_id, chapter.title);
+    this.hub.publish(chapter.book_id, { type: "chapters" });
+    return chapter;
+  }
+
+  reorderChapters(bookId: string, ids: string[]): boolean {
+    const ok = this.store.reorderChapters(bookId, ids);
+    if (ok) this.hub.publish(bookId, { type: "chapters" });
+    return ok;
+  }
+
+  async deleteChapter(chapterId: string, deleteSounds = true): Promise<boolean> {
+    const chapter = this.store.getChapter(chapterId);
+    if (!chapter) return false;
+    await this.runDeleteHooks({
+      book_id: chapter.book_id,
+      chapter_ids: [chapter.id],
+      story_ids: [chapter.story_id],
+    });
+    this.store.deleteChapter(chapterId);
+    await this.svc.deleteStory(chapter.story_id, deleteSounds);
+    this.hub.publish(chapter.book_id, { type: "chapters" });
+    return true;
+  }
+
+  private async runDeleteHooks(scope: DeleteScope): Promise<void> {
+    for (const hook of this.deleteHooks) await hook(scope);
+  }
+
+  /* ------------------------------------------------------------- paragraphs */
+
+  getParagraphs(chapterId: string): Paragraph[] | null {
+    const chapter = this.store.getChapter(chapterId);
+    if (!chapter) return null;
+    return this.paragraphsOf(chapter);
+  }
+
+  private paragraphsOf(chapter: Chapter): Paragraph[] {
+    const segments = this.svc.listSegments(chapter.story_id);
+    const stale = this.store.staleSegments(chapter.story_id);
+    const meta = this.store.getMeta(segments.map((s) => s.id));
+    return segments.map((segment) => {
+      const m = AudiobookStore.meta(segment.id, chapter.id, meta.get(segment.id));
+      const status: ParagraphStatus = m.locked
+        ? "locked"
+        : segment.kind === "pause"
+          ? "voiced"
+          : !segment.sound_id
+            ? "unvoiced"
+            : stale.has(segment.id)
+              ? "stale"
+              : "voiced";
+      return { ...segment, ...m, status };
+    });
+  }
+
+  getParagraph(segmentId: string): Paragraph | null {
+    const chapter = this.store.chapterForSegment(segmentId);
+    if (!chapter) return null;
+    return this.paragraphsOf(chapter).find((p) => p.id === segmentId) ?? null;
+  }
+
+  addParagraph(
+    chapterId: string,
+    fields: {
+      text: string;
+      position?: number | null;
+      character_id?: string | null;
+      is_heading?: boolean;
+    },
+  ): Paragraph {
+    const chapter = this.store.getChapter(chapterId);
+    if (!chapter) throw new ModelError(`Chapter '${chapterId}' not found.`);
+    const book = this.store.getBook(chapter.book_id)!;
+    const segment = this.svc.createSegment(chapter.story_id, {
+      text: fields.text,
+      position: fields.position ?? null,
+      voice_id: this.existingVoice(book.settings.narrator_voice_id),
+      speaker: NARRATOR_SPEAKER,
+      language: book.language,
+      track_index: 0,
+      kind: "line",
+    });
+    if (fields.is_heading) this.store.setMeta(segment.id, { is_heading: true });
+    if (fields.character_id) this.setParagraphCharacter([segment.id], fields.character_id);
+    this.publishParagraphs(chapter, [segment.id]);
+    return this.getParagraph(segment.id)!;
+  }
+
+  /**
+   * Edit one paragraph. A locked paragraph's text can't change (unlock it
+   * first); its lock, heading flag and character can.
+   */
+  updateParagraph(
+    segmentId: string,
+    fields: { text?: string; character_id?: string | null; locked?: boolean; is_heading?: boolean },
+  ): Paragraph | null {
+    const chapter = this.store.chapterForSegment(segmentId);
+    if (!chapter) return null;
+    if (fields.text !== undefined) {
+      const current = this.getParagraph(segmentId)!;
+      const unlocking = fields.locked === false;
+      if (current.locked && !unlocking && fields.text !== current.text) {
+        throw new ModelError("This paragraph is locked. Unlock it to edit its text.");
+      }
+      // Record what the take was voiced from before the text moves.
+      this.store.syncVoiced([chapter.story_id]);
+      this.svc.updateSegment(segmentId, { text: fields.text });
+    }
+    const meta: { locked?: boolean; is_heading?: boolean } = {};
+    if (fields.locked !== undefined) meta.locked = fields.locked;
+    if (fields.is_heading !== undefined) meta.is_heading = fields.is_heading;
+    if (Object.keys(meta).length > 0) this.store.setMeta(segmentId, meta);
+    if ("character_id" in fields) this.setParagraphCharacter([segmentId], fields.character_id ?? null);
+    this.publishParagraphs(chapter, [segmentId]);
+    return this.getParagraph(segmentId);
+  }
+
+  deleteParagraph(segmentId: string): boolean {
+    const chapter = this.store.chapterForSegment(segmentId);
+    if (!chapter) return false;
+    const ok = this.svc.deleteSegment(segmentId);
+    if (ok) this.publishParagraphs(chapter, [segmentId]);
+    return ok;
+  }
+
+  /**
+   * Cast paragraphs as a character (null = narrator), and write the voice
+   * they are read with onto their segments. Returns how many changed. Locked
+   * paragraphs are cast too: the lock protects the take, not the casting,
+   * so their voice is left alone until they are unlocked.
+   */
+  setParagraphCharacter(segmentIds: string | string[], characterId: string | null): number {
+    const ids = Array.isArray(segmentIds) ? segmentIds : [segmentIds];
+    if (ids.length === 0) return 0;
+    let character: Character | null = null;
+    if (characterId) {
+      character = this.store.getCharacter(characterId);
+      if (!character) throw new ModelError(`Character '${characterId}' not found.`);
+    }
+    const byBook = new Map<string, Map<string, string[]>>();
+    let n = 0;
+    this.store.transaction(() => {
+      for (const id of ids) {
+        const chapter = this.store.chapterForSegment(id);
+        if (!chapter) continue;
+        if (character && character.book_id !== chapter.book_id) {
+          throw new ModelError("That character belongs to another book.");
+        }
+        this.store.setMeta(id, { character_id: characterId });
+        const chapters = byBook.get(chapter.book_id) ?? new Map<string, string[]>();
+        byBook.set(chapter.book_id, chapters);
+        chapters.set(chapter.id, [...(chapters.get(chapter.id) ?? []), id]);
+        n++;
+      }
+    });
+    for (const [bookId, chapters] of byBook) {
+      this.syncVoices(bookId, [...chapters.values()].flat(), false);
+      for (const [chapterId, segs] of chapters) {
+        this.hub.publish(bookId, { type: "paragraphs", chapter_id: chapterId, segment_ids: segs });
+      }
+    }
+    return n;
+  }
+
+  markStale(segmentIds: string[]): number {
+    const n = this.store.markStale(segmentIds);
+    this.publishBySegments(segmentIds);
+    return n;
+  }
+
+  markVoiced(segmentId: string, spokenText: string): void {
+    this.store.markVoiced(segmentId, spokenText);
+  }
+
+  /**
+   * Find and replace across a book's paragraph text. Locked paragraphs are
+   * never changed; they are counted in `skipped_locked`.
+   */
+  replace(bookId: string, req: ReplaceRequest): ReplaceResult | null {
+    const book = this.store.getBook(bookId);
+    if (!book) return null;
+    if (!req.find) throw new ModelError("Nothing to find.");
+    const pattern = replacePattern(req);
+    const only = req.chapter_ids?.length ? new Set(req.chapter_ids) : null;
+    const result: ReplaceResult = {
+      matches: 0,
+      paragraphs: 0,
+      skipped_locked: 0,
+      skipped_matches: 0,
+      changed: [],
+      dry_run: req.dry_run === true,
+    };
+    const touched = new Map<string, Chapter>();
+    for (const chapter of this.store.listChapters(bookId)) {
+      if (only && !only.has(chapter.id)) continue;
+      const paragraphs = this.paragraphsOf(chapter);
+      this.store.syncVoiced([chapter.story_id]);
+      for (const p of paragraphs) {
+        if (p.kind !== "line") continue;
+        const count = p.text.match(pattern)?.length ?? 0;
+        if (count === 0) continue;
+        if (p.locked) {
+          result.skipped_locked++;
+          result.skipped_matches += count;
+          continue;
+        }
+        const next = req.regex
+          ? p.text.replace(pattern, req.replace)
+          : p.text.replace(pattern, () => req.replace);
+        result.matches += count;
+        if (next === p.text) continue;
+        result.paragraphs++;
+        result.changed.push({ chapter_id: chapter.id, segment_id: p.id });
+        if (!result.dry_run) {
+          this.svc.updateSegment(p.id, { text: next });
+          touched.set(chapter.id, chapter);
+        }
+      }
+    }
+    for (const chapter of touched.values()) {
+      this.hub.publish(bookId, { type: "paragraphs", chapter_id: chapter.id });
+    }
+    return result;
+  }
+
+  private publishParagraphs(chapter: Chapter, segmentIds: string[]): void {
+    this.hub.publish(chapter.book_id, {
+      type: "paragraphs",
+      chapter_id: chapter.id,
+      segment_ids: segmentIds,
+    });
+  }
+
+  private publishBySegments(segmentIds: string[]): void {
+    const seen = new Map<string, Chapter>();
+    for (const id of segmentIds) {
+      const chapter = this.store.chapterForSegment(id);
+      if (chapter) seen.set(chapter.id, chapter);
+    }
+    for (const chapter of seen.values()) {
+      this.hub.publish(chapter.book_id, { type: "paragraphs", chapter_id: chapter.id });
+    }
+  }
+
+  /* ------------------------------------------------------------- characters */
+
+  listCharacters(bookId: string): Character[] {
+    return this.store.listCharacters(bookId);
+  }
+
+  getCharacter(id: string): Character | null {
+    return this.store.getCharacter(id);
+  }
+
+  createCharacter(bookId: string, fields: CharacterFields & { name: string }): Character {
+    if (!this.store.getBook(bookId)) throw new ModelError(`Book '${bookId}' not found.`);
+    if (fields.voice_id) this.assertVoice(fields.voice_id);
+    const character = this.store.createCharacter(bookId, fields);
+    this.hub.publish(bookId, { type: "characters" });
+    return character;
+  }
+
+  /** A changed voice is written onto every paragraph the character reads. */
+  updateCharacter(id: string, fields: CharacterFields): Character | null {
+    const before = this.store.getCharacter(id);
+    if (!before) return null;
+    if (fields.voice_id) this.assertVoice(fields.voice_id);
+    const character = this.store.updateCharacter(id, fields)!;
+    if (before.voice_id !== character.voice_id) {
+      this.syncVoices(character.book_id, this.store.segmentsForCharacter(id));
+    }
+    this.hub.publish(character.book_id, { type: "characters" });
+    return character;
+  }
+
+  /** The character's paragraphs go back to the narrator. */
+  deleteCharacter(id: string): boolean {
+    const character = this.store.getCharacter(id);
+    if (!character) return false;
+    const segments = this.store.segmentsForCharacter(id);
+    this.store.deleteCharacter(id);
+    this.syncVoices(character.book_id, segments);
+    this.hub.publish(character.book_id, { type: "characters" });
+    return true;
+  }
+
+  /** The voice a paragraph cast as `characterId` is read with. */
+  voiceFor(bookId: string, characterId: string | null): string | null {
+    const book = this.store.getBook(bookId);
+    if (!book) return null;
+    const character = characterId ? this.store.getCharacter(characterId) : null;
+    const narrator = book.settings.narrator_voice_id;
+    if (book.settings.cast_mode === "single" || !character) return this.existingVoice(narrator);
+    return this.existingVoice(character.voice_id ?? narrator);
+  }
+
+  /**
+   * Write each paragraph's voice and speaker from the cast. A voiced,
+   * unlocked paragraph whose voice changes gets its take marked stale.
+   * Returns how many segments changed.
+   */
+  syncVoices(bookId: string, segmentIds?: string[], publish = true): number {
+    const book = this.store.getBook(bookId);
+    if (!book) return 0;
+    const chapters = this.store.listChapters(bookId);
+    const wanted = segmentIds ? new Set(segmentIds) : null;
+    const characters = new Map(this.store.listCharacters(bookId).map((c) => [c.id, c]));
+    const stale: string[] = [];
+    let n = 0;
+    this.store.transaction(() => {
+      for (const chapter of chapters) {
+        const segments = this.svc.db.listSegments(chapter.story_id);
+        const meta = this.store.getMeta(segments.map((s) => s.id));
+        for (const segment of segments) {
+          if (segment.kind !== "line" || (wanted && !wanted.has(segment.id))) continue;
+          const m = meta.get(segment.id);
+          const character = m?.character_id ? (characters.get(m.character_id) ?? null) : null;
+          const voice = this.voiceFor(bookId, character?.id ?? null);
+          const speaker = character?.name ?? NARRATOR_SPEAKER;
+          const locked = m?.locked === 1;
+          const voiceChanges = (segment.voice_id ?? null) !== voice && !locked;
+          if (!voiceChanges && segment.speaker === speaker) continue;
+          this.svc.db.updateSegment(segment.id, {
+            speaker,
+            ...(voiceChanges ? { voice_id: voice } : {}),
+          });
+          if (voiceChanges && segment.sound_id) stale.push(segment.id);
+          n++;
+        }
+      }
+    });
+    if (stale.length > 0) this.store.markStale(stale);
+    if (publish && n > 0) {
+      for (const chapter of chapters) this.svc.stories.changed(chapter.story_id);
+      this.hub.publish(bookId, { type: "chapters" });
+    }
+    return n;
+  }
+
+  private existingVoice(voiceId: string | null | undefined): string | null {
+    if (!voiceId) return null;
+    return this.svc.db.getVoice(voiceId) ? voiceId : null;
+  }
+
+  private assertVoice(voiceId: string): void {
+    if (!this.svc.db.getVoice(voiceId)) throw new ModelError(`Voice '${voiceId}' not found.`);
+  }
+}
+
+async function unlinkQuiet(path: string): Promise<void> {
+  try {
+    await unlink(path);
+  } catch {
+    // Already gone is fine.
+  }
+}
+
+const services = new WeakMap<MirliService, AudiobookService>();
+
+/** The audiobook service for this server. One per MirliService. */
+export function audiobooks(svc: MirliService): AudiobookService {
+  let service = services.get(svc);
+  if (!service) {
+    service = new AudiobookService(svc);
+    services.set(svc, service);
+  }
+  return service;
+}

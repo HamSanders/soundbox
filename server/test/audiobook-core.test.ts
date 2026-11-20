@@ -1,0 +1,473 @@
+/**
+ * Audiobook core: books, chapters, paragraphs, casting, stale tracking and
+ * find/replace, end to end over HTTP against a temp data directory. No
+ * models: "voicing" a paragraph is pointing its segment at a sound row.
+ */
+
+import { randomUUID } from "node:crypto";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import type { FastifyInstance } from "fastify";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+import { buildApp } from "../src/app.js";
+import { audiobooks } from "../src/audiobook/service.js";
+import type { Manuscript } from "../src/audiobook/types.js";
+import { Config } from "../src/config.js";
+import type { Sound } from "../src/schemas.js";
+
+let app: FastifyInstance;
+let dataDir: string;
+
+beforeAll(async () => {
+  dataDir = await mkdtemp(join(tmpdir(), "mirli-audiobook-core-"));
+  app = buildApp(new Config(dataDir), { serveUi: false });
+  await app.ready();
+});
+
+afterAll(async () => {
+  await app.close();
+  await rm(dataDir, { recursive: true, force: true });
+});
+
+const manuscript: Manuscript = {
+  title: "The Lighthouse Keeper",
+  subtitle: null,
+  author: "A. Writer",
+  language: "en",
+  description: "A short test book.",
+  isbn: null,
+  publisher: null,
+  publication_date: null,
+  cover: null,
+  warnings: [],
+  sections: [
+    {
+      title: "Copyright",
+      kind: "front_matter",
+      included: false,
+      paragraphs: ["All rights reserved."],
+    },
+    {
+      title: "Chapter One",
+      kind: "chapter",
+      included: true,
+      paragraphs: [
+        "The lamp turned all night.",
+        '"Is anyone there?" asked Mara.',
+        "Nobody answered the lamp.",
+      ],
+    },
+    {
+      title: "Chapter Two",
+      kind: "chapter",
+      included: true,
+      paragraphs: ["Chapter Two", "Morning came with the lamp still lit."],
+    },
+  ],
+};
+
+function fakeSound(): string {
+  const id = randomUUID();
+  const sound: Sound = {
+    id,
+    created_at: new Date().toISOString(),
+    model: "test",
+    prompt: "",
+    duration_s: 2.5,
+    sample_rate: 24000,
+    channels: 1,
+    file: "",
+    peaks: [],
+    favorite: false,
+    tags: [],
+    name: "take",
+    size_bytes: 0,
+    source: "api",
+  };
+  app.soundbox.db.insertSound(sound, `${id}.wav`);
+  return id;
+}
+
+function addVoice(name: string): string {
+  const id = randomUUID();
+  app.soundbox.db.createVoice(
+    { id, name, kind: "builtin", created_at: new Date().toISOString(), voice_id: name, model_id: "test" },
+    null,
+  );
+  return id;
+}
+
+/** Every request carries the CSRF header the UI sends. */
+function call(opts: Parameters<FastifyInstance["inject"]>[0] & object) {
+  const o = opts as { headers?: Record<string, string> };
+  return app.inject({ ...(opts as object), headers: { "x-soundbox": "1", ...(o.headers ?? {}) } } as never);
+}
+
+async function json<T = any>(method: string, url: string, payload?: unknown): Promise<T> {
+  const res = await call({ method: method as "GET", url, payload: payload as object });
+  if (res.statusCode >= 400) throw new Error(`${method} ${url} -> ${res.statusCode} ${res.body}`);
+  return res.body ? (res.json() as T) : (undefined as T);
+}
+
+describe("books", () => {
+  it("creates a blank book with one chapter and lists it with stats", async () => {
+    const res = await call({ method: "POST", url: "/api/audiobooks", payload: { title: "Blank" } });
+    expect(res.statusCode).toBe(201);
+    const book = res.json();
+    expect(book.title).toBe("Blank");
+    expect(book.chapters).toHaveLength(1);
+    expect(book.chapters[0].status).toBe("empty");
+    expect(book.settings.pacing.paragraph_gap_s).toBeGreaterThan(0);
+    expect(book.settings.cast_mode).toBe("single");
+
+    const list = await json<any[]>("GET", "/api/audiobooks");
+    expect(list.find((b) => b.id === book.id)?.stats.chapters).toBe(1);
+
+    // The chapter's story exists and opens like any other.
+    const story = await json("GET", `/api/stories/${book.chapters[0].story_id}`);
+    expect(story.builder).toBe("script");
+  });
+
+  it("patches metadata and merges settings", async () => {
+    const book = await json("POST", "/api/audiobooks", { title: "Patch me" });
+    const patched = await json("PATCH", `/api/audiobooks/${book.id}`, {
+      author: "Someone",
+      genres: ["mystery"],
+      settings: { pacing: { paragraph_gap_s: 0.9 }, cast_mode: "multi" },
+    });
+    expect(patched.author).toBe("Someone");
+    expect(patched.genres).toEqual(["mystery"]);
+    expect(patched.settings.pacing.paragraph_gap_s).toBe(0.9);
+    // Untouched pacing fields keep their values.
+    expect(patched.settings.pacing.tail_room_tone_s).toBe(book.settings.pacing.tail_room_tone_s);
+    expect(patched.settings.cast_mode).toBe("multi");
+  });
+
+  it("rejects an unknown narrator voice", async () => {
+    const book = await json("POST", "/api/audiobooks", { title: "Voices" });
+    const res = await call({
+      method: "PATCH",
+      url: `/api/audiobooks/${book.id}`,
+      payload: { settings: { narrator_voice_id: "nope" } },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("stores and serves a cover", async () => {
+    const book = await json("POST", "/api/audiobooks", { title: "Covered" });
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+    const put = await call({
+      method: "PUT",
+      url: `/api/audiobooks/${book.id}/cover`,
+      headers: { "content-type": "image/png" },
+      payload: png,
+    });
+    expect(put.statusCode).toBe(200);
+    expect(put.json().cover_path).toMatch(/\.png$/);
+    const get = await call({ method: "GET", url: `/api/audiobooks/${book.id}/cover` });
+    expect(get.statusCode).toBe(200);
+    expect(get.headers["content-type"]).toBe("image/png");
+    expect(get.rawPayload.equals(png)).toBe(true);
+  });
+
+  it("deletes a book and its chapter stories", async () => {
+    const book = await json("POST", "/api/audiobooks", { title: "Doomed" });
+    const storyId = book.chapters[0].story_id;
+    const del = await call({ method: "DELETE", url: `/api/audiobooks/${book.id}` });
+    expect(del.statusCode).toBe(204);
+    expect((await call({ method: "GET", url: `/api/audiobooks/${book.id}` })).statusCode).toBe(404);
+    expect((await call({ method: "GET", url: `/api/stories/${storyId}` })).statusCode).toBe(404);
+  });
+});
+
+describe("createBookFromManuscript", () => {
+  it("builds chapters, paragraphs and headings", async () => {
+    const book = await audiobooks(app.soundbox).createBookFromManuscript(manuscript, {
+      cast_mode: "multi",
+    });
+    expect(book.title).toBe("The Lighthouse Keeper");
+    expect(book.author).toBe("A. Writer");
+    expect(book.settings.cast_mode).toBe("multi");
+    expect(book.chapters.map((c) => [c.title, c.kind, c.included])).toEqual([
+      ["Copyright", "front_matter", false],
+      ["Chapter One", "chapter", true],
+      ["Chapter Two", "chapter", true],
+    ]);
+
+    // Chapter One gets its title as a heading paragraph.
+    const one = await json<any[]>(
+      "GET",
+      `/api/audiobooks/${book.id}/chapters/${book.chapters[1].id}/paragraphs`,
+    );
+    expect(one.map((p) => p.text)).toEqual([
+      "Chapter One",
+      "The lamp turned all night.",
+      '"Is anyone there?" asked Mara.',
+      "Nobody answered the lamp.",
+    ]);
+    expect(one[0].is_heading).toBe(true);
+    expect(one[1].is_heading).toBe(false);
+    expect(one.every((p) => p.status === "unvoiced")).toBe(true);
+    expect(one[1].chapter_id).toBe(book.chapters[1].id);
+
+    // Chapter Two already starts with its title: no duplicate.
+    const two = audiobooks(app.soundbox).getParagraphs(book.chapters[2].id)!;
+    expect(two.map((p) => p.text)).toEqual(["Chapter Two", "Morning came with the lamp still lit."]);
+    expect(two[0].is_heading).toBe(true);
+
+    // Front matter gets no heading.
+    const front = audiobooks(app.soundbox).getParagraphs(book.chapters[0].id)!;
+    expect(front.map((p) => p.text)).toEqual(["All rights reserved."]);
+  });
+});
+
+describe("chapters", () => {
+  it("adds, renames, reorders and deletes", async () => {
+    const book = await json("POST", "/api/audiobooks", { title: "Chapters" });
+    const a = book.chapters[0];
+    const b = await json("POST", `/api/audiobooks/${book.id}/chapters`, {
+      title: "Second",
+      paragraphs: ["One.", "Two."],
+    });
+    const c = await json("POST", `/api/audiobooks/${book.id}/chapters`, {
+      title: "Dedication",
+      kind: "front_matter",
+      position: 0,
+    });
+    let detail = await json("GET", `/api/audiobooks/${book.id}`);
+    expect(detail.chapters.map((x: any) => x.id)).toEqual([c.id, a.id, b.id]);
+    expect(detail.chapters[2].stats.paragraphs).toBe(2);
+
+    const renamed = await json("PATCH", `/api/audiobooks/${book.id}/chapters/${b.id}`, {
+      title: "Two",
+      included: false,
+    });
+    expect(renamed.title).toBe("Two");
+    expect(renamed.included).toBe(false);
+    // The story's title follows, so the studio shows the same name.
+    expect((await json("GET", `/api/stories/${b.story_id}`)).title).toBe("Two");
+
+    const order = await json<any[]>("POST", `/api/audiobooks/${book.id}/chapters/reorder`, {
+      ids: [a.id, b.id, c.id],
+    });
+    expect(order.map((x) => x.id)).toEqual([a.id, b.id, c.id]);
+    const bad = await call({
+      method: "POST",
+      url: `/api/audiobooks/${book.id}/chapters/reorder`,
+      payload: { ids: [a.id] },
+    });
+    expect(bad.statusCode).toBe(422);
+
+    const del = await call({ method: "DELETE", url: `/api/audiobooks/${book.id}/chapters/${b.id}` });
+    expect(del.statusCode).toBe(204);
+    expect((await call({ method: "GET", url: `/api/stories/${b.story_id}` })).statusCode).toBe(404);
+    detail = await json("GET", `/api/audiobooks/${book.id}`);
+    expect(detail.chapters.map((x: any) => [x.id, x.position])).toEqual([
+      [a.id, 0],
+      [c.id, 1],
+    ]);
+  });
+
+  it("404s a chapter of another book", async () => {
+    const one = await json("POST", "/api/audiobooks", { title: "One" });
+    const two = await json("POST", "/api/audiobooks", { title: "Two" });
+    const res = await call({
+      method: "GET",
+      url: `/api/audiobooks/${one.id}/chapters/${two.chapters[0].id}/paragraphs`,
+    });
+    expect(res.statusCode).toBe(404);
+  });
+});
+
+describe("paragraphs", () => {
+  it("tracks voiced, stale and locked", async () => {
+    const book = await json("POST", "/api/audiobooks", { title: "Status" });
+    const chapter = book.chapters[0];
+    const p = await json("POST", `/api/audiobooks/${book.id}/chapters/${chapter.id}/paragraphs`, {
+      text: "The sea was calm.",
+    });
+    expect(p.status).toBe("unvoiced");
+
+    // Voice it: point the segment at a sound, as a generation would.
+    app.soundbox.updateSegment(p.id, { sound_id: fakeSound() });
+    let list = await json<any[]>("GET", `/api/audiobooks/${book.id}/chapters/${chapter.id}/paragraphs`);
+    expect(list[0].status).toBe("voiced");
+
+    // Edit the text: the take no longer matches.
+    await json("PATCH", `/api/audiobooks/${book.id}/paragraphs/${p.id}`, { text: "The sea was rough." });
+    list = await json<any[]>("GET", `/api/audiobooks/${book.id}/chapters/${chapter.id}/paragraphs`);
+    expect(list[0].status).toBe("stale");
+    let detail = await json("GET", `/api/audiobooks/${book.id}`);
+    expect(detail.stats.stale).toBe(1);
+    expect(detail.chapters[0].status).toBe("voiced");
+
+    // A new take clears it.
+    app.soundbox.updateSegment(p.id, { sound_id: fakeSound() });
+    expect(audiobooks(app.soundbox).getParagraph(p.id)!.status).toBe("voiced");
+
+    // Marked stale (a pronunciation changed) until the next take.
+    expect(audiobooks(app.soundbox).markStale([p.id])).toBe(1);
+    expect(audiobooks(app.soundbox).getParagraph(p.id)!.status).toBe("stale");
+    app.soundbox.updateSegment(p.id, { sound_id: fakeSound() });
+    expect(audiobooks(app.soundbox).getParagraph(p.id)!.status).toBe("voiced");
+
+    // Locked: status says so, and text edits are refused until unlocked.
+    const locked = await json("PATCH", `/api/audiobooks/${book.id}/paragraphs/${p.id}`, { locked: true });
+    expect(locked.status).toBe("locked");
+    expect(locked.locked).toBe(true);
+    const refused = await call({
+      method: "PATCH",
+      url: `/api/audiobooks/${book.id}/paragraphs/${p.id}`,
+      payload: { text: "Changed" },
+    });
+    expect(refused.statusCode).toBe(400);
+    detail = await json("GET", `/api/audiobooks/${book.id}`);
+    expect(detail.stats.locked).toBe(1);
+    expect(detail.stats.duration_s).toBe(2.5);
+
+    const unlocked = await json("PATCH", `/api/audiobooks/${book.id}/paragraphs/${p.id}`, {
+      locked: false,
+      text: "Changed",
+    });
+    expect(unlocked.status).toBe("stale");
+  });
+
+  it("casts characters and writes their voices onto segments", async () => {
+    const narrator = addVoice("narrator");
+    const maraVoice = addVoice("mara");
+    const book = await audiobooks(app.soundbox).createBookFromManuscript(manuscript, {
+      narrator_voice_id: narrator,
+      cast_mode: "multi",
+    });
+    const chapter = book.chapters[1];
+    const paras = audiobooks(app.soundbox).getParagraphs(chapter.id)!;
+    expect(paras[2]!.voice_id).toBe(narrator);
+    expect(paras[2]!.speaker).toBe("Narrator");
+
+    const mara = audiobooks(app.soundbox).createCharacter(book.id, { name: "Mara", voice_id: maraVoice });
+    expect(mara.color).toBe(1);
+    const cast = await json("POST", `/api/audiobooks/${book.id}/paragraphs/cast`, {
+      segment_ids: [paras[2]!.id],
+      character_id: mara.id,
+    });
+    expect(cast.changed).toBe(1);
+    let p = audiobooks(app.soundbox).getParagraph(paras[2]!.id)!;
+    expect(p.character_id).toBe(mara.id);
+    expect(p.voice_id).toBe(maraVoice);
+    expect(p.speaker).toBe("Mara");
+
+    // Voiced, then the character's voice changes: new voice, stale take.
+    app.soundbox.updateSegment(p.id, { sound_id: fakeSound() });
+    const other = addVoice("mara-2");
+    audiobooks(app.soundbox).updateCharacter(mara.id, { voice_id: other });
+    p = audiobooks(app.soundbox).getParagraph(p.id)!;
+    expect(p.voice_id).toBe(other);
+    expect(p.status).toBe("stale");
+
+    // Single cast: everyone reads in the narrator's voice.
+    await json("PATCH", `/api/audiobooks/${book.id}`, { settings: { cast_mode: "single" } });
+    expect(audiobooks(app.soundbox).getParagraph(p.id)!.voice_id).toBe(narrator);
+
+    // Back to the narrator via PATCH with character_id null.
+    const back = await json("PATCH", `/api/audiobooks/${book.id}/paragraphs/${p.id}`, {
+      character_id: null,
+    });
+    expect(back.character_id).toBeNull();
+    expect(back.speaker).toBe("Narrator");
+  });
+
+  it("adds and deletes paragraphs", async () => {
+    const book = await json("POST", "/api/audiobooks", { title: "Add" });
+    const cid = book.chapters[0].id;
+    const a = await json("POST", `/api/audiobooks/${book.id}/chapters/${cid}/paragraphs`, { text: "A" });
+    await json("POST", `/api/audiobooks/${book.id}/chapters/${cid}/paragraphs`, { text: "C" });
+    await json("POST", `/api/audiobooks/${book.id}/chapters/${cid}/paragraphs`, { text: "B", position: 1 });
+    let list = await json<any[]>("GET", `/api/audiobooks/${book.id}/chapters/${cid}/paragraphs`);
+    expect(list.map((p) => p.text)).toEqual(["A", "B", "C"]);
+    await json("DELETE", `/api/audiobooks/${book.id}/paragraphs/${a.id}`);
+    list = await json<any[]>("GET", `/api/audiobooks/${book.id}/chapters/${cid}/paragraphs`);
+    expect(list.map((p) => p.text)).toEqual(["B", "C"]);
+  });
+});
+
+describe("find and replace", () => {
+  it("replaces across chapters, skips locked paragraphs and reports counts", async () => {
+    const book = await audiobooks(app.soundbox).createBookFromManuscript(manuscript);
+    const one = audiobooks(app.soundbox).getParagraphs(book.chapters[1].id)!;
+    // Lock "Nobody answered the lamp."
+    audiobooks(app.soundbox).updateParagraph(one[3]!.id, { locked: true });
+
+    const dry = await json("POST", `/api/audiobooks/${book.id}/replace`, {
+      find: "lamp",
+      replace: "beacon",
+      dry_run: true,
+    });
+    expect(dry).toMatchObject({ matches: 2, paragraphs: 2, skipped_locked: 1, skipped_matches: 1 });
+    expect(audiobooks(app.soundbox).getParagraphs(book.chapters[1].id)![1]!.text).toContain("lamp");
+
+    const done = await json("POST", `/api/audiobooks/${book.id}/replace`, {
+      find: "LAMP",
+      replace: "beacon",
+    });
+    expect(done).toMatchObject({ matches: 2, paragraphs: 2, skipped_locked: 1, dry_run: false });
+    const after = audiobooks(app.soundbox).getParagraphs(book.chapters[1].id)!;
+    expect(after[1]!.text).toBe("The beacon turned all night.");
+    expect(after[3]!.text).toBe("Nobody answered the lamp.");
+    expect(audiobooks(app.soundbox).getParagraphs(book.chapters[2].id)![1]!.text).toBe(
+      "Morning came with the beacon still lit.",
+    );
+  });
+
+  it("honours whole word, case, regex and chapter scope", async () => {
+    const book = await audiobooks(app.soundbox).createBookFromManuscript(manuscript);
+    const whole = await json("POST", `/api/audiobooks/${book.id}/replace`, {
+      find: "the",
+      replace: "a",
+      whole_word: true,
+      case_sensitive: true,
+      dry_run: true,
+    });
+    // "the lamp" in each chapter; "The" (case) and "there" (whole word) excluded.
+    expect(whole.matches).toBe(2);
+
+    const scoped = await json("POST", `/api/audiobooks/${book.id}/replace`, {
+      find: "asked (\\w+)",
+      replace: "said $1",
+      regex: true,
+      chapter_ids: [book.chapters[1].id],
+    });
+    expect(scoped.matches).toBe(1);
+    const p = audiobooks(app.soundbox).getParagraphs(book.chapters[1].id)![2]!;
+    expect(p.text).toBe('"Is anyone there?" said Mara.');
+
+    const bad = await call({
+      method: "POST",
+      url: `/api/audiobooks/${book.id}/replace`,
+      payload: { find: "(", regex: true },
+    });
+    expect(bad.statusCode).toBe(400);
+  });
+});
+
+describe("events", () => {
+  it("publishes changes to subscribers", async () => {
+    const service = audiobooks(app.soundbox);
+    const book = await json("POST", "/api/audiobooks", { title: "Events" });
+    const q = service.hub.subscribe(book.id);
+    await json("POST", `/api/audiobooks/${book.id}/chapters`, { title: "Next" });
+    const event = await q.next();
+    expect(event.value).toEqual({ type: "chapters" });
+    service.hub.publish(book.id, { type: "render", done: 1, total: 4 });
+    expect((await q.next()).value).toMatchObject({ type: "render", done: 1 });
+    service.hub.unsubscribe(book.id, q);
+    expect(service.hub.watchers(book.id)).toBe(0);
+  });
+
+  it("404s the stream for a missing book", async () => {
+    const res = await call({ method: "GET", url: "/api/audiobooks/missing/events" });
+    expect(res.statusCode).toBe(404);
+  });
+});

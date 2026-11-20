@@ -17,7 +17,9 @@ export async function* chat(llm, history, signal) {
   };
   // Qwen3 thinks by default, which would put seconds before the first word.
   // llama.cpp reads this; hosted endpoints don't know it, so local only.
-  if (llm.local) body.chat_template_kwargs = { enable_thinking: false };
+  // A remote llama-server (e.g. on a second PC) needs it too: set
+  // LLM_NO_THINK=1 with LLM_PROVIDER=openai.
+  if (llm.local || process.env.LLM_NO_THINK === "1") body.chat_template_kwargs = { enable_thinking: false };
   const resp = await fetch(`${llm.baseUrl}/chat/completions`, {
     method: "POST",
     headers,

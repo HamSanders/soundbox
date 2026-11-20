@@ -31,6 +31,7 @@ import {
   useStories,
   useVoices,
 } from "@/lib/queries";
+import { isDownloadable } from "@/components/model-shared";
 import { MOD } from "@/lib/platform";
 import { useSessionStore } from "@/lib/session-store";
 import type { Model, Profile } from "@/lib/api";
@@ -88,6 +89,8 @@ function pageOwnsTheKey(pathname: string): boolean {
 /** What the row for a model offers, by its state. Null when nothing applies
  *  (downloading, or a state the palette should not poke). */
 function modelVerb(model: Model): "Load" | "Unload" | null {
+  // Only a model with weights here loads into memory.
+  if (!isDownloadable(model)) return null;
   switch (model.status) {
     case "loaded":
       return "Unload";

@@ -106,12 +106,20 @@ export interface Turn {
 /**
  * Which model a picker should land on when the user hasn't chosen one.
  *
- * Loaded beats installed beats "the first one".
+ * Loaded beats installed beats "the first one". A metered model (one that
+ * costs money per render) is only the default when there is nothing else.
  */
 export function preferredModel<T extends Model>(models: readonly T[]): T | undefined {
+  // A ready model beats one that isn't, and a free one beats a metered one at
+  // each step. Only when no free model is ready does a ready metered one win,
+  // since landing on a model you'd have to download first renders nothing.
+  const ready = (m: T) => m.status === "loaded" || m.status === "installed";
+  const free = models.filter((m) => !m.metered);
   return (
-    models.find((m) => m.status === "loaded") ??
-    models.find((m) => m.status === "installed") ??
+    free.find((m) => m.status === "loaded") ??
+    free.find((m) => m.status === "installed") ??
+    models.find((m) => m.metered && ready(m)) ??
+    free[0] ??
     models[0]
   );
 }

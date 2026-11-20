@@ -946,6 +946,8 @@ export class AudioCppModel {
       vram_estimate_mb: s.vram_estimate_mb,
       extras: [EXTRA],
       provider: "local",
+      metered: false,
+      downloadable: true,
       status: "not_installed",
       installed_deps: false,
       auto_installable: this.autoInstallable,

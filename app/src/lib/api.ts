@@ -138,6 +138,12 @@ export interface Model {
   /** Where this model runs. Absent from an older server, which only had local
    *  ones — treat a missing value as "local". */
   provider?: ModelProvider;
+  /** Each render may cost the user money; never picked by default. Absent
+   *  from an older server: treat as false. */
+  metered?: boolean;
+  /** Has weights to download, load and delete. Absent from an older server:
+   *  treat as true for local models. */
+  downloadable?: boolean;
   /** Whether the engine that runs this model is installed. False with
    *  weights present is exactly the "needs_runtime" case. */
   installed_deps: boolean;

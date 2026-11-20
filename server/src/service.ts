@@ -58,6 +58,7 @@ import type {
 } from "./llm/assistant.js";
 import { ImageService, type ImageStatus } from "./image/service.js";
 import { EndpointService } from "./endpoints/service.js";
+import { EndpointSource } from "./endpoints/source.js";
 
 /**
  * What `GET /api/models/audiocpp/runtime` answers. Shaped like `LlmStatus`'s
@@ -248,14 +249,15 @@ export class MirliService {
   constructor(config: Config) {
     this.config = config;
     this.db = openDatabase(config.paths.db, true);
+    const endpointSource = new EndpointSource(config.settings.audio_endpoints);
     this.models = new ModelManager(
       config.paths.models,
       config.settings.effectiveHfToken(),
       config.settings.enabled_audiocpp_models,
       config.settings.effectiveAudiocppModelsDir(config.paths),
-      config.settings.audio_endpoints,
+      [endpointSource],
     );
-    this.endpoints = new EndpointService(config, this.models);
+    this.endpoints = new EndpointService(config, this.models, endpointSource);
     this.jobs = new JobManager();
     this.llm = new LlmService(config);
     this.image = new ImageService(config);

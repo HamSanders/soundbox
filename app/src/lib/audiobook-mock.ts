@@ -581,7 +581,13 @@ export const mockAudiobookApi: AudiobookApi = {
       const m = metaOf(sid);
       m.character_id = characterId;
       const update: SegmentPatch = { speaker: character?.name ?? "Narrator" };
-      if (!m.locked) update.voice_id = voiceFor(book, characterId);
+      const voice = voiceFor(book, characterId);
+      const segment = (await paragraphsOf(chapter)).find((p) => p.id === sid);
+      if (!m.locked) update.voice_id = voice;
+      // Same as the server: a new voice makes the existing take stale.
+      if (!m.locked && segment?.sound_id && (segment.voice_id ?? null) !== voice) {
+        m.stale_sound_id = segment.sound_id;
+      }
       await mockApi.updateSegment(chapter.story_id, sid, update);
       touched.add(chapter.id);
     }

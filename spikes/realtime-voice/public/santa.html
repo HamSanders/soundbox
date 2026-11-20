@@ -45,54 +45,50 @@ h1 { font: 900 clamp(52px, 14vw, 96px)/.9 "Big Shoulders Display", Impact, sans-
 .fine { margin-top: 26px; font-size: 13px; color: var(--dim); }
 .err { color: #ff9b8f; margin-top: 18px; min-height: 1.4em; }
 
-/* ---- Ringing ---- */
-.ringing { text-align: center; }
-.bell { width: 96px; height: 96px; color: var(--gold); transform-origin: 50% 8%; animation: ring 1.2s ease-in-out infinite; }
+/* ---- Ringing: FaceTime-style outgoing call ---- */
+.ringing { position: fixed; inset: 0; display: grid; grid-template-rows: 1fr auto; justify-items: center; padding: max(64px, 12dvh) 16px max(40px, env(safe-area-inset-bottom)); text-align: center; }
+.avatar { width: 112px; height: 112px; border-radius: 50%; display: grid; place-items: center; margin: 0 auto 18px;
+  background: radial-gradient(circle at 50% 35%, var(--red-hi), var(--red)); color: var(--snow); font: 900 44px/1 "Big Shoulders Display", sans-serif; }
+.avatar svg { width: 54px; height: 54px; color: var(--gold); transform-origin: 50% 8%; animation: ring 1.2s ease-in-out infinite; }
 @keyframes ring { 0%,50%,100% { transform: rotate(0); } 10% { transform: rotate(16deg); } 20% { transform: rotate(-14deg); } 30% { transform: rotate(10deg); } 40% { transform: rotate(-6deg); } }
-.ringing h2 { font: 700 34px/1.1 "Big Shoulders Display", sans-serif; margin: 22px 0 8px; }
-.ringing p { color: var(--dim); margin: 0 0 28px; }
-.ringing .round { margin: 0 auto; }
+.ringing h2 { font: 600 34px/1.1 Inter, sans-serif; letter-spacing: -.01em; margin: 0 0 6px; }
+.ringing p { color: var(--dim); margin: 0; font-size: 17px; }
+.ringing p::after { content: ""; animation: dots 1.5s steps(4) infinite; }
+@keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
 
-/* ---- Call ---- */
-.call { grid-template-rows: 1fr auto; gap: 18px; place-items: center; }
-.tile {
-  position: relative; width: min(560px, 92vw, calc(100dvh - 190px)); aspect-ratio: 1; border-radius: 28px; overflow: hidden;
-  background: #000; outline: 1px solid var(--rule); outline-offset: 6px;
-}
-.tile { background: radial-gradient(80% 60% at 50% 100%, rgba(255,138,61,.35), transparent 70%), #120c0a; }
-.tile canvas { width: 100%; height: 100%; display: block; opacity: 0; transition: opacity .4s; }
-body.video .tile canvas { opacity: 1; }
-.ph { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--dim); font: 700 22px/1.2 "Big Shoulders Display", sans-serif; letter-spacing: .04em; }
+/* ---- In call: full-bleed video, floating name, glass control bar ---- */
+.call { padding: 0; display: block; background: #120c0a; }
+.call canvas#face { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .4s; }
+body.video .call canvas#face { opacity: 1; }
+.ph { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--dim); font: 600 17px/1.4 Inter;
+  background: radial-gradient(80% 60% at 50% 100%, rgba(255,138,61,.35), transparent 70%); }
 body.video .ph { display: none; }
-.badge {
-  position: absolute; top: 12px; left: 12px; display: flex; align-items: center; gap: 8px;
-  background: var(--glass); backdrop-filter: blur(6px); padding: 6px 12px; border-radius: 999px; font: 600 13px/1 Inter;
-}
-.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--dim); transition: background .2s; }
+.top { position: absolute; top: 0; left: 0; right: 0; text-align: center; padding: max(18px, env(safe-area-inset-top)) 16px 40px;
+  background: linear-gradient(rgba(0,0,0,.45), transparent); }
+.top b { display: block; font: 600 20px/1.2 Inter; }
+.top span { font-size: 14px; color: var(--dim); font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); transition: background .2s; }
 body.speaking .dot { background: var(--gold); }
-.clock { font-variant-numeric: tabular-nums; color: var(--dim); font-weight: 400; }
-.cc {
-  position: absolute; left: 12px; right: 12px; bottom: 12px; text-align: center; font: 600 clamp(15px, 3.6vw, 19px)/1.35 Inter;
-  background: var(--glass); backdrop-filter: blur(6px); padding: 10px 14px; border-radius: 16px;
-  transition: opacity .25s; text-wrap: balance;
-}
+.bottom { position: absolute; left: 0; right: 0; bottom: 0; display: grid; justify-items: center; gap: 14px;
+  padding: 60px 16px max(24px, env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgba(0,0,0,.55)); }
+.cc { max-width: 620px; text-align: center; font: 600 clamp(16px, 3.8vw, 20px)/1.35 Inter; text-shadow: 0 1px 3px rgba(0,0,0,.7); text-wrap: balance; transition: opacity .25s; }
 .cc:empty { opacity: 0; }
-.status { font-size: 13px; color: var(--dim); text-align: center; min-height: 1.4em; margin-top: -8px; }
-.controls { display: flex; gap: 22px; justify-content: center; }
-.round {
-  appearance: none; border: 0; cursor: pointer; width: 64px; height: 64px; border-radius: 50%;
-  display: grid; place-items: center; color: var(--snow); background: rgba(244,241,234,.12); transition: background .15s;
-}
-.round:hover { background: rgba(244,241,234,.2); }
+.status { font-size: 13px; color: var(--dim); min-height: 1.2em; }
+.controls { display: flex; gap: 18px; justify-content: center; padding: 12px 18px; border-radius: 999px;
+  background: rgba(40,40,44,.55); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+.ringing .controls { background: none; backdrop-filter: none; }
+.round { appearance: none; border: 0; cursor: pointer; width: 60px; height: 60px; border-radius: 50%;
+  display: grid; place-items: center; color: var(--snow); background: rgba(244,241,234,.18); transition: background .15s; }
+.round:hover { background: rgba(244,241,234,.28); }
 .round svg { width: 26px; height: 26px; }
-.round.hang { background: var(--red); }
-.round.hang:hover { background: var(--red-hi); }
-.round[aria-pressed="true"] { background: var(--snow); color: var(--night); }
-#debug { display: flex; gap: 8px; width: min(560px, 92vw); }
+.round.hang { background: #eb4d3d; }
+.round.hang:hover { background: #f2604f; }
+.round[aria-pressed="true"] { background: var(--snow); color: #111; }
+#debug { display: flex; gap: 8px; width: min(560px, 100%); }
 #debug[hidden] { display: none; }
 #debug input { flex: 1; background: rgba(244,241,234,.08); color: var(--snow); border: 1px solid var(--rule); border-radius: 12px; padding: 10px 12px; font: inherit; }
 #debug button { background: var(--green); color: var(--snow); border: 0; border-radius: 12px; padding: 0 16px; font: 600 14px Inter; cursor: pointer; }
-@media (prefers-reduced-motion: reduce) { .big, .bell { animation: none; } #snow { display: none; } }
+@media (prefers-reduced-motion: reduce) { .big, .avatar svg { animation: none; } #snow { display: none; } }
 </style>
 </head>
 <body>
@@ -112,25 +108,23 @@ body.speaking .dot { background: var(--gold); }
   </div>
 </section>
 
-<section class="screen" id="ringing" hidden>
+<section id="ringing" hidden>
   <div class="ringing">
-    <svg class="bell" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true">
-      <circle cx="32" cy="6" r="4"/><path d="M32 10c-11 0-18 8-18 20v10l-6 8h48l-6-8V30c0-12-7-20-18-20z"/><circle cx="32" cy="54" r="6"/>
-    </svg>
-    <h2>Santa is picking up…</h2>
-    <p id="ringNote">Ringing the North Pole</p>
-    <button class="round hang" id="cancelBtn" aria-label="Cancel call"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 9c-1.6 0-3.2.3-4.6.7v3.1c0 .4-.2.7-.6.9-1 .5-1.9 1.1-2.6 1.8-.2.2-.4.3-.7.3s-.5-.1-.7-.3L.3 13.1A1 1 0 0 1 0 12.4c0-.3.1-.5.3-.7C3.4 8.8 7.5 7 12 7s8.6 1.8 11.7 4.7c.2.2.3.4.3.7s-.1.5-.3.7l-2.5 2.4c-.2.2-.4.3-.7.3s-.5-.1-.7-.3c-.8-.7-1.6-1.3-2.6-1.8-.4-.2-.6-.5-.6-.9V9.7C15.2 9.3 13.6 9 12 9z"/></svg></button>
+    <div>
+      <div class="avatar"><svg viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><circle cx="32" cy="6" r="4"/><path d="M32 10c-11 0-18 8-18 20v10l-6 8h48l-6-8V30c0-12-7-20-18-20z"/><circle cx="32" cy="54" r="6"/></svg></div>
+      <h2>Santa Claus</h2>
+      <p>calling the North Pole</p>
+    </div>
+    <div class="controls"><button class="round hang" id="cancelBtn" aria-label="Cancel call"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 9c-1.6 0-3.2.3-4.6.7v3.1c0 .4-.2.7-.6.9-1 .5-1.9 1.1-2.6 1.8-.2.2-.4.3-.7.3s-.5-.1-.7-.3L.3 13.1A1 1 0 0 1 0 12.4c0-.3.1-.5.3-.7C3.4 8.8 7.5 7 12 7s8.6 1.8 11.7 4.7c.2.2.3.4.3.7s-.1.5-.3.7l-2.5 2.4c-.2.2-.4.3-.7.3s-.5-.1-.7-.3c-.8-.7-1.6-1.3-2.6-1.8-.4-.2-.6-.5-.6-.9V9.7C15.2 9.3 13.6 9 12 9z"/></svg></button></div>
   </div>
 </section>
 
 <section class="screen call" id="call" hidden>
-  <div style="display:grid;gap:18px;justify-items:center">
-    <div class="tile">
-      <canvas id="face" width="512" height="512"></canvas>
-      <div class="ph">Santa’s camera is snowed in<br>you can still talk to him</div>
-      <div class="badge"><span class="dot"></span>Santa <span class="clock" id="clock">0:00</span></div>
-      <div class="cc" id="cc" aria-live="polite"></div>
-    </div>
+  <canvas id="face" width="512" height="512"></canvas>
+  <div class="ph">Santa’s camera is snowed in.<br>You can still talk to him.</div>
+  <div class="top"><b>Santa Claus</b><span><span class="dot"></span><span class="clock" id="clock">0:00</span></span></div>
+  <div class="bottom">
+    <div class="cc" id="cc" aria-live="polite"></div>
     <div class="status" id="status"></div>
     <form id="debug" hidden><input id="msg" placeholder="Type to Santa (debug)" autocomplete="off"><button>Send</button></form>
     <div class="controls">

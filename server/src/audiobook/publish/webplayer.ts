@@ -5,7 +5,7 @@
  *   index.html        player, read-along and schema.org Audiobook JSON-LD
  *   audio/NN-*.mp3    one file per chapter (WAV when ffmpeg is missing)
  *   cover.<ext>       the cover, when the book has one
- *   readalong.json    chapters and paragraph timings, for other players
+ *   read-along.json   chapters and paragraph timings, in the export format
  *   book.jsonld       the same JSON-LD as a file
  *
  * The book data is also inlined into index.html, because browsers refuse
@@ -19,6 +19,8 @@ import { join } from "node:path";
 import { ModelError } from "../../errors.js";
 import type { MirliService } from "../../service.js";
 import { audiobooks, type BookDetail } from "../service.js";
+import { readAlong, type ReadAlong, type ReadAlongChapter } from "../timings.js";
+import type { ParagraphTiming } from "../types.js";
 import {
   audiobookJsonLd,
   copyCover,
@@ -36,45 +38,54 @@ export interface WebPlayerOptions {
   zip?: boolean;
 }
 
-/** The read-along document: what index.html plays and what readalong.json holds. */
-export interface ReadAlongDoc {
-  version: 1;
-  title: string;
+/**
+ * The read-along document. `read-along.json` is exactly the export module's
+ * `ReadAlong` format (`../timings.ts`), so one reader handles both: chapters
+ * with their file, offset, length and timed paragraphs. The page inlines the
+ * same document plus the credits it shows (`WebPlayerDoc`); each paragraph
+ * may also carry `heading`, which readers of the plain format can ignore.
+ */
+export type WebPlayerParagraph = ParagraphTiming & { heading?: boolean };
+
+export interface WebPlayerDoc extends Omit<ReadAlong, "chapters"> {
+  chapters: (Omit<ReadAlongChapter, "paragraphs"> & { paragraphs: WebPlayerParagraph[] })[];
   subtitle: string | null;
   author: string | null;
   narrator: string | null;
   description: string | null;
   language: string;
   cover: string | null;
-  chapters: {
-    title: string;
-    audio: string;
-    duration_s: number;
-    paragraphs: { text: string; start_s: number | null; end_s: number | null; heading: boolean }[];
-  }[];
 }
 
-export function readAlongDoc(book: BookDetail, chapters: PublishedChapter[], cover: string | null): ReadAlongDoc {
+/** Timed paragraphs only: a published book is voiced end to end, and the
+ *  format has no place for text without a time. */
+export function readAlongOf(book: BookDetail, chapters: PublishedChapter[]): ReadAlong {
+  return readAlong(
+    book.id,
+    book.title,
+    chapters.map((c) => {
+      const headings = new Set(c.chapter.paragraphs.filter((p) => p.is_heading).map((p) => p.segment_id));
+      return {
+        chapter_id: c.chapter.id,
+        title: c.chapter.title,
+        file: c.chapter.audio_url!,
+        start_s: 0,
+        duration_s: c.chapter.duration_s,
+        paragraphs: c.timings.map((t) => (headings.has(t.segment_id) ? { ...t, heading: true } : t)),
+      };
+    }),
+  );
+}
+
+export function webPlayerDoc(book: BookDetail, ra: ReadAlong, cover: string | null): WebPlayerDoc {
   return {
-    version: 1,
-    title: book.title,
+    ...ra,
     subtitle: book.subtitle,
     author: book.author,
     narrator: book.narrator,
     description: book.description,
     language: book.language,
     cover,
-    chapters: chapters.map((c) => ({
-      title: c.chapter.title,
-      audio: c.chapter.audio_url!,
-      duration_s: c.chapter.duration_s,
-      paragraphs: c.chapter.paragraphs.map((p) => ({
-        text: p.text,
-        start_s: p.start_s,
-        end_s: p.end_s,
-        heading: p.is_heading,
-      })),
-    })),
   };
 }
 
@@ -98,9 +109,10 @@ export async function publishWebPlayer(
   const { name, dir } = newPublishDir(svc, book, "webplayer");
   const chapters = await gatherChapters(svc, book, dir, options.encoding ?? "auto", warnings);
   const cover = copyCover(svc, bookId, dir);
-  const doc = readAlongDoc(book, chapters, cover);
+  const ra = readAlongOf(book, chapters);
+  const doc = webPlayerDoc(book, ra, cover);
   const ld = audiobookJsonLd(svc, book, chapters, cover);
-  writeFileSync(join(dir, "readalong.json"), JSON.stringify(doc, null, 2));
+  writeFileSync(join(dir, "read-along.json"), JSON.stringify(ra, null, 2));
   writeFileSync(join(dir, "book.jsonld"), JSON.stringify(ld, null, 2));
   writeFileSync(join(dir, "index.html"), webPlayerHtml(doc, ld));
 
@@ -127,7 +139,7 @@ export async function publishWebPlayer(
 }
 
 /** The player page. Plain JS and CSS, no dependencies, works from file://. */
-export function webPlayerHtml(doc: ReadAlongDoc, ld: Record<string, unknown>): string {
+export function webPlayerHtml(doc: WebPlayerDoc, ld: Record<string, unknown>): string {
   const title = escapeHtml(doc.title);
   return `<!doctype html>
 <html lang="${escapeHtml(doc.language)}">
@@ -180,7 +192,7 @@ var KEY="mirli-webplayer:"+B.title;
 function $(i){return document.getElementById(i)}
 function fmt(s){s=Math.max(0,Math.floor(s||0));var h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return (h?h+":"+String(m).padStart(2,"0"):m)+":"+String(x).padStart(2,"0")}
 function save(){if(!ready)return;last=Date.now();try{localStorage.setItem(KEY,JSON.stringify({c:ci,t:a.currentTime,r:a.playbackRate}))}catch(e){}}
-function load(c,t,play){ready=false;ci=c;var ch=B.chapters[c];a.src=ch.audio;a.preservesPitch=true;
+function load(c,t,play){ready=false;ci=c;var ch=B.chapters[c];a.src=ch.file;a.preservesPitch=true;
  [].forEach.call(document.querySelectorAll("#toc button"),function(b,i){b.setAttribute("aria-current",i===c)});
  var art=$("text");art.innerHTML="";paras=ch.paragraphs.map(function(p){var el=document.createElement("p");el.textContent=p.text;if(p.heading)el.className="h";
   if(p.start_s==null)el.classList.add("na");else el.onclick=function(){a.currentTime=p.start_s;a.play()};art.appendChild(el);return el});on=-1;

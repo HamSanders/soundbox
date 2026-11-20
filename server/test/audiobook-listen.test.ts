@@ -18,7 +18,7 @@ import { buildApp } from "../src/app.js";
 import { writeWav } from "../src/audio/dsp.js";
 import { imageInfo } from "../src/audiobook/publish/checklist.js";
 import { isoDuration, slug } from "../src/audiobook/publish/common.js";
-import type { ListenManifest } from "../src/audiobook/publish/manifest.js";
+import { exportedAudio, type ListenManifest } from "../src/audiobook/publish/manifest.js";
 import { listenStore } from "../src/audiobook/publish/store.js";
 import { buildZip } from "../src/audiobook/publish/zip.js";
 import { audiobooks, type BookDetail } from "../src/audiobook/service.js";
@@ -238,6 +238,46 @@ describe("chapter audio", () => {
   });
 });
 
+describe("with an export", () => {
+  it("plays the latest finished export, with its timings", async () => {
+    const book = await newBook("Exported");
+    // Every included chapter, the retail sample too: export renders them all.
+    for (const c of book.chapters.filter((c) => c.included)) voiceChapter(c.id);
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/audiobooks/${book.id}/exports`,
+      headers: H,
+      payload: { format: "wav", layout: "files", mastering: "none", include_cover: false, include_transcripts: true },
+    });
+    expect(res.statusCode).toBe(202);
+    let done: { status: string; error?: string } = { status: "queued" };
+    for (let i = 0; i < 200 && (done.status === "queued" || done.status === "running"); i++) {
+      await new Promise((r) => setTimeout(r, 50));
+      done = (await app.inject({ method: "GET", url: `/api/audiobooks/${book.id}/exports/${res.json().id}` })).json();
+    }
+    expect(done.status, done.error).toBe("done");
+
+    const m = (await app.inject({ method: "GET", url: `/api/audiobooks/${book.id}/listen` })).json() as ListenManifest;
+    expect(m.chapters.map((c) => c.source)).toEqual(["export", "export"]);
+    const c1 = m.chapters[0];
+    // Timings are the export's, as its own timings route reports them.
+    const timings = (
+      await app.inject({ method: "GET", url: `/api/audiobooks/${book.id}/chapters/${c1.id}/timings` })
+    ).json() as { segment_id: string; start_s: number; end_s: number }[];
+    expect(timings.length).toBeGreaterThan(0);
+    for (const t of timings) {
+      const p = c1.paragraphs.find((x) => x.segment_id === t.segment_id)!;
+      expect([p.start_s, p.end_s]).toEqual([t.start_s, t.end_s]);
+    }
+    const audio = await app.inject({ method: "GET", url: c1.audio_url! });
+    expect(audio.statusCode).toBe(200);
+    // Byte for byte the export's chapter file, not the live mix.
+    const file = exportedAudio(app.soundbox, book.id).get(c1.id)!.path;
+    expect(file).not.toContain(join("cache", "listen"));
+    expect(audio.rawPayload.equals(readFileSync(file))).toBe(true);
+  });
+});
+
 describe("progress, bookmarks and tags", () => {
   it("saves and resumes a position, and marks a book finished", async () => {
     const book = await newBook("Progress");
@@ -363,7 +403,7 @@ describe("publish", () => {
     expect(out.files).toEqual(
       expect.arrayContaining([
         "index.html",
-        "readalong.json",
+        "read-along.json",
         "book.jsonld",
         "audio/01-chapter-one.wav",
         "audio/02-chapter-two.wav",
@@ -383,9 +423,13 @@ describe("publish", () => {
     expect(ld.hasPart).toHaveLength(2);
     expect(html).toContain('<script id="book" type="application/json">');
     expect(html).not.toMatch(/fetch\(/);
-    const doc = JSON.parse(readFileSync(join(out.dir, "readalong.json"), "utf8"));
-    expect(doc.chapters[1]).toMatchObject({ title: "Chapter Two", audio: "audio/02-chapter-two.wav", duration_s: 4.5 });
-    expect(doc.chapters[0].paragraphs[2]).toMatchObject({ text: "Nobody answered.", start_s: 3, end_s: 4 });
+    const doc = JSON.parse(readFileSync(join(out.dir, "read-along.json"), "utf8"));
+    // The export module's ReadAlong format, so one reader handles both.
+    expect(doc).toMatchObject({ version: 1, book_id: book.id, title: "Web Player Book" });
+    expect(doc.chapters[1]).toMatchObject({ chapter_id: two.id, title: "Chapter Two", file: "audio/02-chapter-two.wav", start_s: 0, duration_s: 4.5 });
+    expect(doc.chapters[0].paragraphs[2]).toMatchObject({ text: "Nobody answered.", start_s: 3, end_s: 4, character_id: null });
+    expect(doc.chapters[0].paragraphs[0]).toMatchObject({ text: "Chapter One", heading: true });
+    expect(doc.chapters[0].paragraphs[2].segment_id).toBeTruthy();
 
     expect(existsSync(out.zip_path)).toBe(true);
     const zip = await app.inject({ method: "GET", url: out.download_url });

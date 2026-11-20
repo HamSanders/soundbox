@@ -1,0 +1,235 @@
+{
+ "version": 1,
+ "talkPose": "talk",
+ "restPose": "rest",
+ "startPose": "talk",
+ "width": 896,
+ "height": 1120,
+ "fps": 16,
+ "notes": "Clips with 'via' are rendered as two FLF2V segments (from->via, via->to) and concatenated. Clips without a rendered src file yet are planned, not made; see README.md.",
+ "poses": {
+  "talk": {
+   "label": "Seated, facing camera (master still; live lip-sync pose)",
+   "still": "stills/talk.png"
+  },
+  "lean": {
+   "label": "Lean-in, hands clasped",
+   "still": "stills/talk_lean.png"
+  },
+  "rest": {
+   "label": "Warming hands by the fire",
+   "still": "stills/fire.png"
+  },
+  "list": {
+   "label": "Reading the Nice list",
+   "still": "stills/list.png"
+  },
+  "cocoa": {
+   "label": "Sipping cocoa",
+   "still": "stills/cocoa.png"
+  }
+ },
+ "clips": [
+  {
+   "id": "talk_idle_a",
+   "from": "talk",
+   "to": "talk",
+   "kind": "idle",
+   "src": "clips/talk_idle_a.mp4",
+   "durationS": 2,
+   "weight": 3,
+   "prompt": "breathes, blinks, small smile"
+  },
+  {
+   "id": "talk_idle_b",
+   "from": "talk",
+   "to": "talk",
+   "kind": "idle",
+   "src": "clips/talk_idle_b.mp4",
+   "durationS": 2,
+   "weight": 2,
+   "prompt": "small nod, glances at the fire and back"
+  },
+  {
+   "id": "talk_idle_gag_elf",
+   "from": "talk",
+   "to": "talk",
+   "kind": "idle",
+   "src": "clips/talk_idle_gag_elf.mp4",
+   "durationS": 4,
+   "weight": 1,
+   "prompt": "an elf walks past behind him carrying presents",
+   "via": "stills/gag_elf.png",
+   "blocked": "still not generated yet (image quota)"
+  },
+  {
+   "id": "talk_idle_gag_reindeer",
+   "from": "talk",
+   "to": "talk",
+   "kind": "idle",
+   "src": "clips/talk_idle_gag_reindeer.mp4",
+   "durationS": 4,
+   "weight": 1,
+   "prompt": "a reindeer nose glows in the window",
+   "via": "stills/gag_reindeer.png",
+   "review": "glowing red reindeer nose evokes the trademarked Rudolph character; legal check before shipping on the paid site"
+  },
+  {
+   "id": "lean_idle",
+   "from": "lean",
+   "to": "lean",
+   "kind": "idle",
+   "src": "clips/lean_idle.mp4",
+   "durationS": 2
+  },
+  {
+   "id": "rest_idle",
+   "from": "rest",
+   "to": "rest",
+   "kind": "idle",
+   "src": "clips/rest_idle.mp4",
+   "durationS": 3
+  },
+  {
+   "id": "list_idle",
+   "from": "list",
+   "to": "list",
+   "kind": "idle",
+   "src": "clips/list_idle.mp4",
+   "durationS": 3
+  },
+  {
+   "id": "cocoa_idle",
+   "from": "cocoa",
+   "to": "cocoa",
+   "kind": "idle",
+   "src": "clips/cocoa_idle.mp4",
+   "durationS": 3
+  },
+  {
+   "id": "talk_to_lean",
+   "from": "talk",
+   "to": "lean",
+   "kind": "transition",
+   "src": "clips/talk_to_lean.mp4",
+   "durationS": 2
+  },
+  {
+   "id": "lean_to_talk",
+   "from": "lean",
+   "to": "talk",
+   "kind": "transition",
+   "src": "clips/lean_to_talk.mp4",
+   "durationS": 2
+  },
+  {
+   "id": "talk_to_rest",
+   "from": "talk",
+   "to": "rest",
+   "kind": "transition",
+   "src": "clips/talk_to_rest.mp4",
+   "durationS": 3
+  },
+  {
+   "id": "rest_to_talk",
+   "from": "rest",
+   "to": "talk",
+   "kind": "transition",
+   "src": "clips/rest_to_talk.mp4",
+   "durationS": 3
+  },
+  {
+   "id": "talk_to_list",
+   "from": "talk",
+   "to": "list",
+   "kind": "transition",
+   "src": "clips/talk_to_list.mp4",
+   "durationS": 3
+  },
+  {
+   "id": "list_to_talk",
+   "from": "list",
+   "to": "talk",
+   "kind": "transition",
+   "src": "clips/list_to_talk.mp4",
+   "durationS": 3
+  },
+  {
+   "id": "talk_to_cocoa",
+   "from": "talk",
+   "to": "cocoa",
+   "kind": "transition",
+   "src": "clips/talk_to_cocoa.mp4",
+   "durationS": 3
+  },
+  {
+   "id": "cocoa_to_talk",
+   "from": "cocoa",
+   "to": "talk",
+   "kind": "transition",
+   "src": "clips/cocoa_to_talk.mp4",
+   "durationS": 3
+  },
+  {
+   "id": "laugh",
+   "from": "talk",
+   "to": "talk",
+   "kind": "reaction",
+   "src": "clips/laugh.mp4",
+   "durationS": 4,
+   "tags": [
+    "laugh"
+   ],
+   "via": "stills/laugh.png"
+  },
+  {
+   "id": "shh",
+   "from": "talk",
+   "to": "talk",
+   "kind": "reaction",
+   "src": "clips/shh.mp4",
+   "durationS": 3,
+   "tags": [
+    "shh",
+    "secret"
+   ],
+   "via": "stills/shh.png"
+  },
+  {
+   "id": "think",
+   "from": "talk",
+   "to": "talk",
+   "kind": "reaction",
+   "src": "clips/think.mp4",
+   "durationS": 4,
+   "tags": [
+    "thinking"
+   ],
+   "via": "stills/think.png"
+  },
+  {
+   "id": "check_list",
+   "from": "list",
+   "to": "list",
+   "kind": "reaction",
+   "src": "clips/check_list.mp4",
+   "durationS": 4,
+   "tags": [
+    "check_list"
+   ],
+   "prompt": "unrolls the scroll further, nods"
+  },
+  {
+   "id": "sip_cocoa",
+   "from": "cocoa",
+   "to": "cocoa",
+   "kind": "reaction",
+   "src": "clips/sip_cocoa.mp4",
+   "durationS": 3,
+   "tags": [
+    "sip_cocoa"
+   ],
+   "prompt": "takes a sip, sighs happily"
+  }
+ ]
+}

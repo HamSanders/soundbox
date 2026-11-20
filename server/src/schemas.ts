@@ -917,6 +917,53 @@ export type StoryPatch = z.infer<typeof storyPatchSchema>;
  * state that exists for as long as it takes to write it. `position` omitted
  * means append.
  */
+/** The most notes one clip keeps. A dense four-minute piano part is a few
+ *  thousand; past this a "take" is a file someone should import elsewhere. */
+export const MAX_CLIP_NOTES = 10000;
+
+/**
+ * The notes a MIDI take was rendered from, kept on the clip it became.
+ *
+ * Without this a placed take is only its WAV, and fixing one wrong note means
+ * playing the whole phrase again. With it the clip can be reopened in the
+ * piano roll, edited, and rendered again into the same place.
+ *
+ * Both clips a take produces carry it: the dry render (`role: "dry"`) and the
+ * ACE-Step cover of it (`role: "cover"`). They share a `take_id`, which is how
+ * one finds the other. Not a segment id, because undo and redo recreate clips
+ * under new ids and a link by id would point at a clip that no longer exists.
+ */
+export const clipMidiSchema = z.object({
+  /** Seconds from the start of the take, the same shape the roll edits. */
+  notes: z
+    .array(
+      z.object({
+        note: z.number().int().min(0).max(127),
+        velocity: z.number().min(0).max(1),
+        start_s: z.number().min(0).max(3600),
+        duration_s: z.number().gt(0).max(600),
+      }),
+    )
+    .min(1)
+    .max(MAX_CLIP_NOTES),
+  /** The roll's tempo, for its bar grid. The notes are in seconds either way. */
+  bpm: z.number().min(20).max(240).optional(),
+  /** The dry synth preset the take was rendered with (lib/midi INSTRUMENTS). */
+  instrument: z.string().min(1).max(64),
+  /** What the cover asked for. Null on a take only ever placed dry. */
+  cover: z
+    .object({
+      prompt: z.string().max(2000),
+      strength: z.number().min(0).max(1),
+    })
+    .nullish(),
+  role: z.enum(["dry", "cover"]).default("dry"),
+  /** Shared by the dry clip and its cover. */
+  take_id: z.string().min(1).max(64),
+});
+
+export type ClipMidi = z.infer<typeof clipMidiSchema>;
+
 export const segmentCreateSchema = z.object({
   speaker: z.string().max(80).nullish(),
   voice_id: z.string().nullish(),
@@ -945,6 +992,8 @@ export const segmentCreateSchema = z.object({
   fade_out_s: z.number().min(0).max(60).optional(),
   gain_db: z.number().min(-40).max(24).optional(),
   muted: z.boolean().optional(),
+  /** The notes this clip was rendered from, for a MIDI take. */
+  midi: clipMidiSchema.nullish(),
 });
 
 export type SegmentCreate = z.infer<typeof segmentCreateSchema>;
@@ -977,6 +1026,9 @@ export const segmentPatchSchema = z.object({
   /** How this line should be read. An empty object clears the override and
    *  puts the line back on the story's default. */
   request_options: requestOptionsSchema.optional(),
+  /** Replace the clip's notes — a re-rendered take — or null to forget them,
+   *  which leaves an ordinary audio clip. */
+  midi: clipMidiSchema.nullish(),
 });
 
 export type SegmentPatch = z.infer<typeof segmentPatchSchema>;
@@ -1164,6 +1216,10 @@ export interface StorySegment {
   fade_out_s: number;
   /** This line's own delivery knobs, empty when it follows the story's. */
   request_options: Record<string, string>;
+  /** The notes a MIDI take was rendered from, so the clip can be edited and
+   *  rendered again. Null for every other clip, and for anything stored
+   *  before clips kept notes. */
+  midi: ClipMidi | null;
   muted: boolean;
   gain_db: number;
   created_at: string;

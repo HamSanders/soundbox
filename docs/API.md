@@ -165,7 +165,7 @@ rather than failing the import.
 | PATCH | `/api/stories/{id}/tracks/{track_index}` | Body `{ name?, muted?, soloed?, gain_db?, devices? }`. `devices` replaces the lane's chain (`[{ kind, id?, bypassed?, params? }]`); unknown knobs are dropped, values are clamped to range and missing knobs take defaults |
 | DELETE | `/api/stories/{id}/tracks/{track_index}` | Delete the lane and everything on it |
 | GET | `/api/stories/{id}/segments` | Lines and clips |
-| POST | `/api/stories/{id}/segments` | Add one. Body `{ text?, kind?: "line" \| "pause", speaker?, voice_id?, track_index?, start_s?, position?, sound_id?, duration_s?, trim_start_s?, fade_in_s?, fade_out_s?, gain_db?, muted? }` |
+| POST | `/api/stories/{id}/segments` | Add one. Body `{ text?, kind?: "line" \| "pause", speaker?, voice_id?, track_index?, start_s?, position?, sound_id?, duration_s?, trim_start_s?, fade_in_s?, fade_out_s?, gain_db?, muted?, midi? }`. `midi` is a MIDI take's notes: `{ notes: [{ note, velocity, start_s, duration_s }], bpm?, instrument, cover?: { prompt, strength }, role: "dry" \| "cover", take_id }`; a PATCH with `midi: null` forgets them |
 | PUT | `/api/stories/{id}/segments/reorder` | Body `{ segment_ids }` |
 | PATCH / DELETE | `/api/stories/{id}/segments/{segment_id}` | Update (same fields as POST) or delete |
 | POST | `/api/stories/{id}/segments/{segment_id}/generate` | Voice one line. Body `{ model, seed?, steps?, cfg? }` → job |
@@ -197,6 +197,17 @@ rather than failing the import.
 | GET / POST | `/api/conversations` | List (`?limit` or `?story_id`) or create (`{ title?, story_id? }`) the chat history |
 | GET / PATCH / DELETE | `/api/conversations/{id}` | Read, rename (`{ title }`), delete |
 | GET / POST | `/api/conversations/{id}/entries` | Read or append (`{ entries: [{ role, content?, actions?, sound_ids?, job_id? }] }`) |
+
+**Sampled instruments** (`routes/instruments.ts`): the VSCO 2 CE samples the
+Studio's MIDI dry render can play. See `docs/STUDIO.md`.
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/api/instruments` | The eight instruments: label, family, size, whether installed |
+| GET | `/api/instruments/{id}` | An installed instrument's SFZ regions (404 if not installed) |
+| POST | `/api/instruments/{id}/download` | Download its samples → job |
+| DELETE | `/api/instruments/{id}` | Delete its samples |
+| GET | `/api/instruments/{id}/files/{path}` | One sample file, by its path in the instrument's manifest |
 
 **Settings, logs, profiles** (`routes/settings.ts`, `routes/fs.ts`, `routes/profiles.ts`)
 

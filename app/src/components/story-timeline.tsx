@@ -27,6 +27,7 @@ import {
   CopyIcon,
   ExpandIcon,
   MicIcon,
+  MusicIcon,
   PaintbrushIcon,
   PlayIcon,
   PlusIcon,
@@ -484,6 +485,9 @@ export interface StoryTimelineProps {
   onRepaintClip?: (segment: StorySegment, window: { start_s: number; end_s: number }) => void;
   /** False when nothing installed can repaint — only ACE-Step can today. */
   canRepaint?: boolean;
+  /** Open a MIDI take's notes in the piano roll. Offered only on clips that
+   *  kept their notes (`segment.midi`). */
+  onEditNotes?: (segment: StorySegment) => void;
   /**
    * Where the play/rec/tools row should live.
    *
@@ -536,6 +540,7 @@ export function StoryTimeline({
   canSeparate = false,
   onRepaintClip,
   canRepaint = false,
+  onEditNotes,
   onActiveSegmentChange,
   onTransport,
   onPlayingChange,
@@ -2386,6 +2391,7 @@ export function StoryTimeline({
           canCover={canCover}
           onRepaint={onRepaintClip}
           canRepaint={canRepaint}
+          onEditNotes={onEditNotes}
           // The highlighted span, as this clip sees it. Worked out here
           // rather than in the menu because the span is the timeline's own
           // state and the menu is only being told what it may offer.
@@ -2543,6 +2549,7 @@ function ClipMenu({
   canSeparate,
   onRepaint,
   canRepaint,
+  onEditNotes,
   repaintWindow,
 }: {
   segment: StorySegment | null;
@@ -2561,6 +2568,7 @@ function ClipMenu({
   canSeparate?: boolean;
   onRepaint?: (segment: StorySegment, window: { start_s: number; end_s: number }) => void;
   canRepaint?: boolean;
+  onEditNotes?: (segment: StorySegment) => void;
   repaintWindow?: {
     start_s: number;
     end_s: number;
@@ -2593,6 +2601,15 @@ function ClipMenu({
           <MicIcon className="size-3.5" />
           {segment.sound_id ? "Regenerate" : "Read this line"}
         </MenuRow>
+        {/* A MIDI take kept its notes, so it can go back into the roll —
+            which is the reason to keep them. First after Regenerate because
+            it is the same idea for a different kind of clip. */}
+        {onEditNotes && segment.midi && (
+          <MenuRow onClick={run(() => onEditNotes(segment))}>
+            <MusicIcon className="size-3.5" />
+            Edit notes
+          </MenuRow>
+        )}
         <MenuRow
           disabled={!inside || !segment.sound_id}
           onClick={run(() => onSplit(playhead - segment.start_s))}

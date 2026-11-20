@@ -54,6 +54,14 @@ export type Capabilities = Record<CapabilityKey, boolean> & {
   sandboxed: boolean;
   /** Settings keys that PATCH /api/settings ignores. */
   settings_locked: string[];
+  /**
+   * Which of the two paths is in force. "full": models on this machine, plus
+   * any from elsewhere the user added. "simple": only models that run
+   * elsewhere. The profile chooses (setting `setup`) unless the server can't
+   * run models itself, which makes it "simple" and `setup_locked`.
+   */
+  setup: "full" | "simple";
+  setup_locked: boolean;
 };
 
 /** Off when sandboxed: each touches the machine underneath. */
@@ -104,12 +112,43 @@ export function capabilitiesFromEnv(env: NodeJS.ProcessEnv = process.env): Capab
       .map((s) => s.trim())
       .filter(Boolean),
   );
-  const caps = { sandboxed, settings_locked: [] as string[] } as Capabilities;
+  const caps = {
+    sandboxed,
+    settings_locked: [] as string[],
+    setup: "full",
+    setup_locked: false,
+  } as Capabilities;
   for (const key of CAPABILITY_KEYS) {
     caps[key] = !(sandboxed && HOST_CAPABILITIES.includes(key)) && !disabled.has(key);
     if (!caps[key]) caps.settings_locked.push(...(SETTINGS_NEEDING[key] ?? []));
   }
+  if (!caps.local_models) {
+    caps.setup = "simple";
+    caps.setup_locked = true;
+  }
   return caps;
+}
+
+/**
+ * The server's capabilities narrowed by the profile's chosen path.
+ *
+ * The simple setup is the same app with the local half switched off: no
+ * downloads, no GPU readout, and no local models unless the profile asked to
+ * keep the ones already installed. What the server allows is the ceiling; the
+ * setup can only take away.
+ */
+export function withSetup(
+  server: Capabilities,
+  settings: { setup: "full" | "simple"; setup_include_local: boolean },
+): Capabilities {
+  if (server.setup_locked || settings.setup !== "simple") return server;
+  return {
+    ...server,
+    setup: "simple",
+    downloads: false,
+    gpu_status: false,
+    local_models: server.local_models && settings.setup_include_local,
+  };
 }
 
 /**
@@ -273,11 +312,12 @@ export function refusedBy(caps: Capabilities, method: string, route: string | un
   return cap && !caps[cap] ? cap : null;
 }
 
-export function registerCapabilityGuards(app: FastifyInstance, caps: Capabilities): void {
+/** `caps` is read per request: switching setup changes what is allowed. */
+export function registerCapabilityGuards(app: FastifyInstance, caps: () => Capabilities): void {
   // onRequest runs after routing, so the matched pattern is already known and
   // nothing (body parsing included) happens for a refused request.
   app.addHook("onRequest", async (request, reply) => {
-    if (refusedBy(caps, request.method, request.routeOptions.url)) {
+    if (refusedBy(caps(), request.method, request.routeOptions.url)) {
       return reply.code(403).send({ detail: "This server doesn't allow that." });
     }
   });

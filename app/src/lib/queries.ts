@@ -1355,15 +1355,24 @@ export function useActivateProfile() {
   });
 }
 
+/** After a settings save: the setup decides capabilities and which models list. */
+export function afterSettingsSaved(qc: ReturnType<typeof useQueryClient>, patch: SettingsPatch): void {
+  void qc.invalidateQueries({ queryKey: qk.update });
+  if ("setup" in patch || "setup_include_local" in patch) {
+    void qc.invalidateQueries({ queryKey: qk.capabilities });
+    void qc.invalidateQueries({ queryKey: qk.models });
+  }
+}
+
 export function useUpdateSettings() {
   const qc = useQueryClient();
   return useMutation<Settings, Error, SettingsPatch>({
     mutationFn: (patch) => api.updateSettings(patch),
     onError: fail("Could not save settings"),
-    onSuccess: (next) => {
+    onSuccess: (next, patch) => {
       qc.setQueryData(qk.settings, next);
       // Turning the check on or off changes what the update row may show.
-      void qc.invalidateQueries({ queryKey: qk.update });
+      afterSettingsSaved(qc, patch);
       toast.success("Settings saved");
     },
   });

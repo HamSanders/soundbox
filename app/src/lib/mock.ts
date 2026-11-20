@@ -1061,6 +1061,8 @@ let settings: Settings = {
   image_auto_artwork: false,
   onboarded_at: null,
   update_check: true,
+  setup: "full",
+  setup_include_local: false,
 };
 
 function mockUpdateStatus(): UpdateStatus {
@@ -2314,8 +2316,10 @@ export const mockApi: MirliApi = {
     const extra = AUDIOCPP_CATALOG_EXTRA.filter(
       (e) => settings.enabled_audiocpp_models.includes(e.id) || DOWNLOADED_EXTRAS.has(e.id),
     ).map(audioCppModelFromCatalog);
-    // A sandboxed server registers no local models: only ones from elsewhere.
-    const all = MOCK_SANDBOXED ? models.filter((m) => m.provider && m.provider !== "local") : [...models, ...extra];
+    // A sandboxed server registers no local models, and the simple setup
+    // lists them only when asked: only ones from elsewhere.
+    const local = !MOCK_SANDBOXED && (settings.setup !== "simple" || settings.setup_include_local);
+    const all = local ? [...models, ...extra] : models.filter((m) => m.provider && m.provider !== "local");
     return all.map((e) => ({ ...e }));
   },
 
@@ -3448,7 +3452,17 @@ export const mockApi: MirliApi = {
 
   async getCapabilities() {
     await wait(20);
-    if (!MOCK_SANDBOXED) return { ...DESKTOP_CAPABILITIES };
+    if (!MOCK_SANDBOXED) {
+      // The server's withSetup(): the simple setup switches the local half off.
+      if (settings.setup !== "simple") return { ...DESKTOP_CAPABILITIES };
+      return {
+        ...DESKTOP_CAPABILITIES,
+        setup: "simple" as const,
+        downloads: false,
+        gpu_status: false,
+        local_models: settings.setup_include_local ?? false,
+      };
+    }
     return {
       sandboxed: true,
       settings_locked: ["sounds_dir", "audiocpp_mode", "audiocpp_models_dir", "hf_token", "device"],
@@ -3463,6 +3477,8 @@ export const mockApi: MirliApi = {
       skills_install: false,
       logs: false,
       setup_wizard: false,
+      setup: "simple" as const,
+      setup_locked: true,
     };
   },
 

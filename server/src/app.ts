@@ -228,7 +228,7 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
 
   registerAuth(app, guard);
   // After auth: refuse what this server has turned off (see capabilities.ts).
-  registerCapabilityGuards(app, svc.capabilities);
+  registerCapabilityGuards(app, () => svc.capabilities);
   // MIRLI_IDLE_EXIT_MINUTES: exit when nobody has used it for that long.
   registerIdleExit(app, { busy: () => svc.jobs.busy });
   registerModels(app, svc);

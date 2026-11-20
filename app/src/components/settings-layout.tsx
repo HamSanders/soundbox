@@ -47,7 +47,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api, errorMessage, type SettingsPatch } from "@/lib/api";
-import { qk, useCan } from "@/lib/queries";
+import { afterSettingsSaved, qk, useCan } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
 import {
@@ -94,9 +94,9 @@ export function useSettingSave() {
   const { markSaved } = useSettingsUi();
   const m = useMutation({
     mutationFn: ({ patch }: { id: string; patch: SettingsPatch }) => api.updateSettings(patch),
-    onSuccess: (next, { id }) => {
+    onSuccess: (next, { id, patch }) => {
       qc.setQueryData(qk.settings, next);
-      void qc.invalidateQueries({ queryKey: qk.update });
+      afterSettingsSaved(qc, patch);
       markSaved(id);
     },
     onError: (err) => toast.error("Could not save settings", { description: errorMessage(err) }),

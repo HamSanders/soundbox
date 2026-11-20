@@ -140,8 +140,25 @@ function statusOf(segment: StorySegment, m: Meta): ParagraphStatus {
   return m.voiced_text !== segment.text ? "stale" : "voiced";
 }
 
+/** Paragraphs are track 0 of a chapter story; other tracks hold beds. */
+const PARAGRAPH_TRACK = 0;
+
+/** The story's full order with its track-0 rows replaced by `ids`, slot for
+ *  slot, so beds on other tracks keep their places. */
+async function withParagraphOrder(storyId: string, ids: string[]): Promise<string[]> {
+  const all = await mockApi.listSegments(storyId);
+  const paragraphs = all.filter((s) => s.track_index === PARAGRAPH_TRACK);
+  if (ids.length !== paragraphs.length || !paragraphs.every((s) => ids.includes(s.id))) {
+    throw new Error("ids must list every paragraph of the chapter exactly once");
+  }
+  let next = 0;
+  return all.map((s) => (s.track_index === PARAGRAPH_TRACK ? ids[next++]! : s.id));
+}
+
 async function paragraphsOf(chapter: Chapter): Promise<Paragraph[]> {
-  const segments = await mockApi.listSegments(chapter.story_id);
+  const segments = (await mockApi.listSegments(chapter.story_id)).filter(
+    (s) => s.track_index === PARAGRAPH_TRACK,
+  );
   return segments.map((segment) => {
     segmentChapter.set(segment.id, chapter.id);
     const m = metaOf(segment.id);
@@ -760,7 +777,7 @@ export const mockAudiobookApi: AudiobookApi = {
   async reorderParagraphs(bookId, chapterId, ids) {
     await ready();
     const chapter = requireChapter(bookId, chapterId);
-    await mockApi.reorderSegments(chapter.story_id, ids);
+    await mockApi.reorderSegments(chapter.story_id, await withParagraphOrder(chapter.story_id, ids));
     emit(bookId, { type: "paragraphs", chapter_id: chapterId });
     return paragraphsOf(chapter);
   },
@@ -961,7 +978,7 @@ export const mockAudiobookApi: AudiobookApi = {
         });
         ids.push(pid);
       }
-      await mockApi.reorderSegments(chapter.story_id, ids);
+      await mockApi.reorderSegments(chapter.story_id, await withParagraphOrder(chapter.story_id, ids));
     }
     order.forEach((cid, i) => {
       chapters.find((c) => c.id === cid)!.position = i;

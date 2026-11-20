@@ -32,7 +32,12 @@
  *   reorderChapters(bookId, ids): boolean
  *   deleteChapter(chapterId, deleteSounds = true): Promise<boolean>
  *   getChapter(chapterId): Chapter | null
- *   chapterForSegment(segmentId): Chapter | null
+ *   chapterForSegment(segmentId): Chapter | null      any segment of a chapter story (beds too)
+ *   chapterForParagraph(segmentId): Chapter | null    track-0 segments only
+ *
+ * Paragraphs are track 0 of a chapter story. Other tracks hold soundscape
+ * beds; nothing here lists, counts, casts, replaces, reorders, captures or
+ * deletes them.
  *
  * Paragraphs (one paragraph = one story_segments row)
  *   getParagraphs(chapterId): Paragraph[] | null
@@ -92,6 +97,7 @@ import {
   type ParagraphStatus,
   type SettingsPatch,
   type SnapshotInfo,
+  PARAGRAPH_TRACK,
 } from "./store.js";
 import type {
   Book,
@@ -417,8 +423,14 @@ export class AudiobookService {
     return this.store.getChapter(chapterId);
   }
 
+  /** The chapter of any segment in a chapter story, beds included. */
   chapterForSegment(segmentId: string): Chapter | null {
     return this.store.chapterForSegment(segmentId);
+  }
+
+  /** The chapter of a paragraph (a track-0 segment); null for a bed. */
+  chapterForParagraph(segmentId: string): Chapter | null {
+    return this.store.chapterForParagraph(segmentId);
   }
 
   addChapter(
@@ -660,7 +672,9 @@ export class AudiobookService {
   }
 
   private paragraphsOf(chapter: Chapter): Paragraph[] {
-    const segments = this.svc.listSegments(chapter.story_id);
+    const segments = this.svc
+      .listSegments(chapter.story_id)
+      .filter((s) => s.track_index === PARAGRAPH_TRACK);
     const stale = this.store.staleSegments(chapter.story_id);
     const meta = this.store.getMeta(segments.map((s) => s.id));
     return segments.map((segment) => {
@@ -679,7 +693,7 @@ export class AudiobookService {
   }
 
   getParagraph(segmentId: string): Paragraph | null {
-    const chapter = this.store.chapterForSegment(segmentId);
+    const chapter = this.store.chapterForParagraph(segmentId);
     if (!chapter) return null;
     return this.paragraphsOf(chapter).find((p) => p.id === segmentId) ?? null;
   }
@@ -743,7 +757,7 @@ export class AudiobookService {
       model_id?: string | null;
     },
   ): Paragraph | null {
-    const chapter = this.store.chapterForSegment(segmentId);
+    const chapter = this.store.chapterForParagraph(segmentId);
     if (!chapter) return null;
     if (fields.text !== undefined) {
       const current = this.getParagraph(segmentId)!;
@@ -821,17 +835,34 @@ export class AudiobookService {
     return { paragraph: this.getParagraph(segmentId)!, removed_id: next.id, split_at: splitAt };
   }
 
-  /** `ids` must be every segment of the chapter, in the new reading order. */
+  /** `ids` must be every paragraph of the chapter, in the new reading order.
+   *  Beds on other tracks keep their places. */
   reorderParagraphs(chapterId: string, ids: string[]): Paragraph[] | null {
     const chapter = this.store.getChapter(chapterId);
     if (!chapter) return null;
-    if (!this.svc.reorderSegments(chapter.story_id, ids)) return null;
+    const order = this.withParagraphOrder(chapter.story_id, ids);
+    if (!order || !this.svc.reorderSegments(chapter.story_id, order)) return null;
     this.publishParagraphs(chapter, ids);
     return this.paragraphsOf(chapter);
   }
 
+  /**
+   * The story's full segment order with its track-0 rows replaced, slot for
+   * slot, by `ids`; every other segment stays where it is. Null unless `ids`
+   * is exactly the story's paragraphs.
+   */
+  private withParagraphOrder(storyId: string, ids: string[]): string[] | null {
+    const all = this.svc.db.listSegments(storyId);
+    const paragraphs = all.filter((s) => s.track_index === PARAGRAPH_TRACK);
+    const known = new Set(paragraphs.map((s) => s.id));
+    if (ids.length !== paragraphs.length || new Set(ids).size !== ids.length) return null;
+    if (!ids.every((id) => known.has(id))) return null;
+    let next = 0;
+    return all.map((s) => (s.track_index === PARAGRAPH_TRACK ? ids[next++]! : s.id));
+  }
+
   deleteParagraph(segmentId: string): boolean {
-    const chapter = this.store.chapterForSegment(segmentId);
+    const chapter = this.store.chapterForParagraph(segmentId);
     if (!chapter) return false;
     const ok = this.svc.deleteSegment(segmentId);
     if (ok) this.publishParagraphs(chapter, [segmentId]);
@@ -856,7 +887,7 @@ export class AudiobookService {
     let n = 0;
     this.store.transaction(() => {
       for (const id of ids) {
-        const chapter = this.store.chapterForSegment(id);
+        const chapter = this.store.chapterForParagraph(id);
         if (!chapter) continue;
         if (character && character.book_id !== chapter.book_id) {
           throw new ModelError("That character belongs to another book.");
@@ -949,7 +980,7 @@ export class AudiobookService {
   private publishBySegments(segmentIds: string[]): void {
     const seen = new Map<string, Chapter>();
     for (const id of segmentIds) {
-      const chapter = this.store.chapterForSegment(id);
+      const chapter = this.store.chapterForParagraph(id);
       if (chapter) seen.set(chapter.id, chapter);
     }
     for (const chapter of seen.values()) {
@@ -971,7 +1002,7 @@ export class AudiobookService {
   }
 
   addNote(segmentId: string, body: string, atS: number | null = null): BookNote {
-    const chapter = this.store.chapterForSegment(segmentId);
+    const chapter = this.store.chapterForParagraph(segmentId);
     if (!chapter) throw new ModelError("Paragraph not found.");
     const note = this.store.createNote(chapter.book_id, segmentId, body.trim(), atS);
     this.hub.publish(chapter.book_id, { type: "notes", chapter_id: chapter.id });
@@ -1190,7 +1221,12 @@ export class AudiobookService {
     characters: Set<string>,
     now: string,
   ): void {
-    const existing = new Map(this.svc.db.listSegments(chapter.story_id).map((s) => [s.id, s]));
+    const existing = new Map(
+      this.svc.db
+        .listSegments(chapter.story_id)
+        .filter((s) => s.track_index === PARAGRAPH_TRACK)
+        .map((s) => [s.id, s]),
+    );
     const keep = new Set(paragraphs.map((p) => p.segment_id));
     this.store.transaction(() => {
       for (const s of existing.values()) {
@@ -1224,7 +1260,11 @@ export class AudiobookService {
         });
         if (sound) this.store.markVoiced(p.segment_id, p.text);
       }
-      this.svc.db.reorderSegments(chapter.story_id, paragraphs.map((p) => p.segment_id));
+      const order = this.withParagraphOrder(
+        chapter.story_id,
+        paragraphs.map((p) => p.segment_id),
+      );
+      if (order) this.svc.db.reorderSegments(chapter.story_id, order);
     });
   }
 
@@ -1275,7 +1315,7 @@ export class AudiobookService {
    *  (usually the voice's own model). */
   modelFor(segmentId: string): string | null {
     const p = this.getParagraph(segmentId);
-    const chapter = this.store.chapterForSegment(segmentId);
+    const chapter = this.store.chapterForParagraph(segmentId);
     if (!p || !chapter) return null;
     if (p.model_id) return p.model_id;
     const book = this.store.getBook(chapter.book_id)!;
@@ -1309,7 +1349,9 @@ export class AudiobookService {
     let n = 0;
     this.store.transaction(() => {
       for (const chapter of chapters) {
-        const segments = this.svc.db.listSegments(chapter.story_id);
+        const segments = this.svc.db
+          .listSegments(chapter.story_id)
+          .filter((s) => s.track_index === PARAGRAPH_TRACK);
         const meta = this.store.getMeta(segments.map((s) => s.id));
         for (const segment of segments) {
           if (segment.kind !== "line" || (wanted && !wanted.has(segment.id))) continue;

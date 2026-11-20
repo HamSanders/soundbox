@@ -59,11 +59,14 @@ function ParagraphInspector({
   book,
   chapter,
   paragraph,
+  number,
   ops,
 }: {
   book: BookDetail;
   chapter: ChapterWithStats;
   paragraph: Paragraph;
+  /** 1-based, among the chapter's paragraphs (beds on other tracks aren't counted). */
+  number: number;
   ops: BookOps;
 }) {
   const qc = useQueryClient();
@@ -93,7 +96,7 @@ function ParagraphInspector({
   return (
     <div className="space-y-5 p-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-medium">Paragraph {paragraph.position + 1}</h3>
+        <h3 className="text-sm font-medium">Paragraph {number}</h3>
         <StatusBadge status={paragraph.status} />
       </div>
 
@@ -254,6 +257,7 @@ export function Inspector({
   book,
   chapter,
   paragraph,
+  paragraphNumber,
   selectedCount,
   onLockSelection,
   ops,
@@ -264,6 +268,7 @@ export function Inspector({
   selectedCount: number;
   onLockSelection: (locked: boolean) => void;
   ops: BookOps;
+  paragraphNumber: number;
 }) {
   return (
     <Tabs defaultValue="inspect" className="flex min-h-0 flex-1 flex-col gap-0">
@@ -291,7 +296,13 @@ export function Inspector({
             </div>
           </div>
         ) : paragraph && chapter ? (
-          <ParagraphInspector book={book} chapter={chapter} paragraph={paragraph} ops={ops} />
+          <ParagraphInspector
+            book={book}
+            chapter={chapter}
+            paragraph={paragraph}
+            number={paragraphNumber}
+            ops={ops}
+          />
         ) : chapter ? (
           <ChapterInspector book={book} chapter={chapter} />
         ) : null}

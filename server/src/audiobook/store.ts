@@ -389,6 +389,11 @@ const BOOK_COLUMNS = [
   "cover_path",
 ] as const;
 
+/** Paragraphs are the narration lane of a chapter story: track 0. Other
+ *  tracks hold the soundscape's beds (music, SFX), which are not paragraphs
+ *  and must never be listed, counted, cast, replaced or reordered as such. */
+export const PARAGRAPH_TRACK = 0;
+
 /** Paragraph status SQL, shared by stats and the paragraph list. A take is
  *  stale when it was marked so, or when the text moved since it was made. */
 const STALE_SQL = `(s.sound_id IS NOT NULL AND (p.stale_sound_id = s.sound_id
@@ -523,7 +528,20 @@ export class AudiobookStore {
     return row ? toChapter(row) : null;
   }
 
-  /** The chapter a paragraph belongs to, through its segment's story. */
+  /** The chapter a paragraph (a track-0 segment) belongs to; null for a
+   *  segment on another track, such as a bed. */
+  chapterForParagraph(segmentId: string): Chapter | null {
+    const row = this.conn
+      .prepare(
+        `SELECT c.* FROM book_chapters c
+           JOIN story_segments s ON s.story_id = c.story_id
+          WHERE s.id=? AND s.track_index = 0`,
+      )
+      .get(segmentId) as ChapterRow | undefined;
+    return row ? toChapter(row) : null;
+  }
+
+  /** The chapter any segment of a chapter story belongs to, beds included. */
   chapterForSegment(segmentId: string): Chapter | null {
     const row = this.conn
       .prepare(
@@ -637,7 +655,7 @@ export class AudiobookStore {
       .prepare(
         `INSERT INTO book_paragraphs (segment_id, voiced_sound_id, voiced_text)
          SELECT s.id, s.sound_id, s.text FROM story_segments s
-          WHERE s.story_id IN (${marks}) AND s.sound_id IS NOT NULL
+          WHERE s.story_id IN (${marks}) AND s.track_index = 0 AND s.sound_id IS NOT NULL
          ON CONFLICT(segment_id) DO UPDATE SET
            voiced_sound_id = excluded.voiced_sound_id,
            voiced_text = excluded.voiced_text
@@ -660,7 +678,7 @@ export class AudiobookStore {
            SUM(CASE WHEN s.sound_id IS NOT NULL
                     THEN COALESCE(s.duration_s, snd.duration_s, 0) ELSE 0 END) AS duration_s
          FROM book_chapters c
-         LEFT JOIN story_segments s ON s.story_id = c.story_id
+         LEFT JOIN story_segments s ON s.story_id = c.story_id AND s.track_index = 0
          LEFT JOIN sounds snd ON snd.id = s.sound_id
          LEFT JOIN book_paragraphs p ON p.segment_id = s.id
          WHERE c.book_id = ?
@@ -709,7 +727,7 @@ export class AudiobookStore {
       .prepare(
         `SELECT s.id FROM story_segments s
            LEFT JOIN book_paragraphs p ON p.segment_id = s.id
-          WHERE s.story_id = ? AND ${STALE_SQL}`,
+          WHERE s.story_id = ? AND s.track_index = 0 AND ${STALE_SQL}`,
       )
       .all(storyId) as { id: string }[];
     return new Set(rows.map((r) => r.id));
@@ -983,7 +1001,7 @@ export class AudiobookStore {
         `SELECT c.id AS chapter_id, COUNT(*) AS n FROM book_notes n
            JOIN story_segments s ON s.id = n.segment_id
            JOIN book_chapters c ON c.story_id = s.story_id
-          WHERE n.book_id = ? AND n.resolved = 0
+          WHERE n.book_id = ? AND n.resolved = 0 AND s.track_index = 0
           GROUP BY c.id`,
       )
       .all(bookId) as { chapter_id: string; n: number }[];

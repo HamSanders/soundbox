@@ -161,7 +161,8 @@ function routes(app: FastifyInstance, svc: MirliService): void {
     return chapter;
   };
   const requireParagraph = (bookId: string, segmentId: string) => {
-    const chapter = books().chapterForSegment(segmentId);
+    // Track 0 only: a bed clip on another track is not a paragraph.
+    const chapter = books().chapterForParagraph(segmentId);
     if (!chapter || chapter.book_id !== bookId) throw new HttpError(404, "Paragraph not found");
     return chapter;
   };

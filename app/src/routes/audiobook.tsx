@@ -192,6 +192,7 @@ export function AudiobookPage() {
             paragraph={paragraph}
             selectedCount={checked.size}
             ops={ops}
+            paragraphNumber={(paragraphs.data ?? []).findIndex((p) => p.id === selectedId) + 1}
             onLockSelection={(locked) =>
               void ops.setLocked((paragraphs.data ?? []).filter((p) => checked.has(p.id)), locked)
             }

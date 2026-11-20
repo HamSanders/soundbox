@@ -1,9 +1,9 @@
 /**
- * The sign-in screen for a Soundbox that has an access token set.
+ * The sign-in screen for a Mirli that has an access token set.
  *
  * Most installs never see it: a desktop server has no token, and
  * `/api/auth/status` answers `required: false` at once. A server started with
- * `SOUNDBOX_API_TOKEN` (a rented GPU, a LAN box, Docker on a public address)
+ * `MIRLI_API_TOKEN` (a rented GPU, a LAN box, Docker on a public address)
  * answers 401 to every API call until the browser signs in. This asks for the
  * token once, trades it for an HttpOnly cookie (server/src/auth.ts), and only
  * then mounts the app, so the first screen is not a wall of failed requests.
@@ -95,14 +95,14 @@ function SignInScreen({ onSignedIn }: { onSignedIn: () => void }) {
           </div>
           <div>
             <h1 id="access-gate-title" className="text-lg font-semibold">
-              Sign in to Soundbox
+              Sign in to Mirli
             </h1>
             <p className="text-muted-foreground text-sm">{window.location.host}</p>
           </div>
         </div>
         <p className="text-muted-foreground text-sm">
-          This Soundbox asks for its access token. It is the value of{" "}
-          <code className="font-mono text-xs">SOUNDBOX_API_TOKEN</code> on the machine running the
+          This Mirli asks for its access token. It is the value of{" "}
+          <code className="font-mono text-xs">MIRLI_API_TOKEN</code> on the machine running the
           server. This browser stays signed in for 30 days.
         </p>
         <div className="space-y-1.5">

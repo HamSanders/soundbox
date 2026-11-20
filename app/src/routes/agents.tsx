@@ -1,7 +1,7 @@
 /**
  * Agents — the companion-app view of the MCP surface.
  *
- * Soundbox's other screens are about sounds; this one is about *who asked for
+ * Mirli's other screens are about sounds; this one is about *who asked for
  * them*. Every agent that has ever connected over MCP, what it called, how it
  * went, and the two levers a team actually needs — the connection details to
  * hand a new client, and installing the bundled skills that make an agent use
@@ -137,7 +137,7 @@ function SkillsCard({
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-muted-foreground text-sm leading-relaxed">
-          Soundbox ships agent skills that teach a connected agent how to use it well — prompting
+          Mirli ships agent skills that teach a connected agent how to use it well — prompting
           text-to-audio models, checking licences, running a full sound pass over a project. Install
           them once and any agent that reads skills from this machine picks them up.
         </p>
@@ -346,7 +346,7 @@ export function AgentsPage() {
           Agents
         </h1>
         <p className="text-muted-foreground mt-1 max-w-2xl text-sm leading-relaxed">
-          Soundbox is built to be driven by AI agents over MCP, not just by this app. This page is
+          Mirli is built to be driven by AI agents over MCP, not just by this app. This page is
           the mission control for that: who has connected, what they have called, and how it went.
         </p>
       </div>

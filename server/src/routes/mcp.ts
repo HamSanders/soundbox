@@ -11,7 +11,7 @@ import { z } from "zod";
 
 import type { McpCall, McpToolInfo } from "../schemas.js";
 import { skillInstallRequestSchema } from "../schemas.js";
-import type { SoundboxService } from "../service.js";
+import type { MirliService } from "../service.js";
 import * as skillsMod from "../skills.js";
 import { HttpError, intQuery, strQuery, streamSse } from "./helpers.js";
 
@@ -41,7 +41,7 @@ const mcpCallSchema = z.object({
 
 export function registerMcp(
   app: FastifyInstance,
-  svc: SoundboxService,
+  svc: MirliService,
   tools: McpToolsProvider,
 ): void {
   /** Connection details, connected agents, totals, telemetry and skills — one

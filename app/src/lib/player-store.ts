@@ -23,6 +23,18 @@ interface PlayerState {
   stop: (id?: string) => void;
   /** Open (or close, with null) the fixed bottom player on this sound. */
   setSound: (sound: Sound | null) => void;
+  /** The list the bottom player steps through with previous / next: the
+   *  Library sets it to whatever it is showing. */
+  queue: Sound[];
+  setQueue: (queue: Sound[]) => void;
+  /** Where the bottom player is, in seconds, for rows that draw progress. */
+  position: number;
+  setPosition: (t: number) => void;
+  /** A request for the bottom player to jump to `t` (and play). `n` makes a
+   *  repeat request for the same time a new one. */
+  seekRequest: { id: string; t: number; n: number } | null;
+  /** Open `sound` in the bottom player, playing from `t` seconds. */
+  playAt: (sound: Sound, t: number) => void;
 }
 
 export const usePlayerStore = create<PlayerState>((set) => ({
@@ -32,4 +44,15 @@ export const usePlayerStore = create<PlayerState>((set) => ({
   stop: (id) =>
     set((s) => (id === undefined || s.playingId === id ? { playingId: null } : s)),
   setSound: (sound) => set({ sound }),
+  queue: [],
+  setQueue: (queue) => set({ queue }),
+  position: 0,
+  setPosition: (position) => set({ position }),
+  seekRequest: null,
+  playAt: (sound, t) =>
+    set((s) => ({
+      sound,
+      playingId: sound.id,
+      seekRequest: { id: sound.id, t, n: (s.seekRequest?.n ?? 0) + 1 },
+    })),
 }));

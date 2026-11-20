@@ -73,6 +73,7 @@ import type { ComposerBlocker } from "@/lib/composer-blocker";
 import { NOT_READY } from "@/lib/model-ready";
 import { clampDuration, type ComposerSettings } from "@/lib/session-store";
 import { cn } from "@/lib/utils";
+import { NewProjectRow } from "@/components/new-project-row";
 
 /* ------------------------------------------------------------------ pills */
 
@@ -159,6 +160,13 @@ interface ComposerProps {
    *  button, which says that something is wrong and nothing about what. */
   blocker: ComposerBlocker | null;
   onSubmit: () => void;
+  /**
+   * Laid out for the Create panel: a tall prompt field, the settings as a
+   * two-column grid of labelled fields, and a full-width Generate pinned to
+   * the panel's foot. The default is the one-line bar the phone layout and
+   * the Generate page use.
+   */
+  panel?: boolean;
   onCancel: () => void;
   /** Estimated wall time for this request, or null when we genuinely do not
    *  know. Never guessed — see `estimateDurationS` in the Generate route. */
@@ -201,6 +209,7 @@ interface ComposerProps {
 }
 
 export function GenerateComposer({
+  panel = false,
   settings,
   onChange,
   models,
@@ -405,8 +414,9 @@ export function GenerateComposer({
   return (
     <div
       className={cn(
-        "bg-card ring-foreground/10 relative rounded-2xl p-2 shadow-lg ring-1",
-        "focus-within:ring-ring/40 transition-shadow",
+        panel
+          ? "relative flex min-h-full flex-col gap-3"
+          : "bg-card ring-foreground/10 relative rounded-2xl p-2 shadow-lg ring-1 focus-within:ring-ring/40 transition-shadow",
       )}
     >
       {/* One textarea for both tasks, relabelled — not two. It carries the
@@ -416,7 +426,7 @@ export function GenerateComposer({
       <Label htmlFor="prompt" className="sr-only">
         {isTts ? "Script" : "Prompt"}
       </Label>
-      <div className="relative">
+      <div className={cn("relative", panel && "bg-field ring-border focus-within:ring-ring/40 rounded-lg ring-1")}>
         <Textarea
           id="prompt"
           value={settings.prompt}
@@ -432,6 +442,7 @@ export function GenerateComposer({
           className={cn(
             "max-h-44 min-h-[3.25rem] resize-none overflow-y-auto border-transparent bg-transparent px-2.5 pt-10 pb-2 text-base leading-relaxed shadow-none placeholder:text-muted-foreground/70 focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent",
             enhance.enabled && !isTts && "pr-16",
+            panel && "min-h-44 max-h-80",
           )}
         />
 
@@ -677,12 +688,20 @@ export function GenerateComposer({
       )}
 
       {/* ---------------------------------------------------------- controls */}
-      <div className="mt-1 flex items-center gap-2 px-0.5">
+      <div className={cn(panel ? "flex flex-1 flex-col gap-3" : "mt-1 flex items-center gap-2 px-0.5")}>
         {/* At 375px seven pills wrap into five rows and the composer swallows a
             third of the screen, so below `sm` they scroll sideways instead —
             the same move the reference makes with its category strip. The
             submit control is a sibling, never inside the scroller. */}
-        <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto py-0.5 sm:flex-wrap sm:gap-y-1.5 sm:overflow-visible">
+        <div
+          className={cn(
+            panel
+              ? // Each pill becomes a labelled field: the label the bar keeps for
+                // screen readers is shown, the value under it.
+                "grid grid-cols-2 gap-1.5 [&_button]:h-auto [&_button]:w-full [&_button]:flex-wrap [&_button]:justify-start [&_button]:rounded-md [&_button]:border [&_button]:border-border [&_button]:bg-field [&_button]:px-2.5 [&_button]:py-1.5 [&_button]:text-foreground [&_button_.sr-only]:not-sr-only [&_button_.sr-only]:label-caps [&_button_.sr-only]:basis-full [&_button_.sr-only]:text-left [&_button_.sr-only]:text-muted-foreground [&_button>svg:first-child]:hidden"
+              : "no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto py-0.5 sm:flex-wrap sm:gap-y-1.5 sm:overflow-visible",
+          )}
+        >
         {/* ------------------------------------------------------ project */}
         {(() => {
           const project = projects?.find((p) => p.id === projectId);
@@ -752,6 +771,12 @@ export function GenerateComposer({
                   Everything generated in this thread files into the project
                   automatically.
                 </p>
+                <NewProjectRow
+                  onCreated={(p) => {
+                    onChangeProject(p.id);
+                    setProjectsOpen(false);
+                  }}
+                />
               </PopoverContent>
             </Popover>
           );
@@ -1000,7 +1025,7 @@ export function GenerateComposer({
                 >
                   {model.name} is a distilled model tuned for CFG{" "}
                   {model.defaults.cfg ?? 1}. Above {model.max_cfg} the output
-                  degrades into noise, so Soundbox won&rsquo;t render past it.
+                  degrades into noise, so Mirli won&rsquo;t render past it.
                 </p>
               )}
             </PopoverContent>
@@ -1114,7 +1139,13 @@ export function GenerateComposer({
         </div>
 
         {/* -------------------------------------------- estimate + submit */}
-        <div className="flex shrink-0 items-center gap-2 pl-1">
+        <div
+          className={cn(
+            panel
+              ? "bg-background sticky bottom-0 z-10 mt-auto flex items-center gap-2 pt-2 pb-3 [&>button:last-child]:h-10 [&>button:last-child]:flex-1 [&>button:last-child]:justify-center [&>button:last-child]:text-sm"
+              : "flex shrink-0 items-center gap-2 pl-1",
+          )}
+        >
           {!running && estimateS !== null && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -1142,7 +1173,7 @@ export function GenerateComposer({
             aria-hidden={!running}
             tabIndex={running ? 0 : -1}
             disabled={!running}
-            className={cn("rounded-full", !running && "invisible")}
+            className={cn("rounded-full", !running && (panel ? "hidden" : "invisible"))}
           >
             <SquareIcon />
           </Button>
@@ -1183,7 +1214,7 @@ export function GenerateComposer({
       {/* Under the entire card — prompt, model, and the rest of the controls
           all sit above it — as its own inline row rather than tucked
           anywhere inside the composer's active area. */}
-      <div className="mt-1.5 flex items-center justify-between gap-2 border-t border-border/60 px-1 pt-1.5">
+      <div className={cn("flex items-center justify-between gap-2", panel ? "order-first -mb-1" : "mt-1.5 border-t border-border/60 px-1 pt-1.5")}>
         <div className="flex min-w-0 flex-wrap items-center gap-1">
           {settings.tags.map((t) => (
             <span

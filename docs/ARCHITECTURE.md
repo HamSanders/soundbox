@@ -46,11 +46,12 @@ the app, and as a crawlable page with no backend. See
 
 ## Where your data lives
 
-Everything is under one directory: `~/.soundbox` by default, or wherever
-`SOUNDBOX_DATA_DIR` points.
+Everything is under one directory: `~/.mirli` by default (or `~/.soundbox`
+on an install from before the rename, while no `~/.mirli` exists), or wherever
+`MIRLI_DATA_DIR` points.
 
 ```
-~/.soundbox/
+~/.mirli/
 ├── soundbox.db      SQLite: every row of metadata
 ├── sounds/          one .wav per generated sound
 ├── models/          downloaded weights (GGUF and friends)

@@ -1,8 +1,8 @@
 /**
- * The on-disk layout Soundbox shares with a standalone audio.cpp.
+ * The on-disk layout Mirli shares with a standalone audio.cpp.
  *
  * These cover the change that made sharing possible at all: weights used to
- * live one level deeper, under Soundbox's own model id, where audio.cpp never
+ * live one level deeper, under Mirli's own model id, where audio.cpp never
  * looked. The migration below is the reason nobody has to re-download because
  * of it, so it gets the most attention.
  */
@@ -68,7 +68,7 @@ describe("catalog layout fields", () => {
 });
 
 describe("weightsDir", () => {
-  it("uses audio.cpp's target directory, not the Soundbox model id", () => {
+  it("uses audio.cpp's target directory, not the Mirli model id", () => {
     expect(model("audiocpp-stable-audio-3-sfx").weightsDir()).toBe(
       join(root, "Stable-Audio-3-Small-SFX-GGUF"),
     );

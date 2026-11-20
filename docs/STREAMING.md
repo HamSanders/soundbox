@@ -90,7 +90,7 @@ Only families whose session implements the streaming run mode can do it.
 audio.cpp ships `model_specs/<family>.json` beside its binaries, and each
 lists its `modes`; Mirli reads that folder and sets `supports.streaming`
 from it (`server/src/models/audiocppModes.ts`), so the flag follows whatever
-build is installed, including your own via `SOUNDBOX_AUDIOCPP_BIN`.
+build is installed, including your own via `MIRLI_AUDIOCPP_BIN`.
 
 In the bundled **audio.cpp 0.6.1**, the TTS families that list `streaming`
 and that the Mirli catalogue carries are:

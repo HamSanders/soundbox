@@ -9,6 +9,9 @@ around it, with no second copy of the UI and no separate API.
    [download page](https://mirli.app/download/), which picks the right one for your system:
    - Windows: `Soundbox_<version>_x64-setup.exe`
    - macOS: the `.dmg`, `aarch64` for Apple silicon or `x64` for Intel
+   - Linux (x64): `Soundbox_<version>_amd64.AppImage`, or the `.deb` for
+     Debian and Ubuntu, from the
+     [latest release](https://github.com/HamSanders/soundbox/releases/latest)
 2. Run it. The app carries its own Node and server, so nothing else needs
    installing.
 3. Download model weights from the Models screen on first use.
@@ -24,6 +27,29 @@ confirm:
   **Open Anyway**. If macOS says the app is
   "damaged", the download's quarantine flag is the cause. Clear it with
   `xattr -dr com.apple.quarantine /Applications/Soundbox.app`.
+- **Linux:** make the AppImage executable (`chmod +x Soundbox_*.AppImage`)
+  and run it, or install the `.deb` with `sudo apt install ./Soundbox_*.deb`.
+  AppImages need FUSE 2: on Ubuntu 22.04 that is `libfuse2`, on 24.04
+  `libfuse2t64`. The packages are built on Ubuntu 22.04, so they need glibc
+  2.35 or newer (Ubuntu 22.04, Debian 12, Fedora 36 and later).
+
+### Linux: blank window or crash on NVIDIA
+
+The Linux app draws its window with the system's WebKitGTK, which has known
+trouble with some NVIDIA drivers, mostly under Wayland. If the window stays
+blank, or the app exits with `Error 71` or `AcceleratedSurfaceDMABuf was
+unable to construct a complete framebuffer`, start it with one of these, in
+the order Tauri's
+[Linux graphics guide](https://v2.tauri.app/develop/debug/linux-graphics/)
+suggests:
+
+1. `__NV_DISABLE_EXPLICIT_SYNC=1 ./Soundbox_*.AppImage`. It costs nothing in speed.
+2. `WEBKIT_DISABLE_DMABUF_RENDERER=1`. This one gives up the faster rendering path.
+3. `WEBKIT_DISABLE_COMPOSITING_MODE=1` if the window dies on resize.
+
+The app does not set these itself, because most machines don't need them.
+The models run on the GPU through audio.cpp either way, so none of these
+slows generation.
 
 ## How it works
 
@@ -135,7 +161,7 @@ screen, as in the web app.
 |---|---|
 | `SOUNDBOX_NODE` | Node interpreter to run the server with. Overrides both the bundled Node and the `PATH` lookup. |
 | `SOUNDBOX_PROJECT_ROOT` | Run a checkout instead of the installed server, or point at one the shell cannot find by walking up. |
-| `SOUNDBOX_DATA_DIR` | Inherited by the server: library, weights, logs. |
+| `MIRLI_DATA_DIR` | Inherited by the server: library, weights, logs. |
 
 The port is fixed at 17494 in the shell. Every other server variable in
 [INSTALL.md](./INSTALL.md#environment-variables) is inherited the same way.
@@ -153,8 +179,9 @@ the web app), Rust (stable), and the platform toolchain Tauri needs:
 
 - **No code signing yet.** See [Installing](#installing) for what users see on
   first launch, and [Signing](#signing) for how to enable it.
-- **No Linux installer in releases.** `npm run desktop:build` can produce an
-  AppImage on Linux, but the release workflow does not build one yet.
+- **Linux is unverified.** Releases include an AppImage and a `.deb` for
+  x64, built on Ubuntu 22.04, but they have not been run on a real desktop
+  before release. There is no arm64 Linux build, and no Flatpak or AUR package.
 - **macOS is unverified.** Every model runs through
   [audio.cpp](./AUDIOCPP.md), which has a Metal backend, but none of the
   verified-status claims were tested on a Mac. Web MIDI is unavailable in the
@@ -170,6 +197,10 @@ otherwise ignored. A checkout run with `npm run desktop` never checks. **Setting
 Check for updates** turns the check off, and with it off the app asks nobody,
 GitHub included. The server's own daily version check is described in
 [PRIVACY.md](./PRIVACY.md).
+
+On Linux the release carries signed update bundles for both the AppImage and
+the `.deb`. Neither path has been tried on a real install yet. If an in-app
+update fails, download the newer package from the releases page.
 
 Updates replace the app only. Models and projects live in the data directory
 and are kept.

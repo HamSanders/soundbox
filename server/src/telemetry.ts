@@ -1,5 +1,5 @@
 /**
- * MCP call telemetry: the record of what agents did through Soundbox.
+ * MCP call telemetry: the record of what agents did through Mirli.
  *
  * Three consumers, one source of truth:
  *
@@ -35,7 +35,7 @@ import type { McpCall, OtelStatus } from "./schemas.js";
 // writes to, same reason: `grep mcp soundbox.log` and the Activity page's
 // tail both depend on this actually reaching the rotating file rather than
 // console.info, which doesn't.
-const _logger = getLogger("soundbox.telemetry");
+const _logger = getLogger("mirli.telemetry");
 const log = { info: (msg: string) => _logger.info(msg), warn: (msg: string) => _logger.warning(msg) };
 
 /** A client counts as "active" if it made a call within this window. */

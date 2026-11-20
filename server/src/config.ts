@@ -2,8 +2,9 @@
  * Configuration, the data directory layout, and persisted settings.
  *
  * The on-disk shape (`settings.json`,
- * the directory names) is deliberately stable, so an existing `~/.soundbox`
- * written by an earlier version is picked up unchanged.
+ * the directory names) is deliberately stable, so a data directory written
+ * by an earlier version, including a pre-rename `~/.soundbox`, is picked up
+ * unchanged.
  */
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
@@ -19,8 +20,9 @@ import {
   type Registry,
 } from "./profiles.js";
 import { type AudioEndpoint, withEndpointDefaults } from "./endpoints/types.js";
+import { envVar } from "./env.js";
 
-export const APP_NAME = "soundbox";
+export const APP_NAME = "mirli";
 /** From server/package.json, which sits one level above both src/ and dist/,
  *  so the same relative path works under tsx, vitest and the built server. */
 export const VERSION: string = (
@@ -57,7 +59,7 @@ export type ImageApiKind = "openai" | "a1111";
  *
  * Deliberately missing the `"off"` that `LlmMode` and `ImageMode` have: the
  * prompt assistant and cover art are niceties, but audio.cpp is the only
- * engine Soundbox generates audio with, so switching it off would leave the
+ * engine Mirli generates audio with, so switching it off would leave the
  * app with nothing to do.
  *
  *   "managed"  — our own install under `<base>/bin/audiocpp`, weights under
@@ -82,7 +84,7 @@ export interface SettingsData {
   audiocpp_mode: AudioCppMode;
   /** Absolute path to the folder audio.cpp packages are installed under, or
    *  null for the managed default (`<base>/models/audiocpp`). Only meaningful
-   *  in "external" mode — this is what lets Soundbox and a standalone
+   *  in "external" mode — this is what lets Mirli and a standalone
    *  audio.cpp see the same weights. */
   audiocpp_models_dir: string | null;
   /** Absolute path to the folder generated audio is written to, or null for
@@ -106,7 +108,7 @@ export interface SettingsData {
    *  default: the image model competes for the same VRAM as the audio model,
    *  and nobody's first render should get slower for a picture. */
   image_auto_artwork: boolean;
-  /** Custom audio endpoints — other people's servers Soundbox sends requests
+  /** Custom audio endpoints — other people's servers Mirli sends requests
    *  to instead of running a model itself. Each is one model in the pickers.
    *  Not settable through PATCH /api/settings: it has its own routes, so a key
    *  can be kept without the client ever holding it. See endpoints/types.ts. */
@@ -125,7 +127,7 @@ export interface SettingsData {
   onboarded_at: string | null;
   /**
    * Ask once a day whether a newer version exists. On by default, and the one
-   * request Soundbox makes on its own: it carries the version and the platform
+   * request Mirli makes on its own: it carries the version and the platform
    * and nothing else (see `updateCheck.ts`). Off means no request at all.
    */
   update_check: boolean;
@@ -348,7 +350,7 @@ export class Settings {
 
 export class Paths {
   /**
-   * The install root — `~/.soundbox`, or `--data-dir`.
+   * The install root — `~/.mirli` (or a pre-rename `~/.soundbox`), or `--data-dir`.
    *
    * Shared by every profile, and the home of the things that are expensive to
    * have twice: `models/` (weights, tens of gigabytes) and `bin/` (the
@@ -405,8 +407,21 @@ export class Paths {
   }
 }
 
-export function defaultDataDir(): string {
-  return process.env.SOUNDBOX_DATA_DIR || join(homedir(), `.${APP_NAME}`);
+/** The data directory's name from before the rename to Mirli. */
+export const LEGACY_APP_NAME = "soundbox";
+
+/**
+ * `MIRLI_DATA_DIR` (or the older `SOUNDBOX_DATA_DIR`) if set, else `~/.mirli`.
+ * An install from before the rename keeps using its `~/.soundbox` until a
+ * `~/.mirli` exists. Nothing is moved: the folder holds the library, every
+ * WAV and the models (which a standalone audio.cpp may share).
+ */
+export function defaultDataDir(home: string = homedir()): string {
+  const explicit = envVar("MIRLI_DATA_DIR");
+  if (explicit) return explicit;
+  const current = join(home, `.${APP_NAME}`);
+  const legacy = join(home, `.${LEGACY_APP_NAME}`);
+  return !existsSync(current) && existsSync(legacy) ? legacy : current;
 }
 
 export class Config {
@@ -526,7 +541,7 @@ export class Config {
    *
    * Only the config half of a switch. The live database, the enabled-model
    * list and the LLM/image engines are the service's to reconcile — see
-   * `SoundboxService.switchProfile`, which is the method callers should use.
+   * `MirliService.switchProfile`, which is the method callers should use.
    */
   useProfile(id: string): void {
     const registry = readRegistry(this.base);

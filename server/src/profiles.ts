@@ -1,10 +1,10 @@
 /**
- * Named profiles — one Soundbox install, several separate libraries.
+ * Named profiles — one Mirli install, several separate libraries.
  *
  * A profile is a data directory: its own `soundbox.db`, `sounds/`, `artwork/`
  * and `settings.json`. Switching to another one is how you keep a curated
  * "demo" library apart from the scratch you generate while developing,
- * without a second checkout or a second `SOUNDBOX_DATA_DIR` to remember.
+ * without a second checkout or a second `MIRLI_DATA_DIR` to remember.
  *
  * Two things deliberately do *not* move with the profile:
  *

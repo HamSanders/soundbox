@@ -1,3 +1,6 @@
+// First, before anything that reads persisted state: see legacy-storage.ts.
+import "./lib/legacy-storage.ts";
+
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 

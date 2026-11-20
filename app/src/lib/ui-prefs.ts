@@ -8,7 +8,7 @@
 
 import { create } from "zustand";
 
-const KEY = "soundbox.ui-prefs";
+const KEY = "mirli.ui-prefs";
 
 interface UiPrefs {
   /** Keep the sidebar open on studio and Voice Lab pages, where it folds to

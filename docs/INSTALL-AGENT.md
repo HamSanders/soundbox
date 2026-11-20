@@ -27,7 +27,7 @@ HTTP API, which is documented in full in [API.md](API.md).
   `device` (`cuda`, `metal` or `cpu`), `gpu_name`, `vram_total_mb` and
   `vram_free_mb`. Pick models that fit, and say so if the machine is CPU-only:
   generation works there, but takes minutes rather than seconds.
-- **Reuse what exists.** Weights live under `~/.soundbox/models` and are shared
+- **Reuse what exists.** Weights live under `~/.mirli/models` and are shared
   by every profile. If `GET /api/models` shows a model as `installed`, do not
   download it again.
 - **Name what you could not do.** The first launch of an unsigned installer

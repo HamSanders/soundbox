@@ -3,7 +3,10 @@
  * Navigation, device status and theme live in the sidebar now.
  */
 
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 
 import { HeaderSlot } from "@/components/header-slot";
 import { ProfileSwitcher } from "@/components/profile-switcher";
@@ -23,6 +26,9 @@ const TITLES: Record<string, string> = {
   "/library/speech": "Text to Speech",
   "/studio": "Studio",
   "/voice/lab": "Voice Lab",
+  "/voice/new": "Voice Creation",
+  "/voice/new/clone": "Clone a Voice",
+  "/voice/new/builtin": "Built-in Voice",
   "/projects": "Projects",
   "/models": "Models",
   "/activity": "Activity",
@@ -30,7 +36,7 @@ const TITLES: Record<string, string> = {
 };
 
 /** `/sounds/:id` isn't a top-level page — it drills into the Library — so
- *  its crumb extends "Soundbox / Library" instead of replacing it. */
+ *  its crumb extends "Mirli / Library" instead of replacing it. */
 function SoundCrumb({ id }: { id: string }) {
   const { data: sound } = useSound(id);
   return (
@@ -62,9 +68,10 @@ export function AppHeader() {
   return (
     <header className="bg-background/85 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 border-b px-3 backdrop-blur">
       <SidebarTrigger className="-ml-1" />
+      <HistoryButtons />
       <Separator orientation="vertical" className="mr-1 !h-4" />
       <nav aria-label="Breadcrumb" className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-sm">
-        <span>Soundbox</span>
+        <span>Mirli</span>
         {soundId ? (
           <SoundCrumb id={soundId} />
         ) : builder !== null ? (
@@ -78,7 +85,7 @@ export function AppHeader() {
         ) : (
           <>
             <span aria-hidden="true">/</span>
-            <span className="text-foreground font-medium">{TITLES[pathname] ?? "Soundbox"}</span>
+            <span className="text-foreground font-medium">{TITLES[pathname] ?? "Mirli"}</span>
           </>
         )}
       </nav>
@@ -100,5 +107,34 @@ export function AppHeader() {
         <ProfileSwitcher />
       </div>
     </header>
+  );
+}
+
+/**
+ * Back and forward, between the sidebar toggle and the breadcrumb, the way a
+ * browser or a music app puts them. The desktop app has no browser chrome, so
+ * without these the only way back from a sound or a story is the crumb.
+ *
+ * Whether there is somewhere to go comes from the Navigation API where the
+ * webview has it (WebView2 and WebKitGTK do), and from React Router's own
+ * history index otherwise. Re-read on every location change.
+ */
+function HistoryButtons() {
+  const navigate = useNavigate();
+  useLocation();
+  const nav = (window as unknown as { navigation?: { canGoBack: boolean; canGoForward: boolean } })
+    .navigation;
+  const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+  const canBack = nav ? nav.canGoBack && idx > 0 : idx > 0;
+  const canForward = nav ? nav.canGoForward : true;
+  return (
+    <div className="flex items-center">
+      <Button variant="ghost" size="icon-sm" aria-label="Back" disabled={!canBack} onClick={() => navigate(-1)}>
+        <ChevronLeftIcon />
+      </Button>
+      <Button variant="ghost" size="icon-sm" aria-label="Forward" disabled={!canForward} onClick={() => navigate(1)}>
+        <ChevronRightIcon />
+      </Button>
+    </div>
   );
 }

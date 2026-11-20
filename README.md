@@ -10,6 +10,8 @@ Code, Cursor or any MCP agent do it. No account, no credits, works offline. MIT.
 
 Mirli was formerly Soundbox. The repository, the `soundbox` command, the
 `soundbox.*` MCP tools and the installer file names keep the old name for now.
+Environment variables are `MIRLI_*`, and the old `SOUNDBOX_*` names still work
+(0.5.0 and earlier read only `SOUNDBOX_*`).
 
 [Download](#download) · [Hear it](#hear-it) · [For agents](#for-agents) · [Models](#models) · [Docs](#docs) · [Website](https://mirli.app/) · [Patreon](https://patreon.com/soundboxai)
 
@@ -35,7 +37,7 @@ Mirli was formerly Soundbox. The repository, the `soundbox` command, the
 
 Four models are verified end to end and on by default; 61 more can be switched
 on from the Models page. Each model's licence is shown before you download it.
-Everything stays in one SQLite file and a folder of WAVs under `~/.soundbox`.
+Everything stays in one SQLite file and a folder of WAVs under `~/.mirli`.
 Profiles give you several libraries in one install, one per game or client,
 switched from the header without a restart; the models are shared.
 
@@ -63,6 +65,7 @@ The [download page](https://mirli.app/download/) picks the installer for your sy
 | **Windows** 10 and 11 (x64) | [`Soundbox_x.y.z_x64-setup.exe`](https://mirli.app/download/) |
 | **macOS**, Apple silicon | [`Soundbox_x.y.z_aarch64.dmg`](https://mirli.app/download/) |
 | **macOS**, Intel | [`Soundbox_x.y.z_x64.dmg`](https://mirli.app/download/) |
+| **Linux** x64 (glibc 2.35+) | [`Soundbox_x.y.z_amd64.AppImage` or `.deb`](https://github.com/HamSanders/soundbox/releases/latest) |
 
 The installer carries its own runtime. The builds are not signed yet, so the
 first launch asks you to confirm ([where](docs/DESKTOP.md#installing)). Open
@@ -72,11 +75,11 @@ model downloads when you pick it, with its licence shown first.
 | Hardware | What to expect |
 |---|---|
 | NVIDIA GPU (Windows, Linux) | CUDA. A few GB of VRAM covers the verified models; MiniMax Music 3 wants about 10 GB. |
-| AMD or Intel GPU | Runs on the CPU unless you set `SOUNDBOX_AUDIOCPP_BACKEND=vulkan` ([how](docs/AUDIOCPP.md#choosing-a-backend)). Vulkan is not yet confirmed on the verified models; reports welcome. |
+| AMD or Intel GPU | Runs on the CPU unless you set `MIRLI_AUDIOCPP_BACKEND=vulkan` ([how](docs/AUDIOCPP.md#choosing-a-backend)). Vulkan is not yet confirmed on the verified models; reports welcome. |
 | Apple silicon | Metal. Installers exist; none of the verified models has been confirmed on a Mac yet. |
 | No dedicated GPU | Works, slowly. A clip that takes seconds on a GPU takes minutes on the CPU. |
 
-Linux, Docker and running from source are under [Run from source](#run-from-source).
+Docker and running from source (Linux arm64 included) are under [Run from source](#run-from-source).
 
 ### Install with a prompt
 
@@ -202,9 +205,9 @@ To build from the checkout instead, add `-f docker-compose.build.yml`
 (and `-f docker-compose.build-cuda.yml` for CUDA) and `--build`; see
 [docs/INSTALL.md](docs/INSTALL.md#docker).
 
-There is no authentication unless you set `SOUNDBOX_API_TOKEN`, so keep the
+There is no authentication unless you set `MIRLI_API_TOKEN`, so keep the
 port on localhost, or set a token and serve it over HTTPS, and set
-`SOUNDBOX_ALLOWED_HOSTS` to the name you reach it by. Details are in
+`MIRLI_ALLOWED_HOSTS` to the name you reach it by. Details are in
 [docs/INSTALL.md](docs/INSTALL.md#access-token).
 
 **HTTP API.** Everything the app does is available on port 17494:
@@ -244,7 +247,7 @@ says what to expect.
 and audio.cpp runs on Metal. None of the verified models has been confirmed on
 a Mac yet, so reports are welcome.
 
-**How do I remove it?** Delete the app and `~/.soundbox`. There is no account
+**How do I remove it?** Delete the app and `~/.mirli`. There is no account
 to close and nothing was uploaded.
 
 ## Star history

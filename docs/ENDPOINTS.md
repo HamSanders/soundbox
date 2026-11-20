@@ -71,7 +71,7 @@ On the far machine:
 1. Install the models you want to use there.
 2. Start it where the near machine can reach it, for example
    `soundbox --host 0.0.0.0`, and list the name you will reach it by in
-   `SOUNDBOX_ALLOWED_HOSTS`. Otherwise it answers `403 Forbidden host`.
+   `MIRLI_ALLOWED_HOSTS`. Otherwise it answers `403 Forbidden host`.
 3. Give it an [access token](INSTALL.md#access-token) if anything other than
    your own machines can reach that port.
 

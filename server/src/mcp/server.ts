@@ -10,7 +10,7 @@
  *    clients that don't follow redirects on POST would break;
  *  - DNS-rebinding protection is armed with a localhost allowlist, which
  *    silently breaks `--host 0.0.0.0`, so the allowlist follows how the server
- *    is actually bound via SOUNDBOX_ALLOWED_HOSTS (comma-separated).
+ *    is actually bound via MIRLI_ALLOWED_HOSTS (comma-separated).
  */
 
 import { randomUUID } from "node:crypto";
@@ -30,7 +30,7 @@ import { z } from "zod";
 import { DEFAULT_HOST, DEFAULT_PORT, VERSION } from "../config.js";
 import { allowedHostEntries, isListedHost, isTrustedOrigin } from "../origins.js";
 import type { Job, ModelInfo, McpToolInfo, Origin, Sound, StorySegment } from "../schemas.js";
-import type { SoundboxService } from "../service.js";
+import type { MirliService } from "../service.js";
 import type { CallRecord, TrackOptions } from "../telemetry.js";
 import {
   DEVICE_KINDS,
@@ -43,7 +43,7 @@ import {
 } from "../devices.js";
 import { ProgressReporter } from "./progress.js";
 
-export const MCP_INSTRUCTIONS = `Soundbox makes audio locally from open-weight models: sound effects, music, and speech.
+export const MCP_INSTRUCTIONS = `Mirli makes audio locally from open-weight models: sound effects, music, and speech.
 
 Call soundbox.generate with a descriptive prompt — the models respond to
 material, action and space ("heavy wooden door slamming in a stone corridor"),
@@ -128,7 +128,7 @@ export interface SoundResult {
   name: string;
   /** Absolute path to the WAV file on this machine. */
   path: string;
-  /** HTTP URL, relative to the Soundbox server. */
+  /** HTTP URL, relative to the Mirli server. */
   url: string;
   model: string;
   prompt: string;
@@ -178,7 +178,7 @@ export interface ModelSummary {
    * them as `delivery` to soundbox.speak, add_lines or update_line.
    *
    * Only for `tts` models, and only where the family lists any, because those
-   * are the only ones Soundbox forwards. An absent list is a real answer: the
+   * are the only ones Mirli forwards. An absent list is a real answer: the
    * words and the voice are that model's only controls. Read off audio.cpp's
    * own parameter table, not guessed — see models/params.ts.
    */
@@ -207,7 +207,7 @@ export interface DeliveryOption {
  * told apart from an edit by *which model made it*, not by its name — both
  * end in a parenthesised suffix.
  */
-async function separatorIds(svc: SoundboxService): Promise<Set<string>> {
+async function separatorIds(svc: MirliService): Promise<Set<string>> {
   return new Set((await svc.listModels()).filter((m) => m.task === "sep").map((m) => m.id));
 }
 
@@ -219,13 +219,13 @@ async function separatorIds(svc: SoundboxService): Promise<Set<string>> {
  * choice made, and needs "none installed" to say so in words rather than come
  * back as a failed job.
  */
-async function defaultSeparator(svc: SoundboxService): Promise<string> {
+async function defaultSeparator(svc: MirliService): Promise<string> {
   const ready = (await svc.listModels()).filter(
     (m) => m.task === "sep" && (m.status === "loaded" || m.status === "installed"),
   );
   if (!ready.length) {
     throw new Error(
-      "No stem-separation model is installed. Open the Soundbox app and download " +
+      "No stem-separation model is installed. Open the Mirli app and download " +
         "one from the Models tab, or call soundbox.list_models to see the options.",
     );
   }
@@ -238,7 +238,7 @@ function stemNameOf(sound: Sound): string | undefined {
 }
 
 function toResult(
-  svc: SoundboxService,
+  svc: MirliService,
   sound: Sound,
   separators?: Set<string>,
 ): SoundResult {
@@ -311,7 +311,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     title: "Generate a sound effect",
     description:
       "Generate one or more sound effects from a text description and save " +
-      "them to the Soundbox library. Blocks until the audio is on disk.",
+      "them to the Mirli library. Blocks until the audio is on disk.",
     calls: 0,
   },
   {
@@ -680,7 +680,7 @@ function clientOf(
  *  keeps this independent of the SSE plumbing. `onTick` sees every poll — it
  *  is how a caller's ProgressReporter hears about the job. */
 async function awaitJob(
-  svc: SoundboxService,
+  svc: MirliService,
   jobId: string,
   onTick?: (job: Job) => void,
   timeoutS = 900.0,
@@ -711,7 +711,7 @@ async function awaitJob(
  * the studio disabled with nothing working on it.
  */
 async function claiming<T>(
-  svc: SoundboxService,
+  svc: MirliService,
   storyId: string,
   label: string,
   work: () => Promise<T> | T,
@@ -732,7 +732,7 @@ async function claiming<T>(
  * Which of the two builders opens it is the story's own answer — a script
  * dropped into the Music Builder would arrive with its script panel missing.
  */
-function studioUrl(svc: SoundboxService, story_id: string): string {
+function studioUrl(svc: MirliService, story_id: string): string {
   const builder = svc.getStory(story_id)?.builder ?? "script";
   return `http://${DEFAULT_HOST}:${DEFAULT_PORT}/#/studio/${builder}/${story_id}`;
 }
@@ -747,7 +747,7 @@ function studioUrl(svc: SoundboxService, story_id: string): string {
  * they see the rest. `soundbox.get_story` still returns the lines, because
  * that call is explicitly asking for them.
  */
-function storySummary(svc: SoundboxService, storyId: string) {
+function storySummary(svc: MirliService, storyId: string) {
   const story = svc.getStory(storyId);
   if (story === null) throw new Error("No story with id " + storyId);
   const lines = svc.listSegments(storyId);
@@ -941,7 +941,7 @@ interface TtsChoice {
  * its absence only reported) when a line actually needs it.
  */
 async function ttsResolver(
-  svc: SoundboxService,
+  svc: MirliService,
   requested?: string,
 ): Promise<(voiceId: string | null | undefined) => TtsChoice> {
   const models = await svc.listModels();
@@ -960,7 +960,7 @@ async function ttsResolver(
   const fallback = (): string => {
     if (!ready.length) {
       throw new Error(
-        "No text-to-speech model is installed. Open the Soundbox app and download " +
+        "No text-to-speech model is installed. Open the Mirli app and download " +
           "one from the Models tab.",
       );
     }
@@ -998,11 +998,11 @@ function modelsUsed(choices: TtsChoice[]): {
  * resolve the service at call time, after startup has built it.
  */
 export function buildMcp(
-  getService: () => SoundboxService,
+  getService: () => MirliService,
   transport: "http" | "stdio" = "http",
 ): McpServer {
   const mcp = new McpServer(
-    { name: "soundbox", version: VERSION },
+    { name: "mirli", version: VERSION },
     { instructions: MCP_INSTRUCTIONS },
   );
 
@@ -1059,7 +1059,7 @@ export function buildMcp(
             );
             if (!ready.length) {
               throw new Error(
-                "No local model is installed yet. Open the Soundbox app and download " +
+                "No local model is installed yet. Open the Mirli app and download " +
                   "one from the Models tab, or call soundbox.list_models to see options.",
               );
             }
@@ -1639,7 +1639,7 @@ export function buildMcp(
   /* ------------------------------------------------------------ devices */
 
   /** A lane's chain as stored. A track with no row has no devices. */
-  function chainOf(svc: SoundboxService, storyId: string, trackIndex: number): DeviceSpec[] {
+  function chainOf(svc: MirliService, storyId: string, trackIndex: number): DeviceSpec[] {
     return svc.listTracks(storyId).find((t) => t.track_index === trackIndex)?.devices ?? [];
   }
 
@@ -1671,7 +1671,7 @@ export function buildMcp(
    *  call usually needs an id from it, plus anything that did not land as
    *  asked. */
   function chainResult(
-    svc: SoundboxService,
+    svc: MirliService,
     storyId: string,
     trackIndex: number,
     extra: Record<string, unknown>,
@@ -1687,7 +1687,7 @@ export function buildMcp(
   }
 
   function saveChain(
-    svc: SoundboxService,
+    svc: MirliService,
     storyId: string,
     trackIndex: number,
     chain: DeviceSpec[],
@@ -1880,14 +1880,14 @@ export function buildMcp(
 }
 
 /** Kept for callers/tests that want the configured exception list on its own:
- *  SOUNDBOX_ALLOWED_HOSTS, parsed the same way as everywhere else (origins.ts). */
+ *  MIRLI_ALLOWED_HOSTS, parsed the same way as everywhere else (origins.ts). */
 export function allowedHosts(): string[] {
   return allowedHostEntries();
 }
 
 /**
  * Is this `Host` header a loopback address (any port), or listed in
- * SOUNDBOX_ALLOWED_HOSTS (a bare `host` on any port, `host:port` on that port)?
+ * MIRLI_ALLOWED_HOSTS (a bare `host` on any port, `host:port` on that port)?
  *
  * The SDK's own `allowedHosts` option only does exact-string `.includes()`
  * matching — there is no wildcard port support — so "127.0.0.1:*" silently
@@ -1964,11 +1964,11 @@ interface McpSession {
  */
 export class McpEndpoint {
   private readonly sessions = new Map<string, McpSession>();
-  private readonly getService: () => SoundboxService;
+  private readonly getService: () => MirliService;
   private readonly idleMs: number;
   private readonly sweeper: NodeJS.Timeout;
 
-  constructor(getService: () => SoundboxService, idleMs: number = MCP_SESSION_IDLE_MS) {
+  constructor(getService: () => MirliService, idleMs: number = MCP_SESSION_IDLE_MS) {
     this.getService = getService;
     this.idleMs = idleMs;
     this.sweeper = setInterval(
@@ -2086,7 +2086,7 @@ export function mountMcp(
       handler: (req: FastifyLikeRequest, reply: FastifyLikeReply) => Promise<void>;
     }): unknown;
   },
-  getService: () => SoundboxService,
+  getService: () => MirliService,
 ): McpEndpoint {
   const endpoint = new McpEndpoint(getService);
   for (const url of ["/mcp", "/mcp/"]) {

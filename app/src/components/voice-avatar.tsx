@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 /**
  * A voice's avatar, or its initial.
  *
- * The fallback is a letter on a tinted tile rather than a generic person
+ * The fallback is a letter, in the display face, on a flat paper tile rather than a generic person
  * glyph: at 40px a stock silhouette is indistinguishable between rows, while
  * an initial is the one thing that already differs per voice. It is also the
  * same fallback `MusicCover` uses, so absent artwork looks deliberate across
@@ -47,7 +47,7 @@ export function VoiceAvatar({
       <span
         aria-hidden="true"
         className={cn(
-          "from-primary/25 via-muted to-accent text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-sm font-semibold",
+          "bg-muted text-foreground/70 font-display flex size-10 shrink-0 items-center justify-center rounded-lg text-base leading-none font-extrabold uppercase",
           className,
         )}
       >

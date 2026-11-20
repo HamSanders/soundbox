@@ -14,19 +14,19 @@ const TOKEN = "correct-horse-battery-staple-42";
 describe("tokenFromEnv", () => {
   it("is null when unset or blank", () => {
     expect(tokenFromEnv({})).toBeNull();
-    expect(tokenFromEnv({ SOUNDBOX_API_TOKEN: "   " })).toBeNull();
+    expect(tokenFromEnv({ MIRLI_API_TOKEN: "   " })).toBeNull();
   });
 
   it("trims, and refuses one too short to protect anything", () => {
-    expect(tokenFromEnv({ SOUNDBOX_API_TOKEN: `  ${TOKEN} ` })).toBe(TOKEN);
-    expect(() => tokenFromEnv({ SOUNDBOX_API_TOKEN: "x".repeat(MIN_TOKEN_LENGTH - 1) })).toThrow(
+    expect(tokenFromEnv({ MIRLI_API_TOKEN: `  ${TOKEN} ` })).toBe(TOKEN);
+    expect(() => tokenFromEnv({ MIRLI_API_TOKEN: "x".repeat(MIN_TOKEN_LENGTH - 1) })).toThrow(
       /at least 16/,
     );
   });
 
   it("gives the CLI and bridge a bearer header only when set", () => {
     expect(bearerHeaders({})).toEqual({});
-    expect(bearerHeaders({ SOUNDBOX_API_TOKEN: TOKEN })).toEqual({ Authorization: `Bearer ${TOKEN}` });
+    expect(bearerHeaders({ MIRLI_API_TOKEN: TOKEN })).toEqual({ Authorization: `Bearer ${TOKEN}` });
   });
 });
 

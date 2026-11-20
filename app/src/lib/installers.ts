@@ -120,7 +120,7 @@ export async function detectPlatform(): Promise<PlatformId | null> {
   return null;
 }
 
-const CACHE_KEY = "soundbox.latest-release";
+const CACHE_KEY = "mirli.latest-release";
 const CACHE_MS = 10 * 60 * 1000;
 let pending: Promise<Release | null> | null = null;
 

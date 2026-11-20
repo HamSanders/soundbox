@@ -1,5 +1,5 @@
 /**
- * "Is there a newer version?" — the one request Soundbox makes on its own.
+ * "Is there a newer version?" — the one request Mirli makes on its own.
  *
  * Once a day (at most) a running server asks the project's update endpoint for
  * the latest release. The request is a GET carrying two things in the query:
@@ -9,7 +9,7 @@
  * roughly how many installs are running and on which versions. Your address is
  * visible to the host, as it is to any web server, and is not stored.
  *
- * It can be turned off in Settings → Updates, or with `SOUNDBOX_UPDATE_CHECK=0`
+ * It can be turned off in Settings → Updates, or with `MIRLI_UPDATE_CHECK=0`
  * (the env var wins, for Docker and managed installs). Off means no request.
  *
  * Why a throttle file rather than a timer alone: the endpoint counts requests,
@@ -28,8 +28,9 @@ import { join } from "node:path";
 import type { Config } from "./config.js";
 import { VERSION } from "./config.js";
 import { getLogger } from "./logging.js";
+import { envVar } from "./env.js";
 
-const _logger = getLogger("soundbox.update");
+const _logger = getLogger("mirli.update");
 const log = { info: (m: string) => _logger.info(m), warn: (m: string) => _logger.warning(m) };
 
 /** Where the question goes. Overridable for tests and for a fork's own host. */
@@ -48,7 +49,7 @@ const THROTTLE_FILE = "update-check.json";
 export interface UpdateStatus {
   /** Whether a check will happen: the setting is on and nothing forces it off. */
   enabled: boolean;
-  /** `"env"` when SOUNDBOX_UPDATE_CHECK=0 is what turned it off. */
+  /** `"env"` when MIRLI_UPDATE_CHECK=0 is what turned it off. */
   disabled_by: "env" | "setting" | null;
   current: string;
   latest: string | null;
@@ -148,12 +149,12 @@ export class UpdateChecker {
   }
 
   endpoint(): string {
-    return process.env.SOUNDBOX_UPDATE_URL || DEFAULT_UPDATE_URL;
+    return envVar("MIRLI_UPDATE_URL") || DEFAULT_UPDATE_URL;
   }
 
   /** Why no check will happen, or null when one will. */
   private disabledBy(): "env" | "setting" | null {
-    const env = process.env.SOUNDBOX_UPDATE_CHECK;
+    const env = envVar("MIRLI_UPDATE_CHECK");
     if (env !== undefined && /^(0|false|off|no)$/i.test(env.trim())) return "env";
     if (!this.config.settings.update_check) return "setting";
     return null;

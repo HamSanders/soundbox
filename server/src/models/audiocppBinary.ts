@@ -1,9 +1,9 @@
 /**
  * Fetches and manages the `audiocpp_cli` binary itself.
  *
- * Every model Soundbox runs goes through one native binary rather than a
+ * Every model Mirli runs goes through one native binary rather than a
  * pip-installable package, so this module is the auto-managed alternative to
- * "download it yourself and set SOUNDBOX_AUDIOCPP_BIN": resolve OS + backend,
+ * "download it yourself and set MIRLI_AUDIOCPP_BIN": resolve OS + backend,
  * download the matching GitHub release asset, verify it, and cache it under
  * the data directory. `audiocpp.findBinary()` checks this managed location
  * before falling back to PATH, so an installed-via-CLI binary is picked up
@@ -35,6 +35,7 @@ import {
   type Release,
   type ReleaseAsset,
 } from "./releaseInstall.js";
+import { envVar } from "../env.js";
 
 export const GITHUB_REPO = "0xShug0/audio.cpp";
 export const BINARY_NAME =
@@ -46,7 +47,7 @@ export const DEFAULT_VERSION = "latest";
 /** Bring-your-own override: an absolute path to an audiocpp_cli the user
  *  installed themselves. Re-exported from `audiocpp.ts`, which is where the
  *  error messages that name it live. */
-export const BIN_ENV = "SOUNDBOX_AUDIOCPP_BIN";
+export const BIN_ENV = "MIRLI_AUDIOCPP_BIN";
 
 /** How long a single HTTP call may take. Release metadata is small; the binary
  *  download itself streams with its own progress reporting below. */
@@ -149,7 +150,7 @@ export async function installedVersions(): Promise<string[]> {
  * Whether *a* usable audiocpp_cli exists, managed or not.
  *
  * Resolves through the same `findBinary()` order generation uses, so someone
- * who set `SOUNDBOX_AUDIOCPP_BIN` or ran `brew install audio-cpp` isn't told
+ * who set `MIRLI_AUDIOCPP_BIN` or ran `brew install audio-cpp` isn't told
  * the runtime is missing and pushed into downloading a second copy. Only a
  * managed install carries a version — an external binary's release tag isn't
  * ours to know, and inferring it from a directory name would be a guess
@@ -166,7 +167,7 @@ export async function status(): Promise<InstallStatus> {
     version: managed ? basename(join(binary, "..")) : null,
     path: binary,
     backend: detectBackend(),
-    source: managed ? "managed" : (process.env[BIN_ENV] ?? "").trim() ? "env" : "path",
+    source: managed ? "managed" : (envVar(BIN_ENV) ?? "").trim() ? "env" : "path",
   };
 }
 
@@ -187,7 +188,7 @@ function isManagedPath(path: string): boolean {
  * doesn't have a stray system-wide `audiocpp_cli` silently win instead.
  */
 export async function findBinary(): Promise<string | null> {
-  const override = (process.env[BIN_ENV] ?? "").trim();
+  const override = (envVar(BIN_ENV) ?? "").trim();
   if (override) return (await isFile(override)) ? override : null;
 
   const managed = await findManagedBinary();
@@ -435,7 +436,7 @@ async function getRelease(version: string): Promise<Release> {
     throw new InstallError(
       `Could not reach GitHub to look up audio.cpp release '${version}' ` +
         `(${String(exc)}). Check your network, or download a binary manually per ` +
-        `docs/AUDIOCPP.md and set SOUNDBOX_AUDIOCPP_BIN.`,
+        `docs/AUDIOCPP.md and set MIRLI_AUDIOCPP_BIN.`,
     );
   }
   checkRelease(GITHUB_REPO, release, installError);
@@ -462,7 +463,7 @@ function pickAsset(release: Release, backend: string | null): ReleaseAsset {
         `(${platform}/${resolved}/${arch}) in release '${release.tag_name}'. ` +
         `Available assets: ${names}\n\n` +
         `Download one manually from ` +
-        `https://github.com/${GITHUB_REPO}/releases and set SOUNDBOX_AUDIOCPP_BIN ` +
+        `https://github.com/${GITHUB_REPO}/releases and set MIRLI_AUDIOCPP_BIN ` +
         `instead — see docs/AUDIOCPP.md.`,
     );
   }
@@ -571,7 +572,7 @@ async function extract(archive: string, dest: string): Promise<void> {
       if (code !== 0) {
         throw new InstallError(
           `Could not unpack ${basename(archive)} — install \`unzip\`, or download ` +
-            `the release manually and set SOUNDBOX_AUDIOCPP_BIN.` +
+            `the release manually and set MIRLI_AUDIOCPP_BIN.` +
             (stderr ? `\n\n${stderr}` : ""),
         );
       }

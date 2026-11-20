@@ -7,7 +7,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 /**
  * Multi-file image models, and the ones you add yourself.
  *
- * `SOUNDBOX_DATA_DIR` is set before the module loads so `customCatalogPath()`
+ * `MIRLI_DATA_DIR` is set before the module loads so `customCatalogPath()`
  * resolves into a temp tree; the loader re-reads on mtime, so writing the file
  * mid-test is the point rather than a hazard.
  */
@@ -15,7 +15,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 let tmp: string;
 let modelsDir: string;
 let customPath: string;
-const previousDataDir = process.env.SOUNDBOX_DATA_DIR;
+const previousDataDir = process.env.MIRLI_DATA_DIR;
 
 let catalog: typeof import("../src/image/catalog.js");
 
@@ -24,7 +24,7 @@ beforeAll(async () => {
   modelsDir = join(tmp, "models");
   await mkdir(modelsDir, { recursive: true });
   customPath = join(modelsDir, "custom.json");
-  process.env.SOUNDBOX_DATA_DIR = tmp;
+  process.env.MIRLI_DATA_DIR = tmp;
   catalog = await import("../src/image/catalog.js");
 });
 
@@ -34,8 +34,8 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  if (previousDataDir === undefined) delete process.env.SOUNDBOX_DATA_DIR;
-  else process.env.SOUNDBOX_DATA_DIR = previousDataDir;
+  if (previousDataDir === undefined) delete process.env.MIRLI_DATA_DIR;
+  else process.env.MIRLI_DATA_DIR = previousDataDir;
   await rm(tmp, { recursive: true, force: true });
 });
 

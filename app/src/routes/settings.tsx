@@ -1,19 +1,16 @@
-/** Settings — storage, credentials and output post-processing. */
+/**
+ * Settings: grouped by what a person is trying to do, searchable, saved on
+ * change. The groups, labels and search words live in
+ * `components/settings-index.ts`; this file only wires each row to its
+ * control and its default.
+ */
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  AlertTriangleIcon,
-  CheckCircle2Icon,
-  CheckIcon,
-  CopyIcon,
-  EyeOffIcon,
-  FolderOpenIcon,
-} from "lucide-react";
+import { AlertTriangleIcon, CheckCircle2Icon, CheckIcon, CopyIcon, EyeOffIcon, FolderOpenIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -29,9 +26,18 @@ import { Switch } from "@/components/ui/switch";
 import { ArtworkSettingsCard } from "@/components/artwork-settings";
 import { EndpointSettingsCard } from "@/components/endpoint-settings";
 import { FolderPickerDialog } from "@/components/folder-picker";
-import { SettingsLayout, SettingsSection } from "@/components/settings-layout";
+import {
+  ConfirmAction,
+  Embedded,
+  SettingRow,
+  SettingsGroup,
+  SettingsLayout,
+  useMarkSaved,
+  useSettingSave,
+} from "@/components/settings-layout";
 import { OutputDeviceCard } from "@/components/output-device-card";
 import { UpdateSettingsCard } from "@/components/update-settings";
+import { useOutputStore } from "@/lib/audio-output";
 import { useUiPrefs } from "@/lib/ui-prefs";
 import {
   useAudioCppRuntime,
@@ -39,48 +45,31 @@ import {
   useLlmStatus,
   useMcpStatus,
   useSettings,
-  useUpdateSettings,
+  useUpdateStatus,
 } from "@/lib/queries";
+import type { Settings } from "@/lib/api";
+
+/** The server's defaults (server/src/config.ts `DEFAULT_SETTINGS`). */
+const DEFAULTS = {
+  output_format: "wav",
+  normalize_lufs: -16,
+  trim_silence: true,
+  auto_unload_minutes: 10,
+  device: "auto",
+  audiocpp_mode: "managed",
+  llm_mode: "off",
+  otel_endpoint: "",
+  update_check: true,
+} as const;
 
 export function SettingsPage() {
   const { data: settings, isLoading, isError, error } = useSettings();
-  const { data: health } = useHealth();
-  const { data: mcpStatus } = useMcpStatus();
-  const update = useUpdateSettings();
-
-  const [token, setToken] = useState("");
-  const [lufs, setLufs] = useState("-16");
-  const [autoUnload, setAutoUnload] = useState("10");
-  const [copied, setCopied] = useState(false);
-  const [otelEndpoint, setOtelEndpoint] = useState("");
-  const [llmBaseUrl, setLlmBaseUrl] = useState("");
-  const [llmExternalModel, setLlmExternalModel] = useState("");
-  const [llmApiKey, setLlmApiKey] = useState("");
-  const [modelsDir, setModelsDir] = useState("");
-  const [soundsDir, setSoundsDir] = useState("");
-  const [pickingSounds, setPickingSounds] = useState(false);
-  const { data: llmStatus } = useLlmStatus();
-  const { data: audiocppRuntime } = useAudioCppRuntime();
-
-  useEffect(() => {
-    if (!settings) return;
-    // Always the path actually in force, so the field answers "where do my
-    // weights live" even in Local mode where it is read-only. Clearing it and
-    // blurring sends "", which the server reads as "back to the default".
-    setModelsDir(settings.audiocpp_models_dir);
-    // Same idea for sounds: always the folder in force, blank-and-blur resets.
-    setSoundsDir(settings.sounds_dir);
-    setLufs(settings.normalize_lufs === null ? "-16" : String(settings.normalize_lufs));
-    setAutoUnload(String(settings.auto_unload_minutes));
-    setOtelEndpoint(settings.otel_endpoint);
-    setLlmBaseUrl(settings.llm_external_base_url);
-    setLlmExternalModel(settings.llm_external_model);
-  }, [settings]);
 
   if (isLoading) {
     return (
-      <div className="max-w-2xl space-y-4">
+      <div className="mx-auto max-w-3xl space-y-4">
         <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-10 w-full" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-64 w-full" />
       </div>
@@ -98,579 +87,317 @@ export function SettingsPage() {
     );
   }
 
-  const normalizeOn = settings.normalize_lufs !== null;
-  // The server hands back native paths, so a placeholder built from one has
-  // to follow the platform the server runs on rather than ours.
-  const pathSep = settings.data_dir.includes("\\") ? "\\" : "/";
-
-  // Read out here rather than inside the closure below: the `!settings` guard
-  // above does not narrow through a function boundary.
-  const savedSoundsDir = settings.sounds_dir;
-
-  /**
-   * Save the sounds folder, from the field or from the picker.
-   *
-   * The mutation already toasts either way; the callback here only puts the
-   * field back to what the server still believes, so a path it rejected does
-   * not sit there looking like it took.
-   */
-  function saveSoundsDir(next: string) {
-    if (next === savedSoundsDir) return;
-    update.mutate({ sounds_dir: next }, { onError: () => setSoundsDir(savedSoundsDir) });
-  }
-
   return (
     <SettingsLayout>
-      <SettingsSection id="audio" title="Audio">
-        {/* -------------------------------------------------- playback device */}
-        <OutputDeviceCard />
-        {/* --------------------------------------------------------- output */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Output</CardTitle>
-            <CardDescription>Applied to every sound as it is written.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="space-y-0.5">
-                <Label htmlFor="output-format">Format</Label>
-                <p className="text-muted-foreground text-xs">
-                  WAV keeps full quality; MP3 is transcoded on download.
-                </p>
-              </div>
-              <Select
-                value={settings.output_format}
-                onValueChange={(v) => update.mutate({ output_format: v as "wav" | "mp3" })}
-              >
-                <SelectTrigger id="output-format" className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="wav">WAV</SelectItem>
-                  <SelectItem value="mp3">MP3</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      <div className="space-y-8">
+        <SoundGroup settings={settings} />
+        <PerformanceGroup settings={settings} />
+        <ModelsGroup settings={settings} />
+        <HelpersGroup settings={settings} />
+        <StorageGroup settings={settings} />
+        <InterfaceGroup />
+        <PrivacyGroup settings={settings} />
+        <DangerGroup settings={settings} />
+      </div>
+    </SettingsLayout>
+  );
+}
 
-            <div className="space-y-3 border-t pt-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="space-y-0.5">
-                  <Label htmlFor="normalize">Normalise loudness</Label>
-                  <p className="text-muted-foreground text-xs">
-                    Bring every sound to a consistent integrated loudness.
-                  </p>
-                </div>
-                <Switch
-                  id="normalize"
-                  checked={normalizeOn}
-                  onCheckedChange={(on) =>
-                    update.mutate({ normalize_lufs: on ? Number(lufs) || -16 : null })
-                  }
-                />
-              </div>
-              {normalizeOn && (
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="lufs" className="text-muted-foreground text-xs">
-                    Target
-                  </Label>
-                  <Input
-                    id="lufs"
-                    value={lufs}
-                    inputMode="decimal"
-                    className="w-24 font-mono"
-                    onChange={(e) => setLufs(e.target.value)}
-                    onBlur={() => {
-                      const n = Number(lufs);
-                      if (Number.isFinite(n)) update.mutate({ normalize_lufs: n });
-                    }}
-                  />
-                  <span className="text-muted-foreground text-xs">LUFS</span>
-                </div>
-              )}
-            </div>
+/** A text field that saves on blur or Enter, and follows the server value. */
+function useDraft(server: string) {
+  const [value, setValue] = useState(server);
+  useEffect(() => setValue(server), [server]);
+  return [value, setValue] as const;
+}
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-              <div className="space-y-0.5">
-                <Label htmlFor="trim">Trim silence</Label>
-                <p className="text-muted-foreground text-xs">
-                  Strip leading and trailing silence from generated audio.
-                </p>
-              </div>
-              <Switch
-                id="trim"
-                checked={settings.trim_silence}
-                onCheckedChange={(on) => update.mutate({ trim_silence: on })}
-              />
-            </div>
+// --------------------------------------------------------------- sound
 
-          </CardContent>
-        </Card>
-      </SettingsSection>
+function SoundGroup({ settings }: { settings: Settings }) {
+  const { save } = useSettingSave();
+  const sinkId = useOutputStore((s) => s.sinkId);
+  const setSinkId = useOutputStore((s) => s.setSinkId);
+  const markSaved = useMarkSaved();
+  const [lufs, setLufs] = useDraft(
+    settings.normalize_lufs === null ? "-16" : String(settings.normalize_lufs),
+  );
+  const normalizeOn = settings.normalize_lufs !== null;
 
-      <SettingsSection id="generation" title="Generation">
-        {/* --------------------------------------------------------- compute */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Compute device</CardTitle>
-            <CardDescription>
-              Where generation runs, and how long a model holds onto the memory
-              afterwards. Auto picks the fastest available.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="space-y-0.5">
-                <Label htmlFor="device">Device</Label>
-                <p className="text-muted-foreground text-xs">
-                  {health?.gpu_name
-                    ? `GPU detected: ${health.gpu_name}`
-                    : "No GPU detected — falling back to CPU."}
-                </p>
-              </div>
-              <Select
-                value={settings.device}
-                onValueChange={(v) =>
-                  update.mutate({ device: v as "auto" | "cuda" | "mps" | "cpu" })
-                }
-              >
-                <SelectTrigger id="device" className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="auto">Auto</SelectItem>
-                  <SelectItem value="cuda">GPU (CUDA)</SelectItem>
-                  <SelectItem value="mps">GPU (MPS)</SelectItem>
-                  <SelectItem value="cpu">CPU</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {health && (
-              <p className="text-muted-foreground border-t pt-3 text-xs">
-                Currently running on <span className="font-mono">{health.device}</span>
-                {(settings.device === "cuda" || settings.device === "mps") &&
-                health.device === "cpu"
-                  ? ` — ${settings.device.toUpperCase()} was requested but isn't available, so this fell back to CPU.`
-                  : null}
-              </p>
-            )}
+  return (
+    <SettingsGroup id="sound">
+      <SettingRow
+        id="output-device"
+        stack
+        modified={sinkId !== ""}
+        onReset={() => {
+          setSinkId("");
+          markSaved("output-device");
+        }}
+      >
+        <Embedded>
+          <OutputDeviceCard />
+        </Embedded>
+      </SettingRow>
 
-            {/* Lives here rather than with output format, where it used to sit:
-                this is about the memory the device above is holding, not about
-                the audio that comes out. */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-              <div className="space-y-0.5">
-                <Label htmlFor="auto-unload">Auto-unload model</Label>
-                <p className="text-muted-foreground text-xs">
-                  Free VRAM after this many idle minutes. 0 keeps the model resident.
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
+      <SettingRow
+        id="output-format"
+        htmlFor="output-format"
+        modified={settings.output_format !== DEFAULTS.output_format}
+        onReset={() => save("output-format", { output_format: DEFAULTS.output_format })}
+        control={
+          <Select
+            value={settings.output_format}
+            onValueChange={(v) => save("output-format", { output_format: v as "wav" | "mp3" })}
+          >
+            <SelectTrigger id="output-format" className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="wav">WAV</SelectItem>
+              <SelectItem value="mp3">MP3</SelectItem>
+            </SelectContent>
+          </Select>
+        }
+      />
+
+      <SettingRow
+        id="normalize"
+        htmlFor="normalize"
+        modified={settings.normalize_lufs !== DEFAULTS.normalize_lufs}
+        onReset={() => save("normalize", { normalize_lufs: DEFAULTS.normalize_lufs })}
+        control={
+          <div className="flex items-center gap-3">
+            {normalizeOn && (
+              <div className="flex items-center gap-1.5">
                 <Input
-                  id="auto-unload"
-                  value={autoUnload}
-                  inputMode="numeric"
+                  id="lufs"
+                  aria-label="Target loudness in LUFS"
+                  value={lufs}
+                  inputMode="decimal"
                   className="w-20 font-mono"
-                  onChange={(e) => setAutoUnload(e.target.value.replace(/\D/g, ""))}
+                  onChange={(e) => setLufs(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
                   onBlur={() => {
-                    const n = Number(autoUnload);
-                    if (Number.isFinite(n) && n !== settings.auto_unload_minutes)
-                      update.mutate({ auto_unload_minutes: n });
+                    const n = Number(lufs);
+                    if (Number.isFinite(n) && n !== settings.normalize_lufs)
+                      save("normalize", { normalize_lufs: n });
                   }}
                 />
-                <span className="text-muted-foreground text-xs">min</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        {/* ----------------------------------------------------- audio engine */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Audio engine</CardTitle>
-            <CardDescription>
-              Every model runs through audio.cpp. Point Soundbox at an audio.cpp you
-              already use and the two share one set of weights instead of each
-              downloading its own.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="space-y-0.5">
-                <Label htmlFor="audiocpp-mode">Mode</Label>
-                <p className="text-muted-foreground text-xs">
-                  Local uses the runtime Soundbox installs and manages; External uses
-                  your own audio.cpp and its models folder.
-                </p>
-              </div>
-              <Select
-                value={settings.audiocpp_mode}
-                onValueChange={(v) =>
-                  update.mutate({ audiocpp_mode: v as "managed" | "external" })
-                }
-              >
-                <SelectTrigger id="audiocpp-mode" className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="managed">Local</SelectItem>
-                  <SelectItem value="external">External</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Which binary actually won. Worth showing even in Local mode:
-                SOUNDBOX_AUDIOCPP_BIN and a copy on PATH both outrank the
-                managed install, and until now nothing in the app said so. */}
-            {audiocppRuntime && (
-              <div className="border-border space-y-1 rounded-lg border border-dashed px-3 py-2">
-                <p className="text-xs">
-                  {audiocppRuntime.engine.installed ? (
-                    <>
-                      Using{" "}
-                      <span className="font-medium">
-                        {audiocppRuntime.engine.source === "managed"
-                          ? `the managed runtime ${audiocppRuntime.engine.version ?? ""}`
-                          : audiocppRuntime.engine.source === "env"
-                            ? "your own binary (SOUNDBOX_AUDIOCPP_BIN)"
-                            : "an audiocpp_cli found on your PATH"}
-                      </span>
-                      {audiocppRuntime.engine.backend
-                        ? ` on the ${audiocppRuntime.engine.backend} backend.`
-                        : "."}
-                    </>
-                  ) : (
-                    <span className="text-muted-foreground">
-                      No audio.cpp runtime found — install it from the Models page.
-                    </span>
-                  )}
-                </p>
-                {audiocppRuntime.engine.path && (
-                  <p className="text-muted-foreground font-mono text-[11px] break-all">
-                    {audiocppRuntime.engine.path}
-                  </p>
-                )}
+                <span className="readout text-muted-foreground">LUFS</span>
               </div>
             )}
+            <Switch
+              id="normalize"
+              checked={normalizeOn}
+              onCheckedChange={(on) =>
+                save("normalize", { normalize_lufs: on ? Number(lufs) || -16 : null })
+              }
+            />
+          </div>
+        }
+      />
 
-            <div className="space-y-1.5">
-              <Label htmlFor="audiocpp-models-dir">Models folder</Label>
-              <Input
-                id="audiocpp-models-dir"
-                value={modelsDir}
-                readOnly={settings.audiocpp_mode !== "external"}
-                placeholder={audiocppRuntime?.models_dir_default ?? ""}
-                className="font-mono text-xs"
-                onChange={(e) => setModelsDir(e.target.value)}
-                onBlur={() => {
-                  if (modelsDir !== settings.audiocpp_models_dir) {
-                    update.mutate({ audiocpp_models_dir: modelsDir });
-                  }
-                }}
-              />
-              <p className="text-muted-foreground text-xs">
-                {settings.audiocpp_mode === "external" ? (
-                  <>
-                    Point this at your audio.cpp models folder and both apps will see
-                    the same downloads. Leave it empty to go back to the default.
-                  </>
-                ) : (
-                  <>
-                    Managed by Soundbox. Switch to External to share a folder with an
-                    audio.cpp you already run.
-                  </>
-                )}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        {/* ------------------------------------------------ prompt assistant */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Prompt assistant</CardTitle>
-            <CardDescription>
-              A small local model that rewrites terse prompts ("scary sound") into
-              descriptive ones the sound models respond to. Off by default.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="space-y-0.5">
-                <Label htmlFor="llm-mode">Mode</Label>
-                <p className="text-muted-foreground text-xs">
-                  Local runs a small model Soundbox manages; External points at your own
-                  OpenAI-compatible server (Ollama, LM Studio, …).
-                </p>
-              </div>
-              <Select
-                value={settings.llm_mode}
-                onValueChange={(v) =>
-                  update.mutate({ llm_mode: v as "off" | "managed" | "external" })
-                }
-              >
-                <SelectTrigger id="llm-mode" className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="off">Off</SelectItem>
-                  <SelectItem value="managed">Local</SelectItem>
-                  <SelectItem value="external">External</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      <SettingRow
+        id="trim-silence"
+        htmlFor="trim"
+        modified={settings.trim_silence !== DEFAULTS.trim_silence}
+        onReset={() => save("trim-silence", { trim_silence: DEFAULTS.trim_silence })}
+        control={
+          <Switch
+            id="trim"
+            checked={settings.trim_silence}
+            onCheckedChange={(on) => save("trim-silence", { trim_silence: on })}
+          />
+        }
+      />
+    </SettingsGroup>
+  );
+}
 
-            {/* Found something already running — no reason to make anyone
-                install a second local model server for this one feature. */}
-            {(llmStatus?.detected ?? [])
-              .filter((d) => !(settings.llm_mode === "external" && settings.llm_external_base_url === d.base_url))
-              .map((d) => (
-                <div
-                  key={d.base_url}
-                  className="border-border flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed px-3 py-2"
-                >
-                  <p className="text-xs">
-                    <span className="font-medium">{d.label}</span> is already running at{" "}
-                    <span className="font-mono">{d.base_url}</span>
-                    {d.models.length > 0 && ` with ${d.models.length} model(s) loaded`}.
-                  </p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      const firstModel = d.models[0] ?? "";
-                      setLlmBaseUrl(d.base_url);
-                      setLlmExternalModel(firstModel);
-                      update.mutate({
-                        llm_mode: "external",
-                        llm_external_base_url: d.base_url,
-                        llm_external_model: firstModel,
-                      });
-                    }}
-                    disabled={update.isPending}
-                  >
-                    Use it
-                  </Button>
-                </div>
-              ))}
+// --------------------------------------------------------- performance
 
-            {settings.llm_mode === "managed" && (
-              <p className="text-muted-foreground border-t pt-3 text-xs">
-                {llmStatus?.engine.installed && llmStatus.model?.installed ? (
-                  `Using ${llmStatus.model.name}.`
-                ) : (
-                  <>
-                    Install the engine and a model from the{" "}
-                    <Link to="/models" className="underline underline-offset-2">
-                      Models page
-                    </Link>
-                    .
-                  </>
-                )}
-              </p>
-            )}
+function PerformanceGroup({ settings }: { settings: Settings }) {
+  const { save } = useSettingSave();
+  const { data: health } = useHealth();
+  const [autoUnload, setAutoUnload] = useDraft(String(settings.auto_unload_minutes));
 
-            {settings.llm_mode === "external" && (
-              <div className="space-y-3 border-t pt-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="llm-base-url">Base URL</Label>
-                  <Input
-                    id="llm-base-url"
-                    value={llmBaseUrl}
-                    placeholder="http://localhost:11434"
-                    className="font-mono text-xs"
-                    onChange={(e) => setLlmBaseUrl(e.target.value)}
-                    onBlur={() => {
-                      if (llmBaseUrl !== settings.llm_external_base_url) {
-                        update.mutate({ llm_external_base_url: llmBaseUrl.trim() });
-                      }
-                    }}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="llm-model-name">Model name</Label>
-                  <Input
-                    id="llm-model-name"
-                    value={llmExternalModel}
-                    placeholder="qwen3:1.7b"
-                    className="font-mono text-xs"
-                    onChange={(e) => setLlmExternalModel(e.target.value)}
-                    onBlur={() => {
-                      if (llmExternalModel !== settings.llm_external_model) {
-                        update.mutate({ llm_external_model: llmExternalModel.trim() });
-                      }
-                    }}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="llm-api-key">API key (optional)</Label>
-                  <div className="flex items-center gap-2 text-xs">
-                    <EyeOffIcon className="text-muted-foreground size-3.5" aria-hidden="true" />
-                    <span
-                      className={
-                        settings.llm_external_api_key_set ? "text-foreground" : "text-muted-foreground"
-                      }
-                    >
-                      {settings.llm_external_api_key_set ? "A key is saved." : "No key saved."}
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      id="llm-api-key"
-                      type="password"
-                      value={llmApiKey}
-                      autoComplete="off"
-                      placeholder={settings.llm_external_api_key_set ? "Replace saved key" : "Most local servers don't need one"}
-                      onChange={(e) => setLlmApiKey(e.target.value)}
-                    />
-                    <Button
-                      variant="outline"
-                      disabled={!llmApiKey.trim() || update.isPending}
-                      onClick={() =>
-                        update.mutate(
-                          { llm_external_api_key: llmApiKey.trim() },
-                          { onSuccess: () => setLlmApiKey("") },
-                        )
-                      }
-                    >
-                      Save
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        {/* -------------------------------------------------------- artwork */}
-        <ArtworkSettingsCard settings={settings} />
-      </SettingsSection>
+  return (
+    <SettingsGroup id="performance">
+      <SettingRow
+        id="device"
+        htmlFor="device"
+        modified={settings.device !== DEFAULTS.device}
+        onReset={() => save("device", { device: DEFAULTS.device })}
+        control={
+          <Select
+            value={settings.device}
+            onValueChange={(v) => save("device", { device: v as Settings["device"] })}
+          >
+            <SelectTrigger id="device" className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="auto">Auto</SelectItem>
+              <SelectItem value="cuda">GPU (CUDA)</SelectItem>
+              <SelectItem value="mps">GPU (MPS)</SelectItem>
+              <SelectItem value="cpu">CPU</SelectItem>
+            </SelectContent>
+          </Select>
+        }
+      >
+        <p className="readout text-muted-foreground">
+          {health?.gpu_name ? `GPU detected: ${health.gpu_name}` : "No GPU detected — falling back to CPU."}
+          {health && (
+            <>
+              {" "}
+              Running on <span className="text-foreground">{health.device}</span>
+              {(settings.device === "cuda" || settings.device === "mps") && health.device === "cpu"
+                ? ` — ${settings.device.toUpperCase()} was requested but isn't available, so this fell back to CPU.`
+                : "."}
+            </>
+          )}
+        </p>
+      </SettingRow>
 
-      <SettingsSection id="endpoints" title="Endpoints">
-        {/* ------------------------------------------------ custom endpoints */}
-        <EndpointSettingsCard />
-      </SettingsSection>
+      <SettingRow
+        id="auto-unload"
+        htmlFor="auto-unload"
+        modified={settings.auto_unload_minutes !== DEFAULTS.auto_unload_minutes}
+        onReset={() => save("auto-unload", { auto_unload_minutes: DEFAULTS.auto_unload_minutes })}
+        control={
+          <div className="flex items-center gap-1.5">
+            <Input
+              id="auto-unload"
+              value={autoUnload}
+              inputMode="numeric"
+              className="w-20 font-mono"
+              onChange={(e) => setAutoUnload(e.target.value.replace(/\D/g, ""))}
+              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+              onBlur={() => {
+                const n = Number(autoUnload);
+                if (autoUnload !== "" && Number.isFinite(n) && n !== settings.auto_unload_minutes)
+                  save("auto-unload", { auto_unload_minutes: n });
+              }}
+            />
+            <span className="readout text-muted-foreground">min</span>
+          </div>
+        }
+      />
+    </SettingsGroup>
+  );
+}
 
-      <SettingsSection id="storage" title="Storage">
-        {/* -------------------------------------------------------- storage */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Folders</CardTitle>
-            <CardDescription>Where sounds, weights and the index live on disk.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-1.5">
-            <Label htmlFor="data-dir">Data directory</Label>
-            <div className="flex gap-2">
-              <Input
-                id="data-dir"
-                value={settings.data_dir}
-                readOnly
-                className="text-muted-foreground font-mono text-xs"
-              />
-              <Button
-                variant="outline"
-                size="icon"
-                aria-label="Copy data directory path"
-                onClick={() => {
-                  void navigator.clipboard
-                    .writeText(settings.data_dir)
-                    .then(() => {
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 1500);
-                    })
-                    .catch(() => toast.error("Could not copy to the clipboard"));
-                }}
-              >
-                {copied ? <CheckIcon /> : <CopyIcon />}
-              </Button>
-            </div>
-            <p className="text-muted-foreground text-xs">
-              The open profile's folder — switch profiles from the chip in the header to
-              point the app at a different library. The install root is set with the{" "}
-              <span className="font-mono">SOUNDBOX_DATA_DIR</span> environment variable
-              before starting the server; downloaded models and runtimes live there and
-              are shared by every profile.
+// -------------------------------------------------------------- models
+
+function ModelsGroup({ settings }: { settings: Settings }) {
+  const { save, pending } = useSettingSave();
+  const { data: runtime } = useAudioCppRuntime();
+  const [modelsDir, setModelsDir] = useDraft(settings.audiocpp_models_dir);
+  const [token, setToken] = useState("");
+  const external = settings.audiocpp_mode === "external";
+  const modelsDefault = runtime?.models_dir_default;
+
+  return (
+    <SettingsGroup id="models">
+      <SettingRow
+        id="audiocpp-mode"
+        htmlFor="audiocpp-mode"
+        modified={settings.audiocpp_mode !== DEFAULTS.audiocpp_mode}
+        onReset={() => save("audiocpp-mode", { audiocpp_mode: DEFAULTS.audiocpp_mode })}
+        control={
+          <Select
+            value={settings.audiocpp_mode}
+            onValueChange={(v) => save("audiocpp-mode", { audiocpp_mode: v as "managed" | "external" })}
+          >
+            <SelectTrigger id="audiocpp-mode" className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="managed">Local</SelectItem>
+              <SelectItem value="external">External</SelectItem>
+            </SelectContent>
+          </Select>
+        }
+      >
+        {/* Which binary actually won: MIRLI_AUDIOCPP_BIN and a copy on PATH
+            both outrank the managed install. */}
+        {runtime && (
+          <div className="readout text-muted-foreground space-y-0.5">
+            <p>
+              {runtime.engine.installed ? (
+                <>
+                  Using{" "}
+                  <span className="text-foreground">
+                    {runtime.engine.source === "managed"
+                      ? `the managed runtime ${runtime.engine.version ?? ""}`
+                      : runtime.engine.source === "env"
+                        ? "your own binary (MIRLI_AUDIOCPP_BIN)"
+                        : "an audiocpp_cli found on your PATH"}
+                  </span>
+                  {runtime.engine.backend ? ` on the ${runtime.engine.backend} backend.` : "."}
+                </>
+              ) : (
+                <>
+                  No audio.cpp runtime found — install it from the{" "}
+                  <Link to="/models" className="underline underline-offset-2">
+                    Models page
+                  </Link>
+                  .
+                </>
+              )}
             </p>
-            <div className="mt-5 space-y-1.5">
-              <Label htmlFor="sounds-dir">Sounds folder</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="sounds-dir"
-                  value={soundsDir}
-                  placeholder={`${settings.data_dir}${pathSep}sounds`}
-                  className="font-mono text-xs"
-                  onChange={(e) => setSoundsDir(e.target.value)}
-                  onBlur={() => saveSoundsDir(soundsDir)}
-                />
-                <Button variant="outline" onClick={() => setPickingSounds(true)}>
-                  <FolderOpenIcon />
-                  Browse
-                </Button>
-              </div>
-              <p className="text-muted-foreground text-xs">
-                Where generated audio is written — set it independently of the data
-                directory to keep sounds on their own disk. Existing sounds are moved
-                across when this changes, so it cannot be done while something is
-                generating. Leave it empty to go back to the default.
-              </p>
-              <FolderPickerDialog
-                open={pickingSounds}
-                onOpenChange={setPickingSounds}
-                initialPath={settings.sounds_dir}
-                title="Sounds folder"
-                description="Folders on the machine running Soundbox — that is where the audio is written. Anything you pick is created if it does not exist yet."
-                onSelect={(path) => {
-                  setSoundsDir(path);
-                  saveSoundsDir(path);
-                }}
-              />
-            </div>
+            {runtime.engine.path && <p className="break-all">{runtime.engine.path}</p>}
+          </div>
+        )}
+      </SettingRow>
 
-            {/* Read-only, and deliberately so — the control that changes this
-                belongs with the engine whose packages it holds. Showing it here
-                anyway is what lets this card answer "where does everything
-                live" without sending anyone hunting for the third folder. */}
-            <div className="mt-5 space-y-1.5">
-              <Label htmlFor="weights-dir">Model weights</Label>
-              <Input
-                id="weights-dir"
-                value={settings.audiocpp_models_dir}
-                readOnly
-                className="text-muted-foreground font-mono text-xs"
-              />
-              <p className="text-muted-foreground text-xs">
-                Shared by every profile, and the largest thing here by far. Change it
-                under Generation &rarr; Audio engine, where pointing it at an audio.cpp
-                you already run is the reason to move it.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </SettingsSection>
+      <SettingRow
+        id="models-dir"
+        stack
+        modified={external && !!modelsDefault && settings.audiocpp_models_dir !== modelsDefault}
+        onReset={external ? () => save("models-dir", { audiocpp_models_dir: "" }) : undefined}
+        htmlFor="audiocpp-models-dir"
+        control={
+          <div className="space-y-1">
+            <Input
+              id="audiocpp-models-dir"
+              value={modelsDir}
+              readOnly={!external}
+              placeholder={modelsDefault ?? ""}
+              className={cn_path(!external)}
+              onChange={(e) => setModelsDir(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+              onBlur={() => {
+                if (modelsDir !== settings.audiocpp_models_dir)
+                  save("models-dir", { audiocpp_models_dir: modelsDir });
+              }}
+            />
+            <p className="text-muted-foreground text-xs">
+              {external
+                ? "Point this at your audio.cpp models folder and both apps see the same downloads. Empty goes back to the default."
+                : "Managed by Mirli. Switch the audio engine to External to share a folder with an audio.cpp you already run."}
+            </p>
+          </div>
+        }
+      />
 
-      {/*
-       * Accounts, not "credentials".
-       *
-       * These two are the only settings that are about a relationship with
-       * somebody else's service — one to fetch gated weights, one to spend
-       * money on their GPUs. The external LLM and image keys deliberately stay
-       * in their own engine cards instead of being gathered here: a base URL,
-       * a model name and a key are one connection, and splitting the key out
-       * would leave two halves of a single setting in two places.
-       */}
-      <SettingsSection id="accounts" title="Accounts">
-        {/* -------------------------------------------------------- hugging face */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Hugging Face</CardTitle>
-            <CardDescription>
-              An access token, required for gated repositories. Stored write-only — it is
-              never displayed again once saved.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center gap-2 text-xs">
-              <EyeOffIcon className="text-muted-foreground size-3.5" aria-hidden="true" />
-              <span className={settings.hf_token_set ? "text-foreground" : "text-muted-foreground"}>
+      <SettingRow id="endpoints" stack>
+        <Embedded>
+          <EndpointSettingsCard />
+        </Embedded>
+      </SettingRow>
+
+      <SettingRow
+        id="hf-token"
+        stack
+        htmlFor="hf-token"
+        control={
+          <div className="space-y-2">
+            <p className="readout text-muted-foreground flex items-center gap-1.5">
+              <EyeOffIcon className="size-3.5" aria-hidden="true" />
+              <span className={settings.hf_token_set ? "text-foreground" : undefined}>
                 {settings.hf_token_set ? "A token is saved." : "No token saved."}
               </span>
-            </div>
+            </p>
             <div className="flex gap-2">
               <Input
                 id="hf-token"
@@ -678,189 +405,437 @@ export function SettingsPage() {
                 value={token}
                 autoComplete="off"
                 placeholder={settings.hf_token_set ? "Replace saved token" : "hf_…"}
-                aria-label="Hugging Face access token"
                 onChange={(e) => setToken(e.target.value)}
               />
               <Button
-                disabled={!token.trim() || update.isPending}
-                onClick={() => {
-                  update.mutate(
-                    { hf_token: token.trim() },
-                    { onSuccess: () => setToken("") },
-                  );
-                }}
+                disabled={!token.trim() || pending}
+                onClick={() => save("hf-token", { hf_token: token.trim() }, { onSuccess: () => setToken("") })}
               >
                 Save token
               </Button>
             </div>
-            {settings.hf_token_set && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => update.mutate({ hf_token: "" })}
-              >
-                Clear saved token
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      </SettingsSection>
-
-      <SettingsSection id="interface" title="Interface">
-        <InterfaceCard />
-      </SettingsSection>
-
-      <SettingsSection id="updates" title="Updates">
-        <UpdateSettingsCard />
-      </SettingsSection>
-
-      <SettingsSection id="advanced" title="Advanced">
-        {/* ------------------------------------------------------ telemetry */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">MCP telemetry</CardTitle>
-            <CardDescription>
-              Export every agent tool call as an OpenTelemetry trace + metrics to your own
-              collector. See the <a href="#/agents" className="underline underline-offset-2">
-                Agents
-              </a>{" "}
-              page for the call log itself — this only wires it out to somewhere else.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="otel-endpoint">OTLP/HTTP collector endpoint</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="otel-endpoint"
-                  value={otelEndpoint}
-                  placeholder="http://localhost:4318"
-                  className="font-mono text-xs"
-                  onChange={(e) => setOtelEndpoint(e.target.value)}
-                  onBlur={() => {
-                    if (otelEndpoint !== settings.otel_endpoint)
-                      update.mutate({ otel_endpoint: otelEndpoint.trim() });
-                  }}
-                />
-                {settings.otel_endpoint && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setOtelEndpoint("");
-                      update.mutate({ otel_endpoint: "" });
-                    }}
-                  >
-                    Clear
-                  </Button>
-                )}
-              </div>
-              <p className="text-muted-foreground text-xs">
-                Traces go to <span className="font-mono">/v1/traces</span>, metrics to{" "}
-                <span className="font-mono">/v1/metrics</span> — the standard OTLP/HTTP layout
-                (Jaeger, Tempo, Honeycomb, the OTel Collector all speak this).
-              </p>
-            </div>
-
-            {mcpStatus && (
-              <div className="flex items-start gap-2 border-t pt-3 text-xs">
-                {mcpStatus.otel.enabled ? (
-                  <CheckCircle2Icon
-                    className="mt-0.5 size-3.5 shrink-0 text-ok"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <AlertTriangleIcon
-                    className="text-muted-foreground mt-0.5 size-3.5 shrink-0"
-                    aria-hidden="true"
-                  />
-                )}
-                <div className="text-muted-foreground space-y-0.5">
-                  {mcpStatus.otel.enabled ? (
-                    <p>
-                      Exporting to <span className="font-mono">{mcpStatus.otel.endpoint}</span>
-                      {mcpStatus.otel.source === "env" && " (from OTEL_EXPORTER_OTLP_ENDPOINT)"}
-                    </p>
-                  ) : (
-                    <p>Not exporting — set an endpoint above to turn this on.</p>
-                  )}
-                  {mcpStatus.otel.source === "env" && (
-                    <p>
-                      OTEL_EXPORTER_OTLP_ENDPOINT is set in the server&apos;s environment, which
-                      takes priority over this field.
-                    </p>
-                  )}
-                  {mcpStatus.otel.error && (
-                    <p className="text-red-500">{mcpStatus.otel.error}</p>
-                  )}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* ------------------------------------------------------ first run */}
-        {/* The honest answer to "I skipped setup, how do I get the assistant
-            now" — and to "I want to redo this on a new machine". Clearing
-            `onboarded_at` is all it takes: the wizard's other condition, no
-            model installed, is checked live. Which is why this says what will
-            actually happen for someone who already has models. */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">First-run setup</CardTitle>
-            <CardDescription>
-              {settings.onboarded_at
-                ? `Completed ${new Date(settings.onboarded_at).toLocaleDateString()}.`
-                : "Not completed yet."}{" "}
-              Re-running it walks through the model picks again. It only opens
-              automatically when no models are installed — with some already on
-              disk, nothing will appear.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={update.isPending || !settings.onboarded_at}
-              onClick={() => update.mutate({ onboarded_at: "" })}
-            >
-              Run setup again
-            </Button>
-          </CardContent>
-        </Card>
-      </SettingsSection>
-    </SettingsLayout>
+          </div>
+        }
+      />
+    </SettingsGroup>
   );
 }
 
-/** Per-browser interface preferences (see `ui-prefs.ts`): nothing here
- *  reaches the server, so there is no save round trip and no loading state. */
-function InterfaceCard() {
+function cn_path(readOnly: boolean): string {
+  return readOnly ? "text-muted-foreground font-mono text-xs" : "font-mono text-xs";
+}
+
+// ------------------------------------------------------------- helpers
+
+function HelpersGroup({ settings }: { settings: Settings }) {
+  const { save, pending } = useSettingSave();
+  const { data: llmStatus } = useLlmStatus();
+  const [baseUrl, setBaseUrl] = useDraft(settings.llm_external_base_url);
+  const [model, setModel] = useDraft(settings.llm_external_model);
+  const [apiKey, setApiKey] = useState("");
+
+  return (
+    <SettingsGroup id="helpers">
+      <SettingRow
+        id="llm-mode"
+        htmlFor="llm-mode"
+        modified={settings.llm_mode !== DEFAULTS.llm_mode}
+        onReset={() => save("llm-mode", { llm_mode: DEFAULTS.llm_mode })}
+        control={
+          <Select
+            value={settings.llm_mode}
+            onValueChange={(v) => save("llm-mode", { llm_mode: v as Settings["llm_mode"] })}
+          >
+            <SelectTrigger id="llm-mode" className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="off">Off</SelectItem>
+              <SelectItem value="managed">Local</SelectItem>
+              <SelectItem value="external">External</SelectItem>
+            </SelectContent>
+          </Select>
+        }
+      >
+        <p className="text-muted-foreground text-xs">
+          Local runs a small model Mirli manages; External points at your own OpenAI-compatible
+          server (Ollama, LM Studio, …).
+        </p>
+
+        {(llmStatus?.detected ?? [])
+          .filter((d) => !(settings.llm_mode === "external" && settings.llm_external_base_url === d.base_url))
+          .map((d) => (
+            <div
+              key={d.base_url}
+              className="border-border flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed px-3 py-2"
+            >
+              <p className="text-xs">
+                <span className="font-medium">{d.label}</span> is already running at{" "}
+                <span className="font-mono">{d.base_url}</span>
+                {d.models.length > 0 && ` with ${d.models.length} model(s) loaded`}.
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={pending}
+                onClick={() => {
+                  const first = d.models[0] ?? "";
+                  setBaseUrl(d.base_url);
+                  setModel(first);
+                  save("llm-mode", {
+                    llm_mode: "external",
+                    llm_external_base_url: d.base_url,
+                    llm_external_model: first,
+                  });
+                }}
+              >
+                Use it
+              </Button>
+            </div>
+          ))}
+
+        {settings.llm_mode === "managed" && (
+          <p className="readout text-muted-foreground">
+            {llmStatus?.engine.installed && llmStatus.model?.installed ? (
+              `Using ${llmStatus.model.name}.`
+            ) : (
+              <>
+                Install the engine and a model from the{" "}
+                <Link to="/models" className="underline underline-offset-2">
+                  Models page
+                </Link>
+                .
+              </>
+            )}
+          </p>
+        )}
+
+        {settings.llm_mode === "external" && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="llm-base-url">Base URL</Label>
+              <Input
+                id="llm-base-url"
+                value={baseUrl}
+                placeholder="http://localhost:11434"
+                className="font-mono text-xs"
+                onChange={(e) => setBaseUrl(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                onBlur={() => {
+                  if (baseUrl !== settings.llm_external_base_url)
+                    save("llm-mode", { llm_external_base_url: baseUrl.trim() });
+                }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="llm-model-name">Model name</Label>
+              <Input
+                id="llm-model-name"
+                value={model}
+                placeholder="qwen3:1.7b"
+                className="font-mono text-xs"
+                onChange={(e) => setModel(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                onBlur={() => {
+                  if (model !== settings.llm_external_model)
+                    save("llm-mode", { llm_external_model: model.trim() });
+                }}
+              />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="llm-api-key">
+                API key (optional) ·{" "}
+                <span className="text-muted-foreground font-normal">
+                  {settings.llm_external_api_key_set ? "a key is saved" : "no key saved"}
+                </span>
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  id="llm-api-key"
+                  type="password"
+                  value={apiKey}
+                  autoComplete="off"
+                  placeholder={
+                    settings.llm_external_api_key_set ? "Replace saved key" : "Most local servers don't need one"
+                  }
+                  onChange={(e) => setApiKey(e.target.value)}
+                />
+                <Button
+                  variant="outline"
+                  disabled={!apiKey.trim() || pending}
+                  onClick={() =>
+                    save("llm-mode", { llm_external_api_key: apiKey.trim() }, { onSuccess: () => setApiKey("") })
+                  }
+                >
+                  Save
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </SettingRow>
+
+      <SettingRow id="artwork" stack>
+        <Embedded>
+          <ArtworkSettingsCard settings={settings} />
+        </Embedded>
+      </SettingRow>
+    </SettingsGroup>
+  );
+}
+
+// ------------------------------------------------------------- storage
+
+function StorageGroup({ settings }: { settings: Settings }) {
+  const { save } = useSettingSave();
+  const [copied, setCopied] = useState(false);
+  const [soundsDir, setSoundsDir] = useDraft(settings.sounds_dir);
+  const [picking, setPicking] = useState(false);
+  // The server hands back native paths, so the default follows its platform.
+  const sep = settings.data_dir.includes("\\") ? "\\" : "/";
+  const soundsDefault = `${settings.data_dir}${sep}sounds`;
+
+  function saveSounds(next: string) {
+    if (next === settings.sounds_dir) return;
+    // Put the field back if the server refused the path.
+    save("sounds-dir", { sounds_dir: next }, { onError: () => setSoundsDir(settings.sounds_dir) });
+  }
+
+  return (
+    <SettingsGroup id="storage">
+      <SettingRow
+        id="data-dir"
+        stack
+        htmlFor="data-dir"
+        control={
+          <div className="flex gap-2">
+            <Input id="data-dir" value={settings.data_dir} readOnly className={cn_path(true)} />
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Copy data directory path"
+              onClick={() => {
+                void navigator.clipboard
+                  .writeText(settings.data_dir)
+                  .then(() => {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1500);
+                  })
+                  .catch(() => toast.error("Could not copy to the clipboard"));
+              }}
+            >
+              {copied ? <CheckIcon /> : <CopyIcon />}
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-muted-foreground text-xs">
+          Switch profiles from the chip in the header to point the app at a different library.
+          Downloaded models and runtimes live in the install root and are shared by every profile.
+        </p>
+      </SettingRow>
+
+      <SettingRow
+        id="sounds-dir"
+        stack
+        htmlFor="sounds-dir"
+        modified={settings.sounds_dir !== soundsDefault}
+        onReset={() => save("sounds-dir", { sounds_dir: "" })}
+        control={
+          <div className="flex gap-2">
+            <Input
+              id="sounds-dir"
+              value={soundsDir}
+              placeholder={soundsDefault}
+              className="font-mono text-xs"
+              onChange={(e) => setSoundsDir(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+              onBlur={() => saveSounds(soundsDir)}
+            />
+            <Button variant="outline" onClick={() => setPicking(true)}>
+              <FolderOpenIcon />
+              Browse
+            </Button>
+            <FolderPickerDialog
+              open={picking}
+              onOpenChange={setPicking}
+              initialPath={settings.sounds_dir}
+              title="Sounds folder"
+              description="Folders on the machine running Mirli — that is where the audio is written. Anything you pick is created if it does not exist yet."
+              onSelect={(path) => {
+                setSoundsDir(path);
+                saveSounds(path);
+              }}
+            />
+          </div>
+        }
+      />
+
+      <SettingRow
+        id="weights-dir"
+        stack
+        htmlFor="weights-dir"
+        control={
+          <div className="space-y-1">
+            <Input id="weights-dir" value={settings.audiocpp_models_dir} readOnly className={cn_path(true)} />
+            <Link
+              to="/settings?s=models-dir"
+              className="text-muted-foreground text-xs underline underline-offset-2"
+            >
+              Change it under Models folder
+            </Link>
+          </div>
+        }
+      />
+    </SettingsGroup>
+  );
+}
+
+// ----------------------------------------------------------- interface
+
+function InterfaceGroup() {
   const keep = useUiPrefs((s) => s.sidebarKeepExpanded);
   const set = useUiPrefs((s) => s.set);
+  const markSaved = useMarkSaved();
+  const change = (on: boolean) => {
+    set({ sidebarKeepExpanded: on });
+    markSaved("sidebar-keep");
+  };
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Interface</CardTitle>
-        <CardDescription>Kept in this browser, not on the server.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="space-y-0.5">
-            <Label htmlFor="sidebar-keep">Keep the sidebar open in the studio</Label>
+    <SettingsGroup id="interface">
+      <SettingRow
+        id="sidebar-keep"
+        htmlFor="sidebar-keep"
+        modified={keep}
+        onReset={() => change(false)}
+        control={<Switch id="sidebar-keep" checked={keep} onCheckedChange={change} />}
+      />
+    </SettingsGroup>
+  );
+}
+
+// ------------------------------------------------------------- privacy
+
+function PrivacyGroup({ settings }: { settings: Settings }) {
+  const { save } = useSettingSave();
+  const { data: mcpStatus } = useMcpStatus();
+  const { data: updateStatus } = useUpdateStatus();
+  const [otel, setOtel] = useDraft(settings.otel_endpoint);
+  const forcedOff = updateStatus?.disabled_by === "env";
+
+  return (
+    <SettingsGroup id="privacy">
+      <SettingRow
+        id="update-check"
+        stack
+        modified={!forcedOff && settings.update_check !== DEFAULTS.update_check}
+        onReset={() => save("update-check", { update_check: DEFAULTS.update_check })}
+      >
+        <Embedded>
+          <UpdateSettingsCard />
+        </Embedded>
+      </SettingRow>
+
+      <SettingRow
+        id="otel-endpoint"
+        stack
+        htmlFor="otel-endpoint"
+        modified={settings.otel_endpoint !== DEFAULTS.otel_endpoint}
+        onReset={() => save("otel-endpoint", { otel_endpoint: "" })}
+        control={
+          <div className="space-y-1.5">
+            <Label htmlFor="otel-endpoint" className="text-muted-foreground text-xs font-normal">
+              OTLP/HTTP collector endpoint
+            </Label>
+            <Input
+              id="otel-endpoint"
+              value={otel}
+              placeholder="http://localhost:4318"
+              className="font-mono text-xs"
+              onChange={(e) => setOtel(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+              onBlur={() => {
+                if (otel !== settings.otel_endpoint) save("otel-endpoint", { otel_endpoint: otel.trim() });
+              }}
+            />
             <p className="text-muted-foreground text-xs">
-              Leaves the navigation expanded on studio, Music and Voice Lab pages. Off: it folds
-              to an icon rail there so the timeline gets the width, and opens again when you
-              leave.
+              Traces go to <span className="font-mono">/v1/traces</span>, metrics to{" "}
+              <span className="font-mono">/v1/metrics</span> (Jaeger, Tempo, Honeycomb and the OTel
+              Collector all speak this). The call log itself is on the{" "}
+              <Link to="/agents" className="underline underline-offset-2">
+                Agents
+              </Link>{" "}
+              page.
             </p>
           </div>
-          <Switch
-            id="sidebar-keep"
-            checked={keep}
-            onCheckedChange={(on) => set({ sidebarKeepExpanded: on })}
+        }
+      >
+        {mcpStatus && (
+          <div className="flex items-start gap-2 text-xs">
+            {mcpStatus.otel.enabled ? (
+              <CheckCircle2Icon className="text-ok mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+            ) : (
+              <AlertTriangleIcon className="text-muted-foreground mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+            )}
+            <div className="text-muted-foreground space-y-0.5">
+              {mcpStatus.otel.enabled ? (
+                <p>
+                  Exporting to <span className="font-mono">{mcpStatus.otel.endpoint}</span>
+                  {mcpStatus.otel.source === "env" && " (from OTEL_EXPORTER_OTLP_ENDPOINT)"}
+                </p>
+              ) : (
+                <p>Not exporting — set an endpoint to turn this on.</p>
+              )}
+              {mcpStatus.otel.source === "env" && (
+                <p>OTEL_EXPORTER_OTLP_ENDPOINT is set in the server&apos;s environment, which takes priority over this field.</p>
+              )}
+              {mcpStatus.otel.error && <p className="text-danger">{mcpStatus.otel.error}</p>}
+            </div>
+          </div>
+        )}
+      </SettingRow>
+    </SettingsGroup>
+  );
+}
+
+// -------------------------------------------------------------- danger
+
+function DangerGroup({ settings }: { settings: Settings }) {
+  const { save, pending } = useSettingSave();
+  return (
+    <SettingsGroup id="danger">
+      <SettingRow
+        id="clear-hf-token"
+        control={
+          <ConfirmAction
+            label="Clear token"
+            title="Clear the Hugging Face token?"
+            description="The saved token is deleted. Downloads from gated repositories fail until you save a token again."
+            confirmLabel="Clear token"
+            disabled={!settings.hf_token_set || pending}
+            onConfirm={() => save("clear-hf-token", { hf_token: "" })}
           />
-        </div>
-      </CardContent>
-    </Card>
+        }
+      />
+      <SettingRow
+        id="rerun-setup"
+        control={
+          <ConfirmAction
+            label="Run setup again"
+            title="Run first-run setup again?"
+            description="The setup wizard is marked as not done. It opens by itself only when no models are installed; with models already on disk, nothing will appear."
+            confirmLabel="Run setup again"
+            disabled={pending || !settings.onboarded_at}
+            onConfirm={() => save("rerun-setup", { onboarded_at: "" })}
+          />
+        }
+      >
+        <p className="readout text-muted-foreground">
+          {settings.onboarded_at
+            ? `Completed ${new Date(settings.onboarded_at).toLocaleDateString()}.`
+            : "Not completed yet."}
+        </p>
+      </SettingRow>
+    </SettingsGroup>
   );
 }

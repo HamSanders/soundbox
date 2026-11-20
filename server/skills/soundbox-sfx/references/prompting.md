@@ -1,6 +1,6 @@
 # Prompting text-to-audio models
 
-The models behind Soundbox (Stable Audio, ACE-Step, and others via audio.cpp)
+The models behind Mirli (Stable Audio, ACE-Step, and others via audio.cpp)
 were trained on captions of *recordings*. They respond to how a recording would
 be described — physical, concrete, present tense — not to how a sound makes you
 feel. Everything below follows from that.

@@ -29,7 +29,7 @@ export function UpdateSettingsCard() {
       <CardHeader>
         <CardTitle className="text-base">Updates</CardTitle>
         <CardDescription>
-          Soundbox can ask once a day whether a newer version is out. It never downloads or
+          Mirli can ask once a day whether a newer version is out. It never downloads or
           installs anything by itself.
         </CardDescription>
       </CardHeader>
@@ -39,8 +39,8 @@ export function UpdateSettingsCard() {
             <Label htmlFor="update-check">Check for updates</Label>
             <p className="text-muted-foreground text-xs">
               {forcedOff
-                ? "Turned off by SOUNDBOX_UPDATE_CHECK=0 in this server's environment."
-                : "On by default. Turn it off and Soundbox sends nothing at all."}
+                ? "Turned off by MIRLI_UPDATE_CHECK=0 in this server's environment."
+                : "On by default. Turn it off and Mirli sends nothing at all."}
             </p>
           </div>
           <Switch
@@ -72,7 +72,7 @@ export function UpdateSettingsCard() {
             <p className="text-sm">
               {status.available ? (
                 <>
-                  Soundbox {status.latest} is available. You have {status.current}.{" "}
+                  Mirli {status.latest} is available. You have {status.current}.{" "}
                   {status.url && (
                     <a
                       href={status.url}

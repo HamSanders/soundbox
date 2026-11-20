@@ -15,8 +15,8 @@
  *
  * Set up:
  *
- *     SOUNDBOX_AUDIOCPP_BIN=C:\tools\audio.cpp\audiocpp_cli.exe
- *     SOUNDBOX_AUDIOCPP_BACKEND=cuda     # optional; default auto-detects
+ *     MIRLI_AUDIOCPP_BIN=C:\tools\audio.cpp\audiocpp_cli.exe
+ *     MIRLI_AUDIOCPP_BACKEND=cuda     # optional; default auto-detects
  */
 
 import { spawn } from "node:child_process";
@@ -49,8 +49,9 @@ import { BIN_ENV, detectBackend, findBinary } from "./audiocppBinary.js";
 import { knownStreamingFamilies, refreshStreamingFamilies } from "./audiocppModes.js";
 import { paramsFor } from "./params.js";
 import type { SpeakOptions, StreamChunk } from "./types.js";
+import { envVar } from "../env.js";
 
-const log = getLogger("soundbox.audiocpp");
+const log = getLogger("mirli.audiocpp");
 
 /** Binary discovery lives in `audiocppBinary.ts` — one module owns "where is
  *  the binary", whether the answer is a managed install or the user's own —
@@ -62,7 +63,7 @@ export { BIN_ENV, findBinary };
  *  is nothing for a package manager to install. */
 export const EXTRA = "audio-cpp";
 
-export const BACKEND_ENV = "SOUNDBOX_AUDIOCPP_BACKEND";
+export const BACKEND_ENV = "MIRLI_AUDIOCPP_BACKEND";
 
 /** How long one generate may run before we assume the child is wedged. */
 export const GENERATE_TIMEOUT_S = 1800.0;
@@ -97,7 +98,7 @@ export interface ModelSpec {
    * e.g. "stable_audio_3_small_sfx_q8_0".
    *
    * This is what lets the runtime's package manager install and account for a
-   * model instead of Soundbox re-deriving the download from `hf_repo` +
+   * model instead of Mirli re-deriving the download from `hf_repo` +
    * `weights_glob` — the two describe the same package, but only this one is
    * a name audio.cpp answers to. Null for a bring-your-own entry, which by
    * definition names no upstream package.
@@ -108,7 +109,7 @@ export interface ModelSpec {
    * models root — e.g. "Stable-Audio-3-Small-SFX-GGUF", or the two-segment
    * "PocketTTS-GGUF/english".
    *
-   * Soundbox used to nest weights under its own model id instead
+   * Mirli used to nest weights under its own model id instead
    * (`<root>/audiocpp-stable-audio-3-sfx/…`), one level deeper than audio.cpp
    * looks. That extra level was the whole reason the two installs could not
    * see each other's downloads. Following upstream's layout is what makes a
@@ -135,7 +136,7 @@ export interface ModelSpec {
    *
    * When set it *is* the answer `weightsFile()` gives, so `hf_repo` /
    * `weights_glob` are unused and nothing is ever downloaded or deleted for
-   * this model: the file belongs to the user, not to Soundbox's data dir. A
+   * this model: the file belongs to the user, not to Mirli's data dir. A
    * file for `weights_layout: "file"`, a directory for `"directory"`.
    */
   weights_path: string | null;
@@ -569,7 +570,7 @@ export function catalogById(): Map<string, ModelSpec> {
  *
  * An id in `enabledExtraIds` that no longer matches a catalog entry (a stale
  * settings.json after a catalog edit) is silently dropped rather than raised —
- * the alternative is Soundbox refusing to start over one leftover setting,
+ * the alternative is Mirli refusing to start over one leftover setting,
  * which is a worse failure than the model quietly not appearing.
  */
 export function modelSpecs(enabledExtraIds: ReadonlySet<string> = new Set()): ModelSpec[] {
@@ -602,7 +603,7 @@ async function isFile(path: string): Promise<boolean> {
  * costs speed, an exception costs the generation.
  */
 export function backend(): string {
-  const override = (process.env[BACKEND_ENV] ?? "").trim();
+  const override = (envVar(BACKEND_ENV) ?? "").trim();
   if (override) return override;
   return detectBackend();
 }
@@ -886,7 +887,7 @@ export class AudioCppModel {
     "package — there is nothing for pip to install. Run " +
     "`soundbox model install audiocpp`, or download a prebuilt " +
     "audiocpp_cli from the audio.cpp releases page and set " +
-    "SOUNDBOX_AUDIOCPP_BIN to it.";
+    "MIRLI_AUDIOCPP_BIN to it.";
 
   constructor(
     spec: ModelSpec,
@@ -961,7 +962,7 @@ export class AudioCppModel {
         `this machine yet.\n\n` +
         `Download a prebuilt audiocpp_cli from ` +
         `https://github.com/0xShug0/audio.cpp/releases (Windows CUDA/CPU packages, ` +
-        `or \`brew install audio-cpp\` on macOS), then point Soundbox at it:\n` +
+        `or \`brew install audio-cpp\` on macOS), then point Mirli at it:\n` +
         `    ${BIN_ENV}=/path/to/audiocpp_cli` +
         (process.platform === "win32" ? ".exe" : ""),
     );

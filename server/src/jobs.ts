@@ -24,7 +24,7 @@ import type { Job, JobPhase } from "./schemas.js";
 // section) and what the Activity page's log tail actually shows — so these
 // must go through the real file-backed logger, not console.info, which never
 // reaches the rotating file at all.
-const log = getLogger("soundbox.jobs");
+const log = getLogger("mirli.jobs");
 
 function now(): string {
   return new Date().toISOString();

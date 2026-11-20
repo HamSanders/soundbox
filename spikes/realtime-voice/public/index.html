@@ -366,6 +366,7 @@ td.over { color: var(--rust); font-weight: 700; }
   </aside>
 </main>
 
+<script type="module">import { showEnded } from "./ended.js"; window.showEnded = showEnded;</script>
 <script type="module">import { personaFor, SANTA_ID } from "./personas.js"; window.personaFor = personaFor; window.SANTA_ID = SANTA_ID; window.dispatchEvent(new Event("personas"));</script>
 <script>
 const $ = (id) => document.getElementById(id);
@@ -642,10 +643,23 @@ const setLog = (on) => { document.body.classList.toggle("showlog", on); $("logBt
 setLog(store.get("mirli-call-log") === "1");
 $("logBtn").onclick = () => setLog(!document.body.classList.contains("showlog"));
 $("statsBtn").onclick = () => { if (!document.body.classList.contains("showlog")) setLog(true); const on = !document.body.classList.contains("stats"); document.body.classList.toggle("stats", on); $("statsBtn").setAttribute("aria-pressed", String(on)); };
-$("endBtn").onclick = () => {
+// Ending stops the mic and audio but stays on the call, with a summary card.
+let replies = 0, ending = false;
+function hangUp() {
+  ending = true;
   try { ws?.close(); face.ws?.close(); micStream?.getTracks().forEach((t) => t.stop()); ctx?.close(); } catch {}
-  location.reload();
-};
+  faceFlush();
+  const seconds = callStart ? (Date.now() - callStart) / 1000 : 0;
+  const lastBot = [...document.querySelectorAll(".entry.bot .txt")].pop()?.textContent ?? "";
+  const f = faceList.find((x) => x.id === currentFace);
+  setState("closed");
+  window.showEnded({
+    who: $("who").textContent, photo: f ? faceSrc(f.id) : "", seconds, turns: replies, last: lastBot,
+    again: () => { ending = false; callStart = 0; replies = 0; setState("starting"); sys("New call."); $("callBtn").disabled = false; $("callBtn").click(); },
+    home: () => location.reload(),
+  });
+}
+$("endBtn").onclick = hangUp;
 setInterval(() => { if (callStart) $("clock").textContent = clockStr(); }, 500);
 $("msg").addEventListener("input", () => { const t = $("msg"); t.style.height = "auto"; t.style.height = Math.min(140, t.scrollHeight) + "px"; });
 $("msg").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("compose").requestSubmit(); } });
@@ -678,7 +692,7 @@ $("callBtn").onclick = () => {
     onJson(JSON.parse(e.data)).catch(fail);
   };
   ws.onerror = () => fail(new Error("Could not reach the call server on this machine."));
-  ws.onclose = () => { setState("closed"); if (callStart) sys("Call ended."); };
+  ws.onclose = () => { if (ending) return; setState("closed"); if (callStart) sys("Call ended."); };
 };
 
 let micLevel = 0, lastTyped = null;
@@ -735,7 +749,7 @@ async function onJson(m) {
     lastTyped = null;
     youEl = null; botEl = null; botText = "";
   } else if (m.type === "reply_delta") {
-    if (!botEl) { botEl = entry("bot", "", "live"); botText = ""; }
+    if (!botEl) { botEl = entry("bot", "", "live"); botText = ""; replies++; }
     botText += m.text;
     setTxt(botEl, botText);
     $("ccLine").textContent = botText.length > 160 ? "…" + botText.slice(-160) : botText;

@@ -131,6 +131,7 @@ form.type input:focus { outline: none; border-color: var(--ink); }
   </div>
 </div>
 
+<script type="module">import { showEnded } from "./ended.js"; window.showEnded = showEnded;</script>
 <script>
 const $ = (id) => document.getElementById(id);
 const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
@@ -243,7 +244,7 @@ $("go").onclick = () => {
   ws.binaryType = "arraybuffer";
   ws.onmessage = (e) => typeof e.data === "string" ? onJson(JSON.parse(e.data)).catch(fail) : onPcm(e.data);
   ws.onerror = () => fail(new Error("Couldn't reach the call server on this machine."));
-  ws.onclose = () => { setState("closed"); };
+  ws.onclose = () => { if (!ending) setState("closed"); };
 };
 function fail(e) {
   $("err").textContent = e?.name === "NotAllowedError" ? "Microphone access was refused. Allow it for this page and reload." : String(e?.message ?? e);
@@ -281,7 +282,8 @@ async function onJson(m) {
     if (m.text) $("you").textContent = m.text;
     clearReply();
   } else if (m.type === "reply_delta") {
-    reply += m.text; setReply(reply);
+    if (!reply) replies++;
+    reply += m.text; lastReply = reply; setReply(reply);
   } else if (m.type === "flush") {
     player?.port.postMessage("flush");
   } else if (m.type === "error") {
@@ -304,7 +306,20 @@ $("typeForm").onsubmit = (e) => {
   ws.send(JSON.stringify({ type: "text", text: t }));
   $("you").classList.remove("live"); $("you").textContent = t; $("typeIn").value = ""; clearReply();
 };
-$("end").onclick = () => { try { ws?.close(); micStream?.getTracks().forEach((t) => t.stop()); ctx?.close(); } catch {} location.reload(); };
+// Ending stops the mic and audio but stays here, with a summary card.
+let replies = 0, lastReply = "", ending = false;
+$("end").onclick = () => {
+  ending = true;
+  try { ws?.close(); micStream?.getTracks().forEach((t) => t.stop()); ctx?.close(); } catch {}
+  botAnalyser = micAnalyser = null;
+  const seconds = callStart ? (Date.now() - callStart) / 1000 : 0;
+  setState("closed");
+  window.showEnded({
+    who: "Mirli", seconds, turns: replies, last: lastReply || reply,
+    again: () => { ending = false; callStart = 0; replies = 0; clearReply(); $("you").textContent = ""; $("go").disabled = false; $("go").click(); },
+    home: () => location.reload(),
+  });
+};
 </script>
 </body>
 </html>

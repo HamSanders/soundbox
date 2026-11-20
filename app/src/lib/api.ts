@@ -1950,6 +1950,8 @@ function qs(query: object | undefined): string {
 /* ------------------------------------------------------------ http impl */
 
 const POLL_INTERVAL_MS = 750;
+/** How long a job's event stream may stay silent before polling takes over. */
+const SSE_STALL_MS = 5000;
 
 export const httpApi: MirliApi = {
   getHealth: () => request<HealthStatus>("/api/health"),
@@ -2021,10 +2023,12 @@ export const httpApi: MirliApi = {
       closed = true;
       source?.close();
       if (poll) clearInterval(poll);
+      if (stall) clearTimeout(stall);
     };
 
     const startPolling = () => {
       if (closed || poll) return;
+      if (stall) clearTimeout(stall);
       const tick = async () => {
         if (closed) return;
         try {
@@ -2032,17 +2036,37 @@ export const httpApi: MirliApi = {
           onJob(job);
           if (terminal(job)) stop();
         } catch (err) {
-          onError?.(err as Error);
-          stop();
+          // Only a 404 ends it: the server no longer knows the job, which on
+          // the web means the studio restarted and took the job with it. A
+          // 503 while the studio wakes, or a dropped connection, is the next
+          // tick's problem — giving up on the first one left a turn spinning
+          // forever while its sound landed in the library.
+          if (err instanceof ApiError && err.status === 404) {
+            onError?.(err);
+            stop();
+          }
         }
       };
       poll = setInterval(tick, POLL_INTERVAL_MS);
       void tick();
     };
 
+    // The server sends the job's current state the moment the stream opens,
+    // so silence means something between here and it is holding the stream
+    // back (a proxy buffering it, as an edge in front of Mirli on the web
+    // might). Polling then, rather than a progress bar frozen until the end.
+    let stall: ReturnType<typeof setTimeout> | undefined;
+
     try {
       source = new EventSource(`/api/jobs/${encodeURIComponent(id)}/events`);
+      stall = setTimeout(() => {
+        if (closed) return;
+        source?.close();
+        source = undefined;
+        startPolling();
+      }, SSE_STALL_MS);
       source.onmessage = (ev: MessageEvent<string>) => {
+        if (stall) clearTimeout(stall);
         try {
           const job = JSON.parse(ev.data) as Job;
           onJob(job);

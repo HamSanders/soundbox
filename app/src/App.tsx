@@ -25,6 +25,7 @@ import { PLAYER_DOCK_HEIGHT_PX } from "@/components/player-dock";
 import { usePlayerStore } from "@/lib/player-store";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { JobWatcher } from "@/components/job-watcher";
 import { DashboardPage } from "@/routes/dashboard";
 
 /*
@@ -217,6 +218,9 @@ function AppShell() {
       {/* Same reasoning, and one more: it reads settings and models through
           react-query, so it cannot live above the provider. */}
       <OnboardingDialog />
+      {/* Follows every render whatever page is open, and toasts when one
+          ends somewhere it isn't already shown: see job-watcher.tsx. */}
+      <JobWatcher />
       </HeaderSlotProvider>
     </SidebarProvider>
   );

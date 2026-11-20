@@ -15,6 +15,7 @@
  * this one.
  */
 
+import { useSidebar } from "@/components/ui/sidebar";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DownloadIcon,
@@ -56,6 +57,7 @@ function clock(s: number): string {
 }
 
 export function NowPlayingBar() {
+  const { state: sidebarState } = useSidebar();
   const sound = usePlayerStore((s) => s.sound);
   const setSound = usePlayerStore((s) => s.setSound);
   const queue = usePlayerStore((s) => s.queue);
@@ -222,7 +224,12 @@ export function NowPlayingBar() {
     <div
       role="region"
       aria-label="Now playing"
-      className="bg-sidebar fixed inset-x-0 bottom-0 z-40 grid h-(--dock-h,80px) grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)]"
+      className={cn(
+        "bg-sidebar fixed inset-x-0 bottom-0 z-40 grid h-(--dock-h,80px) grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] md:pr-2",
+        // Its edges line up with the panels above: left with the first
+        // panel (just past the sidebar), right with their 8px margin.
+        sidebarState === "collapsed" ? "md:pl-[calc(var(--sidebar-width-icon)+1rem)]" : "md:pl-(--sidebar-width)",
+      )}
     >
       <audio
         ref={audioRef}

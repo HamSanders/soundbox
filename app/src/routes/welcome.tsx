@@ -233,7 +233,7 @@ function Hero() {
             docs/new-models-2026-10.md (RTX 5080, CUDA, model already loaded). */}
         <p className="text-muted-foreground mt-4 text-center text-xs leading-relaxed">
           Every clip above was made on one desktop GPU from the prompt shown. A
-          five-second sound effect takes 1.3 s on an RTX 5080.{" "}
+          five-second sound effect takes 1.3 s on an RTX 5080 once the model is loaded.{" "}
           <Link to="/sfx" className="text-foreground underline underline-offset-4">
             Hear hundreds more
           </Link>

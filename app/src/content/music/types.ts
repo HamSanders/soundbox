@@ -71,8 +71,9 @@ export const MUSIC_MODEL_NAMES: Record<MusicModelId, string> = {
   "audiocpp-ace-step": "ACE-Step 1.5 Turbo",
 };
 
-/** Licence surfaced next to each track, matching the model catalogue entry
- *  in `server/src/models/audiocpp_models_catalog.json`. Kept here so the page
+/** Licence surfaced next to each track, matching the licence findings in
+ *  `content/models/models.ts` (which read the licence files; the server
+ *  catalogue's ACE-Step entry still says "Apache-2.0 (unverified)"). Kept here so the page
  *  can state the terms without a backend call — this build has no backend. */
 export const MUSIC_MODEL_LICENSES: Record<MusicModelId, { name: string; note: string }> = {
   "audiocpp-stable-audio-3-small-music": {
@@ -80,7 +81,7 @@ export const MUSIC_MODEL_LICENSES: Record<MusicModelId, { name: string; note: st
     note: "Commercial use is free below USD $1M annual revenue; above that Stability requires an Enterprise licence.",
   },
   "audiocpp-ace-step": {
-    name: "Apache 2.0",
-    note: "Listed as Apache 2.0 in the catalogue and flagged unverified there. Read the model card before shipping output commercially.",
+    name: "MIT License",
+    note: "The LICENSE file in ace-step/ACE-Step-1.5 is MIT, which permits commercial use with no threshold. MIT has no output clause; the model card says generated music may be used commercially, which is the publisher's stated intent rather than a contractual grant.",
   },
 };

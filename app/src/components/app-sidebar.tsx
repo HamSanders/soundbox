@@ -5,7 +5,6 @@
  * rail (Ctrl/Cmd+B, or the trigger in the header).
  */
 
-import { BrandMark, Wordmark } from "@/components/brand-mark";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
@@ -37,7 +36,6 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuButton,
@@ -72,7 +70,7 @@ import { useUiPrefs, wantsRail } from "@/lib/ui-prefs";
 import { formatMb, formatRelative } from "@/lib/format";
 import { SITE_URL } from "@/lib/marketing-links";
 import { useSessionStore } from "@/lib/session-store";
-import { api, IS_MOCK, type Session } from "@/lib/api";
+import { api, type Session } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 /**
@@ -707,29 +705,6 @@ export function AppSidebar() {
       {/* pr-2.5: panels sit 8px apart, the same as their margin from the
           window edges. */}
       <Sidebar collapsible="icon" variant="inset" className="pr-2.5">
-        <SidebarHeader>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton size="lg" asChild>
-                {/* Home, not the composer. `/app` used to redirect here to
-                    /chat, which made the logo a second door into a page that
-                    is now one conversation among many; `/` lands on the
-                    dashboard through the catch-all. */}
-                <NavLink to="/" end onClick={() => setOpenMobile(false)}>
-                  <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-sm">
-                    <BrandMark inset={0.04} className="size-6" />
-                  </div>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <Wordmark className="truncate text-lg leading-none font-extrabold" />
-                    <span className="text-muted-foreground truncate text-xs">
-                      {IS_MOCK ? "mock backend" : "sound, music and voice"}
-                    </span>
-                  </div>
-                </NavLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarHeader>
 
         <SidebarContent>
           {/* Create and Library first: making a sound and finding one are

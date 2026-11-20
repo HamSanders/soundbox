@@ -3,7 +3,8 @@
  * Navigation, device status and theme live in the sidebar now.
  */
 
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { BrandMark, Wordmark } from "@/components/brand-mark";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -67,18 +68,27 @@ export function AppHeader() {
   const { state: sidebarState } = useSidebar();
 
   return (
-    <header className="bg-sidebar fixed inset-x-0 top-0 z-40 flex h-(--top-h,2.5rem) items-center gap-2 px-3">
-      {/* Toggle, back and forward as one group, starting where the first
-          panel starts: the header's left inset is the sidebar's width. */}
+    <header className="bg-sidebar fixed inset-x-0 top-0 z-40 flex h-(--top-h,2.5rem) items-center gap-2 px-3 md:pl-0">
+      {/* The logo sits in a cell as wide as the sidebar, centred over the
+          icon rail when it is folded; the toggle, back and forward then
+          start where the first panel starts. */}
       <div
-        aria-hidden="true"
         className={cn(
-          "hidden shrink-0 md:block",
+          "flex shrink-0 items-center",
           sidebarState === "collapsed"
-            ? "w-[calc(var(--sidebar-width-icon)+1rem-0.75rem)]"
-            : "w-[calc(var(--sidebar-width)-0.75rem)]",
+            ? "md:w-[calc(var(--sidebar-width-icon)+1rem)] md:justify-center"
+            : "md:w-(--sidebar-width) md:pl-4",
         )}
-      />
+      >
+        <NavLink to="/" end aria-label="Mirli home" className="flex items-center gap-2 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+          <span className="bg-sidebar-primary text-sidebar-primary-foreground flex size-7 items-center justify-center rounded-sm">
+            <BrandMark inset={0.04} className="size-5" />
+          </span>
+          {sidebarState !== "collapsed" && (
+            <Wordmark className="hidden text-lg leading-none font-extrabold md:inline" />
+          )}
+        </NavLink>
+      </div>
       <div className="flex items-center md:-ml-2">
         <SidebarTrigger />
         <HistoryButtons />

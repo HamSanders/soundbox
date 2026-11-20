@@ -11,8 +11,6 @@ to follow [Semantic Versioning](https://semver.org/).
 ### Fixed
 - **Scrubbing the player works.** Dragging the yellow ball on the player's timeline now moves playback there. The server sent sound files without byte-range support, so the browser (and the desktop app's window) treated them as unseekable and every scrub snapped back. `/files/{name}` now answers `Range` requests with `206 Partial Content`.
 
-## [0.6.1] - 2026-11-20
-
 ### Changed
 - **A sound plays once and stops.** The bottom player no longer runs on to the next sound in the list when one ends. Two toggles beside the transport turn on **Autoplay** (play the next sound) and **Repeat** (loop this one); both are off by default and remembered in this browser.
 - **A livelier splash screen.** While the desktop app starts, the mark plays a loop: rain falls into a puddle, the ripples swell into a sound wave, the wave folds into the M, the M opens into a pulsing ring and sinks back into the puddle. A slow amber glow breathes from the window's edges. Under the mark there is now just one status line and one thin progress bar, which also shows an update's download; tips take turns at the bottom edge instead of stacking under the status. Both settle to a still M when the app is ready, and stay still with reduced motion.
@@ -352,7 +350,6 @@ Initial public release, MIT-licensed. Everything below is new.
 
 [Unreleased]: https://github.com/HamSanders/soundbox/compare/v0.6.2...HEAD
 [0.6.2]: https://github.com/HamSanders/soundbox/compare/v0.6.1...v0.6.2
-[0.6.1]: https://github.com/HamSanders/soundbox/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/HamSanders/soundbox/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/HamSanders/soundbox/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/HamSanders/soundbox/compare/v0.4.0...v0.4.1

@@ -429,7 +429,7 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
           )}
         </EmptyState>
       ) : (
-        <div className="grid gap-3">
+        <div className="grid gap-2">
           {failed.map((turn) => (
             <FailureCard
               key={turn.id}
@@ -449,9 +449,25 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
               onCancel={() => cancelTurn(turn)}
             />
           ))}
+          {items.length > 0 && (
+            <div role="list" aria-label="Sounds" className="-mx-2 grid">
+              {/* Column heads, md and up: the same grid as a track row. */}
+              <div
+                aria-hidden="true"
+                className="label-caps text-muted-foreground border-border mb-1 hidden grid-cols-[3.25rem_2.5rem_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto] gap-x-3 border-b px-2 pb-1.5 md:grid"
+              >
+                <span className="text-right">No.</span>
+                <span />
+                <span>Subject</span>
+                <span>Licence</span>
+                <span>Model</span>
+                <span className="text-right">Length</span>
+                <span className="w-16" />
+              </div>
           {items.map((sound, i) => (
             <SoundCard
               key={sound.id}
+              track
               sound={sound}
               modelName={modelNames.get(sound.model)}
               className="animate-in fade-in-0 slide-in-from-bottom-1 duration-300 fill-mode-both"
@@ -462,6 +478,8 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
               }}
             />
           ))}
+            </div>
+          )}
         </div>
       )}
 

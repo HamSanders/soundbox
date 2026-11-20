@@ -37,6 +37,7 @@ import {
 import type { ChapterKind, ChapterStatus } from "@/lib/audiobook-types";
 import { formatDuration } from "@/lib/format";
 
+import { announce } from "./announce";
 import { ChapterFromTextDialog } from "./chapter-from-text";
 import { cn } from "@/lib/utils";
 
@@ -158,6 +159,18 @@ function ChapterListView({
                   type="button"
                   className="flex min-w-0 flex-1 items-center gap-2 py-1.5 text-left"
                   onClick={() => onSelect(chapter.id)}
+                  onKeyDown={(e) => {
+                    // Alt+Up/Down: the keyboard way to drag a chapter.
+                    if (!e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+                    e.preventDefault();
+                    const j = i + (e.key === "ArrowUp" ? -1 : 1);
+                    if (j < 0 || j >= chapters.length) return;
+                    const ids = chapters.map((c) => c.id);
+                    [ids[i], ids[j]] = [ids[j]!, ids[i]!];
+                    reorder(ids);
+                    announce(`${chapter.title} moved to position ${j + 1} of ${ids.length}`);
+                  }}
+                  aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
                   onDoubleClick={() => {
                     setDraft(chapter.title);
                     setRenaming(chapter.id);
@@ -165,10 +178,11 @@ function ChapterListView({
                   aria-current={selected ? "true" : undefined}
                 >
                   <span
+                    aria-hidden="true"
                     className={cn("size-2 shrink-0 rounded-full", dot.className)}
                     title={dot.label}
-                    aria-label={dot.label}
                   />
+                  <span className="sr-only">{dot.label}: </span>
                   <span className="min-w-0 flex-1">
                     <span className={cn("block truncate", !chapter.included && "line-through")}>
                       {chapter.title}

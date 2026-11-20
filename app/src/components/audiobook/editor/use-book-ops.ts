@@ -17,6 +17,23 @@ import { errorMessage } from "@/lib/api";
 import { audiobookApi, type BookDetail, type Paragraph } from "@/lib/audiobook-api";
 import { abk } from "@/lib/audiobook-queries";
 
+import { announce } from "./announce";
+
+/** What each edit sounds like when it lands. */
+const SAID: Record<string, string> = {
+  "edit text": "Text saved",
+  cast: "Character assigned",
+  lock: "Locked",
+  unlock: "Unlocked",
+  split: "Paragraph split in two",
+  merge: "Merged with the next paragraph",
+  "add pause": "Pause added",
+  "add paragraph": "Paragraph added",
+  "delete paragraph": "Paragraph deleted",
+  "reorder paragraphs": "Paragraph moved",
+  "reorder chapters": "Chapter moved",
+};
+
 export interface BookOps {
   setText: (p: Paragraph, text: string) => Promise<void>;
   cast: (paragraphs: Paragraph[], characterId: string | null) => Promise<void>;
@@ -60,6 +77,15 @@ export function useBookOps(bookId: string, history: EditHistory): BookOps {
   const api = audiobookApi;
   const r = history.resolve;
 
+  /** Push an undo step and tell screen-reader users what happened. */
+  const record = useCallback(
+    (step: Parameters<EditHistory["push"]>[0]) => {
+      history.push(step);
+      announce(SAID[step.label] ?? step.label.charAt(0).toUpperCase() + step.label.slice(1));
+    },
+    [history],
+  );
+
   return useMemo<BookOps>(() => {
     const setText = async (p: Paragraph, text: string) => {
       const before = p.text;
@@ -68,7 +94,7 @@ export function useBookOps(bookId: string, history: EditHistory): BookOps {
         api.updateParagraph(bookId, p.id, { text }),
       );
       if (!ok) return;
-      history.push({
+      record({
         label: "edit text",
         undo: () => void run("Undo failed", () => api.updateParagraph(bookId, r(p.id), { text: before })),
         redo: () => void run("Redo failed", () => api.updateParagraph(bookId, r(p.id), { text })),
@@ -95,7 +121,7 @@ export function useBookOps(bookId: string, history: EditHistory): BookOps {
         api.castParagraphs(bookId, ids, characterId),
       );
       if (!ok) return;
-      history.push({
+      record({
         label: "cast",
         undo: () => void run("Undo failed", () => castMany(before)),
         redo: () =>
@@ -111,7 +137,7 @@ export function useBookOps(bookId: string, history: EditHistory): BookOps {
       if (ids.length === 0) return;
       const ok = await run("Could not change the lock", () => setLockedMany(ids, locked));
       if (!ok) return;
-      history.push({
+      record({
         label: locked ? "lock" : "unlock",
         undo: () => void run("Undo failed", () => setLockedMany(ids, !locked)),
         redo: () => void run("Redo failed", () => setLockedMany(ids, locked)),
@@ -126,7 +152,7 @@ export function useBookOps(bookId: string, history: EditHistory): BookOps {
       });
       if (!result) return null;
       let secondId = result.second.id;
-      history.push({
+      record({
         label: "split",
         undo: () =>
           void run("Undo failed", async () => {
@@ -162,7 +188,7 @@ export function useBookOps(bookId: string, history: EditHistory): BookOps {
           });
         }
       };
-      history.push({
+      record({
         label: "merge",
         undo: () => void run("Undo failed", restore),
         redo: () => void run("Redo failed", () => api.mergeWithNext(bookId, r(p.id))),
@@ -193,7 +219,7 @@ export function useBookOps(bookId: string, history: EditHistory): BookOps {
       );
       if (!made) return null;
       let id = made.id;
-      history.push({
+      record({
         label: kind === "pause" ? "add pause" : "add paragraph",
         undo: () => void run("Undo failed", () => api.deleteParagraph(bookId, r(id))),
         redo: () =>
@@ -214,7 +240,7 @@ export function useBookOps(bookId: string, history: EditHistory): BookOps {
       if (!ok) return;
       // Ids change on every restore; keep the latest for the next redo.
       let current = doomed.map((p) => ({ ...p }));
-      history.push({
+      record({
         label: doomed.length === 1 ? "delete paragraph" : `delete ${doomed.length} paragraphs`,
         undo: () =>
           void run("Undo failed", async () => {
@@ -235,7 +261,7 @@ export function useBookOps(bookId: string, history: EditHistory): BookOps {
         api.reorderParagraphs(bookId, chapterId, after),
       );
       if (!ok) return;
-      history.push({
+      record({
         label: "reorder paragraphs",
         undo: () =>
           void run("Undo failed", () => api.reorderParagraphs(bookId, chapterId, before.map(r))),
@@ -253,7 +279,7 @@ export function useBookOps(bookId: string, history: EditHistory): BookOps {
       });
       const ok = await run("Could not reorder the chapters", () => api.reorderChapters(bookId, after));
       if (!ok) return;
-      history.push({
+      record({
         label: "reorder chapters",
         undo: () => void run("Undo failed", () => api.reorderChapters(bookId, before)),
         redo: () => void run("Redo failed", () => api.reorderChapters(bookId, after)),
@@ -261,5 +287,5 @@ export function useBookOps(bookId: string, history: EditHistory): BookOps {
     };
 
     return { setText, cast, setLocked, split, mergeNext, insert, remove, reorderParagraphs, reorderChapters };
-  }, [api, bookId, history, qc, r, run]);
+  }, [api, bookId, history, qc, r, record, run]);
 }

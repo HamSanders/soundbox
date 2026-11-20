@@ -178,6 +178,7 @@ export const DEFAULT_SETTINGS: BookSettings = {
     heading_gap_s: 1.5,
     head_room_tone_s: 0.75,
     tail_room_tone_s: 2,
+    scene_break_s: 2,
   },
   mastering: "acx",
   cast_mode: "single",

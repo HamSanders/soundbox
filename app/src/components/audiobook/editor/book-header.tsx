@@ -55,6 +55,7 @@ const PACING_FIELDS: { key: keyof PacingSettings; label: string; hint: string; m
   { key: "heading_gap_s", label: "After a heading", hint: "Extra pause after a chapter title.", max: 10 },
   { key: "head_room_tone_s", label: "Room tone at start", hint: "ACX asks for 0.5–1 s.", max: 5 },
   { key: "tail_room_tone_s", label: "Room tone at end", hint: "ACX asks for 1–5 s.", max: 10 },
+  { key: "scene_break_s", label: "Scene break", hint: "Pause at a scene break (* * *) on import.", max: 30 },
 ];
 
 function DetailsDialog({
@@ -277,7 +278,7 @@ function BookHeaderView({
                     min={0}
                     max={f.max}
                     step={0.25}
-                    defaultValue={settings.pacing[f.key]}
+                    defaultValue={settings.pacing[f.key] ?? (f.key === "scene_break_s" ? 2 : 0)}
                     className="h-7 text-right text-sm"
                     onBlur={(e) => {
                       const n = Math.min(f.max, Math.max(0, Number(e.target.value)));

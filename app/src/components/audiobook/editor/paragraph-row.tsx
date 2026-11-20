@@ -6,6 +6,8 @@
 
 import { memo, useEffect, useRef, useState } from "react";
 import {
+  ArrowDownIcon,
+  ArrowUpIcon,
   GripVerticalIcon,
   HeadingIcon,
   Loader2Icon,
@@ -89,6 +91,8 @@ export interface RowActions {
   dragOver: (id: string, after: boolean) => void;
   drop: () => void;
   dragEnd: () => void;
+  /** Move a paragraph up (-1) or down (1): the keyboard alternative to drag. */
+  move: (id: string, by: -1 | 1) => void;
   /** Extra controls for a row, from other features (notes). */
   extra?: (paragraph: Paragraph) => React.ReactNode;
 }
@@ -109,6 +113,8 @@ export interface ParagraphRowProps {
   /** Where a dragged paragraph would land relative to this one. */
   dropEdge: "before" | "after" | null;
   highlight: RegExp | null;
+  /** Whether any paragraph is selected; with none, the first row takes Tab. */
+  anySelected?: boolean;
   actions: RowActions;
 }
 
@@ -203,6 +209,17 @@ function RowMenu({ p, isLast, actions }: { p: Paragraph; isLast: boolean; action
             <DropdownMenuSeparator />
           </>
         )}
+        <DropdownMenuItem onSelect={() => actions.move(p.id, -1)}>
+          <ArrowUpIcon />
+          Move up
+          <DropdownMenuShortcut>Alt+↑</DropdownMenuShortcut>
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={isLast} onSelect={() => actions.move(p.id, 1)}>
+          <ArrowDownIcon />
+          Move down
+          <DropdownMenuShortcut>Alt+↓</DropdownMenuShortcut>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => actions.insertAfter(p.id, "line")}>
           <PlusIcon />
           Paragraph after
@@ -227,10 +244,8 @@ function Grip({ id, actions }: { id: string; actions: RowActions }) {
   return (
     <span
       draggable
-      role="button"
-      tabIndex={-1}
-      aria-label="Drag to reorder"
-      title="Drag to reorder"
+      aria-hidden="true"
+      title="Drag to reorder (or Alt+↑/↓)"
       onClick={(e) => e.stopPropagation()}
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = "move";
@@ -262,13 +277,30 @@ export const ParagraphRow = memo(function ParagraphRow({
   dragging,
   dropEdge,
   highlight,
+  anySelected = false,
   actions,
 }: ParagraphRowProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (selected) ref.current?.scrollIntoView({ block: "nearest" });
+    if (!selected || !ref.current) return;
+    ref.current.scrollIntoView({ block: "nearest" });
+    // Focus follows the selection while focus is in the list (j/k), so a
+    // screen reader reads the new paragraph.
+    const list = ref.current.closest("[role=list]");
+    const active = document.activeElement;
+    if (list && active && list.contains(active) && !ref.current.contains(active)) {
+      ref.current.focus({ preventScroll: true });
+    }
   }, [selected]);
+
+  const focusProps = {
+    tabIndex: selected || (index === 0 && !anySelected) ? 0 : -1,
+    "aria-current": selected ? ("true" as const) : undefined,
+    onFocus: (e: React.FocusEvent) => {
+      if (e.target === e.currentTarget && !selected) actions.select(p.id);
+    },
+  };
 
   const dnd = {
     onDragOver: (e: React.DragEvent) => {
@@ -297,11 +329,12 @@ export const ParagraphRow = memo(function ParagraphRow({
         ref={ref}
         data-paragraph-id={p.id}
         role="listitem"
-        aria-selected={selected}
+        aria-label={`Paragraph ${index + 1}: pause, ${p.duration_s ? `${p.duration_s.toFixed(1)} seconds` : "no length"}`}
+        {...focusProps}
         onClick={() => actions.select(p.id)}
         {...dnd}
         className={cn(
-          "group text-muted-foreground relative mx-2 flex items-center gap-2 rounded-md py-1 pr-2 pl-3 text-xs",
+          "group text-muted-foreground focus-visible:ring-ring/50 relative outline-none focus-visible:ring-2 mx-2 flex items-center gap-2 rounded-md py-1 pr-2 pl-3 text-xs",
           selected && "bg-accent",
           dragging && "opacity-40",
         )}
@@ -326,11 +359,11 @@ export const ParagraphRow = memo(function ParagraphRow({
       ref={ref}
       data-paragraph-id={p.id}
       role="listitem"
-      aria-selected={selected}
+      {...focusProps}
       onClick={() => actions.select(p.id)}
       {...dnd}
       className={cn(
-        "group relative mx-2 flex gap-2 rounded-lg border border-transparent py-2.5 pr-2 pl-2 transition-colors",
+        "group focus-visible:ring-ring/50 relative mx-2 flex gap-2 outline-none focus-visible:ring-2 rounded-lg border border-transparent py-2.5 pr-2 pl-2 transition-colors",
         selected ? "bg-accent/60 border-border" : "hover:bg-accent/30",
         checked && "bg-primary/5 border-primary/30",
         playing && "border-primary/50",
@@ -338,6 +371,10 @@ export const ParagraphRow = memo(function ParagraphRow({
       )}
     >
       {edge}
+      {/* What a screen reader hears first on this row. */}
+      <span className="sr-only">
+        {`Paragraph ${index + 1}${p.is_heading ? ", heading" : ""}. Read by ${character?.name ?? "Narrator"}. ${STATUS_LABEL[p.status]}${p.locked && p.status !== "locked" ? ", locked" : ""}.`}
+      </span>
       {/* The voice's colour, as a rail, so a page of dialogue reads at a glance. */}
       <span
         aria-hidden="true"

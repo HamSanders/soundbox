@@ -13,6 +13,8 @@ import { BookHeader } from "@/components/audiobook/editor/book-header";
 import { ChapterList } from "@/components/audiobook/editor/chapter-list";
 import { ChapterPane } from "@/components/audiobook/editor/chapter-pane";
 import { Inspector } from "@/components/audiobook/editor/inspector";
+import { announce } from "@/components/audiobook/editor/announce";
+import { LiveRegion } from "@/components/audiobook/editor/announcer";
 import { useBookOps } from "@/components/audiobook/editor/use-book-ops";
 import { RenderBar } from "@/components/audiobook/render";
 import { EmptyState } from "@/components/empty-state";
@@ -34,6 +36,17 @@ export function AudiobookPage() {
   const history = useEditHistory();
   const ops = useBookOps(id, history);
 
+  const undo = useCallback(() => {
+    if (!history.canUndo) return announce("Nothing to undo");
+    announce(`Undid ${history.undoLabel ?? "the last edit"}`);
+    history.undo();
+  }, [history]);
+  const redo = useCallback(() => {
+    if (!history.canRedo) return announce("Nothing to redo");
+    announce("Redone");
+    history.redo();
+  }, [history]);
+
   // Undo and redo, unless a text field has its own.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -43,15 +56,15 @@ export function AudiobookPage() {
       const key = e.key.toLowerCase();
       if (key === "z" && !e.shiftKey) {
         e.preventDefault();
-        history.undo();
+        undo();
       } else if ((key === "z" && e.shiftKey) || key === "y") {
         e.preventDefault();
-        history.redo();
+        redo();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [history]);
+  }, [redo, undo]);
 
   const chapters = useMemo(() => book.data?.chapters ?? [], [book.data]);
   const chapterId = params.get("chapter");
@@ -122,6 +135,18 @@ export function AudiobookPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2 md:pr-2 md:pb-2">
+      <LiveRegion />
+      <a
+        href="#audiobook-paragraphs"
+        onClick={(e) => {
+          e.preventDefault();
+          const row = document.querySelector<HTMLElement>("#audiobook-paragraphs [role=listitem][tabindex='0']");
+          (row ?? document.getElementById("audiobook-paragraphs"))?.focus();
+        }}
+        className="bg-primary text-primary-foreground sr-only z-50 rounded-md px-3 py-1.5 text-sm focus:not-sr-only focus:absolute focus:top-2 focus:left-2"
+      >
+        Skip to paragraphs
+      </a>
       <div className={panel}>
         <BookHeader
           book={data}
@@ -132,7 +157,7 @@ export function AudiobookPage() {
         <RenderBar bookId={data.id} />
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-2 md:flex-row">
-        <aside className={`${panel} md:w-60 md:shrink-0`} aria-label="Chapters">
+        <nav className={`${panel} md:w-60 md:shrink-0`} aria-label="Chapters">
           <ChapterList
             book={data}
             selectedId={chapter?.id ?? null}
@@ -140,7 +165,7 @@ export function AudiobookPage() {
             onReorder={reorderChapters}
             noteCounts={noteCounts}
           />
-        </aside>
+        </nav>
         <section className={`${panel} min-h-[50vh] flex-1 md:min-h-0`} aria-label="Paragraphs">
           {chapter ? (
             <ChapterPane
@@ -171,7 +196,7 @@ export function AudiobookPage() {
                     aria-label="Undo"
                     title={history.undoLabel ? `Undo ${history.undoLabel} (Ctrl+Z)` : "Undo (Ctrl+Z)"}
                     disabled={!history.canUndo}
-                    onClick={history.undo}
+                    onClick={undo}
                   >
                     <Undo2Icon />
                   </Button>
@@ -181,7 +206,7 @@ export function AudiobookPage() {
                     aria-label="Redo"
                     title="Redo (Ctrl+Shift+Z)"
                     disabled={!history.canRedo}
-                    onClick={history.redo}
+                    onClick={redo}
                   >
                     <Redo2Icon />
                   </Button>

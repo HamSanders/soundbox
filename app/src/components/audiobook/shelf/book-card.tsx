@@ -41,10 +41,13 @@ export function BookCard({
       className="group animate-in fade-in-0 slide-in-from-bottom-1 relative flex flex-col gap-2 duration-300 fill-mode-both"
       style={{ animationDelay: `${Math.min(index, 10) * 30}ms` }}
     >
+      {/* The cover repeats the title link below, so it is out of the tab
+          order and hidden from screen readers: one stop per book. */}
       <Link
         to={`/audiobooks/${book.id}`}
-        className="focus-visible:ring-ring/50 rounded-md transition-transform duration-(--duration-fast) outline-none group-hover:-translate-y-0.5 focus-visible:ring-2"
-        aria-label={`Open ${book.title}`}
+        tabIndex={-1}
+        aria-hidden="true"
+        className="rounded-md transition-transform duration-(--duration-fast) outline-none group-hover:-translate-y-0.5"
       >
         <BookCover book={book} />
       </Link>
@@ -108,7 +111,8 @@ export function BookCard({
           aria-valuenow={pct}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label="Voiced"
+          aria-label={`${book.title}: voiced`}
+          aria-valuetext={`${pct}% voiced`}
         >
           <div className="bg-primary h-full rounded-full" style={{ width: `${pct}%` }} />
         </div>

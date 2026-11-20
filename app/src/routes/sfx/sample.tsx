@@ -11,23 +11,29 @@
  */
 
 import { Link, Navigate, useParams } from "react-router-dom";
-import { DownloadIcon, FlaskConicalIcon } from "lucide-react";
+import { DownloadIcon } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { CopyButton } from "@/components/docs-primitives";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { WaveformPlayer } from "@/components/waveform-player";
 import { MarketingLink } from "@/components/marketing-link";
 import { SeoHead, breadcrumbJsonLd } from "@/components/seo-head";
 import { getCategory } from "@/content/sfx/categories";
-import { coverCard, isPublished } from "@/content/sfx/types";
+import { COVER_SIZE, coverCard, isPublished } from "@/content/sfx/types";
 import type { PublishedCategory, SfxSample } from "@/content/sfx/types";
 import { getModelByCatalogId } from "@/content/models/models";
-import { sampleAudioUrl, sampleToSound, useSampleManifest } from "@/lib/sfx-sample";
+import { sampleAudioUrl } from "@/lib/sfx-sample";
+import { PlaceholderBadge, SampleRow, sampleId, sampleQueue } from "@/components/sfx/sample-list";
+import {
+  SiteCollectionHeader,
+  SiteFactLog,
+  SiteInlinePlayer,
+  SitePlayButton,
+  SiteTrackList,
+  WaveTile,
+  useSiteAudio,
+} from "@/components/site/site-tracks";
 import { GENERATOR_HREF } from "@/lib/marketing-links";
-import { pageUrl, siteUrl } from "@/lib/asset-url";
+import { assetUrl, pageUrl, siteUrl } from "@/lib/asset-url";
 import sampleFacts from "virtual:sfx-sample-facts";
 
 /** The prompt cut at a word boundary, for a meta description. */
@@ -79,9 +85,13 @@ function SampleBody({
   category: PublishedCategory;
   sample: SfxSample;
 }) {
-  const { manifest, failed } = useSampleManifest(category.slug);
-  const meta = manifest?.[sample.slug];
   const others = category.content.samples.filter((s) => s.slug !== sample.slug);
+  const shownOthers = others.slice(0, 8);
+  const id = sampleId(category.slug, sample.slug);
+  // This sample first, then the ones listed under "More", so those play here too.
+  const queue = sampleQueue(category.slug, [sample, ...shownOthers]);
+  const audio = useSiteAudio(queue, id);
+  const isPlaying = audio.current?.id === id && audio.playing;
   // Bundled at build time, so these are in the prerendered HTML too; `meta`
   // (with the waveform peaks) only arrives after the fetch.
   const facts = sampleFacts[category.slug]?.[sample.slug];
@@ -136,72 +146,72 @@ function SampleBody({
         <span className="text-foreground">{sample.title}</span>
       </nav>
 
-      <header className="py-8">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <h1 className="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-            {sample.title}
-          </h1>
-          {sample.source === "placeholder" && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge variant="outline" className="gap-1 text-[11px] font-normal">
-                  <FlaskConicalIcon className="size-3" aria-hidden="true" />
-                  Placeholder
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>{sample.placeholderNote ?? "Not a model render."}</TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-        <p className="text-muted-foreground mt-3 max-w-2xl leading-relaxed">
-          A {category.name.toLowerCase()} sound effect
-          {modelName ? <>, generated with {modelLink}</> : ""} from the prompt below. Copy the
-          prompt, change a word and generate your own version.
-        </p>
-        {facts && (
-          <dl className="text-muted-foreground mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-            <div className="flex gap-1.5">
-              <dt>Length</dt>
-              <dd className="text-foreground tabular-nums">{facts[0].toFixed(1)} s</dd>
-            </div>
-            <div className="flex gap-1.5">
-              <dt>File</dt>
-              <dd className="text-foreground tabular-nums">MP3, {formatSize(facts[1])}</dd>
-            </div>
-            {modelName && (
-              <div className="flex gap-1.5">
-                <dt>Model</dt>
-                <dd>{modelLink}</dd>
-              </div>
-            )}
-          </dl>
-        )}
-      </header>
-
-      {failed ? (
-        <p className="text-muted-foreground text-sm">This sample could not be loaded.</p>
-      ) : meta ? (
-        <div className="bg-card ring-border/70 rounded-2xl p-4 ring-1">
-          <WaveformPlayer sound={sampleToSound(category.slug, sample, meta)} />
-        </div>
-      ) : (
-        <Skeleton className="h-14 w-full rounded-2xl" />
-      )}
-
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <SiteCollectionHeader
+        tile={
+          category.coverImage ? (
+            <img
+              src={assetUrl(category.coverImage)}
+              alt=""
+              width={COVER_SIZE.width}
+              height={COVER_SIZE.height}
+              fetchPriority="high"
+              decoding="async"
+              className="size-full object-cover"
+            />
+          ) : (
+            <WaveTile />
+          )
+        }
+        kicker={`Sound effect · ${category.name}`}
+        title={sample.title}
+        log={[
+          facts ? `${facts[0].toFixed(1)} s` : null,
+          facts ? `MP3 ${formatSize(facts[1])}` : null,
+          modelName,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+        lede={
+          <>
+            A {category.name.toLowerCase()} sound effect
+            {modelName ? <>, generated with {modelLink}</> : ""} from the prompt below. Copy the prompt,
+            change a word and generate your own version.
+          </>
+        }
+      >
+        <SitePlayButton playing={isPlaying} onClick={() => audio.toggle(id)} label={sample.title} size="icon-lg" />
         <Button variant="outline" size="sm" asChild>
           <a href={sampleAudioUrl(category.slug, sample.slug)} download>
             <DownloadIcon />
             Download MP3
           </a>
         </Button>
-        <Button asChild>
+        <Button size="sm" variant="outline" asChild>
           <MarketingLink href={GENERATOR_HREF}>Generate a variation</MarketingLink>
         </Button>
+        {sample.source === "placeholder" && <PlaceholderBadge note={sample.placeholderNote} />}
+      </SiteCollectionHeader>
+
+      <SiteInlinePlayer audio={audio} id={id} label={sample.title} />
+
+      <div className="mt-8">
+        <SiteFactLog
+          facts={[
+            ...(facts
+              ? [
+                  { label: "Length", value: `${facts[0].toFixed(1)} s` },
+                  { label: "File", value: `MP3, ${formatSize(facts[1])}` },
+                ]
+              : []),
+            ...(modelName ? [{ label: "Model", value: modelLink }] : []),
+            ...(model ? [{ label: "Licence", value: model.license.name }] : []),
+            { label: "Collection", value: <Link to={`/sfx/${category.slug}`} className="underline underline-offset-4 hover:no-underline">{category.name}</Link> },
+          ]}
+        />
       </div>
 
       <section aria-labelledby="prompt" className="border-border/60 mt-10 border-t py-10">
-        <h2 id="prompt" className="font-heading text-xl font-semibold tracking-tight">
+        <h2 id="prompt" className="font-display text-2xl leading-none font-extrabold uppercase">
           The prompt
         </h2>
         <div className="bg-muted/50 ring-border mt-4 min-w-0 overflow-hidden rounded-xl ring-1 ring-inset">
@@ -219,18 +229,14 @@ function SampleBody({
 
       {others.length > 0 && (
         <section aria-labelledby="more" className="border-border/60 border-t py-10">
-          <h2 id="more" className="font-heading text-xl font-semibold tracking-tight">
+          <h2 id="more" className="font-display text-2xl leading-none font-extrabold uppercase">
             More {category.name.toLowerCase()} sounds
           </h2>
-          <ul className="mt-4 flex flex-wrap gap-2">
-            {others.slice(0, 8).map((s) => (
-              <li key={s.slug}>
-                <Button variant="outline" size="sm" asChild>
-                  <Link to={`/sfx/${category.slug}/${s.slug}`}>{s.title}</Link>
-                </Button>
-              </li>
+          <SiteTrackList className="mt-4">
+            {shownOthers.map((s, i) => (
+              <SampleRow key={s.slug} categorySlug={category.slug} sample={s} index={i} audio={audio} showPrompt={false} />
             ))}
-          </ul>
+          </SiteTrackList>
           <Link
             to={`/sfx/${category.slug}`}
             className="text-muted-foreground hover:text-foreground mt-4 inline-block text-sm underline-offset-4 hover:underline"
@@ -239,6 +245,7 @@ function SampleBody({
           </Link>
         </section>
       )}
+      {audio.element}
     </>
   );
 }
@@ -263,8 +270,8 @@ export function SfxSamplePage() {
 
   return (
     <div className="bg-background text-foreground min-h-svh">
-      <div className="mx-auto w-full max-w-3xl px-4">
-        <SampleBody category={category} sample={sample} />
+      <div className="mx-auto w-full max-w-3xl px-4 pb-12">
+        <SampleBody key={`${category.slug}/${sample.slug}`} category={category} sample={sample} />
       </div>
     </div>
   );

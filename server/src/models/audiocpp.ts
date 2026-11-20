@@ -2134,7 +2134,13 @@ export class AudioCppModel {
     }
     if (!this.loaded) await this.load();
     const weights = this.model!;
-    const { progress, language } = options;
+    const { progress } = options;
+    // A language name or code only ("English", "en", "zh-CN"): it ends up on
+    // the audiocpp_cli command line, so nothing else gets through.
+    const language = options.language?.trim() || null;
+    if (language !== null && !/^[A-Za-z][A-Za-z _-]{0,31}$/.test(language)) {
+      throw new ModelError(`"${language}" is not a language name or code.`);
+    }
 
     const body: Record<string, unknown> = { task: "asr", audio: wavPath };
     if (language) body["language"] = language;

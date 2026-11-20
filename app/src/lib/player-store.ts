@@ -23,6 +23,10 @@ interface PlayerState {
   stop: (id?: string) => void;
   /** Open (or close, with null) the fixed bottom player on this sound. */
   setSound: (sound: Sound | null) => void;
+  /** The list the bottom player steps through with previous / next: the
+   *  Library sets it to whatever it is showing. */
+  queue: Sound[];
+  setQueue: (queue: Sound[]) => void;
 }
 
 export const usePlayerStore = create<PlayerState>((set) => ({
@@ -32,4 +36,6 @@ export const usePlayerStore = create<PlayerState>((set) => ({
   stop: (id) =>
     set((s) => (id === undefined || s.playingId === id ? { playingId: null } : s)),
   setSound: (sound) => set({ sound }),
+  queue: [],
+  setQueue: (queue) => set({ queue }),
 }));

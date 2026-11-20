@@ -27,7 +27,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ListMusicIcon, SearchIcon } from "lucide-react";
+import { SearchIcon } from "lucide-react";
 
 import { EmptyState } from "@/components/empty-state";
 import { Input } from "@/components/ui/input";
@@ -307,7 +307,10 @@ export function MusicStudioPage() {
                 {
                   id: "takes",
                   label: "Takes",
-                  icon: ListMusicIcon,
+                  // The only panel in the column: nothing to collapse it
+                  // against, so no chevron, and the tabs name it without an
+                  // icon.
+                  pinned: true,
                   // The tabs are the panel's header, the way the sound
                   // artifact's header is its transport: what the panel is
                   // showing is the one control that belongs up there.

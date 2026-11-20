@@ -127,6 +127,11 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
   const { data, isLoading, isError, error } = useSounds(query, modelsReady);
 
   const items = data?.items ?? [];
+  // Previous / next in the bottom player walk the list on screen.
+  const setQueue = usePlayerStore((s) => s.setQueue);
+  useEffect(() => {
+    if (data?.items) setQueue(data.items);
+  }, [data?.items, setQueue]);
 
   // The composer that lets a category page create directly from the list
   // view, instead of a trip to Generate — shares the same session Generate

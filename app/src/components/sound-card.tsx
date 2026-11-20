@@ -795,7 +795,7 @@ export function SoundCard({
  * "Kick (trim)", and giving those a random instrument icon would be worse than
  * giving them none.
  */
-function SoundTileArt({ sound }: { sound: Sound }) {
+export function SoundTileArt({ sound }: { sound: Sound }) {
   const [failed, setFailed] = useState(false);
   const stem = instrumentIcon(stemSuffix(sound.name) ?? "");
   // A spoken sound has no cover of its own, but the voice that read it may

@@ -47,7 +47,16 @@ ElevenLabs parity (see research §1–6):
 - [ ] Time estimate before a render.
 - [ ] Progress per chapter.
 - [ ] Auto-regenerate on failed QC (silence, clipping, length mismatch, ASR word check where an ASR model is installed).
-- [ ] Listening shelf and player (ElevenReader-style): cover grid, detail page, chapters, speed, sleep timer, resume, read-along highlight, narrator switching where takes exist.
+- [ ] **Listening shelf** (ElevenReader-style, research §7):
+  - shelves by genre and series, plus tag and genre filters and search;
+  - book detail page with cover, blurb, details block (length, narrated by, language, published), table of contents, and a "preview" sample;
+  - schema.org `Audiobook` JSON-LD on the exported web player.
+- [ ] **Player:**
+  - chapters, speed 0.25–4x, sleep timer (including end of chapter);
+  - bookmarks and notes, resume position;
+  - read-along highlighting: per paragraph from segment timings, and per word where a local ASR model (qwen3-asr) can align;
+  - start from any paragraph;
+  - narrator switching where alternate takes exist.
 
 Beyond ElevenLabs (gaps in research §"Gaps"):
 - [ ] **M4B** with chapter markers and cover.

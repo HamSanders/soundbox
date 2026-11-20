@@ -337,14 +337,6 @@ export class BedStore {
 
 /* ---------------------------------------------------------------- service */
 
-/**
- * The shared SQLite connection. `MirliDb.conn` is private; the plan has each
- * audiobook module build its store from it, so it is read here at runtime.
- */
-function connOf(svc: MirliService): Database {
-  return (svc.db as unknown as { conn: Database }).conn;
-}
-
 const now = () => new Date().toISOString();
 const newId = () => randomUUID();
 
@@ -359,7 +351,7 @@ export class BedService {
   private readonly watching = new Set<string>();
 
   constructor(private readonly svc: MirliService) {
-    this.store = new BedStore(connOf(svc));
+    this.store = new BedStore(svc.db.sqlite);
     audiobooks(svc).onDelete(async (scope) => {
       // The stories (and the clips on them) go with the chapters; only the
       // rows need dropping, which ON DELETE CASCADE does for whole books.

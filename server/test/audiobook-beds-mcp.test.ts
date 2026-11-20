@@ -6,7 +6,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -153,6 +153,36 @@ describe("audiobook MCP tools", () => {
     // The bed does not show up as a paragraph.
     const after = await tool("soundbox.get_audiobook", { book_id: created.book_id, chapter_id: chapterId });
     expect(after.total_paragraphs).toBe(got.total_paragraphs);
+  });
+
+  it("imports a manuscript file and pasted text through the real import routes", async () => {
+    const file = join(dataDir, "lighthouse.md");
+    await writeFile(
+      file,
+      [
+        "# The Lighthouse",
+        "## Chapter One",
+        "The lamp turned all night.",
+        "Nobody answered.",
+        "## Chapter Two",
+        "Morning came.",
+      ].join("\n\n"),
+    );
+    const fromFile = await tool("soundbox.import_manuscript", { path: file, author: "A. Writer", cast_mode: "multi" });
+    expect(fromFile.author).toBe("A. Writer");
+    expect(fromFile.settings.cast_mode).toBe("multi");
+    expect(fromFile.chapters.length).toBeGreaterThanOrEqual(2);
+    expect(fromFile.chapters.map((c: any) => c.title)).toEqual(expect.arrayContaining(["Chapter One", "Chapter Two"]));
+    expect(Array.isArray(fromFile.warnings)).toBe(true);
+
+    const pasted = await tool("soundbox.import_manuscript", {
+      text: ["Chapter 1", "It was dark.", "Chapter 2", "It was light."].join("\n\n"),
+      title: "Pasted Book",
+    });
+    expect(pasted.title).toBe("Pasted Book");
+    expect(pasted.chapters.length).toBeGreaterThanOrEqual(1);
+    const got = await tool("soundbox.get_audiobook", { book_id: pasted.book_id, chapter_id: pasted.chapters[0].chapter_id });
+    expect(got.paragraphs.some((p: any) => /dark/.test(p.text))).toBe(true);
   });
 
   it("refuses manuscript paths it should not read, before calling the importer", async () => {

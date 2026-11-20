@@ -470,7 +470,7 @@ export class Database {
    *  Its own store rather than more methods here: two tables nothing else
    *  joins against, and this file is long enough already. */
   readonly history: HistoryStore;
-  private readonly conn: Sqlite;
+  readonly conn: Sqlite; // [audiobooks:voice] public so area stores run their own schema on it
   /** Statement cache keyed by SQL text — the filter combinations in listSounds
    *  and listMcpCalls generate a small, bounded set of distinct queries. */
   private readonly stmts = new Map<string, Statement>();

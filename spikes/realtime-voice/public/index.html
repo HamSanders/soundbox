@@ -54,7 +54,7 @@ button, select, textarea, input { font: inherit; color: inherit; }
 .pill[data-s="speaking"] { color: var(--ink); border-color: var(--ink); }
 .pill[data-s="speaking"] .dot { display: inline-block; }
 .pill[data-s="listening"] { color: var(--ink); }
-.pill[data-s="error"] { color: var(--danger); border-color: var(--danger); }
+.pill[data-s="error"], .pill[data-s="down"] { color: var(--danger); border-color: var(--danger); }
 select.btn { appearance: none; padding-right: 34px; max-width: 220px; overflow: hidden; text-overflow: ellipsis;
              background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
              background-position: calc(100% - 18px) 17px, calc(100% - 13px) 17px; background-size: 5px 5px; background-repeat: no-repeat; }
@@ -276,7 +276,7 @@ td.over { color: var(--rust); font-weight: 700; }
   </div>
   <span class="log hide-sm" id="hdrLog">call · runs here</span>
   <span class="grow"></span>
-  <span class="pill" id="state" data-s="off"><span class="dot"></span><span id="stateTxt">not connected</span></span>
+  <span class="pill" id="state" data-s="off"><span class="dot"></span><span id="stateTxt">checking</span></span>
   <button class="btn" id="themeBtn" title="Day or dusk" aria-label="Switch between day and dusk">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5a5.5 5.5 0 0 0 0 11z" fill="currentColor"/></svg>
   </button>
@@ -391,7 +391,7 @@ $("callNo").textContent = String(callNo).padStart(4, "0");
 let ctx, ws, player, analyser, micStream, muted = false, callStart = 0;
 let firstChunkAt = null, lastHeard = null;
 
-const STATE_WORDS = { off: "not connected", starting: "connecting", idle: "your turn", listening: "listening", thinking: "thinking", speaking: "speaking", error: "error", closed: "call ended" };
+const STATE_WORDS = { off: "ready to call", down: "call server down", starting: "connecting", idle: "your turn", listening: "listening", thinking: "thinking", speaking: "speaking", error: "error", closed: "call ended" };
 function setState(s) {
   $("state").dataset.s = s;
   $("stateTxt").textContent = STATE_WORDS[s] ?? s;
@@ -434,10 +434,11 @@ function setTxt(el, text) {
 // ---- Voices ---------------------------------------------------------------
 const sendVoice = () => ws?.readyState === 1 && ws.send(JSON.stringify({ type: "voice", id: $("voice").value }));
 fetch("voices").then((r) => r.json()).then((list) => {
+  if (!callStart) setState("off");
   for (const v of list) $("voice").append(new Option(v.name, v.id));
   const saved = store.get("spike-voice") ?? "";
   if (list.some((v) => v.id === saved)) $("voice").value = saved;
-}).catch(() => {}).finally(() => { $("voice2").innerHTML = $("voice").innerHTML; $("voice2").value = $("voice").value; });
+}).catch(() => { if (!callStart) setState("down"); }).finally(() => { $("voice2").innerHTML = $("voice").innerHTML; $("voice2").value = $("voice").value; });
 for (const [a, b] of [["voice", "voice2"], ["voice2", "voice"]]) {
   $(a).onchange = () => { $(b).value = $(a).value; store.set("spike-voice", $("voice").value); sendVoice(); };
 }

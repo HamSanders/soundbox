@@ -7,9 +7,15 @@
  * at an average reading pace, so the read-along highlight moves with it. It is
  * rendered to a WAV blob the first time a chapter is opened. Everything
  * resets on reload, like the rest of the mock.
+ *
+ * Books from the audiobook editor's own mock (`audiobook-mock.ts`) are on the
+ * shelf too, read through `audiobookApi`, so a book edited in Audiobooks
+ * shows up here with its real chapters and its voiced paragraphs' timings.
  */
 
 import type { ListenApi } from "./listen-api";
+import { audiobookApi, type BookDetail } from "./audiobook-api";
+import { mockApi } from "./mock";
 import type { Book, BookSettings, ChapterKind } from "./audiobook-types";
 import type {
   Bookmark,
@@ -373,6 +379,69 @@ function bookOf(m: MockBook): Book & { cover_url: string | null; tags: string[] 
   };
 }
 
+/* ------------------------------------------------- editor (core) mock books */
+
+const LISTENABLE = (kind: ChapterKind, included: boolean) => included && kind !== "retail_sample";
+
+/** An editor book's chapters as the listen manifest has them: narration
+ *  (track 0) paragraphs, with timings where a paragraph is voiced. */
+async function editorChapters(detail: BookDetail): Promise<ListenChapter[]> {
+  const out: ListenChapter[] = [];
+  for (const c of detail.chapters.filter((ch) => LISTENABLE(ch.kind, ch.included))) {
+    const paragraphs = (await audiobookApi.listParagraphs(detail.id, c.id)).filter(
+      (p) => p.kind === "line" && p.track_index === 0 && p.text.trim() !== "",
+    );
+    let end = 0;
+    const listen = paragraphs.map((p) => {
+      const length = p.sound_id ? (p.duration_s ?? p.sound?.duration_s ?? Math.max(0.8, words(p.text) / WORDS_PER_S)) : 0;
+      const voiced = Boolean(p.sound_id) && length > 0;
+      if (voiced) end = Math.max(end, p.start_s + length);
+      return {
+        segment_id: p.id,
+        text: p.text,
+        start_s: voiced ? round(p.start_s) : null,
+        end_s: voiced ? round(p.start_s + length) : null,
+        character_id: p.character_id,
+        is_heading: p.is_heading,
+      };
+    });
+    out.push({
+      id: c.id,
+      title: c.title,
+      kind: c.kind,
+      position: c.position,
+      duration_s: round(end),
+      audio_url: null,
+      source: end > 0 ? "live" : null,
+      paragraphs: listen,
+    });
+  }
+  return out;
+}
+
+async function editorBooks(): Promise<BookDetail[]> {
+  const summaries = await audiobookApi.listBooks();
+  return Promise.all(summaries.map((b) => audiobookApi.getBook(b.id)));
+}
+
+/** A catalogue book, or an editor book in the same shape (for the checklist). */
+async function anyBook(id: string): Promise<MockBook> {
+  const known = CATALOGUE.find((b) => b.id === id);
+  if (known) return known;
+  const d = await audiobookApi.getBook(id);
+  return {
+    id: d.id,
+    title: d.title,
+    author: d.author ?? "",
+    narrator: d.narrator ?? "",
+    description: d.description ?? "",
+    genres: d.genres,
+    tags: [],
+    published: d.publication_date ?? "",
+    chapters: d.chapters.map((c) => ({ title: c.title, kind: c.kind, paragraphs: [] })),
+  };
+}
+
 function find(id: string): MockBook {
   const book = CATALOGUE.find((b) => b.id === id);
   if (!book) throw new Error("Book not found");
@@ -405,7 +474,32 @@ function seed(): void {
 export const mockListenApi: ListenApi = {
   async shelf(): Promise<ShelfBook[]> {
     seed();
-    return CATALOGUE.map((m) => {
+    const editor: ShelfBook[] = [];
+    for (const d of await editorBooks()) {
+      const chapters = await editorChapters(d);
+      editor.push({
+        id: d.id,
+        title: d.title,
+        subtitle: d.subtitle,
+        author: d.author,
+        narrator: d.narrator,
+        description: d.description,
+        language: d.language,
+        genres: d.genres,
+        tags: tags.get(d.id) ?? [],
+        series: d.series,
+        series_index: d.series_index,
+        publication_date: d.publication_date,
+        cover_url: audiobookApi.coverUrl(d),
+        duration_s: round(chapters.reduce((s, c) => s + c.duration_s, 0)),
+        chapters: chapters.length,
+        playable_chapters: chapters.filter((c) => c.duration_s > 0).length,
+        progress: progress.get(d.id) ?? null,
+        created_at: d.created_at,
+        updated_at: d.updated_at,
+      });
+    }
+    return [...editor, ...CATALOGUE.map((m) => {
       const chapters = chaptersOf(m);
       const b = bookOf(m);
       return {
@@ -429,11 +523,12 @@ export const mockListenApi: ListenApi = {
         created_at: b.created_at,
         updated_at: b.updated_at,
       };
-    });
+    })];
   },
 
   async manifest(id): Promise<ListenManifest> {
     seed();
+    if (!CATALOGUE.some((b) => b.id === id)) return editorManifest(id);
     const m = find(id);
     const seedN = CATALOGUE.indexOf(m) + 1;
     const chapters = chaptersOf(m).map((c) => ({ ...c, audio_url: synthesise(c, seedN) }));
@@ -510,7 +605,7 @@ export const mockListenApi: ListenApi = {
   },
 
   async checklist(id): Promise<ChecklistTarget[]> {
-    const m = find(id);
+    const m = await anyBook(id);
     const item = (iid: string, label: string, pass: boolean, detail: string, level: "required" | "recommended" = "required") => ({
       id: iid,
       label,
@@ -546,16 +641,15 @@ export const mockListenApi: ListenApi = {
   },
 
   async publishWebPlayer(id) {
-    return fakePublish(id, "webplayer", ["index.html", "readalong.json", "book.jsonld"]);
+    return fakePublish(await anyBook(id), "webplayer", ["index.html", "readalong.json", "book.jsonld"]);
   },
 
   async publishRss(id) {
-    return fakePublish(id, "rss", ["feed.xml"]);
+    return fakePublish(await anyBook(id), "rss", ["feed.xml"]);
   },
 };
 
-function fakePublish(id: string, kind: PublishResult["kind"], extra: string[]): PublishResult {
-  const m = find(id);
+function fakePublish(m: MockBook, kind: PublishResult["kind"], extra: string[]): PublishResult {
   const name = `${m.id}-${kind}-mock`;
   return {
     kind,
@@ -567,5 +661,33 @@ function fakePublish(id: string, kind: PublishResult["kind"], extra: string[]): 
     chapters: m.chapters.length,
     warnings: ["Mock mode: nothing was written to disk."],
     created_at: now(),
+  };
+}
+
+async function editorManifest(id: string): Promise<ListenManifest> {
+  const d = await audiobookApi.getBook(id);
+  const chapters = (await editorChapters(d)).map((c, i) => ({
+    ...c,
+    audio_url: c.duration_s > 0 ? synthesise(c, i + 11) : null,
+  }));
+  const first = chapters.find((c) => c.kind === "chapter" && c.duration_s > 0) ?? chapters.find((c) => c.duration_s > 0);
+  const voices = new Map((await mockApi.listVoices().catch(() => [])).map((v) => [v.id, v.name]));
+  const voiceName = (vid: string | null) => (vid ? (voices.get(vid) ?? null) : null);
+  const { chapters: _c, characters, stats: _s, ...book } = d;
+  return {
+    book: { ...book, cover_url: audiobookApi.coverUrl(d), tags: tags.get(id) ?? [] },
+    cast: [
+      { character_id: null, role: "Narrator", voice_id: d.settings.narrator_voice_id, voice_name: d.narrator ?? voiceName(d.settings.narrator_voice_id) },
+      ...(d.settings.cast_mode === "multi"
+        ? characters.filter((c) => c.voice_id).map((c) => ({ character_id: c.id, role: c.name, voice_id: c.voice_id, voice_name: voiceName(c.voice_id) }))
+        : []),
+    ],
+    characters: characters.map((c) => ({ id: c.id, name: c.name, color: c.color })),
+    chapters,
+    duration_s: round(chapters.reduce((s, c) => s + c.duration_s, 0)),
+    sample: first ? { chapter_id: first.id, start_s: 0, end_s: Math.min(300, first.duration_s), from: "first_chapter" } : null,
+    progress: progress.get(id) ?? null,
+    bookmarks: bookmarks.get(id) ?? [],
+    word_timings: false,
   };
 }

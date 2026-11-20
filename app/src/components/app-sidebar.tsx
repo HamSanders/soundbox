@@ -20,7 +20,6 @@ import {
   MessagesSquareIcon,
   MicIcon,
   MoonIcon,
-  PanelLeftIcon,
   PlusIcon,
   SearchIcon,
   SettingsIcon,
@@ -652,34 +651,6 @@ function DeviceStatus() {
   );
 }
 
-/** The "keep expanded" switch, in the sidebar itself so it can be found from
- *  the thing it changes. Only shown on a page that would otherwise fold. */
-function KeepExpandedRow() {
-  const { pathname } = useLocation();
-  const keep = useUiPrefs((s) => s.sidebarKeepExpanded);
-  const set = useUiPrefs((s) => s.set);
-  if (!wantsRail(pathname)) return null;
-  return (
-    <SidebarMenuItem>
-      <SidebarMenuButton
-        tooltip={keep ? "Fold to a rail on studio pages" : "Keep the sidebar open on studio pages"}
-        onClick={() => set({ sidebarKeepExpanded: !keep })}
-        aria-pressed={keep}
-      >
-        <PanelLeftIcon />
-        <span className="flex-1">Keep expanded here</span>
-        <span
-          className={cn(
-            "readout text-xs group-data-[collapsible=icon]:hidden",
-            keep ? "text-sidebar-primary" : "text-muted-foreground",
-          )}
-        >
-          {keep ? "On" : "Off"}
-        </span>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
-  );
-}
 
 function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -737,7 +708,6 @@ export function AppSidebar() {
             <SidebarMenuItem>
               <ThemeToggle />
             </SidebarMenuItem>
-            <KeepExpandedRow />
             <SidebarMenuItem>
               <DeviceStatus />
             </SidebarMenuItem>

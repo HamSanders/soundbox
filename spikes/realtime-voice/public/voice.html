@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Talk to Mirli</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Courier+Prime:wght@400;700&family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap">
+<style>
+/* Voice mode: the whole screen is the call. One pen line across the page moves
+   with whoever is talking; the words sit large in the middle like a poster.
+   Mirli's palette: dusk by default, the beak dot only where sound happens. */
+:root {
+  --paper: #181817; --sheet: #20201e; --ink: #f1ece0; --pencil: #a9a797; --rule: #33332f; --rule-strong: #7c7b74; --well: #121211;
+  --beak: #f2a40c; --danger: #f08a80;
+  --title: "Big Shoulders Display", "Arial Narrow", Inter, sans-serif;
+  --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --log: "Courier Prime", "Courier New", ui-monospace, monospace;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --paper: #f1ece0; --sheet: #faf6ec; --ink: #14130f; --pencil: #66625a; --rule: #d9d2c0; --rule-strong: #8c8676; --well: #e7e0d0; --danger: #b3261e; color-scheme: light; } }
+:root[data-theme="light"] { --paper: #f1ece0; --sheet: #faf6ec; --ink: #14130f; --pencil: #66625a; --rule: #d9d2c0; --rule-strong: #8c8676; --well: #e7e0d0; --danger: #b3261e; color-scheme: light; }
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 var(--sans); overflow: hidden; -webkit-font-smoothing: antialiased; }
+button, textarea, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.log { font: 400 13px/1.5 var(--log); color: var(--pencil); }
+
+.app { position: relative; height: 100dvh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; padding: env(safe-area-inset-top, 0px) max(20px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(20px, env(safe-area-inset-left, 0px)); }
+header { height: 64px; display: flex; align-items: center; gap: 14px; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
+.brand svg { width: 34px; height: auto; overflow: visible; }
+.brand b { font: 800 22px/1 var(--title); }
+header .grow { flex: 1; }
+.state { display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--rule-strong); font: 12.5px/1 var(--log); color: var(--pencil); }
+.state i { width: 7px; height: 7px; border-radius: 50%; background: var(--beak); display: none; }
+body.speaking .state { color: var(--ink); border-color: var(--ink); }
+body.speaking .state i { display: inline-block; }
+.clock { font: 13px var(--log); color: var(--pencil); min-width: 3.5em; text-align: right; }
+
+/* The stage: words on top, the line through the middle. */
+.stage { position: relative; display: grid; place-items: center; min-height: 0; }
+canvas#line { position: absolute; inset: 0; width: 100%; height: 100%; }
+.words { position: relative; z-index: 1; width: min(1100px, 100%); text-align: center; display: grid; gap: 18px; pointer-events: none; }
+.said { font: 800 clamp(34px, 6.4vw, 92px)/.98 var(--title); text-transform: uppercase; letter-spacing: .005em; text-wrap: balance; min-height: 1em; transition: opacity .3s var(--ease); }
+.said .w { opacity: 0; display: inline-block; transform: translateY(.18em); animation: w .38s var(--ease) forwards; }
+@keyframes w { to { opacity: 1; transform: none; } }
+.you { font: 500 clamp(16px, 1.8vw, 21px)/1.4 var(--sans); color: var(--pencil); min-height: 1.4em; max-width: 60ch; margin: 0 auto; }
+.you.live { font-style: italic; }
+
+/* Start screen, same page: the call is one tap away. */
+.start { position: absolute; inset: 0; z-index: 3; display: grid; align-content: center; justify-items: start; gap: 26px; padding: 0 max(20px, 6vw); background: var(--paper); transition: opacity .5s var(--ease), visibility .5s; }
+body.live .start { opacity: 0; visibility: hidden; }
+.start h1 { margin: 0; font: 800 clamp(64px, min(14vw, 19dvh), 220px)/.84 var(--title); text-transform: uppercase; }
+.start h1 em { font-style: normal; color: var(--beak); }
+.start p { margin: 0; max-width: 40ch; font-size: clamp(17px, 2vw, 22px); line-height: 1.4; font-weight: 500; }
+.start .row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px; }
+.go { height: 72px; padding: 0 34px 0 14px; border-radius: 999px; border: 0; cursor: pointer; background: var(--ink); color: var(--paper); font-size: 19px; font-weight: 600; display: inline-flex; align-items: center; gap: 14px; }
+.go .ring { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: var(--paper); color: var(--ink); }
+.go .ring svg { width: 20px; height: 20px; }
+.go:hover { opacity: .92; }
+select.pick { appearance: none; height: 44px; padding: 0 36px 0 16px; border-radius: 999px; border: 1px solid var(--rule-strong); background: transparent; cursor: pointer; max-width: 240px;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 19px) 19px, calc(100% - 14px) 19px; background-size: 5px 5px; background-repeat: no-repeat; }
+select.pick option { background: var(--sheet); color: var(--ink); }
+.start .err { color: var(--danger); min-height: 1.4em; }
+.start .alt { color: var(--pencil); }
+.start .alt a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--beak); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+
+/* Controls. */
+body:not(.live) .bar { visibility: hidden; }
+.bar { display: flex; justify-content: center; align-items: center; gap: 10px; padding: 14px 0 22px; flex-wrap: wrap; }
+.btn { height: 48px; min-width: 48px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--rule-strong); background: transparent; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 500; }
+.btn:hover { background: var(--well); }
+.btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.btn svg { width: 18px; height: 18px; }
+.btn.end { background: var(--danger); border-color: var(--danger); color: var(--paper); padding: 0 24px; }
+form.type { display: none; width: min(560px, 100%); gap: 8px; }
+body.typing form.type { display: flex; }
+form.type input { flex: 1; height: 48px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--rule-strong); background: var(--sheet); min-width: 0; }
+form.type input:focus { outline: none; border-color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .said .w { animation: none; opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <a class="brand" href="./" title="Back to video calls"><svg id="mark" viewBox="-8 -8 236 144" aria-hidden="true"></svg><b>MIRLI</b></a>
+    <span class="log">voice call</span>
+    <span class="grow"></span>
+    <span class="state"><i></i><span id="stateTxt">ready</span></span>
+    <span class="clock" id="clock"></span>
+  </header>
+
+  <main class="stage">
+    <canvas id="line" aria-hidden="true"></canvas>
+    <div class="words">
+      <div class="said" id="said" aria-live="polite"></div>
+      <div class="you" id="you"></div>
+    </div>
+
+    <section class="start" id="start">
+      <div class="log">No. <span id="callNo">0001</span> · a voice call · runs on this machine</div>
+      <h1>Just<br>talk<em>.</em></h1>
+      <p>No face, no screen to look at. Say something and Mirli answers in a voice you made. Cut in whenever you like.</p>
+      <div class="row">
+        <button class="go" id="go"><span class="ring"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M3.6 1.5c.5 0 .9.3 1.1.8l.9 2.3c.2.5 0 1-.4 1.3l-1 .8a9 9 0 0 0 5.1 5.1l.8-1c.3-.4.8-.6 1.3-.4l2.3.9c.5.2.8.6.8 1.1V14c0 .8-.7 1.5-1.5 1.5A13 13 0 0 1 .5 3C.5 2.2 1.2 1.5 2 1.5z"/></svg></span>Start talking</button>
+        <select class="pick" id="voice" aria-label="Voice"><option value="">VoxCPM2 default</option></select>
+      </div>
+      <div class="log err" id="err"></div>
+      <div class="log alt">Headphones help. Want a face? <a href="./">Video call</a></div>
+    </section>
+  </main>
+
+  <div class="bar">
+    <button class="btn" id="mute" aria-pressed="false" aria-label="Mute"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="5.5" y="1.5" width="5" height="8.5" rx="2.5"/><path d="M3 8a5 5 0 0 0 10 0M8 13v2"/></svg><span>Mute</span></button>
+    <button class="btn" id="typeBtn" aria-pressed="false" aria-label="Type instead"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="1.5" y="4" width="13" height="8" rx="2"/><path d="M4 7h1M7 7h1M10 7h2M5 9.5h6"/></svg><span>Type</span></button>
+    <form class="type" id="typeForm"><input id="typeIn" placeholder="Type and press Enter" autocomplete="off" aria-label="Message"></form>
+    <button class="btn end" id="end"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 5.5c2.6 0 5 .8 6.6 2.2.5.4.5 1.1.1 1.5l-1.2 1.2c-.4.4-1 .4-1.4.1l-1.6-1.2c-.3-.2-.4-.5-.4-.8V7.4a9 9 0 0 0-4.2 0v1.1c0 .3-.2.6-.4.8l-1.6 1.2c-.4.3-1 .3-1.4-.1L1.3 9.2c-.4-.4-.4-1.1.1-1.5C3 6.3 5.4 5.5 8 5.5z"/></svg>End</button>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+const M = "M0 107.5C1.8 106.9 6.7 105.9 11 104C15.3 102.1 21.1 99.3 26 96C30.9 92.7 36.2 88 40.5 84C44.8 80 48.1 76 51.5 72C54.9 68 58.3 63.3 61 60C63.7 56.7 65.7 54 67.5 52C69.3 50 70.2 50 72 48C73.8 46 75.8 42.1 78 40C80.2 37.9 82.5 36.8 85 35.5C87.5 34.2 90.6 31.9 93 32C95.4 32.1 97.6 34 99.5 36C101.4 38 103.2 41 104.5 44C105.8 47 106.6 50 107.5 54C108.4 58 109.2 63.7 110 68C110.8 72.3 111.3 76 112 80C112.7 84 113.2 88.3 114 92C114.8 95.7 115.5 98.8 116.5 102C117.5 105.2 118.6 108.6 120 111C121.4 113.4 123.5 116.3 125 116.5C126.5 116.7 127.8 114.2 129 112C130.2 109.8 131.1 106.3 132 103C132.9 99.7 133.8 95.3 134.5 92C135.2 88.7 135.8 86.3 136.5 83C137.2 79.7 138.2 75.8 139 72C139.8 68.2 140.3 63.3 141 60C141.7 56.7 142.2 55 143 52C143.8 49 144.4 45.3 145.5 42C146.6 38.7 148.1 34.8 149.5 32C150.9 29.2 152.4 26.9 154 25.5C155.6 24.1 157.2 23.2 159 23.5C160.8 23.8 163.1 25.4 164.5 27.5C165.9 29.6 166.7 31.9 167.5 36C168.3 40.1 168.9 47.3 169.5 52C170.1 56.7 170.5 59.3 171 64C171.5 68.7 172 75.3 172.5 80C173 84.7 173.3 88 174 92C174.7 96 175.6 100.3 176.5 104C177.4 107.7 178.2 111 179.5 114C180.8 117 181.8 119.8 184 122C186.2 124.2 189.8 127.2 192.5 127.5C195.2 127.8 197.6 125.6 200 124C202.4 122.4 204.9 120.5 207 118C209.1 115.5 210.8 112.3 212.5 109C214.2 105.7 215.9 102 217 98C218.1 94 218.9 89.3 219.3 85C219.7 80.7 219.6 76.2 219.2 72C218.8 67.8 218 63.2 217 60C216 56.8 214.2 53.4 213 52.5C211.8 51.6 210.7 52.4 210 54.5C209.3 56.6 209.2 60.8 209 65C208.8 69.2 209.2 75.8 209 80C208.8 84.2 208.2 87 207.5 90C206.8 93 205.8 96.2 204.5 98C203.2 99.8 201.5 101.2 200 101C198.5 100.8 196.8 98.8 195.5 96.5C194.2 94.2 193.4 90.6 192.5 87C191.6 83.4 190.8 79.3 190 75C189.2 70.7 188.7 66.2 188 61C187.3 55.8 186.7 49.2 186 44C185.3 38.8 184.8 34.7 184 30C183.2 25.3 182.5 19.8 181.5 16C180.5 12.2 179.4 9.4 178 7C176.6 4.6 174.8 2.7 173 1.5C171.2 0.3 169.5 -0.1 167.5 0C165.5 0.1 163.2 0.7 161 2C158.8 3.3 156.4 5.7 154.5 8C152.6 10.3 151 13.3 149.5 16C148 18.7 146.8 21.2 145.5 24C144.2 26.8 143 30 142 33C141 36 140.2 38.8 139.5 42C138.8 45.2 138.2 48.3 137.5 52C136.8 55.7 136.2 60.3 135.5 64C134.8 67.7 134.2 71.2 133.5 74C132.8 76.8 131.8 80.2 131 80.5C130.2 80.8 129.2 78.6 128.5 76C127.8 73.4 127.2 68.7 126.5 65C125.8 61.3 125.2 57.7 124.5 54C123.8 50.3 122.8 46.7 122 43C121.2 39.3 120.4 35.8 119.5 32C118.6 28.2 117.5 23.7 116.5 20C115.5 16.3 114.8 12.8 113.5 10C112.2 7.2 110.7 4.7 109 3C107.3 1.3 105.4 0.1 103.5 0C101.6 -0.1 99.4 1.2 97.5 2.5C95.6 3.8 93.7 6.1 92 8C90.3 9.9 88.9 11.7 87.5 14C86.1 16.3 84.8 19.3 83.5 22C82.2 24.7 81 27.5 80 30C79 32.5 78.3 34.7 77.5 37C76.7 39.3 75.8 41.3 75 44C74.2 46.7 73.2 49.8 72.5 53C71.8 56.2 71.2 59.8 70.5 63C69.8 66.2 69.2 68.3 68.5 72C67.8 75.7 67.1 81 66.5 85C65.9 89 65.5 92.2 65 96C64.5 99.8 63.8 104.3 63.5 108C63.2 111.7 63.1 115.2 63 118C62.9 120.8 62.8 123.4 62.8 124.5";
+$("mark").innerHTML = `<path d="${M}" fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>`;
+if (store.get("mirli-call-theme")) document.documentElement.dataset.theme = store.get("mirli-call-theme");
+const callNo = Number(store.get("mirli-call-no") || 0) + 1;
+$("callNo").textContent = String(callNo).padStart(4, "0");
+
+// A voice call with no face is Mirli itself: friendly, a real-feeling person.
+const PERSONA = `You are Mirli, a real-feeling person on a casual voice call. You are not an assistant and you don't say you're an AI unless someone asks directly and sincerely.
+Talk like a friend: relaxed, warm, a bit playful, one to three short sentences. Have opinions and share them. Be curious: ask follow-up questions about what they just said. Remember what they told you and come back to it. React naturally ("no way", "ha, fair").
+Your words are turned into speech, so plain spoken sentences only: no lists, no markdown, no emoji, no stage directions, nothing in brackets.`;
+
+// ---- Voices ----
+fetch("voices").then((r) => r.json()).then((list) => {
+  for (const v of list) $("voice").append(new Option(v.name, v.id));
+  const saved = store.get("spike-voice") ?? "";
+  if (list.some((v) => v.id === saved)) $("voice").value = saved;
+}).catch(() => { $("err").textContent = "The call server isn't running on this machine."; });
+$("voice").onchange = () => store.set("spike-voice", $("voice").value);
+
+// ---- The line: one pen stroke across the screen ------------------------------
+// Mirli's voice swells it from the middle; your voice ripples it from the edges.
+const cv = $("line"), g = cv.getContext("2d");
+let dpr = 1, W = 0, H = 0;
+function size() { dpr = Math.min(2, devicePixelRatio || 1); W = cv.clientWidth; H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr; }
+addEventListener("resize", size); size();
+const lvl = { bot: 0, you: 0 }, phase = { a: 0, b: 0 };
+let botAnalyser = null, micAnalyser = null;
+const buf = new Uint8Array(1024);
+const peak = (an) => { if (!an) return 0; an.getByteTimeDomainData(buf); let p = 0; for (const v of buf) p = Math.max(p, Math.abs(v - 128)); return Math.min(1, p / 64); };
+function draw() {
+  requestAnimationFrame(draw);
+  const css = getComputedStyle(document.documentElement);
+  const ink = css.getPropertyValue("--ink").trim(), beak = css.getPropertyValue("--beak").trim();
+  lvl.bot += (peak(botAnalyser) - lvl.bot) * 0.22;
+  lvl.you += ((muted ? 0 : peak(micAnalyser)) - lvl.you) * 0.18;
+  phase.a += 0.035 + lvl.bot * 0.09; phase.b += 0.05 + lvl.you * 0.08;
+  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  const mid = H * 0.5, amp = Math.min(H * 0.32, 220), x0 = 24, x1 = W - 24;
+  g.lineWidth = 2.6; g.lineCap = "round"; g.lineJoin = "round"; g.strokeStyle = ink; g.globalAlpha = 0.9;
+  g.beginPath();
+  let lastY = mid;
+  for (let x = x0; x <= x1; x += 4) {
+    const t = (x - x0) / (x1 - x0);
+    const env = Math.sin(t * Math.PI) ** 1.4;                     // Mirli: from the middle
+    const edge = (Math.cos(t * Math.PI * 2) + 1) / 2;               // you: from the edges
+    const idle = 2.2 * Math.sin(t * 9 + phase.a * 0.4);
+    const y = mid + idle
+      + env * lvl.bot * amp * Math.sin(t * 22 + phase.a) * (0.7 + 0.3 * Math.sin(t * 5 - phase.a * 0.5))
+      + edge * lvl.you * amp * 0.45 * Math.sin(t * 34 - phase.b);
+    x === x0 ? g.moveTo(x, y) : g.lineTo(x, y);
+    lastY = y;
+  }
+  g.stroke();
+  // The beak dot at the end of the line, while Mirli speaks.
+  g.globalAlpha = Math.min(1, lvl.bot * 4);
+  g.fillStyle = beak; g.beginPath(); g.arc(x1, lastY, 6, 0, Math.PI * 2); g.fill();
+  g.globalAlpha = 1;
+}
+requestAnimationFrame(draw);
+
+// ---- Words: the reply builds up word by word, large ---------------------------
+let replyWords = 0, reply = "";
+function setReply(text) {
+  // Show the tail, so a long reply keeps the newest words in view.
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  const keep = words.slice(-22);
+  const start = words.length - keep.length;
+  const el = $("said");
+  if (start > 0 || keep.length < replyWords) { el.textContent = ""; replyWords = 0; }
+  for (let i = replyWords; i < keep.length; i++) {
+    const s = document.createElement("span"); s.className = "w"; s.textContent = keep[i]; el.append(s, " ");
+  }
+  replyWords = keep.length;
+}
+function clearReply() { $("said").textContent = ""; replyWords = 0; reply = ""; }
+
+// ---- The call ----
+let ctx, ws, player, micStream, muted = false, callStart = 0;
+const STATES = { idle: "your turn", listening: "listening", thinking: "thinking", speaking: "speaking", closed: "call ended" };
+function setState(s) { $("stateTxt").textContent = STATES[s] ?? s; document.body.classList.toggle("speaking", s === "speaking"); }
+setInterval(() => { if (!callStart) return; const s = Math.floor((Date.now() - callStart) / 1000); $("clock").textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }, 500);
+
+$("go").onclick = () => {
+  $("go").disabled = true; $("err").textContent = "";
+  try { ctx = new AudioContext({ sampleRate: 48000, latencyHint: "interactive" }); ctx.resume(); }
+  catch (e) { $("err").textContent = String(e.message ?? e); $("go").disabled = false; return; }
+  ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.binaryType = "arraybuffer";
+  ws.onmessage = (e) => typeof e.data === "string" ? onJson(JSON.parse(e.data)).catch(fail) : onPcm(e.data);
+  ws.onerror = () => fail(new Error("Couldn't reach the call server on this machine."));
+  ws.onclose = () => { setState("closed"); };
+};
+function fail(e) {
+  $("err").textContent = e?.name === "NotAllowedError" ? "Microphone access was refused. Allow it for this page and reload." : String(e?.message ?? e);
+  document.body.classList.remove("live"); $("go").disabled = false;
+}
+
+async function onJson(m) {
+  if (m.type === "hello") {
+    ws.send(JSON.stringify({ type: "voice", id: $("voice").value }));
+    ws.send(JSON.stringify({ type: "persona", text: PERSONA }));
+    await ctx.audioWorklet.addModule("capture-worklet.js");
+    await ctx.audioWorklet.addModule("playback-worklet.js");
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
+    const src = ctx.createMediaStreamSource(micStream);
+    const cap = new AudioWorkletNode(ctx, "capture");
+    cap.port.onmessage = (e) => { if (ws.readyState === 1) ws.send(muted ? new ArrayBuffer(e.data.byteLength) : e.data); };
+    src.connect(cap);
+    micAnalyser = ctx.createAnalyser(); micAnalyser.fftSize = 2048; src.connect(micAnalyser);
+    player = new AudioWorkletNode(ctx, "playback", { outputChannelCount: [1] });
+    player.port.onmessage = (e) => ws.readyState === 1 && ws.send(JSON.stringify({ type: "playback", playing: e.data.playing }));
+    botAnalyser = ctx.createAnalyser(); botAnalyser.fftSize = 2048;
+    player.connect(botAnalyser); player.connect(ctx.destination);
+    if (ctx.state !== "running") await ctx.resume();
+    callStart = Date.now(); store.set("mirli-call-no", String(callNo));
+    document.body.classList.add("live");
+    setState("idle");
+    $("you").textContent = "Say something.";
+  } else if (m.type === "state") {
+    setState(m.state);
+    if (m.state === "listening") { clearReply(); }
+  } else if (m.type === "partial") {
+    $("you").classList.add("live"); $("you").textContent = m.text;
+  } else if (m.type === "final") {
+    $("you").classList.remove("live");
+    if (m.text) $("you").textContent = m.text;
+    clearReply();
+  } else if (m.type === "reply_delta") {
+    reply += m.text; setReply(reply);
+  } else if (m.type === "flush") {
+    player?.port.postMessage("flush");
+  } else if (m.type === "error") {
+    $("you").textContent = m.message;
+  }
+}
+function onPcm(b) {
+  const i16 = new Int16Array(b), f32 = new Float32Array(i16.length);
+  for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 32768;
+  player?.port.postMessage(f32.buffer, [f32.buffer]);
+}
+
+// ---- Controls ----
+$("mute").onclick = () => { muted = !muted; $("mute").setAttribute("aria-pressed", String(muted)); $("mute").querySelector("span").textContent = muted ? "Muted" : "Mute"; };
+$("typeBtn").onclick = () => { const on = !document.body.classList.contains("typing"); document.body.classList.toggle("typing", on); $("typeBtn").setAttribute("aria-pressed", String(on)); if (on) $("typeIn").focus(); };
+$("typeForm").onsubmit = (e) => {
+  e.preventDefault();
+  const t = $("typeIn").value.trim();
+  if (!t || ws?.readyState !== 1) return;
+  ws.send(JSON.stringify({ type: "text", text: t }));
+  $("you").classList.remove("live"); $("you").textContent = t; $("typeIn").value = ""; clearReply();
+};
+$("end").onclick = () => { try { ws?.close(); micStream?.getTracks().forEach((t) => t.stop()); ctx?.close(); } catch {} location.reload(); };
+</script>
+</body>
+</html>

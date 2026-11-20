@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Call Santa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* A seasonal one-off: night sky, fireplace warmth, one gold dot where sound happens. */
+:root {
+  --night: #0b1324; --night2: #142445; --ember: #ff8a3d; --ember-soft: rgba(255, 138, 61, .18);
+  --snow: #f4f1ea; --dim: rgba(244, 241, 234, .62); --red: #c8312f; --red-hi: #e0443f;
+  --green: #2f7a55; --gold: #f5c84b; --glass: rgba(10, 16, 32, .55); --rule: rgba(244, 241, 234, .14);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: radial-gradient(120% 70% at 50% 110%, var(--ember-soft), transparent 60%),
+              linear-gradient(180deg, var(--night) 0%, var(--night2) 100%);
+  color: var(--snow); font: 400 16px/1.45 Inter, system-ui, sans-serif;
+  overflow: hidden; -webkit-tap-highlight-color: transparent;
+}
+#snow { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: .7; }
+.screen { position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+.screen[hidden] { display: none; }
+
+/* ---- Landing ---- */
+.landing { text-align: center; max-width: 520px; }
+.kicker { font: 600 12px/1 Inter; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); margin: 0 0 14px; }
+h1 { font: 900 clamp(52px, 14vw, 96px)/.9 "Big Shoulders Display", Impact, sans-serif; margin: 0; letter-spacing: .01em; }
+.sub { color: var(--dim); margin: 16px auto 36px; max-width: 34ch; }
+.big {
+  appearance: none; border: 0; cursor: pointer; font: 900 28px/1 "Big Shoulders Display", sans-serif; letter-spacing: .04em;
+  color: var(--snow); background: var(--red); padding: 22px 44px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 14px; transition: transform .15s, background .15s;
+  box-shadow: 0 0 0 0 rgba(200, 49, 47, .5); animation: beckon 2.6s ease-out infinite;
+}
+.big:hover { background: var(--red-hi); transform: translateY(-1px); }
+.big:active { transform: scale(.98); }
+.big:disabled { opacity: .6; cursor: default; animation: none; }
+.big svg { width: 26px; height: 26px; }
+@keyframes beckon { 0% { box-shadow: 0 0 0 0 rgba(200,49,47,.45); } 70%,100% { box-shadow: 0 0 0 22px rgba(200,49,47,0); } }
+.fine { margin-top: 26px; font-size: 13px; color: var(--dim); }
+.err { color: #ff9b8f; margin-top: 18px; min-height: 1.4em; }
+
+/* ---- Ringing: FaceTime-style outgoing call ---- */
+.ringing { position: fixed; inset: 0; display: grid; grid-template-rows: 1fr auto; justify-items: center; padding: max(64px, 12dvh) 16px max(40px, env(safe-area-inset-bottom)); text-align: center; }
+.avatar { width: 112px; height: 112px; border-radius: 50%; display: grid; place-items: center; margin: 0 auto 18px;
+  background: radial-gradient(circle at 50% 35%, var(--red-hi), var(--red)); color: var(--snow); font: 900 44px/1 "Big Shoulders Display", sans-serif; }
+.avatar svg { width: 54px; height: 54px; color: var(--gold); transform-origin: 50% 8%; animation: ring 1.2s ease-in-out infinite; }
+@keyframes ring { 0%,50%,100% { transform: rotate(0); } 10% { transform: rotate(16deg); } 20% { transform: rotate(-14deg); } 30% { transform: rotate(10deg); } 40% { transform: rotate(-6deg); } }
+.ringing h2 { font: 600 34px/1.1 Inter, sans-serif; letter-spacing: -.01em; margin: 0 0 6px; }
+.ringing p { color: var(--dim); margin: 0; font-size: 17px; }
+.ringing p::after { content: ""; animation: dots 1.5s steps(4) infinite; }
+@keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+
+/* ---- In call: full-bleed video, floating name, glass control bar ---- */
+.call { padding: 0; display: block; background: #120c0a; }
+.call canvas#face { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .4s; }
+body.video .call canvas#face { opacity: 1; }
+.ph { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--dim); font: 600 17px/1.4 Inter;
+  background: radial-gradient(80% 60% at 50% 100%, rgba(255,138,61,.35), transparent 70%); }
+body.video .ph { display: none; }
+.top { position: absolute; top: 0; left: 0; right: 0; text-align: center; padding: max(18px, env(safe-area-inset-top)) 16px 40px;
+  background: linear-gradient(rgba(0,0,0,.45), transparent); }
+.top b { display: block; font: 600 20px/1.2 Inter; }
+.top span { font-size: 14px; color: var(--dim); font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); transition: background .2s; }
+body.speaking .dot { background: var(--gold); }
+.bottom { position: absolute; left: 0; right: 0; bottom: 0; display: grid; justify-items: center; gap: 14px;
+  padding: 60px 16px max(24px, env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgba(0,0,0,.55)); }
+.cc { max-width: 620px; text-align: center; font: 600 clamp(16px, 3.8vw, 20px)/1.35 Inter; text-shadow: 0 1px 3px rgba(0,0,0,.7); text-wrap: balance; transition: opacity .25s; }
+.cc:empty { opacity: 0; }
+.status { font-size: 13px; color: var(--dim); min-height: 1.2em; }
+.controls { display: flex; gap: 18px; justify-content: center; padding: 12px 18px; border-radius: 999px;
+  background: rgba(40,40,44,.55); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+.ringing .controls { background: none; backdrop-filter: none; }
+.round { appearance: none; border: 0; cursor: pointer; width: 60px; height: 60px; border-radius: 50%;
+  display: grid; place-items: center; color: var(--snow); background: rgba(244,241,234,.18); transition: background .15s; }
+.round:hover { background: rgba(244,241,234,.28); }
+.round svg { width: 26px; height: 26px; }
+.round.hang { background: #eb4d3d; }
+.round.hang:hover { background: #f2604f; }
+.round[aria-pressed="true"] { background: var(--snow); color: #111; }
+#debug { display: flex; gap: 8px; width: min(560px, 100%); }
+#debug[hidden] { display: none; }
+#debug input { flex: 1; background: rgba(244,241,234,.08); color: var(--snow); border: 1px solid var(--rule); border-radius: 12px; padding: 10px 12px; font: inherit; }
+#debug button { background: var(--green); color: var(--snow); border: 0; border-radius: 12px; padding: 0 16px; font: 600 14px Inter; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .big, .avatar svg { animation: none; } #snow { display: none; } }
+</style>
+</head>
+<body>
+<canvas id="snow" aria-hidden="true"></canvas>
+
+<section class="screen" id="landing">
+  <div class="landing">
+    <p class="kicker">North Pole · direct line</p>
+    <h1>Call Santa</h1>
+    <p class="sub">He's by the fire with a mug of cocoa. Say hello, tell him your name, and what's on your list.</p>
+    <button class="big" id="callBtn">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z"/></svg>
+      Call Santa
+    </button>
+    <p class="fine">Uses your microphone. Everything runs on this computer.</p>
+    <p class="err" id="err" role="alert"></p>
+  </div>
+</section>
+
+<section id="ringing" hidden>
+  <div class="ringing">
+    <div>
+      <div class="avatar"><svg viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><circle cx="32" cy="6" r="4"/><path d="M32 10c-11 0-18 8-18 20v10l-6 8h48l-6-8V30c0-12-7-20-18-20z"/><circle cx="32" cy="54" r="6"/></svg></div>
+      <h2>Santa Claus</h2>
+      <p>calling the North Pole</p>
+    </div>
+    <div class="controls"><button class="round hang" id="cancelBtn" aria-label="Cancel call"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 9c-1.6 0-3.2.3-4.6.7v3.1c0 .4-.2.7-.6.9-1 .5-1.9 1.1-2.6 1.8-.2.2-.4.3-.7.3s-.5-.1-.7-.3L.3 13.1A1 1 0 0 1 0 12.4c0-.3.1-.5.3-.7C3.4 8.8 7.5 7 12 7s8.6 1.8 11.7 4.7c.2.2.3.4.3.7s-.1.5-.3.7l-2.5 2.4c-.2.2-.4.3-.7.3s-.5-.1-.7-.3c-.8-.7-1.6-1.3-2.6-1.8-.4-.2-.6-.5-.6-.9V9.7C15.2 9.3 13.6 9 12 9z"/></svg></button></div>
+  </div>
+</section>
+
+<section class="screen call" id="call" hidden>
+  <canvas id="face" width="512" height="512"></canvas>
+  <div class="ph">Santa’s camera is snowed in.<br>You can still talk to him.</div>
+  <div class="top"><b>Santa Claus</b><span><span class="dot"></span><span class="clock" id="clock">0:00</span></span></div>
+  <div class="bottom">
+    <div class="cc" id="cc" aria-live="polite"></div>
+    <div class="status" id="status"></div>
+    <form id="debug" hidden><input id="msg" placeholder="Type to Santa (debug)" autocomplete="off"><button>Send</button></form>
+    <div class="controls">
+      <button class="round" id="mute" aria-pressed="false" aria-label="Mute microphone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/><path id="muteSlash" d="M4 4l16 16" style="display:none"/></svg>
+      </button>
+      <button class="round hang" id="endBtn" aria-label="Hang up"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 9c-1.6 0-3.2.3-4.6.7v3.1c0 .4-.2.7-.6.9-1 .5-1.9 1.1-2.6 1.8-.2.2-.4.3-.7.3s-.5-.1-.7-.3L.3 13.1A1 1 0 0 1 0 12.4c0-.3.1-.5.3-.7C3.4 8.8 7.5 7 12 7s8.6 1.8 11.7 4.7c.2.2.3.4.3.7s-.1.5-.3.7l-2.5 2.4c-.2.2-.4.3-.7.3s-.5-.1-.7-.3c-.8-.7-1.6-1.3-2.6-1.8-.4-.2-.6-.5-.6-.9V9.7C15.2 9.3 13.6 9 12 9z"/></svg></button>
+    </div>
+  </div>
+</section>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const SANTA_FACE = params.get("face") || "0fea11caf8194e3d86b337b9-56ea891b";
+const FACE_WS = "ws://127.0.0.1:17660/ws", FACE_HTTP = "http://127.0.0.1:17660";
+
+// The persona. Written for a small model: short concrete rules, examples, no ambiguity.
+const PERSONA = `You are Santa Claus, on a video call from your workshop at the North Pole. Everything you write is spoken aloud by a voice, so write only the words Santa says.
+
+How you talk:
+- Reply in one to three short sentences. Never more.
+- Warm, jolly and a little mischievous. Say "ho ho ho" now and then, not every time.
+- Plain words only. No lists, no emoji, no asterisks, no stage directions, no actions in brackets.
+- Ask one question at a time, then wait.
+
+What you do on the call:
+1. First, greet the caller and ask their name.
+2. Then ask what they would like for Christmas.
+3. Then ask, with a twinkle, whether they have been good this year.
+4. Remember their name and what they told you, and use it later in the call.
+
+Your world: Mrs. Claus bakes gingerbread. The elves are Pepper, Jingle and Tinsel, who runs the toy workshop. The reindeer are Dasher, Dancer, Prancer, Vixen, Comet, Cupid, Donner, Blitzen and Rudolph with his bright red nose. You keep the Nice List in a very long book.
+
+Rules you never break:
+- You are always Santa. Never say you are an AI, a program or a model. If asked, laugh and say you are Santa, of course.
+- Never promise a specific gift. Say things like "I'll tell the elves" or "we'll see what the workshop can do".
+- Never say anything about the caller's parents, family, money or home. Never ask where they live or for personal details beyond their first name.
+- Keep it kind and safe for young children. If something is sad or scary, be gentle and suggest they talk to a grown-up they trust.
+- If you do not understand, ask them to say it again, Santa style.
+
+Examples:
+Caller: Hello?
+Santa: Ho ho ho, hello there! This is Santa at the North Pole. What's your name, my friend?
+Caller: I'm Maya.
+Santa: Maya, what a lovely name! Tell me, Maya, what are you hoping for this Christmas?
+Caller: A bike.
+Santa: A bike, eh? I'll have Tinsel write that down right away. Now, Maya, have you been good this year?
+Caller: Are you real?
+Santa: Real as reindeer, little one! Rudolph is snoring in the stable right now.`;
+
+let ctx, ws, player, analyser, micStream, muted = false, callStart = 0, voiceId = null, greeted = false, ringer = null;
+const show = (id) => ["landing", "ringing", "call"].forEach((s) => ($(s).hidden = s !== id));
+const STATUS = { idle: "your turn", listening: "listening…", thinking: "Santa is thinking…", speaking: "" };
+function fail(err) {
+  const msg = err?.name === "NotAllowedError" ? "Santa needs your microphone. Allow it for this page and try again." : String(err?.message ?? err);
+  hangup(false); $("err").textContent = msg;
+}
+
+// ---- Voice: ?voice=<id> wins, else a voice named like Santa, else the server default ----
+fetch("voices").then((r) => r.json()).then((list) => {
+  if (params.get("voice")) { voiceId = params.get("voice"); return; }
+  const rank = (v) => /santa|claus|father christmas|st\.? ?nick/i.test(v.name) ? 3 : /jolly|old|grand|deep/i.test(v.name) ? 1 : 0;
+  const best = list.map((v) => [rank(v), v]).filter(([r]) => r > 0).sort((a, b) => b[0] - a[0])[0];
+  if (best) voiceId = best[1].id;
+}).catch(() => {});
+
+// ---- Snow: a few slow flakes ----
+(function snow() {
+  const c = $("snow"), g = c.getContext("2d"); let W, H, flakes;
+  const size = () => { W = c.width = innerWidth * devicePixelRatio; H = c.height = innerHeight * devicePixelRatio;
+    flakes = Array.from({ length: Math.round(innerWidth / 14) }, () => ({ x: Math.random() * W, y: Math.random() * H, r: (Math.random() * 1.6 + .6) * devicePixelRatio, v: Math.random() * .35 + .15, p: Math.random() * 6 })); };
+  size(); addEventListener("resize", size);
+  (function f() { g.clearRect(0, 0, W, H); g.fillStyle = "rgba(244,241,234,.8)";
+    for (const k of flakes) { k.y += k.v * devicePixelRatio; k.p += .01; k.x += Math.sin(k.p) * .3; if (k.y > H) { k.y = -4; k.x = Math.random() * W; }
+      g.beginPath(); g.arc(k.x, k.y, k.r, 0, 7); g.fill(); }
+    requestAnimationFrame(f); })();
+})();
+
+// ---- Sleigh-bell ring while connecting (synthesised, no asset) ----
+function startRinging() {
+  const bell = () => { if (!ctx || ctx.state === "closed") return; const t = ctx.currentTime;
+    for (let i = 0; i < 6; i++) for (const f of [2093, 2637, 3136]) {
+      const o = ctx.createOscillator(), g = ctx.createGain(), s = t + i * .07;
+      o.frequency.value = f * (1 + (Math.random() - .5) * .01); o.type = "sine";
+      g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(.025, s + .005); g.gain.exponentialRampToValueAtTime(.0001, s + .35);
+      o.connect(g).connect(ctx.destination); o.start(s); o.stop(s + .4); } };
+  bell(); ringer = setInterval(bell, 1800);
+}
+const stopRinging = () => { clearInterval(ringer); ringer = null; };
+
+// ---- Face video (same wire format as index.html) ----
+const face = { ws: null, on: false, gen: 0, next: 0, frames: [], sources: [], speechFrom: Infinity, speechUntil: 0, playing: false };
+function faceFlush() { face.gen++; for (const s of face.sources) try { s.stop(); } catch {} for (const f of face.frames) f.bm.close();
+  face.sources = []; face.frames = []; face.next = 0; face.speechFrom = Infinity; face.speechUntil = 0; }
+function setVideo(on) { if (face.on === on) return; face.on = on; document.body.classList.toggle("video", on); player?.port.postMessage("flush"); faceFlush();
+  if (!on && face.playing) { face.playing = false; reportPlaying(false); } if (on) answer(); }
+function faceConnect() {
+  if (!ctx || ctx.state === "closed") return;
+  const s = face.ws = new WebSocket(FACE_WS); s.binaryType = "arraybuffer";
+  s.onopen = () => setVideo(true);
+  s.onmessage = (e) => onFace(e).catch(() => {});
+  s.onclose = () => { setVideo(false); if (callStart) setTimeout(faceConnect, 4000); };
+}
+async function onFace(ev) {
+  if (typeof ev.data === "string") { if (JSON.parse(ev.data).type === "flush") faceFlush(); return; }
+  const dv = new DataView(ev.data), hl = dv.getUint32(0, true);
+  const h = JSON.parse(new TextDecoder().decode(new Uint8Array(ev.data, 4, hl)));
+  let off = 4 + hl;
+  const pcm = new Int16Array(ev.data.slice(off, off + h.samples * 2)); off += h.samples * 2;
+  const blobs = h.frames.map((n) => { const b = new Blob([new Uint8Array(ev.data, off, n)], { type: "image/jpeg" }); off += n; return b; });
+  const gen = face.gen, bitmaps = await Promise.all(blobs.map((b) => createImageBitmap(b)));
+  if (gen !== face.gen || !face.on) return bitmaps.forEach((b) => b.close());
+  const buf = ctx.createBuffer(1, h.samples, h.rate), ch = buf.getChannelData(0);
+  for (let i = 0; i < pcm.length; i++) ch[i] = pcm[i] / 32768;
+  const src = ctx.createBufferSource(); src.buffer = buf; src.connect(analyser); src.connect(ctx.destination);
+  if (face.next < ctx.currentTime + 0.03) face.next = ctx.currentTime + 0.06;
+  src.start(face.next); face.sources.push(src);
+  src.onended = () => { const i = face.sources.indexOf(src); if (i >= 0) face.sources.splice(i, 1); };
+  bitmaps.forEach((bm, i) => face.frames.push({ t: face.next + i / h.fps, bm }));
+  const end = face.next + h.samples / h.rate;
+  if (h.kind === "speech") { if (face.speechUntil < face.next - 0.01) face.speechFrom = face.next; face.speechUntil = end; }
+  face.next = end;
+}
+function tick() {
+  if (!ctx || ctx.state === "closed") return;
+  requestAnimationFrame(tick);
+  if (!face.on) return;
+  const t = ctx.currentTime - (ctx.outputLatency || 0); let f = null;
+  while (face.frames.length && face.frames[0].t <= t) { f?.bm.close(); f = face.frames.shift(); }
+  if (f) { $("face").getContext("2d").drawImage(f.bm, 0, 0, 512, 512); f.bm.close(); }
+  const playing = ctx.currentTime >= face.speechFrom && ctx.currentTime < face.speechUntil;
+  if (playing !== face.playing) { face.playing = playing; reportPlaying(playing); }
+}
+const reportPlaying = (playing) => ws?.readyState === 1 && ws.send(JSON.stringify({ type: "playback", playing }));
+
+// Santa "picks up": leave the ringing screen and have him say hello first.
+function answer() {
+  if (greeted || !callStart) return; greeted = true;
+  stopRinging(); show("call");
+  ws.send(JSON.stringify({ type: "text", text: "Hello?" }));
+}
+
+// ---- The call ----
+$("callBtn").onclick = () => {
+  $("err").textContent = ""; $("callBtn").disabled = true; show("ringing");
+  try { ctx = new AudioContext({ sampleRate: 48000, latencyHint: "interactive" }); ctx.resume(); } catch (e) { return fail(e); }
+  startRinging();
+  // Put Santa's portrait on the face server before the video starts.
+  fetch(FACE_HTTP + "/face", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: SANTA_FACE }) }).catch(() => {});
+  ws = new WebSocket(`ws://${location.host}/ws`); ws.binaryType = "arraybuffer";
+  ws.onmessage = (e) => typeof e.data !== "string" ? onPcm(e.data) : onJson(JSON.parse(e.data)).catch(fail);
+  ws.onerror = () => fail(new Error("Couldn't reach the North Pole (the call server isn't running)."));
+  ws.onclose = () => { if (callStart) hangup(true); };
+};
+
+async function onJson(m) {
+  if (m.type === "hello") {
+    ws.send(JSON.stringify({ type: "persona", text: PERSONA }));
+    if (voiceId) ws.send(JSON.stringify({ type: "voice", id: voiceId }));
+    await ctx.audioWorklet.addModule("capture-worklet.js");
+    await ctx.audioWorklet.addModule("playback-worklet.js");
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
+    const capture = new AudioWorkletNode(ctx, "capture");
+    capture.port.onmessage = (e) => { const buf = muted ? new ArrayBuffer(e.data.byteLength) : e.data; if (ws.readyState === 1) ws.send(buf); };
+    ctx.createMediaStreamSource(micStream).connect(capture);
+    analyser = ctx.createAnalyser();
+    player = new AudioWorkletNode(ctx, "playback", { outputChannelCount: [1] });
+    player.port.onmessage = (e) => { if (!face.on) reportPlaying(e.data.playing); };
+    player.connect(analyser); player.connect(ctx.destination);
+    callStart = Date.now();
+    faceConnect(); requestAnimationFrame(tick);
+    // No face server? Pick up after a couple of rings anyway, audio only.
+    setTimeout(answer, 4500);
+  } else if (m.type === "state") {
+    document.body.classList.toggle("speaking", m.state === "speaking");
+    $("status").textContent = STATUS[m.state] ?? "";
+    if (m.state === "listening") $("cc").textContent = "";
+  } else if (m.type === "final") {
+    reply = "";
+  } else if (m.type === "reply_delta") {
+    reply += m.text;
+    $("cc").textContent = reply.length > 150 ? "…" + reply.slice(-150) : reply;
+  } else if (m.type === "flush") {
+    player?.port.postMessage("flush"); faceFlush();
+  } else if (m.type === "error") {
+    $("cc").textContent = "The line to the North Pole is crackly. Try again in a moment."; console.warn(m.message);
+  }
+}
+let reply = "";
+function onPcm(buf) {
+  if (face.on || !player) return;
+  const i16 = new Int16Array(buf), f32 = new Float32Array(i16.length);
+  for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 32768;
+  player.port.postMessage(f32.buffer, [f32.buffer]);
+}
+
+function hangup(toLanding = true) {
+  stopRinging(); callStart = 0; greeted = false;
+  try { ws?.close(); face.ws?.close(); micStream?.getTracks().forEach((t) => t.stop()); ctx?.close(); } catch {}
+  ws = null; face.on = false; $("cc").textContent = ""; $("callBtn").disabled = false;
+  show("landing");
+}
+$("endBtn").onclick = $("cancelBtn").onclick = () => hangup();
+$("mute").onclick = () => { muted = !muted; $("mute").setAttribute("aria-pressed", String(muted)); $("muteSlash").style.display = muted ? "" : "none"; };
+setInterval(() => { if (callStart) { const s = Math.floor((Date.now() - callStart) / 1000); $("clock").textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; } }, 500);
+
+// Hidden debug input: ?debug=1
+if (params.has("debug")) $("debug").hidden = false;
+$("debug").onsubmit = (e) => { e.preventDefault(); const t = $("msg").value.trim(); if (t && ws?.readyState === 1) { ws.send(JSON.stringify({ type: "text", text: t })); $("msg").value = ""; } };
+</script>
+</body>
+</html>

@@ -6,6 +6,9 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Linux desktop packages.** Releases now include an AppImage and a `.deb` for x64 Linux, built on Ubuntu 22.04, so they run on glibc 2.35 and newer. They have not been tested on a real Linux desktop yet, so reports are welcome. `docs/DESKTOP.md` covers installing and the NVIDIA blank-window workarounds.
+
 ### Changed
 - Settings are grouped by what you are trying to do and searchable (Ctrl/Cmd+K or `/`). Each setting saves as you change it and says so on its row, marks when it differs from the default with a one-click reset, and can be linked to directly with `#/settings?s=<id>`. Clearing the Hugging Face token and re-running first-run setup sit together at the end and ask before they act.
 - The music and sound effect pages on mirli.app look like the app: tracks and samples are listed as rows with a play-on-hover tile, length, model and licence; collections are shelves of square tiles; collection, track and sample pages open with a header and a Play button; and the player is a thin timeline with a yellow playhead you can drag while it plays.

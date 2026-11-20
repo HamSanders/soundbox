@@ -271,6 +271,32 @@ td.over { color: var(--rust); font-weight: 700; }
   .controls { gap: 8px; }
   .controls .sep { display: none; }
 }
+/* ---- Floating shell (the app redesign's look): rounded panels on a shared,
+   slightly darker ground, 8 px apart, a 1 px ring and no shadow; the controls
+   sit in a full-width dock under the panels, like the app's player bar. ---- */
+body.live { background: var(--well); }
+body.live header { border-bottom: 0; }
+body.live #call { gap: 8px; padding: 0 8px 8px; height: calc(100dvh - 60px); grid-template-rows: minmax(0, 1fr) auto; }
+body.live.showlog #call { grid-template-columns: minmax(0, 1fr) minmax(320px, 400px); }
+body.live .stage { display: contents; }
+body.live .stage-main { grid-column: 1; grid-row: 1; background: var(--paper); border-radius: 12px; box-shadow: inset 0 0 0 1px var(--rule); }
+body.live .chat { grid-column: 2; grid-row: 1; border-left: 0; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--rule); overflow: hidden; }
+body.live .controls { grid-column: 1 / -1; grid-row: 2; border-top: 0; padding: 10px 14px; border-radius: 12px; background: var(--sheet);
+                      box-shadow: inset 0 0 0 1px var(--rule); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; }
+.controls .dock-who { display: none; }
+body.live .controls .dock-who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.dock-who img { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; border: 1px solid var(--rule); flex: none; }
+.dock-who b { display: block; font: 800 17px/1.1 var(--title); text-transform: uppercase; letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dock-who span { display: block; font: 400 12px/1.3 var(--log); color: var(--pencil); white-space: nowrap; }
+.dock-mid { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.dock-end { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+body:not(.live) .dock-mid, body:not(.live) .dock-end { display: contents; }
+@media (max-width: 860px) {
+  body.live #call { height: auto; }
+  body.live .chat { grid-column: 1; grid-row: auto; }
+  body.live .controls { grid-template-columns: minmax(0, 1fr); justify-items: center; position: sticky; bottom: 8px; }
+  body.live .controls .dock-who { display: none; }
+}
 @media (prefers-reduced-motion: reduce) { .tile canvas, .tile::after, .entry { animation: none; } }
 </style>
 </head>
@@ -337,6 +363,8 @@ td.over { color: var(--rust); font-weight: 700; }
       <div id="facePop"><div class="engine-row" id="engineRowCall" style="margin-bottom:12px"><span class="log">Face model</span><span class="seg" id="engineSegCall" role="group" aria-label="Face model"></span></div><div class="section-h" style="margin-bottom:12px"><h2>Change face</h2><button class="btn" id="facePopClose" style="height:28px;padding:0 12px">Done</button></div></div>
     </div>
     <div class="controls">
+      <div class="dock-who"><img id="dockImg" alt=""><div><b id="dockName">Mirli</b><span id="dockLog">video call · runs here</span></div></div>
+      <div class="dock-mid">
       <button class="btn" id="mute" aria-pressed="false">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="5.5" y="1.5" width="5" height="8.5" rx="2.5"/><path d="M3 8a5 5 0 0 0 10 0M8 13v2"/></svg>
         <span class="mic">Mute <i></i></span>
@@ -346,7 +374,8 @@ td.over { color: var(--rust); font-weight: 700; }
         Face
       </button>
       <select class="btn" id="voice2" title="Voice"></select>
-      <span class="sep"></span>
+      </div>
+      <div class="dock-end">
       <button class="btn" id="logBtn" aria-pressed="false">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 4h10M3 8h10M3 12h6"/></svg>
         Log
@@ -356,6 +385,7 @@ td.over { color: var(--rust); font-weight: 700; }
         <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 5.5c2.6 0 5 .8 6.6 2.2.5.4.5 1.1.1 1.5l-1.2 1.2c-.4.4-1 .4-1.4.1l-1.6-1.2c-.3-.2-.4-.5-.4-.8V7.4a9 9 0 0 0-4.2 0v1.1c0 .3-.2.6-.4.8l-1.6 1.2c-.4.3-1 .3-1.4-.1L1.3 9.2c-.4-.4-.4-1.1.1-1.5C3 6.3 5.4 5.5 8 5.5z"/></svg>
         End
       </button>
+      </div>
     </div>
   </section>
 
@@ -509,6 +539,8 @@ function showCurrent() {
   const f = faceList.find((x) => x.id === currentFace);
   if (!f) return;
   $("ctaFace").src = faceSrc(f.id);
+  $("dockImg").src = faceSrc(f.id);
+  $("dockName").textContent = isUpload(f) || f.id === "girl" ? "Mirli" : faceName(f);
   $("ctaTxt").textContent = isUpload(f) || f.id === "girl" ? "Start call" : `Call ${faceName(f)}`;
   $("still").src = faceSrc(f.id);
   $("who").textContent = isUpload(f) || f.id === "girl" ? "Mirli" : faceName(f);
@@ -720,7 +752,11 @@ function hangUp() {
   });
 }
 $("endBtn").onclick = hangUp;
-setInterval(() => { if (callStart) $("clock").textContent = clockStr(); }, 500);
+setInterval(() => {
+  if (!callStart) return;
+  $("clock").textContent = clockStr();
+  $("dockLog").textContent = `${face.on ? "video" : "voice"} call · ${clockStr()}${engine ? " · " + (engine === "ditto" ? "Ditto" : "FlashHead") : ""}`;
+}, 500);
 $("msg").addEventListener("input", () => { const t = $("msg"); t.style.height = "auto"; t.style.height = Math.min(140, t.scrollHeight) + "px"; });
 $("msg").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("compose").requestSubmit(); } });
 $("compose").onsubmit = (e) => {

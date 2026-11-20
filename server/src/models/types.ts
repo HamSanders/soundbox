@@ -108,4 +108,9 @@ export interface GenerationModel {
     sourceWavPath: string,
     options?: { progress?: ProgressFn },
   ): Promise<{ stemName: string; audio: RenderedAudio }[]>;
+  /** Speech to text. Only on "asr"-task models. */
+  transcribe?(
+    wavPath: string,
+    options?: { language?: string | null; progress?: ProgressFn },
+  ): Promise<{ text: string; language: string | null }>;
 }

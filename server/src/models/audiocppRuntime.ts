@@ -181,6 +181,10 @@ export interface TaskResult {
   sample_rate?: number;
   channels?: number;
   named_audio_outputs?: TaskAudio[];
+  /** Speech recognition answers with text instead of audio. */
+  text?: string;
+  language?: string;
+  segments?: unknown;
   timing?: Record<string, number>;
 }
 

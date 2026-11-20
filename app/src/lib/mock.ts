@@ -63,8 +63,10 @@ import type {
   SoundsPage,
   StemSelection,
   TagCount,
+  Transcription,
   Unsubscribe,
 } from "./api";
+import { ApiError } from "./api";
 import { clampDeviceParams, createDevice } from "./devices";
 import { followPlacement } from "./reading-order";
 
@@ -639,7 +641,53 @@ const models: Model[] = [
         default: 1.2, minimum: 1, maximum: 2, step: 0.01 },
     ],
   },
+  {
+    id: "audiocpp-qwen3-asr-0-6b",
+    family: "qwen3_asr",
+    name: "Qwen3-ASR 0.6B transcription (audio.cpp)",
+    vendor: "Qwen (Alibaba)",
+    description:
+      "Speech to text: fills in a voice clip's transcript on the clone page.",
+    license: {
+      name: "Apache License 2.0",
+      commercial: "yes",
+      url: "https://huggingface.co/Qwen/Qwen3-ASR-0.6B",
+      note: null,
+    },
+    hf_repo: "audio-cpp/audio.cpp-gguf",
+    gated: false,
+    task: "asr",
+    voice_ids: [],
+    requires_voice_reference: false,
+    category: "utility",
+    max_duration_s: 600,
+    sample_rate: 16000,
+    channels: 1,
+    supports: {
+      negative_prompt: false, seed: false, steps: false, cfg: false, lyrics: false,
+      text: false, voice_reference: false, extend: false, cover: false, repaint: false,
+    },
+    defaults: { duration_s: 0 },
+    vram_estimate_mb: 2000,
+    extras: ["audio-cpp"],
+    // Installed, so the clone page's auto-transcribe shows in a mock build.
+    status: "installed",
+    installed_deps: true,
+    auto_installable: false,
+    manual_install_reason:
+      "This model runs on audio.cpp, a native binary rather than a Python package.",
+    error: null,
+    params: [],
+  },
 ];
+
+/** Canned transcripts for the mock recogniser, picked in turn. */
+const MOCK_TRANSCRIPTS = [
+  "The quick brown fox jumps over the lazy dog.",
+  "Every voice tells a story, if you listen closely enough.",
+  "Welcome back. Let's pick up where we left off.",
+];
+let mockTranscriptSeq = 0;
 
 /** Builds a placeholder Model row for an enabled-but-unverified catalog
  *  entry — same shape a real audio.cpp model reports before its binary is
@@ -3212,6 +3260,21 @@ export const mockApi: MirliApi = {
     };
     voices.unshift(voice);
     return withVoiceCounts(voice);
+  },
+
+  async transcribe(_source, _language): Promise<Transcription> {
+    const asr = models.find(
+      (m) => m.task === "asr" && (m.status === "installed" || m.status === "loaded"),
+    );
+    if (!asr) {
+      throw new ApiError(
+        "No transcription model is installed. Download one (e.g. Qwen3-ASR) from the Models tab.",
+        409,
+      );
+    }
+    await wait(900);
+    const text = MOCK_TRANSCRIPTS[mockTranscriptSeq++ % MOCK_TRANSCRIPTS.length]!;
+    return { text, language: "English", model: asr.id };
   },
 
   async addVoiceSample(voiceId, source, _tidy, referenceText): Promise<Voice> {

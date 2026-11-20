@@ -345,6 +345,42 @@
       "verified": false
     },
     {
+      "id": "audiocpp-qwen3-asr-0-6b",
+      "name": "Qwen3-ASR 0.6B transcription (audio.cpp)",
+      "vendor": "Qwen (Alibaba)",
+      "description": "Speech to text via audio.cpp's --task asr and the qwen3_asr loader: 30 languages plus Chinese dialects. Not a generator - Mirli uses it to fill in a voice clip's transcript on the clone page. Run end-to-end against audio.cpp (the qwen3_asr family): a 4-second English clip transcribed word for word in under 3 seconds on CUDA.",
+      "family": "qwen3_asr",
+      "audiocpp_package_id": "qwen3_asr_0_6b_q8_0",
+      "audiocpp_target_dir": "Qwen3-ASR-0.6B-GGUF",
+      "audiocpp_strip_prefix": "Qwen3-ASR-0.6B-GGUF",
+      "category": "utility",
+      "hf_repo": "audio-cpp/audio.cpp-gguf",
+      "weights_glob": "Qwen3-ASR-0.6B-GGUF/qwen3-asr-0.6b-q8_0.gguf",
+      "license": {
+        "name": "Apache License 2.0",
+        "commercial": "yes",
+        "url": "https://huggingface.co/Qwen/Qwen3-ASR-0.6B",
+        "note": "The model card declares license: apache-2.0. Commercial use permitted; keep the licence and NOTICE when redistributing the weights."
+      },
+      "max_duration_s": 600.0,
+      "sample_rate": 16000,
+      "channels": 1,
+      "vram_estimate_mb": 2000,
+      "defaults": {},
+      "request_options": {},
+      "supports": {
+        "negative_prompt": false,
+        "seed": false,
+        "steps": false,
+        "cfg": false,
+        "lyrics": false
+      },
+      "max_cfg": null,
+      "task": "asr",
+      "gated": false,
+      "verified": true
+    },
+    {
       "id": "audiocpp-bs-roformer-sep",
       "name": "BS-RoFormer stem separation (audio.cpp)",
       "vendor": "Unverified",

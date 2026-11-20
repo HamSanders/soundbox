@@ -1305,6 +1305,34 @@ export class MirliService {
    * timeline was playing.
    */
   exportStory(storyId: string, handle?: JobHandle): Sound | null {
+    // [audiobooks:export] mixdown factored into mixStory so audiobook export
+    // can master the buffer before anything is written.
+    const mix = this.mixStory(storyId, handle);
+    if (mix === null) return null;
+    const { story, segments, audio: mixed, sampleRate } = mix;
+    return this.writeSound(mixed, sampleRate, {
+      model: "story",
+      prompt: segments.map((s) => (s.speaker ? `${s.speaker}: ${s.text}` : s.text)).join("\n").slice(0, 2000),
+      name: story.title,
+      seed: null,
+      steps: null,
+      cfg: null,
+      projectId: story.project_id ?? null,
+      trim: false,
+      // One gain over the whole mixdown, so the clips keep their levels
+      // relative to each other; only the file's overall loudness moves.
+      normalize: true,
+    });
+  }
+
+  /**
+   * The mixdown behind `exportStory`, returned as a buffer rather than
+   * written: every audible clip at its `start_s` with trims, fades,
+   * crossfades and clip + track gain applied. Timeline second t is frame
+   * t * sampleRate of the result. Null when the story does not exist; throws
+   * when nothing in it has audio. [audiobooks:export]
+   */
+  mixStory(storyId: string, handle?: JobHandle) {
     const story = this.db.getStory(storyId);
     if (story === null) return null;
     // A track's mute/solo and its gain sit on top of each clip's own — the
@@ -1410,20 +1438,7 @@ export class MirliService {
     }
 
     handle?.progress(0.7, "Mixing timeline", "encoding");
-    const mixed = dsp.mixTimeline(placed, sampleRate);
-    return this.writeSound(mixed, sampleRate, {
-      model: "story",
-      prompt: segments.map((s) => (s.speaker ? `${s.speaker}: ${s.text}` : s.text)).join("\n").slice(0, 2000),
-      name: story.title,
-      seed: null,
-      steps: null,
-      cfg: null,
-      projectId: story.project_id ?? null,
-      trim: false,
-      // One gain over the whole mixdown, so the clips keep their levels
-      // relative to each other; only the file's overall loudness moves.
-      normalize: true,
-    });
+    return { story, segments, audio: dsp.mixTimeline(placed, sampleRate), sampleRate };
   }
 
   /**

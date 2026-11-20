@@ -195,6 +195,41 @@ describe("chapter audio", () => {
     expect(audio.rawPayload.length).toBe(44 + 6 * RATE * 3);
   });
 
+  it("respects track mute, solo and gain", async () => {
+    const book = await newBook("Faders");
+    const one = book.chapters.find((c) => c.kind === "chapter")!;
+    voiceChapter(one.id);
+    app.soundbox.createSegment(one.story_id, {
+      text: "",
+      track_index: 1,
+      start_s: 0,
+      sound_id: sineSound(6, 220),
+      kind: "line",
+    } as Parameters<typeof app.soundbox.createSegment>[1]);
+    const url = `/api/audiobooks/${book.id}/listen/chapters/${one.id}/audio`;
+    const length = async () => (await app.inject({ method: "GET", url })).rawPayload.length;
+    const peak = async () => {
+      const wav = (await app.inject({ method: "GET", url })).rawPayload;
+      let max = 0;
+      for (let i = 44; i + 2 < wav.length; i += 3) max = Math.max(max, Math.abs(wav.readIntLE(i, 3)));
+      return max / 0x7fffff;
+    };
+    expect(await length()).toBe(44 + 6 * RATE * 3);
+    // Mute the bed: only the 4 s of narration is left.
+    app.soundbox.updateTrack(one.story_id, 1, { muted: true });
+    expect(await length()).toBe(44 + 4 * RATE * 3);
+    // Solo the bed: only soloed tracks are heard, so the 6 s bed plays alone.
+    app.soundbox.updateTrack(one.story_id, 1, { muted: false, soloed: true });
+    expect(await length()).toBe(44 + 6 * RATE * 3);
+    app.soundbox.updateTrack(one.story_id, 1, { soloed: false });
+    // Pull narration down 12 dB and the bed off: the peak follows the fader.
+    app.soundbox.updateTrack(one.story_id, 1, { muted: true });
+    const loud = await peak();
+    app.soundbox.updateTrack(one.story_id, 0, { gain_db: -12 });
+    const quiet = await peak();
+    expect(quiet / loud).toBeCloseTo(10 ** (-12 / 20), 2);
+  });
+
   it("404s when nothing in the chapter is voiced", async () => {
     const book = await newBook("Silent");
     const one = book.chapters.find((c) => c.kind === "chapter")!;
@@ -397,6 +432,100 @@ describe("publish", () => {
       payload: { base_url: "ftp://nope" },
     });
     expect(bad.statusCode).toBe(400);
+  });
+});
+
+describe("podcast feed validity", () => {
+  /**
+   * A structural check in the spirit of the W3C feed validator and Apple's
+   * podcast requirements (https://podcasters.apple.com/support/823-podcast-requirements):
+   * well-formed XML, RSS 2.0 with the itunes namespace, required channel and
+   * item elements, enclosure url/length/type, unique GUIDs and enclosure URLs,
+   * RFC 2822 dates, ASCII URLs, and itunes values from the allowed sets.
+   */
+  function validate(xmlText: string): string[] {
+    const errors: string[] = [];
+    // Well-formedness: every tag closes in order; entities are the five XML ones.
+    const stack: string[] = [];
+    const tagRe = /<(\/?)([A-Za-z_][\w:.-]*)([^>]*?)(\/?)>/g;
+    const body = xmlText.replace(/^<\?xml[^>]*\?>\s*/, "");
+    if (!/^<\?xml version="1.0" encoding="UTF-8"\?>/.test(xmlText)) errors.push("missing XML declaration");
+    let m: RegExpExecArray | null;
+    while ((m = tagRe.exec(body)) !== null) {
+      const [, close, name, , self] = m;
+      if (self) continue;
+      if (close) {
+        if (stack.pop() !== name) errors.push(`mismatched </${name}>`);
+      } else stack.push(name);
+    }
+    if (stack.length) errors.push(`unclosed ${stack.join(",")}`);
+    for (const ent of xmlText.match(/&[^;\s]*;?/g) ?? []) {
+      if (!/^&(amp|lt|gt|quot|apos);$/.test(ent)) errors.push(`bad entity ${ent}`);
+    }
+    if (!/<rss version="2.0"[^>]*xmlns:itunes="http:\/\/www.itunes.com\/dtds\/podcast-1.0.dtd"/.test(xmlText)) {
+      errors.push("rss 2.0 with itunes namespace");
+    }
+    const channel = xmlText.slice(xmlText.indexOf("<channel>"), xmlText.indexOf("<item>"));
+    for (const tag of ["title", "link", "description", "language", "itunes:author", "itunes:explicit", "itunes:type"]) {
+      if (!new RegExp(`<${tag}>[^<]+</${tag}>`).test(channel)) errors.push(`channel <${tag}>`);
+    }
+    if (!/<itunes:category text="[^"]+"/.test(channel)) errors.push("channel itunes:category");
+    if (!/<itunes:explicit>(true|false)<\/itunes:explicit>/.test(channel)) errors.push("itunes:explicit value");
+    if (!/<itunes:type>(episodic|serial)<\/itunes:type>/.test(channel)) errors.push("itunes:type value");
+    const items = xmlText.match(/<item>[\s\S]*?<\/item>/g) ?? [];
+    if (items.length === 0) errors.push("no items");
+    const guids = new Set<string>();
+    const urls = new Set<string>();
+    for (const item of items) {
+      if (!/<title>[^<]+<\/title>/.test(item)) errors.push("item title");
+      const enc = /<enclosure url="([^"]+)" length="(\d+)" type="(audio\/[\w+.-]+)"\/>/.exec(item);
+      if (!enc) errors.push("item enclosure");
+      else {
+        if (!/^https?:\/\/[!-~]+$/.test(enc[1].replace(/&amp;/g, "&"))) errors.push(`non-ASCII or relative url ${enc[1]}`);
+        if (Number(enc[2]) <= 0) errors.push("enclosure length");
+        if (urls.has(enc[1])) errors.push("duplicate enclosure url");
+        urls.add(enc[1]);
+      }
+      const guid = /<guid[^>]*>([^<]+)<\/guid>/.exec(item)?.[1];
+      if (!guid) errors.push("item guid");
+      else if (guids.has(guid)) errors.push("duplicate guid");
+      else guids.add(guid);
+      const date = /<pubDate>([^<]+)<\/pubDate>/.exec(item)?.[1];
+      if (!date || !/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} \d{2}:\d{2}:\d{2} [+-]\d{4}$/.test(date)) {
+        errors.push(`pubDate ${date}`);
+      }
+      if (!/<itunes:duration>\d+<\/itunes:duration>/.test(item)) errors.push("itunes:duration");
+      if (!/<itunes:episode>[1-9]\d*<\/itunes:episode>/.test(item)) errors.push("itunes:episode");
+      if (!/<itunes:episodeType>(full|trailer|bonus)<\/itunes:episodeType>/.test(item)) errors.push("itunes:episodeType");
+    }
+    return errors;
+  }
+
+  it("passes the structural checks, including awkward titles", async () => {
+    const book = await newBook("Q & A: <Tales> \"of\" O'Brien – Ü");
+    const [one, two] = book.chapters.filter((c) => c.kind === "chapter");
+    voiceChapter(one.id);
+    voiceChapter(two.id);
+    const png = Buffer.alloc(64);
+    png.writeUInt32BE(0x89504e47, 0);
+    png.writeUInt32BE(1400, 16);
+    png.writeUInt32BE(1400, 20);
+    await audiobooks(app.soundbox).setCover(book.id, png, "image/png");
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/audiobooks/${book.id}/publish/rss`,
+      headers: H,
+      payload: { base_url: "https://example.test/feeds/q-a", encoding: "wav", zip: false, owner_email: "owner@example.test" },
+    });
+    expect(res.statusCode).toBe(200);
+    const feed = readFileSync(join(res.json().dir, "feed.xml"), "utf8");
+    expect(validate(feed)).toEqual([]);
+    expect(feed).toContain('<itunes:image href="https://example.test/feeds/q-a/cover.png"/>');
+    expect(feed).toContain("<itunes:email>owner@example.test</itunes:email>");
+  });
+
+  it("the validator catches a broken feed", () => {
+    expect(validate("<rss><channel><item></channel></rss>").length).toBeGreaterThan(0);
   });
 });
 

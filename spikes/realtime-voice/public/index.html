@@ -29,6 +29,7 @@
 <h1>Mirli voice spike</h1>
 <p class="sub">Talk; it answers in a Mirli voice. Talk over it and it stops. Use headphones, or its own voice may interrupt it.</p>
 <button id="go">Start</button><span id="state" data-s="off">off</span>
+<meter id="level" min="0" max="1" value="0" title="mic level" style="margin-left:12px;width:120px"></meter>
 <small id="info"></small>
 <div id="log"></div>
 <div class="scroll">
@@ -51,31 +52,50 @@ function bubble(cls, text) {
   return d;
 }
 
+function fail(err) {
+  setState("error");
+  bubble("bot", err?.name === "NotAllowedError"
+    ? "Microphone access was refused. Allow it for this page (lock icon in the address bar) and reload."
+    : "error: " + (err?.message ?? err));
+}
+
+// Everything audio starts inside the click: Chrome keeps an AudioContext
+// made outside a user gesture suspended, and then nothing is captured.
 $("go").onclick = () => {
   $("go").disabled = true;
+  setState("starting");
+  try {
+    // 48 kHz is VoxCPM2's rate; the hello message checks it.
+    ctx = new AudioContext({ sampleRate: 48000, latencyHint: "interactive" });
+    ctx.resume();
+  } catch (err) { return fail(err); }
   ws = new WebSocket(`ws://${location.host}/ws`);
   ws.binaryType = "arraybuffer";
   ws.onmessage = (e) => {
     if (typeof e.data !== "string") return onPcm(e.data);
-    onJson(JSON.parse(e.data)).catch((err) => {
-      setState("error");
-      bubble("bot", err.name === "NotAllowedError" ? "Microphone access was refused. Allow it for this page and reload." : String(err));
-    });
+    onJson(JSON.parse(e.data)).catch(fail);
   };
+  ws.onerror = () => fail(new Error("could not connect to the spike server"));
   ws.onclose = () => setState("closed");
 };
 
 async function onJson(m) {
   if (m.type === "hello") {
-    // Run the whole graph at the TTS rate so playback needs no resampling.
-    ctx = new AudioContext({ sampleRate: m.tts.sample_rate, latencyHint: "interactive" });
+    if (ctx.sampleRate !== m.tts.sample_rate) bubble("bot", `warning: TTS is ${m.tts.sample_rate} Hz, page plays at ${ctx.sampleRate} Hz`);
     await ctx.audioWorklet.addModule("capture-worklet.js");
     await ctx.audioWorklet.addModule("playback-worklet.js");
     const mic = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
     });
     const capture = new AudioWorkletNode(ctx, "capture");
-    capture.port.onmessage = (e) => ws.readyState === 1 && ws.send(e.data);
+    capture.port.onmessage = (e) => {
+      if (ws.readyState === 1) ws.send(e.data);
+      // Mic level, so you can see it hears you.
+      const s = new Int16Array(e.data);
+      let peak = 0;
+      for (let i = 0; i < s.length; i++) peak = Math.max(peak, Math.abs(s[i]));
+      $("level").value = Math.max(peak / 32768, $("level").value * 0.85);
+    };
     ctx.createMediaStreamSource(mic).connect(capture);
     player = new AudioWorkletNode(ctx, "playback", { outputChannelCount: [1] });
     player.port.onmessage = (e) => {
@@ -86,7 +106,8 @@ async function onJson(m) {
       }
     };
     player.connect(ctx.destination);
-    $("info").textContent = ` TTS ${m.tts.sample_rate} Hz · engines +${m.vram.total} MiB VRAM · endpoint ${m.vad.endpointMs} ms`;
+    if (ctx.state !== "running") await ctx.resume();
+    $("info").textContent = ` audio ${ctx.state} · TTS ${m.tts.sample_rate} Hz · engines +${m.vram.total} MiB VRAM · endpoint ${m.vad.endpointMs} ms`;
     setState("idle");
   } else if (m.type === "state") {
     setState(m.state);

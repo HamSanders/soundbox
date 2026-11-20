@@ -128,6 +128,14 @@ body.chatmode #compose, #compose.debug { display: flex; }
 #compose button { width: 42px; height: 42px; flex: none; border-radius: 50%; border: 0; background: var(--red); color: var(--snow); cursor: pointer; display: grid; place-items: center; }
 #compose button svg { width: 18px; height: 18px; }
 
+/* ---- Music toggle ---- */
+#musicBtn { position: fixed; z-index: 5; left: 14px; bottom: max(14px, env(safe-area-inset-bottom)); width: 44px; height: 44px;
+  border: 0; border-radius: 50%; cursor: pointer; display: grid; place-items: center; color: var(--snow);
+  background: rgba(40,40,44,.55); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+#musicBtn svg { width: 20px; height: 20px; }
+#musicBtn[aria-pressed="false"] { color: var(--dim); }
+#musicBtn[aria-pressed="false"] .on, #musicBtn[aria-pressed="true"] .off { display: none; }
+
 /* ---- Goofy bits ---- */
 h1 { display: inline-block; animation: wobble 4s ease-in-out infinite; }
 @keyframes wobble { 0%,90%,100% { transform: rotate(0); } 93% { transform: rotate(-3deg) scale(1.03); } 96% { transform: rotate(3deg) scale(1.03); } }
@@ -139,6 +147,9 @@ h1 { display: inline-block; animation: wobble 4s ease-in-out infinite; }
 </head>
 <body>
 <canvas id="snow" aria-hidden="true"></canvas>
+<audio id="music" loop preload="auto"></audio>
+<script src="santa-music.js"></script>
+<button id="musicBtn" aria-pressed="true" aria-label="Background music"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/><path class="off" d="M3 3l18 18"/></svg></button>
 
 <section class="screen" id="landing">
   <div class="landing">
@@ -337,10 +348,35 @@ $("mChat").onclick = () => setMode(true, true);
 
 const pickSanta = () => fetch(FACE_HTTP + "/face", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: SANTA_FACE }) }).catch(() => {});
 
+// ---- Holiday music (made with Soundbox): loud while ringing, a murmur under the call ----
+const music = $("music");
+if (window.SANTA_MUSIC) music.src = window.SANTA_MUSIC;
+let musicOn = (() => { try { return localStorage.getItem("santa-music") !== "off"; } catch { return true; } })();
+$("musicBtn").setAttribute("aria-pressed", String(musicOn));
+let musicTarget = 0, musicFade = null;
+function musicLevel(v) {
+  musicTarget = musicOn ? v : 0;
+  if (musicTarget > 0 && music.paused) music.play().catch(() => {});
+  clearInterval(musicFade);
+  musicFade = setInterval(() => {
+    const d = musicTarget - music.volume;
+    if (Math.abs(d) < .01) { music.volume = musicTarget; clearInterval(musicFade); if (!musicTarget) music.pause(); return; }
+    music.volume = Math.max(0, Math.min(1, music.volume + Math.sign(d) * .02));
+  }, 30);
+}
+const musicForNow = () => !callStart && $("ringing").hidden ? 0 : !greeted ? .45 : document.body.classList.contains("speaking") ? .04 : .1;
+$("musicBtn").onclick = () => {
+  musicOn = !musicOn; $("musicBtn").setAttribute("aria-pressed", String(musicOn));
+  try { localStorage.setItem("santa-music", musicOn ? "on" : "off"); } catch {}
+  musicLevel(musicOn ? Math.max(musicForNow(), $("landing").hidden ? 0 : .3) : 0);
+};
+music.volume = 0;
+
 // Santa "picks up": leave the ringing screen and have him say hello first.
 function answer() {
   if (greeted || !callStart) return; greeted = true;
   stopRinging(); show("call");
+  musicLevel(.1);
   if (!userPicked) setMode(!face.on);  // no camera: all the text, in chat
   say("Hello?");
 }
@@ -349,7 +385,7 @@ function answer() {
 $("callBtn").onclick = () => {
   $("err").textContent = ""; $("callBtn").disabled = true; show("ringing");
   try { ctx = new AudioContext({ sampleRate: 48000, latencyHint: "interactive" }); ctx.resume(); } catch (e) { return fail(e); }
-  startRinging();
+  startRinging(); musicLevel(.45);
   // Put Santa's portrait on the face server before the video starts.
   pickSanta();
   ws = new WebSocket(`ws://${location.host}/ws`); ws.binaryType = "arraybuffer";
@@ -382,6 +418,7 @@ async function onJson(m) {
     setTimeout(answer, 4500);
   } else if (m.type === "state") {
     document.body.classList.toggle("speaking", m.state === "speaking");
+    if (greeted) musicLevel(m.state === "speaking" ? .04 : .1);
     $("status").textContent = STATUS[m.state] ?? "";
     if (m.state === "listening") $("cc").textContent = "";
     if (m.state === "thinking") typing(true);
@@ -413,7 +450,7 @@ function onPcm(buf) {
 }
 
 function hangup(toLanding = true) {
-  stopRinging(); callStart = 0; greeted = false;
+  stopRinging(); musicLevel(0); callStart = 0; greeted = false;
   try { ws?.close(); face.ws?.close(); micStream?.getTracks().forEach((t) => t.stop()); ctx?.close(); } catch {}
   ws = null; face.on = false; $("cc").textContent = ""; $("chat").textContent = ""; youEl = santaEl = typingEl = null; userPicked = false; muted = false; $("mute").disabled = false; $("mute").setAttribute("aria-pressed", "false"); $("muteSlash").style.display = "none"; setMode(false); $("callBtn").disabled = false;
   show("landing");

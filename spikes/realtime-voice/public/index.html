@@ -160,7 +160,7 @@ body.live #call { display: grid; }
 /* The video tile: framed like a photograph on a sheet, hairline, 6 px corners.
    The model's soft spots in the mouth are hidden by scale, a hair of blur and a
    fine grain that reads as sensor noise; a slow breathing zoom keeps it alive. */
-.tile { position: relative; width: min(100cqw, calc(100cqh - 60px), 900px); aspect-ratio: 1; border-radius: 6px; overflow: hidden; border: 1px solid var(--rule); background: var(--well); }
+.tile { position: relative; width: min(100cqw, calc(100cqh - 60px), 560px); aspect-ratio: 1; border-radius: 24px; overflow: hidden; border: 1px solid var(--rule); background: var(--well); }
 .tile canvas, .tile img.still { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; }
 .tile canvas { filter: blur(.3px) contrast(1.03); transform-origin: 50% 40%; animation: breathe 8s ease-in-out infinite; opacity: 0; transition: opacity .4s var(--ease); }
 body.video .tile canvas { opacity: 1; }
@@ -184,7 +184,7 @@ body.showlog .tile .cc { display: none; }
 body.video .tile .nofeed { display: none; }
 
 /* The pen line under the tile: one drawn stroke that moves with the voice. */
-.penline { width: min(100cqw, calc(100cqh - 60px), 900px); height: 46px; margin-top: 10px; color: var(--ink); display: block; overflow: visible; }
+.penline { width: min(100cqw, calc(100cqh - 60px), 560px); height: 46px; margin-top: 10px; color: var(--ink); display: block; overflow: visible; }
 .penline path { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; opacity: .85; }
 .penline circle { fill: var(--beak); transition: opacity .2s; opacity: 0; }
 body.speaking .penline circle { opacity: 1; }

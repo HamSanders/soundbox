@@ -4,7 +4,8 @@
  */
 
 import type { Manuscript, ManuscriptSection } from "../types.js";
-import { classifySection, cleanParagraphs, tidyTitle, type CleanOptions } from "./text.js";
+import { detectLanguage } from "./lang.js";
+import { classifySection, cleanSection, tidyTitle, type CleanOptions } from "./text.js";
 
 export type Block =
   | { type: "heading"; level: number; text: string }
@@ -35,10 +36,10 @@ export function makeSection(
   raw: string[],
   opts: ParseOptions = {},
 ): ManuscriptSection | null {
-  const paragraphs = cleanParagraphs(raw, opts);
+  const { paragraphs, breaks } = cleanSection(raw, opts);
   if (!paragraphs.length) return null;
   const tidy = tidyTitle(title);
-  return { title: tidy, ...classifySection(tidy, raw), paragraphs };
+  return { title: tidy, ...classifySection(tidy, raw), paragraphs, ...(breaks.length ? { breaks } : {}) };
 }
 
 /**
@@ -99,6 +100,16 @@ export function finishManuscript(m: Manuscript): Manuscript {
   for (const key of ["title", "subtitle", "author", "description", "publisher"] as const) {
     const v = m[key];
     if (typeof v === "string") m[key] = v.replace(/\s+/g, " ").trim() || null;
+  }
+  if (!m.language) {
+    // No language in the metadata: guess from the included text.
+    let sample = "";
+    for (const s of m.sections) {
+      if (!s.included) continue;
+      sample += ` ${s.paragraphs.join(" ")}`;
+      if (sample.length > 20_000) break;
+    }
+    m.language = detectLanguage(sample);
   }
   return m;
 }

@@ -40,6 +40,7 @@ import { cn } from "@/lib/utils";
 
 import { bedKeys, bedsApi } from "./api";
 import { BedPreview } from "./preview";
+import { SoundscapeSuggestions } from "./suggestions";
 import type { Bed, BedInput, BedKind, BedMode, BedPatch } from "./types";
 
 const KIND_LABEL: Record<BedKind, string> = { music: "Music", ambience: "Ambience", sfx: "SFX" };
@@ -49,6 +50,7 @@ const MODE_LABEL: Record<BedMode, string> = {
   intro: "Intro only",
   outro: "Outro only",
   intro_outro: "Intro and outro",
+  scene: "One scene",
 };
 const PREVIEW_S = 30;
 
@@ -157,6 +159,7 @@ function useBedMutations(bookId: string, chapterId: string, storyId: string | nu
   const fail = (what: string) => (err: unknown) => toast.error(what, { description: errorMessage(err) });
   return {
     create: useMutation({
+      mutationKey: ["audiobook", bookId, "beds", "create"],
       mutationFn: (input: BedInput) => bedsApi.create(bookId, chapterId, input),
       onSuccess: refresh,
       onError: fail("Could not add the bed"),
@@ -236,6 +239,19 @@ export function BedsPanel({ bookId, chapterId }: { bookId: string; chapterId: st
   };
 
   const stale = beds.data?.some((b) => b.stale) ?? false;
+  const paragraphs = useParagraphs(bookId, chapterId);
+  const position = useMemo(() => {
+    const map = new Map<string, number>();
+    (paragraphs.data ?? []).filter((p) => p.track_index === 0).forEach((p, i) => map.set(p.id, i + 1));
+    return map;
+  }, [paragraphs.data]);
+  const rangeOf = (bed: Bed): string | null => {
+    if (bed.kind === "sfx") return bed.anchor_segment_id ? `At paragraph ${position.get(bed.anchor_segment_id) ?? "?"}` : null;
+    if (bed.mode !== "scene") return null;
+    const a = bed.anchor_segment_id ? position.get(bed.anchor_segment_id) : 1;
+    const b = bed.end_segment_id ? position.get(bed.end_segment_id) : position.size;
+    return `Paragraphs ${a ?? "?"}–${b ?? "?"}`;
+  };
   const isSample = chapter?.kind === "retail_sample";
 
   return (
@@ -267,6 +283,7 @@ export function BedsPanel({ bookId, chapterId }: { bookId: string; chapterId: st
             <BedCard
               key={bed.id}
               bed={bed}
+              range={rangeOf(bed)}
               playing={playing === bed.id}
               onPreview={() => void togglePreview(bed)}
               onPatch={(patch) => m.update.mutate({ id: bed.id, patch })}
@@ -279,6 +296,8 @@ export function BedsPanel({ bookId, chapterId }: { bookId: string; chapterId: st
         </ul>
       )}
 
+      <SoundscapeSuggestions bookId={bookId} chapterId={chapterId} onAccept={(input) => m.create.mutateAsync(input)} />
+
       <AddBed bookId={bookId} chapterId={chapterId} pending={m.create.isPending} onAdd={(input) => m.create.mutate(input)} />
     </section>
   );
@@ -286,12 +305,15 @@ export function BedsPanel({ bookId, chapterId }: { bookId: string; chapterId: st
 
 function BedCard({
   bed,
+  range,
   playing,
   onPreview,
   onPatch,
   onRemove,
 }: {
   bed: Bed;
+  /** Where in the chapter it plays, for scene beds and effects. */
+  range: string | null;
   playing: boolean;
   onPreview: () => void;
   onPatch: (patch: BedPatch) => void;
@@ -333,6 +355,7 @@ function BedCard({
             <Trash2Icon />
           </Button>
         </div>
+        {range && <p className="text-muted-foreground -mt-1 px-2 pb-1.5 pl-7.5 text-xs">{range}</p>}
         {bed.status === "failed" && <p className="text-destructive px-2 pb-1.5 text-xs">{bed.error}</p>}
         <CollapsibleContent className="space-y-3 border-t px-2 py-2">
           <DbSlider
@@ -354,7 +377,10 @@ function BedCard({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {(Object.keys(MODE_LABEL) as BedMode[]).map((k) => (
+                    {(Object.keys(MODE_LABEL) as BedMode[])
+                      // A scene needs its paragraphs; only a suggested bed has them.
+                      .filter((k) => k !== "scene" || bed.mode === "scene")
+                      .map((k) => (
                       <SelectItem key={k} value={k}>
                         {MODE_LABEL[k]}
                       </SelectItem>

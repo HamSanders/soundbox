@@ -47,6 +47,11 @@ const DOCUMENT_TYPES = [
   "text/x-markdown",
   "text/html",
   "application/xhtml+xml",
+  "application/vnd.oasis.opendocument.text",
+  "application/rtf",
+  "text/rtf",
+  "application/x-fictionbook+xml",
+  "application/zip",
 ];
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 

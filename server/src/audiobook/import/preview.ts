@@ -190,6 +190,20 @@ export type ImportEdits = z.infer<typeof importEditsSchema>;
 
 export class EditError extends Error {}
 
+/**
+ * A source section's scene breaks that fall inside the paragraph range
+ * [start, end), moved to where that range lands in the output (`offset`).
+ * A break exactly at `start` survives only when the range continues
+ * earlier output, so splitting at a scene break drops it (the section
+ * boundary already separates the scenes) and merging back restores it.
+ */
+export function remapBreaks(breaks: number[] | undefined, start: number, end: number, offset: number): number[] {
+  if (!breaks?.length) return [];
+  return breaks
+    .filter((b) => b < end && (b > start || (b === start && b > 0 && offset > 0)))
+    .map((b) => offset + (b - start));
+}
+
 /** The final manuscript: the preview with the review screen's edits applied. */
 export function applyEdits(source: Manuscript, edits: ImportEdits): Manuscript {
   const meta = edits.metadata ?? {};
@@ -197,17 +211,27 @@ export function applyEdits(source: Manuscript, edits: ImportEdits): Manuscript {
     meta[key] === undefined ? source[key] : ((meta[key] || null) as Manuscript[K]);
   const sections: ManuscriptSection[] = edits.sections
     ? edits.sections.map((s, i) => {
-        const paragraphs = s.parts.flatMap((part) => {
+        const paragraphs: string[] = [];
+        const breaks: number[] = [];
+        for (const part of s.parts) {
           const from = source.sections[part.section];
           if (!from) throw new EditError(`Section ${i + 1} refers to a section that doesn't exist.`);
           const start = part.start ?? 0;
           const end = Math.min(part.end ?? from.paragraphs.length, from.paragraphs.length);
           if (start > end) throw new EditError(`Section ${i + 1} has an empty or reversed paragraph range.`);
-          return from.paragraphs.slice(start, end);
-        });
-        return { title: s.title || `Chapter ${i + 1}`, kind: s.kind, included: s.included, paragraphs };
+          for (const b of remapBreaks(from.breaks, start, end, paragraphs.length)) breaks.push(b);
+          paragraphs.push(...from.paragraphs.slice(start, end));
+        }
+        const valid = [...new Set(breaks)].filter((b) => b > 0 && b < paragraphs.length).sort((a, b) => a - b);
+        return {
+          title: s.title || `Chapter ${i + 1}`,
+          kind: s.kind,
+          included: s.included,
+          paragraphs,
+          ...(valid.length ? { breaks: valid } : {}),
+        };
       })
-    : source.sections.map((s) => ({ ...s, paragraphs: [...s.paragraphs] }));
+    : source.sections.map((s) => ({ ...s, paragraphs: [...s.paragraphs], ...(s.breaks ? { breaks: [...s.breaks] } : {}) }));
   const result: Manuscript = {
     title: pick("title"),
     subtitle: pick("subtitle"),

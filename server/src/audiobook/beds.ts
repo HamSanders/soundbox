@@ -24,6 +24,14 @@ import type { Database } from "better-sqlite3";
 import { applyDucking, resolveDuck, type DuckOptions } from "../audio/duck.js";
 import type { Audio } from "../audio/dsp.js";
 import { ModelError } from "../errors.js";
+import type { ChatMessage } from "../llm/client.js";
+import {
+  buildSoundscapeMessages,
+  heuristicSoundscape,
+  parseSoundscape,
+  type SoundscapeInput,
+  type SoundscapeSuggestion,
+} from "../llm/soundscape.js";
 import type { ModelInfo, StorySegment } from "../schemas.js";
 import type { MirliService } from "../service.js";
 import { audiobooks } from "./service.js";
@@ -31,11 +39,12 @@ import type { Chapter, ChapterKind } from "./types.js";
 
 export type BedKind = "music" | "ambience" | "sfx";
 /** Where in the chapter a music or ambience bed plays. */
-export type BedMode = "full" | "intro" | "outro" | "intro_outro";
+/** "scene" plays from `anchor_segment_id` to the end of `end_segment_id`. */
+export type BedMode = "full" | "intro" | "outro" | "intro_outro" | "scene";
 export type BedStatus = "generating" | "ready" | "failed";
 
 export const BED_KINDS: BedKind[] = ["music", "ambience", "sfx"];
-export const BED_MODES: BedMode[] = ["full", "intro", "outro", "intro_outro"];
+export const BED_MODES: BedMode[] = ["full", "intro", "outro", "intro_outro", "scene"];
 
 export interface Bed {
   id: string;
@@ -59,8 +68,11 @@ export interface Bed {
   mode: BedMode;
   /** Length of the intro and outro pieces; null = the sound's own length. */
   intro_s: number | null;
-  /** SFX: the paragraph it fires at. null = chapter start. */
+  /** SFX: the paragraph it fires at. Scene: the paragraph it starts at.
+   *  null = chapter start. */
   anchor_segment_id: string | null;
+  /** Scene: the last paragraph it plays under. null = chapter end. */
+  end_segment_id: string | null;
   /** Seconds after the anchor (or chapter start). */
   offset_s: number;
   /** null = no ducking. */
@@ -97,12 +109,21 @@ export interface BedInput {
   mode?: BedMode;
   intro_s?: number | null;
   anchor_segment_id?: string | null;
+  end_segment_id?: string | null;
   offset_s?: number;
   /** false = no ducking; an object overrides the defaults. */
   duck?: Partial<DuckOptions> | false | null;
 }
 
 export type BedPatch = Omit<BedInput, "kind" | "prompt" | "model_id" | "duration_s">;
+
+export interface SoundscapeResult {
+  /** Where the suggestions came from. */
+  source: "llm" | "heuristic";
+  suggestions: SoundscapeSuggestion[];
+  /** Why the lexicon was used, or other things the reviewer should know. */
+  note: string | null;
+}
 
 export interface BedWarning {
   id: "distribution" | "retail_sample" | "noise_floor";
@@ -153,8 +174,10 @@ export interface LayoutInput {
   intro_s: number | null;
   fade_in_s: number;
   fade_out_s: number;
-  /** SFX: start of the anchor paragraph, or 0. */
+  /** SFX and scene: start of the anchor paragraph, or 0. */
   anchor_s: number;
+  /** Scene: end of the last paragraph, or null for the chapter's end. */
+  end_s?: number | null;
   offset_s: number;
 }
 
@@ -215,6 +238,12 @@ export function layoutBed(input: LayoutInput): ClipPlan[] {
       return fill(0, piece, input);
     case "outro":
       return fill(length - piece, length, input);
+    case "scene": {
+      const from = Math.max(0, input.anchor_s + input.offset_s);
+      const to = input.end_s ?? length;
+      // Nothing voiced in the scene yet: lay the sound out once from its start.
+      return fill(from, to > from ? to : from + input.sound_s, input);
+    }
     case "intro_outro": {
       if (piece * 2 >= length) return fill(0, length, input);
       return [...fill(0, piece, input), ...fill(length - piece, length, input)];
@@ -253,6 +282,7 @@ CREATE TABLE IF NOT EXISTS book_beds (
     mode              TEXT NOT NULL,
     intro_s           REAL,
     anchor_segment_id TEXT,
+    end_segment_id    TEXT,
     offset_s          REAL NOT NULL DEFAULT 0,
     duck              TEXT,
     status            TEXT NOT NULL,
@@ -284,7 +314,7 @@ function fromRow(row: BedRow): Bed {
 
 const COLUMNS = [
   "id", "book_id", "chapter_id", "kind", "label", "track_index", "sound_id", "prompt", "model_id",
-  "gain_db", "fade_in_s", "fade_out_s", "loop", "mode", "intro_s", "anchor_segment_id", "offset_s",
+  "gain_db", "fade_in_s", "fade_out_s", "loop", "mode", "intro_s", "anchor_segment_id", "end_segment_id", "offset_s",
   "duck", "status", "job_id", "error", "segment_ids", "laid_out_s", "created_at", "updated_at",
 ] as const;
 
@@ -300,6 +330,9 @@ function toRow(bed: Bed): Record<string, unknown> {
 export class BedStore {
   constructor(private readonly conn: Database) {
     this.conn.exec(SCHEMA);
+    // Columns added after the table first shipped.
+    const cols = new Set((this.conn.prepare("PRAGMA table_info(book_beds)").all() as { name: string }[]).map((c) => c.name));
+    if (!cols.has("end_segment_id")) this.conn.exec("ALTER TABLE book_beds ADD COLUMN end_segment_id TEXT");
   }
 
   get(id: string): Bed | null {
@@ -337,14 +370,6 @@ export class BedStore {
 
 /* ---------------------------------------------------------------- service */
 
-/**
- * The shared SQLite connection. `MirliDb.conn` is private; the plan has each
- * audiobook module build its store from it, so it is read here at runtime.
- */
-function connOf(svc: MirliService): Database {
-  return (svc.db as unknown as { conn: Database }).conn;
-}
-
 const now = () => new Date().toISOString();
 const newId = () => randomUUID();
 
@@ -359,12 +384,43 @@ export class BedService {
   private readonly watching = new Set<string>();
 
   constructor(private readonly svc: MirliService) {
-    this.store = new BedStore(connOf(svc));
+    this.store = new BedStore(svc.db.sqlite);
     audiobooks(svc).onDelete(async (scope) => {
       // The stories (and the clips on them) go with the chapters; only the
       // rows need dropping, which ON DELETE CASCADE does for whole books.
       for (const cid of scope.chapter_ids) for (const bed of this.store.listChapter(cid)) this.store.delete(bed.id);
     });
+    audiobooks(svc).onDuplicate((scope) => this.copyBook(scope));
+  }
+
+  /**
+   * After core copies a book (its chapter stories, every clip and the track
+   * rows), copy the bed rows onto the copy, pointing at its chapters and clips.
+   * Track indexes carry over unchanged because the tracks were copied as is.
+   */
+  private copyBook(scope: {
+    from_book_id: string;
+    to_book_id: string;
+    chapters: Map<string, string>;
+    segments: Map<string, string>;
+  }): void {
+    const at = now();
+    const remap = (id: string | null) => (id ? (scope.segments.get(id) ?? null) : null);
+    for (const bed of this.store.listBook(scope.from_book_id)) {
+      const chapter = scope.chapters.get(bed.chapter_id);
+      if (!chapter) continue;
+      this.store.save({
+        ...bed,
+        id: newId(),
+        book_id: scope.to_book_id,
+        chapter_id: chapter,
+        anchor_segment_id: remap(bed.anchor_segment_id),
+        end_segment_id: remap(bed.end_segment_id),
+        segment_ids: bed.segment_ids.map((sid) => scope.segments.get(sid)).filter((x): x is string => !!x),
+        created_at: at,
+        updated_at: at,
+      });
+    }
   }
 
   private get books() {
@@ -430,6 +486,7 @@ export class BedService {
     const sound = input.sound_id ? this.svc.getSound(input.sound_id) : null;
     if (input.sound_id && !sound) throw new ModelError(`Sound '${input.sound_id}' not found.`);
     if (input.anchor_segment_id) this.anchorStart(chapter, input.anchor_segment_id);
+    if (input.end_segment_id) this.anchorStart(chapter, input.end_segment_id);
 
     const track = this.freeTrack(chapter);
     const duck = input.duck === false || input.duck === null ? null : resolveDuck({ ...(d.duck || {}), ...(input.duck ?? {}) });
@@ -450,6 +507,7 @@ export class BedService {
       mode: input.mode ?? d.mode!,
       intro_s: input.intro_s ?? null,
       anchor_segment_id: input.anchor_segment_id ?? null,
+      end_segment_id: input.end_segment_id ?? null,
       offset_s: input.offset_s ?? 0,
       duck: input.duck === undefined && d.duck === false ? null : duck,
       status: sound ? "ready" : "generating",
@@ -584,9 +642,14 @@ export class BedService {
         bed.error = "The bed's sound is no longer in the library.";
       } else {
         let anchor = 0;
-        if (bed.kind === "sfx" && bed.anchor_segment_id) {
+        let end: number | null = null;
+        if ((bed.kind === "sfx" || bed.mode === "scene") && bed.anchor_segment_id) {
           const seg = segments.find((s) => s.id === bed.anchor_segment_id);
           anchor = seg?.start_s ?? 0;
+        }
+        if (bed.kind !== "sfx" && bed.mode === "scene" && bed.end_segment_id) {
+          const seg = segments.find((s) => s.id === bed.end_segment_id);
+          if (seg) end = seg.start_s + (seg.duration_s ?? 0);
         }
         const plan = layoutBed({
           kind: bed.kind,
@@ -598,6 +661,7 @@ export class BedService {
           fade_in_s: bed.fade_in_s,
           fade_out_s: bed.fade_out_s,
           anchor_s: anchor,
+          end_s: end,
           offset_s: bed.offset_s,
         });
         for (const clip of plan) {
@@ -647,6 +711,7 @@ export class BedService {
       bed.error = null;
     }
     if (patch.anchor_segment_id) this.anchorStart(chapter, patch.anchor_segment_id);
+    if (patch.end_segment_id) this.anchorStart(chapter, patch.end_segment_id);
     if (patch.label?.trim()) {
       bed.label = patch.label.trim().slice(0, 80);
       this.svc.updateTrack(chapter.story_id, bed.track_index, { name: bed.label });
@@ -658,6 +723,7 @@ export class BedService {
     if (patch.mode !== undefined) bed.mode = patch.mode;
     if (patch.intro_s !== undefined) bed.intro_s = patch.intro_s;
     if (patch.anchor_segment_id !== undefined) bed.anchor_segment_id = patch.anchor_segment_id;
+    if (patch.end_segment_id !== undefined) bed.end_segment_id = patch.end_segment_id;
     if (patch.offset_s !== undefined) bed.offset_s = patch.offset_s;
     if (patch.duck !== undefined) {
       bed.duck = patch.duck === false || patch.duck === null ? null : resolveDuck({ ...(bed.duck ?? {}), ...patch.duck });
@@ -689,6 +755,54 @@ export class BedService {
     this.store.delete(bed.id);
     this.publish(bed);
     return true;
+  }
+
+  /* ----------------------------------------------------------- suggest */
+
+  /**
+   * Propose beds for a chapter from its text. The prompt assistant reads it
+   * when it is on; otherwise a keyword lexicon does. Nothing is created: the
+   * caller shows the list and adds the ones a person accepts.
+   */
+  async suggest(bookId: string, chapterId: string): Promise<SoundscapeResult> {
+    const chapter = this.chapterOf(bookId, chapterId);
+    const book = this.books.getBook(bookId);
+    const paragraphs = (this.books.getParagraphs(chapter.id) ?? [])
+      .filter((p) => p.kind === "line" && !p.is_heading && p.text.trim())
+      .map((p) => ({ id: p.id, text: p.text }));
+    if (paragraphs.length === 0) {
+      return { source: "heuristic", suggestions: [], note: "This chapter has no text to read yet." };
+    }
+    const input: SoundscapeInput = {
+      chapter_title: chapter.title,
+      book_title: book?.title ?? null,
+      genres: book?.genres ?? [],
+      paragraphs,
+    };
+
+    // `chat` is the assistant's one-call method (added for character
+    // detection); read structurally so this works whichever lands first.
+    const llm = this.svc.llm as unknown as {
+      chat?: (messages: ChatMessage[], opts?: { temperature?: number; maxTokens?: number }) => Promise<string>;
+    };
+    let note: string | null = null;
+    if (this.svc.getSettings().llm_mode === "off" || typeof llm.chat !== "function") {
+      note = "Suggested from keywords in the text. Turn on the prompt assistant in Settings for suggestions that follow each scene.";
+    } else {
+      try {
+        const text = await llm.chat(buildSoundscapeMessages(input), { temperature: 0.2, maxTokens: 1800 });
+        const suggestions = parseSoundscape(text, input);
+        return {
+          source: "llm",
+          suggestions,
+          note: suggestions.length ? null : "The assistant found nothing that needs sound in this chapter.",
+        };
+      } catch (exc) {
+        const why = exc instanceof Error ? exc.message : String(exc);
+        note = `The prompt assistant could not read this chapter (${why.slice(0, 200)}), so these come from keywords in the text.`;
+      }
+    }
+    return { source: "heuristic", suggestions: heuristicSoundscape(input), note };
   }
 
   /* --------------------------------------------------------- export side */

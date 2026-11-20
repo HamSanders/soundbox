@@ -1,26 +1,35 @@
 /**
  * Manuscript import: any supported file in, a `Manuscript` out.
  *
- * Formats: EPUB, PDF, DOCX, TXT, Markdown, HTML, pasted text, and web pages
- * (through `url.ts`). The format is sniffed from the bytes first and the file
- * name second, so a mislabelled upload still parses.
+ * Formats: EPUB, PDF, DOCX, ODT, RTF, FB2 (and .fb2.zip), TXT, Markdown,
+ * HTML, pasted text, and web pages (through `url.ts`). The format is sniffed
+ * from the bytes first and the file name second, so a mislabelled upload
+ * still parses. Kindle files (MOBI/AZW/AZW3/KFX) are recognised and refused
+ * with the reason: DRM, or not supported (see `drm.ts`).
  */
 
 import type { Manuscript } from "../types.js";
 import { parseDocx } from "./docx.js";
+import { kindleMessage, sniffKindle } from "./drm.js";
+import { decodeBytes } from "./encoding.js";
 import { parseEpub } from "./epub.js";
+import { parseFb2 } from "./fb2.js";
 import { parseHtml } from "./html.js";
 import type { ParseOptions } from "./manuscript.js";
+import { parseOdt } from "./odt.js";
 import { parsePdf } from "./pdf.js";
 import { parsePlainText } from "./plain.js";
+import { parseRtf } from "./rtf.js";
 
 export type { ParseOptions } from "./manuscript.js";
 export { DEFAULT_MAX_CHARS } from "./text.js";
 export { splitManuscriptText, type SplitTextOptions } from "./split.js";
 
-export type ManuscriptFormat = "epub" | "pdf" | "docx" | "html" | "markdown" | "text";
+export type ManuscriptFormat = "epub" | "pdf" | "docx" | "odt" | "rtf" | "fb2" | "html" | "markdown" | "text";
 
-export const SUPPORTED_EXTENSIONS = [".epub", ".pdf", ".docx", ".txt", ".md", ".markdown", ".html", ".htm", ".xhtml"];
+export const SUPPORTED_EXTENSIONS = [
+  ".epub", ".pdf", ".docx", ".odt", ".rtf", ".fb2", ".txt", ".md", ".markdown", ".html", ".htm", ".xhtml",
+];
 
 export class ImportError extends Error {
   readonly status: number;
@@ -39,24 +48,7 @@ export function decodeText(bytes: Uint8Array): string {
   if (startsWith(bytes, [0xef, 0xbb, 0xbf])) return new TextDecoder("utf-8").decode(bytes.subarray(3));
   if (startsWith(bytes, [0xff, 0xfe])) return new TextDecoder("utf-16le").decode(bytes.subarray(2));
   if (startsWith(bytes, [0xfe, 0xff])) return new TextDecoder("utf-16be").decode(bytes.subarray(2));
-  try {
-    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-  } catch {
-    return decodeWindows1252(bytes);
-  }
-}
-
-/** Windows-1252's 0x80–0x9F block (smart quotes, dashes, ellipsis); the rest
- *  is Latin-1. Mapped by hand: Node's TextDecoder treats "windows-1252" as
- *  Latin-1 in some builds, which turns smart quotes into control codes. */
-const CP1252 = [
-  0x20ac, 0x81, 0x201a, 0x192, 0x201e, 0x2026, 0x2020, 0x2021, 0x2c6, 0x2030, 0x160, 0x2039, 0x152, 0x8d, 0x17d, 0x8f,
-  0x90, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014, 0x2dc, 0x2122, 0x161, 0x203a, 0x153, 0x9d, 0x17e, 0x178,
-];
-function decodeWindows1252(bytes: Uint8Array): string {
-  let out = "";
-  for (const b of bytes) out += String.fromCharCode(b >= 0x80 && b <= 0x9f ? CP1252[b - 0x80]! : b);
-  return out;
+  return decodeBytes(bytes);
 }
 
 function extension(filename: string): string {
@@ -67,23 +59,34 @@ function extension(filename: string): string {
 export function detectFormat(bytes: Uint8Array, filename = "", contentType = ""): ManuscriptFormat {
   const ext = extension(filename);
   if (startsWith(bytes, [0x25, 0x50, 0x44, 0x46])) return "pdf"; // %PDF
+  const kindle = sniffKindle(bytes);
+  if (kindle) throw new ImportError(415, kindleMessage(kindle));
   if (startsWith(bytes, [0x50, 0x4b, 0x03, 0x04])) {
-    // ZIP: EPUB declares itself in an uncompressed "mimetype" first entry.
+    // ZIP. EPUB and ODF declare themselves in an uncompressed "mimetype" first entry.
     const head = new TextDecoder("latin1").decode(bytes.subarray(0, 200));
     if (head.includes("application/epub+zip") || ext === "epub") return "epub";
+    if (head.includes("application/vnd.oasis.opendocument.text") || ext === "odt") return "odt";
+    if (head.includes("application/vnd.oasis.opendocument")) {
+      throw new ImportError(415, "That OpenDocument file isn't a text document. Use a .odt file.");
+    }
     if (ext === "docx" || head.includes("[Content_Types].xml") || head.includes("word/")) return "docx";
-    throw new ImportError(415, "This archive isn't an EPUB or a Word document.");
+    if (/\.fb2\.zip$/i.test(filename) || /\.fb2/i.test(head)) return "fb2";
+    if (/\.kfx/i.test(head)) throw new ImportError(415, kindleMessage({ kind: "kfx", encrypted: true }));
+    throw new ImportError(415, "This archive isn't an EPUB, OpenDocument, Word or FB2 document.");
   }
   if (startsWith(bytes, [0xd0, 0xcf, 0x11, 0xe0])) {
     throw new ImportError(415, "Old Word (.doc) files aren't supported. Save it as .docx and import that.");
   }
+  const head = decodeText(bytes.subarray(0, 2048)).trimStart().slice(0, 500);
+  if (head.startsWith("{\\rtf")) return "rtf";
+  if (/^(?:<\?xml[^>]*>\s*)?<FictionBook\b/.test(head) || ext === "fb2") return "fb2";
   if (ext === "md" || ext === "markdown" || contentType.includes("markdown")) return "markdown";
   if (ext === "html" || ext === "htm" || ext === "xhtml" || /html/.test(contentType)) return "html";
   if (ext === "txt" || contentType.startsWith("text/plain")) return "text";
-  const head = decodeText(bytes.subarray(0, 2048)).trimStart().slice(0, 500).toLowerCase();
-  if (head.startsWith("<!doctype html") || head.startsWith("<html") || /<(?:body|p|div|h1)[\s>]/.test(head)) return "html";
+  const lower = head.toLowerCase();
+  if (lower.startsWith("<!doctype html") || lower.startsWith("<html") || /<(?:body|p|div|h1)[\s>]/.test(lower)) return "html";
   if (ext && !["txt", "text", ""].includes(ext) && /[\x00-\x08\x0e-\x1f]/.test(head)) {
-    throw new ImportError(415, `.${ext} files aren't supported. Use EPUB, PDF, DOCX, TXT, Markdown or HTML.`);
+    throw new ImportError(415, `.${ext} files aren't supported. Use EPUB, PDF, DOCX, ODT, RTF, FB2, TXT, Markdown or HTML.`);
   }
   if (/^#{1,6}\s/m.test(head)) return "markdown";
   return "text";
@@ -96,7 +99,11 @@ export interface ManuscriptInput {
 }
 
 function baseName(filename: string): string | null {
-  const name = filename.replace(/^.*[\\/]/, "").replace(/\.[a-z0-9]+$/i, "").replace(/[_-]+/g, " ").trim();
+  const name = filename
+    .replace(/^.*[\\/]/, "")
+    .replace(/(?:\.fb2)?\.[a-z0-9]+$/i, "")
+    .replace(/[_-]+/g, " ")
+    .trim();
   return name || null;
 }
 
@@ -115,6 +122,15 @@ export async function parseManuscript(input: ManuscriptInput, opts: ParseOptions
         break;
       case "docx":
         m = parseDocx(input.bytes, opts);
+        break;
+      case "odt":
+        m = parseOdt(input.bytes, opts);
+        break;
+      case "rtf":
+        m = parseRtf(input.bytes, opts);
+        break;
+      case "fb2":
+        m = parseFb2(input.bytes, opts);
         break;
       case "html":
         m = parseHtml(decodeText(input.bytes), { ...opts, extractMain: true, titleHint });
@@ -143,4 +159,4 @@ export function parsePasted(text: string, opts: ParseOptions & { title?: string 
   return m;
 }
 
-export { parseDocx, parseEpub, parseHtml, parsePdf, parsePlainText };
+export { parseDocx, parseEpub, parseFb2, parseHtml, parseOdt, parsePdf, parsePlainText, parseRtf };

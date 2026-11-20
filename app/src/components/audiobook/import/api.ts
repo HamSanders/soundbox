@@ -16,6 +16,8 @@ export interface ImportSection {
   kind: ChapterKind;
   included: boolean;
   paragraphs: string[];
+  /** Scene breaks: a pause before paragraphs[i] (ascending, 0 < i < length). */
+  breaks?: number[];
   characters: number;
 }
 
@@ -103,4 +105,4 @@ const httpImportApi: ImportApi = {
 export const importApi: ImportApi = IS_MOCK ? mockImportApi : httpImportApi;
 
 /** Accepted by the file picker; the server sniffs the bytes either way. */
-export const ACCEPT = ".epub,.pdf,.docx,.txt,.md,.markdown,.html,.htm,.xhtml";
+export const ACCEPT = ".epub,.pdf,.docx,.odt,.rtf,.fb2,.zip,.txt,.md,.markdown,.html,.htm,.xhtml";

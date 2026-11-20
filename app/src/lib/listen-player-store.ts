@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 import { create } from "zustand";
 
 import { listenApi } from "./listen-api";
-import type { Bookmark, ListenChapter, ListenManifest } from "./listen-types";
+import type { Bookmark, ListenChapter, ListenManifest, ListenProgress } from "./listen-types";
 import { usePlayerStore } from "./player-store";
 
 export const PLAYER_ID = "listen";
@@ -70,6 +70,15 @@ interface ListenPlayerState {
 
 let audio: HTMLAudioElement | null = null;
 let lastSave = 0;
+
+const progressListeners = new Set<(p: ListenProgress) => void>();
+
+/** Hear every progress save the player makes (the shelf keeps itself live
+ *  with this). Returns the unsubscribe. */
+export function onProgressSaved(fn: (p: ListenProgress) => void): () => void {
+  progressListeners.add(fn);
+  return () => progressListeners.delete(fn);
+}
 
 /** Clamp to the speed range and snap to the 0.05 grid. */
 export function snapSpeed(speed: number): number {
@@ -177,6 +186,7 @@ export const useListenPlayer = create<ListenPlayerState>((set, get) => {
         book_position_s: bookPosition(s.manifest.chapters, s.chapterIndex, position),
         ...(finished ? { finished: true } : {}),
       })
+      .then((p) => progressListeners.forEach((fn) => fn(p)))
       .catch(() => {
         /* offline or server gone: the next save will try again */
       });

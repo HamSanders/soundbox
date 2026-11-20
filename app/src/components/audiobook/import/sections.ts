@@ -51,6 +51,28 @@ export function paragraphsFor(parts: SectionPart[], source: ImportSection[]): st
   });
 }
 
+/**
+ * Where scene breaks fall in a list of parts: the same rule the server's
+ * `remapBreaks` applies on commit. A break exactly at a part's start is kept
+ * only when the part continues earlier text, so splitting at a scene break
+ * drops it and merging back restores it.
+ */
+export function breaksFor(parts: SectionPart[], source: ImportSection[]): Set<number> {
+  const out = new Set<number>();
+  let offset = 0;
+  for (const p of parts) {
+    const from = source[p.section];
+    if (!from) continue;
+    const start = p.start ?? 0;
+    const end = Math.min(p.end ?? from.paragraphs.length, from.paragraphs.length);
+    for (const b of from.breaks ?? []) {
+      if (b < end && (b > start || (b === start && b > 0 && offset > 0))) out.add(offset + (b - start));
+    }
+    offset += Math.max(0, end - start);
+  }
+  return out;
+}
+
 export function countParagraphs(s: WorkingSection): number {
   return s.parts.reduce((n, p) => n + (p.end - p.start), 0);
 }

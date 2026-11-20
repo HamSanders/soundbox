@@ -51,6 +51,7 @@ import { cn } from "@/lib/utils";
 
 import { ACCEPT, importApi, type ImportMetadata, type ImportPreview } from "./api";
 import {
+  breaksFor,
   countParagraphs,
   initialSections,
   KIND_LABEL,
@@ -160,7 +161,7 @@ export function ImportWizard({ open, onOpenChange, onImported }: ImportWizardPro
         <DialogHeader className="border-b p-4 pr-12">
           <DialogTitle>Import a manuscript</DialogTitle>
           <DialogDescription>
-            EPUB, PDF, Word, text, Markdown, HTML or a web page. Chapters, front matter and the cover are detected for
+            EPUB, PDF, Word, OpenDocument, RTF, FB2, text, Markdown, HTML or a web page. Chapters, front matter and the cover are detected for
             you to check.
           </DialogDescription>
           <ol className="mt-2 flex flex-wrap gap-1.5" aria-label="Steps">
@@ -306,7 +307,7 @@ function SourceStep({ busy, run, onParsed }: { busy: string | null; run: Run; on
         >
           {busy ? <Loader2Icon className="text-muted-foreground size-8 animate-spin" /> : <UploadIcon className="text-muted-foreground size-8" />}
           <span className="font-medium">Drop a manuscript here, or choose a file</span>
-          <span className="text-muted-foreground text-xs">EPUB, PDF, DOCX, TXT, Markdown or HTML, up to 256 MB</span>
+          <span className="text-muted-foreground text-xs">EPUB, PDF, DOCX, ODT, RTF, FB2, TXT, Markdown or HTML, up to 256 MB</span>
           <input
             ref={fileInput}
             type="file"
@@ -394,6 +395,7 @@ function SectionsStep({
   const index = Math.max(0, sections.findIndex((s) => s.key === selected));
   const current = sections[index];
   const paragraphs = useMemo(() => (current ? paragraphsFor(current.parts, preview.sections) : []), [current, preview.sections]);
+  const breaks = useMemo(() => (current ? breaksFor(current.parts, preview.sections) : new Set<number>()), [current, preview.sections]);
   // A merged-away selection falls back to the first section (index 0 above).
   const included = sections.filter((s) => s.included).length;
 
@@ -491,6 +493,17 @@ function SectionsStep({
               <ol className="space-y-0.5 text-sm">
                 {paragraphs.map((p, i) => (
                   <li key={i} className="group">
+                    {breaks.has(i) && (
+                      <div
+                        className="text-muted-foreground my-2 flex items-center gap-2 text-xs"
+                        title="A pause is added here, using the book's scene-break pacing"
+                      >
+                        <span className="border-border flex-1 border-t" />
+                        <span aria-hidden>⁂</span>
+                        Scene break
+                        <span className="border-border flex-1 border-t" />
+                      </div>
+                    )}
                     {i > 0 && (
                       <button
                         type="button"

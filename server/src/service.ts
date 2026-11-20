@@ -41,6 +41,7 @@ import {
 } from "./models/audiocpp.js";
 import { listGpus, pickGpu } from "./gpu.js";
 import { HistoryStore } from "./history.js";
+import { beds } from "./audiobook/beds.js"; // [audiobooks:soundscape]
 import { ModelManager } from "./models/manager.js";
 import * as audiocppBinary from "./models/audiocppBinary.js";
 import { migrateLayout } from "./models/audiocppMigrate.js";
@@ -125,7 +126,6 @@ import { McpTelemetry } from "./telemetry.js";
 import { UpdateChecker } from "./updateCheck.js";
 import { envVar } from "./env.js";
 import { InstrumentLibrary, instrumentManifest } from "./instruments/index.js";
-import { beds } from "./audiobook/beds.js"; // [audiobooks:soundscape]
 
 const log = getLogger("mirli.service");
 
@@ -239,6 +239,8 @@ export class MirliService {
   readonly telemetry: McpTelemetry;
   /** Live story activity — see story-hub.ts. */
   readonly stories = new StoryHub();
+  /** Called after a segment is voiced; audiobook takes record each generation. */
+  readonly segmentVoiced: ((e: { segment_id: string; sound_id: string; spoken_text: string; voice_id: string | null; model_id: string; request_options: Record<string, string>; seed: number | null }) => void)[] = []; // [audiobooks:voice]
   /** Sampled instruments for the MIDI dry render — see instruments/index.ts.
    *  Reads the models directory at call time, like everything under `paths`. */
   readonly instruments = new InstrumentLibrary(() => this.config.paths.models);
@@ -965,7 +967,8 @@ export class MirliService {
   ): Promise<StorySegment | null> {
     const segment = this.db.getSegment(segmentId);
     if (segment === null) return null;
-    if (!segment.text.trim()) throw new ModelError("This line has no text to speak.");
+    const spoken = req.text ?? segment.text; // [audiobooks:voice]
+    if (!spoken.trim()) throw new ModelError("This line has no text to speak.");
 
     const model = this.models.get(req.model);
     const info = model.describe();
@@ -983,7 +986,7 @@ export class MirliService {
     this.models.touch();
 
     handle?.phase("generating", "Speaking");
-    const clip = await model.speak(segment.text, {
+    const clip = await model.speak(spoken, { // [audiobooks:voice]
       voiceRefPath: refPath,
       voiceId: builtinId,
       seed: req.seed ?? null,
@@ -1013,6 +1016,7 @@ export class MirliService {
 
     this.models.touch();
     const voiced = this.db.setSegmentSound(segmentId, sound.id, sound.duration_s);
+    for (const cb of this.segmentVoiced) cb({ segment_id: segmentId, sound_id: sound.id, spoken_text: spoken, voice_id: segment.voice_id ?? null, model_id: req.model, request_options: requestOptions, seed: req.seed ?? null }); // [audiobooks:voice] record a take
     this.stories.changed(segment.story_id);
 
     // A line that has never been placed sits at 0:00, because until it has

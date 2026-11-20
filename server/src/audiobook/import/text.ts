@@ -8,7 +8,8 @@
  * from the app.
  */
 
-import type { ChapterKind, ManuscriptSection } from "../types.js";
+import type { ManuscriptSection } from "../types.js";
+import { isMultilingualHeading, matterFromTitle } from "./lang.js";
 
 /** Default ceiling on characters per paragraph. Most local TTS models read a
  *  paragraph this long in one pass without rushing or truncating it. */
@@ -37,7 +38,7 @@ const BARE_NUMBER = new RegExp(`^(?:${ROMAN}|\\d{1,3})\\.?$`);
 export function isHeadingLine(line: string): boolean {
   const s = line.trim();
   if (!s || s.length > 100) return false;
-  if (NUMBERED_HEADING.test(s) || NAMED_HEADING.test(s)) return true;
+  if (NUMBERED_HEADING.test(s) || NAMED_HEADING.test(s) || isMultilingualHeading(s)) return true;
   // A lone roman numeral counts; a lone "I" is almost always the pronoun.
   if (BARE_NUMBER.test(s) && s !== "I" && s !== "I.") return true;
   return false;
@@ -45,47 +46,33 @@ export function isHeadingLine(line: string): boolean {
 
 /* ----------------------------------------------------- section kinds */
 
-interface KindRule {
-  test: RegExp;
-  kind: ChapterKind;
-  included: boolean;
-}
+/** "All rights reserved" in the supported languages: an untitled copyright page. */
+const RIGHTS_RESERVED =
+  /all rights reserved|alle rechte vorbehalten|tous droits réservés|todos los derechos reservados|tutti i diritti riservati|todos os direitos reservados|alle rechten voorbehouden|wszelkie prawa zastrzeżone|все права защищены|版权所有|版權所有|無断転載|無断複製/i;
+/** A dedication's opening word: For, To, Für, Pour, À, Para, Per, Voor, Dla, Для, 献给. */
+const DEDICATION_START = /^(?:for|to|für|pour|à|para|per|voor|dla|для)\s|^(?:献给|獻給)/iu;
 
-/** Title patterns, checked in order. Excluded by default: pages a listener
- *  doesn't want read aloud (copyright, contents, index) and the title page. */
-const KIND_RULES: KindRule[] = [
-  { test: /^(?:copyright|legal|imprint|colophon)\b/i, kind: "front_matter", included: false },
-  { test: /^(?:(?:table of )?contents|toc)\b/i, kind: "front_matter", included: false },
-  { test: /^(?:title page|half[- ]title|cover)\b/i, kind: "front_matter", included: false },
-  { test: /^(?:also by|other books by|books by|praise for)\b/i, kind: "front_matter", included: false },
-  { test: /^(?:dedication|epigraph)\b/i, kind: "front_matter", included: true },
-  { test: /^(?:foreword|preface|introduction|a note (?:from|on) the (?:author|text)|author'?s note)\b/i, kind: "front_matter", included: true },
-  { test: /^(?:prologue|epilogue|interlude|coda|postscript)\b/i, kind: "chapter", included: true },
-  { test: /^(?:afterword|acknowledg(?:e)?ments?|about the authors?|about the author)\b/i, kind: "back_matter", included: true },
-  { test: /^(?:index|bibliography|glossary|endnotes|notes|references|appendix|further reading)\b/i, kind: "back_matter", included: false },
-];
-
-/** Detect a section's kind from its title, falling back to its text. */
+/** Detect a section's kind from its title (any supported language; see
+ *  `lang.ts`), falling back to its text. Excluded by default: pages a
+ *  listener doesn't want read aloud (copyright, contents, index). */
 export function classifySection(
   title: string,
   paragraphs: string[],
 ): Pick<ManuscriptSection, "kind" | "included"> {
-  const t = title.trim();
-  for (const rule of KIND_RULES) {
-    if (rule.test.test(t)) return { kind: rule.kind, included: rule.included };
-  }
+  const matter = matterFromTitle(title);
+  if (matter) return { kind: matter.kind, included: matter.included };
   const body = paragraphs.join("\n");
   const head = body.slice(0, 1500);
   // Untitled copyright pages: "All rights reserved", "ISBN", a © line.
   if (
     body.length < 3000 &&
-    (/all rights reserved/i.test(head) || /\bISBN[- :]/.test(head) || /(?:©|\(c\)|copyright)\s*\d{4}/i.test(head))
+    (RIGHTS_RESERVED.test(head) || /\bISBN[- :]/.test(head) || /(?:©|\(c\)|copyright)\s*\d{4}/i.test(head))
   ) {
     return { kind: "front_matter", included: false };
   }
   if (looksLikeContents(paragraphs)) return { kind: "front_matter", included: false };
-  // A dedication: one or two short lines starting "For" / "To".
-  if (paragraphs.length <= 2 && body.length < 200 && /^(?:for|to)\s/i.test(body.trim())) {
+  // A dedication: one or two short lines ("For Cassandra", "Für Anna").
+  if (paragraphs.length <= 2 && body.length < 200 && DEDICATION_START.test(body.trim())) {
     return { kind: "front_matter", included: true };
   }
   return { kind: "chapter", included: true };
@@ -223,7 +210,7 @@ export function cleanParagraphs(paragraphs: string[], opts: CleanOptions = {}): 
  *  is left as written. */
 export function tidyTitle(title: string): string {
   const s = normaliseWhitespace(title).replace(/[.:]+$/, "");
-  if (s !== s.toUpperCase() || !/[A-Z]/.test(s)) return s;
-  return s.toLowerCase().replace(/(^|[\s(“"'-])([a-z])/g, (_m, pre: string, c: string) => pre + c.toUpperCase())
+  if (s !== s.toUpperCase() || !/\p{Lu}/u.test(s)) return s;
+  return s.toLowerCase().replace(/(^|[\s(“"'«-])(\p{Ll})/gu, (_m, pre: string, c: string) => pre + c.toUpperCase())
     .replace(/\b(Ii|Iii|Iv|Vi|Vii|Viii|Ix|Xi|Xii|Xiii|Xiv|Xv|Xvi|Xvii|Xviii|Xix|Xx)\b/g, (r) => r.toUpperCase());
 }

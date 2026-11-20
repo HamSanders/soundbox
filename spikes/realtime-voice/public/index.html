@@ -92,6 +92,14 @@ header .grow { flex: 1; }
 /* The wall: big portrait cards, tossed on the table. Hover straightens one;
    click picks it; the picked one carries the beak dot. */
 #faceSection { position: relative; z-index: 1; }
+/* Desktop: the whole landing fits one screen, so the Call button never scrolls away.
+   Three rows of cards plus captions have to fit the height, so the wall is sized by it. */
+@media (min-width: 901px) {
+  #lobby { overflow: hidden; }
+  .hero { height: calc(100dvh - 60px); min-height: 0; padding-block: 20px 70px; }
+  #faceSection { justify-self: center; width: min(100%, calc((100dvh - 60px - 70px - 20px - 130px) * 1.02)); }
+  .more { margin-top: 8px; }
+}
 #faceSection .section-h { display: none; }
 #faceHome .faces { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; transform: rotate(-3deg); }
 #faceHome .face-card { transition: transform .35s var(--ease); }
@@ -271,7 +279,7 @@ td.over { color: var(--rust); font-weight: 700; }
         <button class="btn ink" id="callBtn"><span class="av"><img id="ctaFace" alt=""></span><span id="ctaTxt">Start call</span></button>
         <label><span class="log">Voice</span><select class="btn" id="voice"><option value="">VoxCPM2 default</option></select></label>
       </div>
-      <span class="log" id="notice">Use headphones, or it may hear itself.</span>
+      <span class="log" id="notice"></span>
     </div>
     <div id="faceSection">
       <div class="section-h"><h2>Who you're calling</h2><span class="log" id="faceCount"></span></div>

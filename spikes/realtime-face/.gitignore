@@ -1,0 +1,8 @@
+results/*.jsonl
+results/*.log
+results/*.out
+results/*.wav
+results/*_silent.mp4
+results/*.vram_before.txt
+results/*.stats.json
+__pycache__/

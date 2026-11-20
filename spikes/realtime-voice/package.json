@@ -1,0 +1,17 @@
+{
+  "name": "mirli-spike-realtime-voice",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Spike: real-time voice conversation (VAD -> streaming STT -> LLM -> streaming TTS). Not part of the shipping app.",
+  "scripts": {
+    "setup": "node setup.mjs",
+    "start": "node server.mjs",
+    "bench:tts": "node bench/tts-ttfa.mjs",
+    "bench:turns": "node bench/turns.mjs"
+  },
+  "dependencies": {
+    "onnxruntime-node": "^1.20.0",
+    "ws": "^8.18.0"
+  }
+}

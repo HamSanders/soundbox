@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mirli voice spike</title>
+<style>
+  :root { color-scheme: light dark; font: 15px/1.45 system-ui, sans-serif; }
+  body { margin: 0 auto; padding: 24px 16px; max-width: 880px; background: Canvas; color: CanvasText; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 16px; opacity: .7; }
+  button { font: inherit; padding: 8px 18px; border-radius: 8px; border: 1px solid GrayText; background: ButtonFace; color: ButtonText; cursor: pointer; }
+  #state { display: inline-block; margin-left: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid GrayText; min-width: 76px; text-align: center; }
+  #state[data-s=listening] { background: Highlight; color: HighlightText; }
+  #state[data-s=speaking] { outline: 2px solid Highlight; }
+  #log { margin: 18px 0; display: grid; gap: 8px; }
+  .msg { padding: 8px 12px; border-radius: 10px; border: 1px solid color-mix(in srgb, CanvasText 18%, Canvas); }
+  .msg.user { justify-self: end; background: color-mix(in srgb, Highlight 14%, Canvas); }
+  .msg.partial { opacity: .6; font-style: italic; }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 13px; }
+  th, td { text-align: right; padding: 4px 8px; border-bottom: 1px solid color-mix(in srgb, CanvasText 15%, Canvas); }
+  th:first-child, td:first-child { text-align: left; }
+  td.over { font-weight: 700; text-decoration: underline; }
+  small { opacity: .7; }
+</style>
+</head>
+<body>
+<h1>Mirli voice spike</h1>
+<p class="sub">Talk; it answers in a Mirli voice. Talk over it and it stops. Use headphones, or its own voice may interrupt it.</p>
+<button id="go">Start</button><span id="state" data-s="off">off</span>
+<small id="info"></small>
+<div id="log"></div>
+<div class="scroll">
+<table>
+  <thead><tr><th>turn</th><th>endpoint wait</th><th>EOS → transcript</th><th>EOS → first LLM token</th><th>EOS → first audio</th><th>heard (client)</th><th>VRAM peak</th></tr></thead>
+  <tbody id="turns"></tbody>
+</table>
+</div>
+<p><small>All times in ms. EOS = the last moment the VAD heard speech. Target for EOS → first audio: 500 ms. "heard" adds the wait from the first PCM chunk's arrival to the speaker (the browser's reported output latency included).</small></p>
+<script>
+const $ = (id) => document.getElementById(id);
+let ctx, ws, player, partialEl, replyEl;
+let firstChunkAt = null, lastHeard = null;
+
+function setState(s) { $("state").textContent = s; $("state").dataset.s = s; }
+function bubble(cls, text) {
+  const d = document.createElement("div");
+  d.className = "msg " + cls; d.textContent = text;
+  $("log").append(d); d.scrollIntoView({ block: "nearest" });
+  return d;
+}
+
+$("go").onclick = () => {
+  $("go").disabled = true;
+  ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.binaryType = "arraybuffer";
+  ws.onmessage = (e) => {
+    if (typeof e.data !== "string") return onPcm(e.data);
+    onJson(JSON.parse(e.data)).catch((err) => {
+      setState("error");
+      bubble("bot", err.name === "NotAllowedError" ? "Microphone access was refused. Allow it for this page and reload." : String(err));
+    });
+  };
+  ws.onclose = () => setState("closed");
+};
+
+async function onJson(m) {
+  if (m.type === "hello") {
+    // Run the whole graph at the TTS rate so playback needs no resampling.
+    ctx = new AudioContext({ sampleRate: m.tts.sample_rate, latencyHint: "interactive" });
+    await ctx.audioWorklet.addModule("capture-worklet.js");
+    await ctx.audioWorklet.addModule("playback-worklet.js");
+    const mic = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
+    });
+    const capture = new AudioWorkletNode(ctx, "capture");
+    capture.port.onmessage = (e) => ws.readyState === 1 && ws.send(e.data);
+    ctx.createMediaStreamSource(mic).connect(capture);
+    player = new AudioWorkletNode(ctx, "playback", { outputChannelCount: [1] });
+    player.port.onmessage = (e) => {
+      ws.send(JSON.stringify({ type: "playback", playing: e.data.playing }));
+      if (e.data.playing && firstChunkAt !== null) {
+        lastHeard = Math.round(performance.now() - firstChunkAt + (ctx.outputLatency || 0) * 1000);
+        firstChunkAt = null;
+      }
+    };
+    player.connect(ctx.destination);
+    $("info").textContent = ` TTS ${m.tts.sample_rate} Hz · engines +${m.vram.total} MiB VRAM · endpoint ${m.vad.endpointMs} ms`;
+    setState("idle");
+  } else if (m.type === "state") {
+    setState(m.state);
+    if (m.state === "speaking") firstChunkAt = performance.now();
+  } else if (m.type === "partial") {
+    partialEl ??= bubble("user partial", "");
+    partialEl.textContent = m.text;
+  } else if (m.type === "final") {
+    partialEl ??= bubble("user", "");
+    partialEl.textContent = m.text;
+    partialEl.classList.remove("partial");
+    partialEl = null; replyEl = null;
+  } else if (m.type === "reply_delta") {
+    replyEl ??= bubble("bot", "");
+    replyEl.textContent += m.text;
+  } else if (m.type === "flush") {
+    player?.port.postMessage("flush");
+  } else if (m.type === "turn") {
+    if (m.discarded) { partialEl?.remove(); partialEl = null; }
+    const tr = document.createElement("tr");
+    const cells = [
+      m.turn + (m.barged_in ? " (interrupted)" : "") + (m.discarded ? " (dropped)" : ""),
+      m.endpoint_wait_ms, m.eos_to_transcript_ms, m.eos_to_first_token_ms, m.eos_to_first_audio_ms,
+      m.eos_to_first_audio_ms != null && lastHeard != null ? m.eos_to_first_audio_ms + lastHeard : null,
+      m.vram_peak_mib,
+    ];
+    cells.forEach((v, i) => {
+      const td = document.createElement("td");
+      td.textContent = v ?? "–";
+      if (i === 4 && v > m.target_ms) td.className = "over";
+      tr.append(td);
+    });
+    $("turns").prepend(tr);
+    lastHeard = null;
+  } else if (m.type === "error") {
+    bubble("bot", "error: " + m.message);
+  }
+}
+
+function onPcm(buf) {
+  const i16 = new Int16Array(buf);
+  const f32 = new Float32Array(i16.length);
+  for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 32768;
+  player.port.postMessage(f32.buffer, [f32.buffer]);
+}
+</script>
+</body>
+</html>

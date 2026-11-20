@@ -65,3 +65,20 @@ Stills and clips for the animated Santa in the Call Santa video call. The format
 
 Character design: original. No hat in the master, round gold spectacles, a plain belt buckle, no logos. The
 prompts reference no film or brand.
+
+## Proof clips on fal (decided 2026-11-20: use fal, don't download Wan locally)
+
+fal endpoints that take a first and a last frame, as of 2026-11-20:
+
+| Endpoint | Start / end params | Price (fal page) | Notes |
+|---|---|---|---|
+| `minimax/h3/image-to-video` (**picked**) | `image_url` / `end_image_url` | $0.05/s 480p, $0.06/s 768p, $0.13/s 2K | Output canvas follows the input image, so 4:5 works. Marked "Commercial use". https://fal.ai/models/minimax/h3/image-to-video |
+| `fal-ai/wan/v2.2-a14b/image-to-video` | `image_url` / `end_image_url` | $0.04–0.08/s | Aspect options are auto, 16:9, 9:16 and 1:1, so 4:5 would be cropped. Removed from fal on 2027-01-04. https://fal.ai/models/fal-ai/wan/v2.2-a14b/image-to-video |
+| `fal-ai/kling-video/o3/standard/image-to-video` | `image_url` / `end_image_url` | $0.084/s | 3–15 s. https://fal.ai/models/fal-ai/kling-video/o3/standard/image-to-video |
+| `kling/v4/image-to-video` | `start_image_url` / `end_image_url` | $0.157/s at 720p | 3–30 s; the input aspect can be 0.4 to 2.5. https://fal.ai/models/kling/v4/image-to-video |
+| `fal-ai/vidu/start-end-to-video` | `start_image_url` / `end_image_url` | $0.20 per 4 s | No size or duration control. https://fal.ai/models/fal-ai/vidu/start-end-to-video |
+| `fal-ai/veo3.1/first-last-frame-to-video` | `first_frame_url` / `last_frame_url` | $0.20/s | Only 16:9 or 9:16. https://fal.ai/models/fal-ai/veo3.1/first-last-frame-to-video |
+
+**MiniMax H3 licence:** this is a closed partner model run through fal. fal's model page marks it "Commercial use", and use falls
+under fal's terms (https://fal.ai/terms). No weights are downloaded, and there is no separate open licence. The valid duration range
+isn't stated (the default is 5 s), so the 2 s idles may come back at 5 s and need retiming or trimming.

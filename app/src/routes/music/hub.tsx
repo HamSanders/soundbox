@@ -84,7 +84,7 @@ const FAQS = [
   {
     question: "Can I use this music in a commercial game or video?",
     answer:
-      "It depends on which model rendered the track; every row names it. The instrumentals come from Stable Audio 3.0 Small Music, under the Stability AI Community License: free for commercial use below USD $1M annual revenue, Enterprise licence required above it. The sung tracks come from ACE-Step, listed as Apache 2.0 but flagged unverified in the model catalogue, so read its model card before shipping. Mirli itself is MIT and imposes no terms on what you generate.",
+      "It depends on which model rendered the track; every row names it. The instrumentals come from Stable Audio 3.0 Small Music, under the Stability AI Community License: free for commercial use below USD $1M annual revenue, Enterprise licence required above it. The sung tracks come from ACE-Step 1.5, whose LICENSE file is MIT: commercial use is permitted with no threshold. Mirli itself is MIT and imposes no terms on what you generate.",
   },
   {
     question: "How long can a generated track be?",

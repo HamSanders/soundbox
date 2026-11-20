@@ -9,13 +9,13 @@
  * Cover does to any clip. This panel therefore stops at "a clip on a lane" and
  * hands over to machinery the studio already had.
  *
- * It stores no MIDI. A note list lives here while you play it, becomes a WAV,
- * and the WAV is what the story keeps — the same path a microphone take takes,
- * for the same reason: the export reads clips off disk, so a take that existed
- * only in the browser could be arranged and then vanish from its own mixdown.
- * The cost is that a placed clip cannot be re-edited as notes. That is the
- * right trade for now; a clip that *is* notes is a change to the story
- * document, and it is a much bigger change than this panel.
+ * A note list lives here while you play it and becomes a WAV, which is what
+ * the timeline plays and the export mixes — the same path a microphone take
+ * takes, for the same reason: the export reads clips off disk, so a take that
+ * existed only in the browser could be arranged and then vanish from its own
+ * mixdown. The notes ride along on the clip (`midi` on the segment), so
+ * "Edit notes" on it brings them back here and into the roll, and rendering
+ * again replaces the clip's audio in place.
  *
  * Three ways in, because the first two each fail somewhere:
  *
@@ -29,6 +29,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CircleIcon,
+  DownloadIcon,
   KeyboardIcon,
   MagnetIcon,
   PlayIcon,
@@ -51,7 +52,7 @@ import {
 } from "@/components/ui/select";
 import { useMidiInput } from "@/hooks/use-midi-input";
 import type { MidiMessage } from "@/hooks/use-midi-input";
-import { useMidiStore } from "@/lib/midi-store";
+import { exportTake, useMidiStore } from "@/lib/midi-store";
 import { MidiMappingPanel } from "@/components/midi-mapping-panel";
 import { bindingFor, dispatchMidi, useMidiMapping } from "@/lib/midi-mapping";
 import type { MidiTargetId } from "@/lib/midi-mapping";
@@ -634,6 +635,20 @@ export function MidiPanel({
             if (file) void importFile(file);
           }}
         />
+
+        <Button
+          size="sm"
+          variant="outline"
+          // Not gated on readOnly: saving a copy changes nothing here.
+          disabled={!notes.length || recording}
+          onClick={() => {
+            const count = exportTake();
+            if (count) toast.success(`Saved take.mid — ${count} ${count === 1 ? "note" : "notes"}`);
+          }}
+        >
+          <DownloadIcon />
+          Export
+        </Button>
 
       </div>
 

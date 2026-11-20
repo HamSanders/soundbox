@@ -21,6 +21,7 @@ import { VERSION, type Config } from "./config.js";
 import { ModelError, QueueFull } from "./errors.js";
 import { buildFailure } from "./failure.js";
 import { registerModels } from "./routes/models.js";
+import { registerInstruments } from "./routes/instruments.js";
 import { registerFiles } from "./routes/files.js";
 import { registerFs } from "./routes/fs.js";
 import {
@@ -225,6 +226,7 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
 
   registerAuth(app, guard);
   registerModels(app, svc);
+  registerInstruments(app, svc);
   registerJobs(app, svc);
   registerSpeakStream(app, svc);
   // The rate limiter (registered above) only sees routes added after it has

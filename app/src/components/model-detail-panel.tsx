@@ -26,6 +26,7 @@ import {
   XIcon,
 } from "lucide-react";
 
+import { usePanelWidth } from "@/hooks/use-panel-width";
 import { FailureCard } from "@/components/failure-card";
 import { LicenseChip, LicensePanel } from "@/components/license-badge";
 import {
@@ -65,6 +66,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export function ModelDetailPanel() {
+  const panel = usePanelWidth({ id: "model-detail", initial: 416, min: 320, max: 720, edge: "left" });
   const modelId = useModelDetailStore((s) => s.modelId);
   const close = useModelDetailStore((s) => s.close);
   const { data: models } = useModels();
@@ -99,8 +101,10 @@ export function ModelDetailPanel() {
   return (
     <aside
       aria-label={`Details for ${name}`}
-      className="bg-background ring-border animate-in fade-in-0 slide-in-from-right-8 fixed inset-x-0 top-0 bottom-(--dock-h,0px) z-30 flex flex-col duration-(--duration-base) md:static md:z-auto md:my-2 md:mr-2 md:h-[calc(100svh-1rem-var(--dock-h,0px))] md:w-[26rem] md:shrink-0 md:rounded-xl md:ring-1"
+      className="bg-background ring-border animate-in fade-in-0 slide-in-from-right-8 fixed inset-x-0 top-0 bottom-(--dock-h,0px) z-30 flex flex-col duration-(--duration-base) md:static md:z-auto md:my-2 md:mr-2 md:relative md:h-[calc(100svh-1rem-var(--dock-h,0px))] md:w-(--panel-w) md:shrink-0 md:rounded-xl md:ring-1"
+      style={panel.style}
     >
+      {panel.handle}
       <div className="border-border flex items-start gap-3 border-b px-4 pt-4 pb-3">
         <ModelMark vendor={vendor} />
         <div className="grid min-w-0 flex-1 gap-1">

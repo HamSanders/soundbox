@@ -291,6 +291,18 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
         </div>
       )}
 
+      {/* Kinds as tabs, the way a music app's library splits Songs from the
+          rest; the filter row below narrows within the tab. */}
+      {!category && !project && (
+        <LibraryKindChips
+          value={kindFilter}
+          onChange={(k) => {
+            setKindFilter(k);
+            setModelId(ALL);
+          }}
+        />
+      )}
+
       {/* ------------------------------------------------------------ filters */}
       {/* One row: search, then each filter as a small pill. A dropdown pill
           names its choice once one is made ("Tag · door"); a toggle pill is
@@ -312,17 +324,6 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
             className="h-9 pl-8"
           />
         </div>
-        {/* Kind sits in the same row as the other filters on the combined
-            Library: one place to narrow the list, not a second tab bar. */}
-        {!category && (
-          <LibraryKindChips
-            value={kindFilter}
-            onChange={(k) => {
-              setKindFilter(k);
-              setModelId(ALL);
-            }}
-          />
-        )}
         <FilterMenu
           label="Tag"
           value={tag === ALL ? null : tag}

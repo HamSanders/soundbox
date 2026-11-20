@@ -11,6 +11,7 @@
  * Closes on ×, on Escape, and when the route changes.
  */
 
+import { usePanelWidth } from "@/hooks/use-panel-width";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
@@ -246,6 +247,7 @@ function VoiceDetails({
 
 
 export function VoiceDetailPanel() {
+  const panel = usePanelWidth({ id: "voice-detail", initial: 416, min: 320, max: 720, edge: "left" });
   const voiceId = useVoiceDetailStore((s) => s.voiceId);
   const actions = useVoiceDetailStore((s) => s.actions);
   const close = useVoiceDetailStore((s) => s.close);
@@ -292,8 +294,10 @@ export function VoiceDetailPanel() {
   return (
     <aside
       aria-label={`Details for ${voice.name}`}
-      className="bg-background ring-border animate-in fade-in-0 slide-in-from-right-8 fixed inset-x-0 top-0 bottom-(--dock-h,0px) z-30 flex flex-col duration-(--duration-base) md:static md:z-auto md:my-2 md:mr-2 md:h-[calc(100svh-1rem-var(--dock-h,0px))] md:w-[26rem] md:shrink-0 md:rounded-xl md:ring-1"
+      className="bg-background ring-border animate-in fade-in-0 slide-in-from-right-8 fixed inset-x-0 top-0 bottom-(--dock-h,0px) z-30 flex flex-col duration-(--duration-base) md:static md:z-auto md:my-2 md:mr-2 md:relative md:h-[calc(100svh-1rem-var(--dock-h,0px))] md:w-(--panel-w) md:shrink-0 md:rounded-xl md:ring-1"
+      style={panel.style}
     >
+      {panel.handle}
       <VoiceDetails
         key={voice.id}
         voice={voice}

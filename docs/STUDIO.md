@@ -357,8 +357,9 @@ the record button's tooltip says so. There is no dialog.
 
 ## MIDI
 
-> **Experimental.** The panel works end to end, but a placed take is audio, not
-> notes. See "What this costs" below before relying on it.
+> **Experimental.** The panel works end to end. A placed take keeps its notes,
+> so you can reopen it in the piano roll and render it again; see "Editing a
+> placed take" below.
 
 The **MIDI** panel (`Ctrl/⌘ + N`) sits under the timeline beside the rack. Play
 a line, then press **Place on timeline** to render it and drop it on a new track
@@ -371,6 +372,15 @@ There are three ways to play:
 | A MIDI keyboard | Where the browser has Web MIDI. Chromium does; the macOS desktop build's WKWebView does not |
 | The on-screen keyboard | Always. Click the keys, or focus it and use your computer keyboard |
 | **Import** a `.mid` | To bring in an existing piece of music without playing it |
+
+**Export** saves the take as `take.mid`, so another tool can play it. Render
+the part on an instrument in your DAW, a sampler or a cloud tool, then drag
+the WAV back onto a lane in the studio. The file is one track on channel 1. It
+uses the piano roll's BPM for its tempo, so the bars a DAW draws match the
+roll's bars, and it keeps each note's velocity. It has no sustain pedal
+events: the recorder already folds the pedal into note lengths as you play
+(see below), so a pedalled note is exported as a held note. The piano roll's
+header has the same export button.
 
 ### Knobs, pads and the pedal
 
@@ -445,14 +455,15 @@ works in seconds.
 ### The instrument is a second pass
 
 No model in the catalogue takes notes as input. The panel renders the notes
-with a plain synth, then a second pass applies the timbre you describe:
+with a synth or with sampled instruments, then a second pass applies the timbre
+you describe:
 
 ```
-notes ──▶ [synth] ──▶ dry clip ──▶ [Cover, ACE-Step] ──▶ "solo violin, large hall"
+notes ──▶ [synth or samples] ──▶ dry clip ──▶ [Cover, ACE-Step] ──▶ "solo violin, large hall"
 ```
 
-The synth gets the pitch and timing exactly right, and the model is only asked
-for timbre over audio whose notes are already correct. The cover is rendered at
+The dry render gets the pitch and timing exactly right, and the model is only
+asked for timbre over audio whose notes are already correct. The cover is rendered at
 the source's own length, so it lines up with the take.
 
 **Generate instrument** does both steps in one press. It places the dry take and
@@ -469,24 +480,99 @@ the clip's right edge to get it back.
 
 - **Keep the notes** is the cover strength. High keeps your synth line and
   changes its sound; low lets the model write its own notes.
-- **Place dry** skips the model and places only the synth render.
+- **Place dry** skips the model and places only the dry render.
 
 These controls are at the bottom of **both** the MIDI panel and the piano roll,
 so you can finish a take from either one: play it in and place it without
 opening the roll, or draw it in the roll without touching the keyboard.
 
-The four **Instrument** presets are bright and harmonically rich, because the
-cover pass works better from a filtered sawtooth than from a sine. The render is
-normalised to -3 dBFS, so the level the model receives does not depend on how
-many notes overlap.
+The four **Synth** presets are bright and harmonically rich, because the cover
+pass works better from a filtered sawtooth than from a sine. Whichever
+instrument renders it, the dry take is 44.1 kHz stereo, runs 1.5 seconds past
+the last note's end so releases are not cut off, and is normalised to a
+-3 dBFS peak, so the level the model receives does not depend on how many notes
+overlap.
+
+#### Sampled instruments
+
+A real recording gives the cover pass a real instrument's spectrum and attack
+to work from, so it can keep your notes at a higher **Keep the notes** setting
+without them drifting or changing. **Samples**, next to the Instrument menu,
+lists eight sustained patches from **VSCO 2 Community Edition** by Versilian
+Studios, which is CC0 and free for any use, commercial included:
+
+| Instrument | Patch | Download |
+| --- | --- | --- |
+| Solo violin | `SViolinVib` | 71 MB |
+| Violin section | `ViolinEnsSusVib` | 44 MB |
+| Cello section | `CelloEnsSusVib` | 69 MB |
+| Harp | `Harp` | 34 MB |
+| Flute | `FluteSusVib` | 24 MB |
+| Clarinet | `ClarinetSus` | 57 MB |
+| Trumpet | `TrumpetSus` | 39 MB |
+| French horn | `FHornSus` | 48 MB |
+
+Each one is a separate download, about 385 MB for all eight. None of them is
+part of the install. They land in `<data dir>/models/instruments/`, next to the
+model weights, so every profile shares them. An installed instrument appears in
+the Instrument menu under **Samples · VSCO 2 CE**, and monitoring, preview and
+the render all play it. While the samples load, keys sound on the Bowed synth.
+
+How the samples are played (the subset of SFZ the library uses):
+
+- Each note plays the region whose key and velocity range it falls in,
+  repitched from the key it was recorded at, plus the region's `tune`. VSCO
+  samples every two to four semitones, so no note is shifted far.
+- Velocity picks the layer (soft or loud recordings) and scales the level by the
+  SFZ default curve, on top of each region's `volume`.
+- The note fades in over `ampeg_attack` and out over `ampeg_release` after it
+  ends. The recordings have no sustain loops, so a note held longer than its
+  recording (the solo violin's run 13 to 16 seconds) stops when the recording
+  does.
+- A note outside the instrument's range is silent, as on the real instrument.
+  The violin's lowest note is G3.
+
+If an instrument is chosen but its samples are gone (removed, or a server that
+does not have them), **Place dry** and **Generate instrument** render the take
+on the Bowed synth and say so. The in-browser demo (`npm run dev:mock`) has no
+samples.
 
 For room sound, use the **Reverb** device instead of the prompt. Asking the
 model for a room smears the note attacks; the rack's reverb can be turned down.
 
-**What this costs:** the story keeps the WAV, not the notes, so a placed take
-cannot be edited as notes afterwards. Play it again instead. Clips are audio
-everywhere else in the studio, and storing notes in a clip would need a change
-to the story document.
+### Editing a placed take
+
+A placed take keeps its notes. The clip plays and exports as audio like any
+other clip, and it also stores the notes, the tempo, the instrument preset and
+the cover prompt and strength. Both clips from **Generate instrument** store
+them, the dry take and its cover, and they share a take id.
+
+Right-click either clip and choose **Edit notes**. The notes open in the piano
+roll and the MIDI panel, with the instrument, tempo, prompt and strength they
+were placed with. A bar above the buttons names the take you are editing, and
+the buttons change:
+
+- **Re-render dry** replaces the dry clip's audio in place. The clip keeps its
+  lane, start, fades and gain. Its cover still plays the old notes until you
+  re-render the instrument too.
+- **Re-render instrument** replaces the dry clip's audio and then the cover
+  clip's audio when the new cover comes back.
+- **Place as new instead** stops editing the take. The next press places a new
+  take at the playhead and leaves the old one alone.
+
+**Undo** puts the old audio and the old notes back. The earlier renders stay in
+the library and nothing is deleted. If you delete the dry clip, a re-render puts
+a new one on a free lane. If you delete both clips, the
+next press places the notes as a new take.
+
+If you had notes in the panel that were not placed yet, **Edit notes** puts
+them away and its toast offers **Bring it back**. Splitting a clip drops its
+notes, because half a take no longer matches them. Clips placed before takes
+kept their notes are audio only, so they have no **Edit notes**.
+
+`soundbox.get_story` and `GET /api/stories/{id}/segments` return the notes as
+`midi` on each clip, so an agent can read what was played. Over MCP the notes
+are read-only.
 
 ## The device rack
 

@@ -6,6 +6,7 @@
 
 import { useState, type DragEvent } from "react";
 import {
+  ClipboardPasteIcon,
   EyeIcon,
   EyeOffIcon,
   GripVerticalIcon,
@@ -31,11 +32,12 @@ import { CHAPTER_KIND_LABELS, type BookDetail, type ChapterWithStats } from "@/l
 import {
   useAddChapter,
   useDeleteChapter,
-  useReorderChapters,
   useUpdateChapter,
 } from "@/lib/audiobook-queries";
 import type { ChapterKind, ChapterStatus } from "@/lib/audiobook-types";
 import { formatDuration } from "@/lib/format";
+
+import { ChapterFromTextDialog } from "./chapter-from-text";
 import { cn } from "@/lib/utils";
 
 const STATUS_DOT: Record<ChapterStatus, { className: string; label: string }> = {
@@ -49,19 +51,26 @@ export function ChapterList({
   book,
   selectedId,
   onSelect,
+  onReorder,
+  noteCounts,
 }: {
   book: BookDetail;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  /** Undoable reorder: the order before and after. */
+  onReorder: (before: string[], after: string[]) => void;
+  /** Open review notes per chapter id. */
+  noteCounts?: Record<string, number>;
 }) {
   const add = useAddChapter(book.id);
   const update = useUpdateChapter(book.id);
-  const reorder = useReorderChapters(book.id);
+  const reorder = (ids: string[]) => onReorder(chapters.map((c) => c.id), ids);
   const remove = useDeleteChapter(book.id);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const [fromText, setFromText] = useState(false);
 
   const chapters = book.chapters;
 
@@ -77,7 +86,7 @@ export function ChapterList({
     if (!dragId || dragId === target.id) return;
     const ids = chapters.map((c) => c.id).filter((id) => id !== dragId);
     ids.splice(ids.indexOf(target.id) + (chapters.findIndex((c) => c.id === dragId) < chapters.findIndex((c) => c.id === target.id) ? 1 : 0), 0, dragId);
-    reorder.mutate(ids);
+    reorder(ids);
     setDragId(null);
   };
 
@@ -168,6 +177,12 @@ export function ChapterList({
                       {chapter.kind !== "chapter" ? `${CHAPTER_KIND_LABELS[chapter.kind]} · ` : ""}
                       {chapter.stats.voiced}/{chapter.stats.paragraphs}
                       {chapter.stats.duration_s > 0 ? ` · ${formatDuration(chapter.stats.duration_s)}` : ""}
+                      {noteCounts?.[chapter.id] ? (
+                        <span className="text-warn" title="Open review notes">
+                          {" · "}
+                          {noteCounts[chapter.id]} note{noteCounts[chapter.id] === 1 ? "" : "s"}
+                        </span>
+                      ) : null}
                     </span>
                   </span>
                 </button>
@@ -223,7 +238,7 @@ export function ChapterList({
                     onSelect={() => {
                       const ids = chapters.map((c) => c.id);
                       [ids[i - 1], ids[i]] = [ids[i]!, ids[i - 1]!];
-                      reorder.mutate(ids);
+                      reorder(ids);
                     }}
                   >
                     Move up
@@ -233,7 +248,7 @@ export function ChapterList({
                     onSelect={() => {
                       const ids = chapters.map((c) => c.id);
                       [ids[i + 1], ids[i]] = [ids[i]!, ids[i + 1]!];
-                      reorder.mutate(ids);
+                      reorder(ids);
                     }}
                   >
                     Move down
@@ -262,12 +277,22 @@ export function ChapterList({
           );
         })}
       </ol>
-      <div className="border-border/60 border-t p-2">
+      <div className="border-border/60 space-y-0.5 border-t p-2">
         <Button variant="ghost" size="sm" className="w-full justify-start" onClick={addChapter}>
           <PlusIcon />
           Add chapter
         </Button>
+        <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => setFromText(true)}>
+          <ClipboardPasteIcon />
+          Chapter from text…
+        </Button>
       </div>
+      <ChapterFromTextDialog
+        bookId={book.id}
+        open={fromText}
+        onOpenChange={setFromText}
+        onCreated={onSelect}
+      />
     </div>
   );
 }

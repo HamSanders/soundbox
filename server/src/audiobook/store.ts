@@ -97,7 +97,74 @@ CREATE TABLE IF NOT EXISTS book_paragraphs (
     stale_sound_id  TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_book_paragraphs_character ON book_paragraphs(character_id);
+
+-- Review notes on a paragraph, optionally at a time inside its audio.
+CREATE TABLE IF NOT EXISTS book_notes (
+    id         TEXT PRIMARY KEY,
+    book_id    TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    segment_id TEXT NOT NULL REFERENCES story_segments(id) ON DELETE CASCADE,
+    body       TEXT NOT NULL,
+    at_s       REAL,
+    resolved   INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_book_notes_book ON book_notes(book_id, resolved);
+CREATE INDEX IF NOT EXISTS idx_book_notes_segment ON book_notes(segment_id);
+
+-- Saved versions of a book: its metadata, cast, chapters and paragraph
+-- text as one JSON document (see BookSnapshotData in service.ts).
+CREATE TABLE IF NOT EXISTS book_snapshots (
+    id         TEXT PRIMARY KEY,
+    book_id    TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    label      TEXT NOT NULL,
+    data       TEXT NOT NULL,
+    chapters   INTEGER NOT NULL DEFAULT 0,
+    paragraphs INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_book_snapshots_book ON book_snapshots(book_id, created_at DESC);
 `;
+
+/** A saved version, without its data. */
+export interface SnapshotInfo {
+  id: string;
+  book_id: string;
+  label: string;
+  chapters: number;
+  paragraphs: number;
+  created_at: string;
+}
+
+/** A review note on one paragraph. */
+export interface BookNote {
+  id: string;
+  book_id: string;
+  segment_id: string;
+  chapter_id: string;
+  body: string;
+  /** Seconds into the paragraph's audio, or null for the paragraph as a whole. */
+  at_s: number | null;
+  resolved: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface NoteRow {
+  id: string;
+  book_id: string;
+  segment_id: string;
+  chapter_id: string;
+  body: string;
+  at_s: number | null;
+  resolved: number;
+  created_at: string;
+  updated_at: string;
+}
+
+function toNote(row: NoteRow): BookNote {
+  return { ...row, resolved: row.resolved === 1 };
+}
 
 /** Defaults inside ACX's published room tone ranges (head 0.5–1 s, tail
  *  1–5 s). The gaps are a starting point for narration, not a standard. */
@@ -129,6 +196,8 @@ export type ParagraphStatus = "unvoiced" | "voiced" | "stale" | "locked";
 export interface ChapterWithStats extends Chapter {
   stats: ChapterStats;
   status: ChapterStatus;
+  /** Unresolved review notes in this chapter. */
+  open_notes: number;
 }
 
 /** Book-wide totals, the sum of every chapter's stats. */
@@ -140,6 +209,7 @@ export interface BookStats {
   locked: number;
   characters: number;
   duration_s: number;
+  open_notes: number;
 }
 
 interface BookRow {
@@ -319,6 +389,11 @@ const BOOK_COLUMNS = [
   "cover_path",
 ] as const;
 
+/** Paragraphs are the narration lane of a chapter story: track 0. Other
+ *  tracks hold the soundscape's beds (music, SFX), which are not paragraphs
+ *  and must never be listed, counted, cast, replaced or reordered as such. */
+export const PARAGRAPH_TRACK = 0;
+
 /** Paragraph status SQL, shared by stats and the paragraph list. A take is
  *  stale when it was marked so, or when the text moved since it was made. */
 const STALE_SQL = `(s.sound_id IS NOT NULL AND (p.stale_sound_id = s.sound_id
@@ -453,7 +528,20 @@ export class AudiobookStore {
     return row ? toChapter(row) : null;
   }
 
-  /** The chapter a paragraph belongs to, through its segment's story. */
+  /** The chapter a paragraph (a track-0 segment) belongs to; null for a
+   *  segment on another track, such as a bed. */
+  chapterForParagraph(segmentId: string): Chapter | null {
+    const row = this.conn
+      .prepare(
+        `SELECT c.* FROM book_chapters c
+           JOIN story_segments s ON s.story_id = c.story_id
+          WHERE s.id=? AND s.track_index = 0`,
+      )
+      .get(segmentId) as ChapterRow | undefined;
+    return row ? toChapter(row) : null;
+  }
+
+  /** The chapter any segment of a chapter story belongs to, beds included. */
   chapterForSegment(segmentId: string): Chapter | null {
     const row = this.conn
       .prepare(
@@ -469,9 +557,16 @@ export class AudiobookStore {
   createChapter(
     bookId: string,
     storyId: string,
-    fields: { title: string; kind?: ChapterKind; included?: boolean; position?: number | null },
+    fields: {
+      title: string;
+      kind?: ChapterKind;
+      included?: boolean;
+      position?: number | null;
+      /** Reuse an id (restoring a snapshot). */
+      id?: string;
+    },
   ): Chapter {
-    const id = this.newId();
+    const id = fields.id ?? this.newId();
     const count = (
       this.conn.prepare("SELECT COUNT(*) n FROM book_chapters WHERE book_id=?").get(bookId) as {
         n: number;
@@ -560,7 +655,7 @@ export class AudiobookStore {
       .prepare(
         `INSERT INTO book_paragraphs (segment_id, voiced_sound_id, voiced_text)
          SELECT s.id, s.sound_id, s.text FROM story_segments s
-          WHERE s.story_id IN (${marks}) AND s.sound_id IS NOT NULL
+          WHERE s.story_id IN (${marks}) AND s.track_index = 0 AND s.sound_id IS NOT NULL
          ON CONFLICT(segment_id) DO UPDATE SET
            voiced_sound_id = excluded.voiced_sound_id,
            voiced_text = excluded.voiced_text
@@ -583,7 +678,7 @@ export class AudiobookStore {
            SUM(CASE WHEN s.sound_id IS NOT NULL
                     THEN COALESCE(s.duration_s, snd.duration_s, 0) ELSE 0 END) AS duration_s
          FROM book_chapters c
-         LEFT JOIN story_segments s ON s.story_id = c.story_id
+         LEFT JOIN story_segments s ON s.story_id = c.story_id AND s.track_index = 0
          LEFT JOIN sounds snd ON snd.id = s.sound_id
          LEFT JOIN book_paragraphs p ON p.segment_id = s.id
          WHERE c.book_id = ?
@@ -632,7 +727,7 @@ export class AudiobookStore {
       .prepare(
         `SELECT s.id FROM story_segments s
            LEFT JOIN book_paragraphs p ON p.segment_id = s.id
-          WHERE s.story_id = ? AND ${STALE_SQL}`,
+          WHERE s.story_id = ? AND s.track_index = 0 AND ${STALE_SQL}`,
       )
       .all(storyId) as { id: string }[];
     return new Set(rows.map((r) => r.id));
@@ -777,6 +872,32 @@ export class AudiobookStore {
     return this.getCharacter(id);
   }
 
+  /** Write a character exactly as given, id included (restoring a snapshot). */
+  putCharacter(c: Character): void {
+    this.conn
+      .prepare(
+        `INSERT INTO book_characters (id, book_id, name, aliases, description, voice_id,
+           model_id, request_options, color, created_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?)
+         ON CONFLICT(id) DO UPDATE SET name=excluded.name, aliases=excluded.aliases,
+           description=excluded.description, voice_id=excluded.voice_id,
+           model_id=excluded.model_id, request_options=excluded.request_options,
+           color=excluded.color`,
+      )
+      .run(
+        c.id,
+        c.book_id,
+        c.name,
+        JSON.stringify(c.aliases),
+        c.description,
+        c.voice_id,
+        c.model_id,
+        JSON.stringify(c.request_options),
+        c.color,
+        this.now(),
+      );
+  }
+
   deleteCharacter(id: string): boolean {
     const current = this.getCharacter(id);
     if (!current) return false;
@@ -791,6 +912,140 @@ export class AudiobookStore {
       .prepare("SELECT segment_id FROM book_paragraphs WHERE character_id=?")
       .all(characterId) as { segment_id: string }[];
     return rows.map((r) => r.segment_id);
+  }
+
+  /* ------------------------------------------------------------------ notes */
+
+  listNotes(
+    bookId: string,
+    opts: { resolved?: boolean; chapterId?: string; segmentId?: string } = {},
+  ): BookNote[] {
+    const where = ["n.book_id = ?"];
+    const args: (string | number)[] = [bookId];
+    if (opts.resolved !== undefined) {
+      where.push("n.resolved = ?");
+      args.push(opts.resolved ? 1 : 0);
+    }
+    if (opts.chapterId) {
+      where.push("c.id = ?");
+      args.push(opts.chapterId);
+    }
+    if (opts.segmentId) {
+      where.push("n.segment_id = ?");
+      args.push(opts.segmentId);
+    }
+    const rows = this.conn
+      .prepare(
+        `SELECT n.*, c.id AS chapter_id FROM book_notes n
+           JOIN story_segments s ON s.id = n.segment_id
+           JOIN book_chapters c ON c.story_id = s.story_id
+          WHERE ${where.join(" AND ")}
+          ORDER BY c.position, s.position, COALESCE(n.at_s, 0), n.created_at`,
+      )
+      .all(...args) as NoteRow[];
+    return rows.map(toNote);
+  }
+
+  getNote(id: string): BookNote | null {
+    const row = this.conn
+      .prepare(
+        `SELECT n.*, c.id AS chapter_id FROM book_notes n
+           JOIN story_segments s ON s.id = n.segment_id
+           JOIN book_chapters c ON c.story_id = s.story_id
+          WHERE n.id = ?`,
+      )
+      .get(id) as NoteRow | undefined;
+    return row ? toNote(row) : null;
+  }
+
+  createNote(bookId: string, segmentId: string, body: string, atS: number | null): BookNote {
+    const id = this.newId();
+    const now = this.now();
+    this.conn
+      .prepare(
+        `INSERT INTO book_notes (id, book_id, segment_id, body, at_s, resolved, created_at, updated_at)
+         VALUES (?,?,?,?,?,0,?,?)`,
+      )
+      .run(id, bookId, segmentId, body, atS, now, now);
+    return this.getNote(id)!;
+  }
+
+  updateNote(id: string, fields: { body?: string; resolved?: boolean; at_s?: number | null }): BookNote | null {
+    const note = this.getNote(id);
+    if (!note) return null;
+    this.conn
+      .prepare("UPDATE book_notes SET body=?, resolved=?, at_s=?, updated_at=? WHERE id=?")
+      .run(
+        fields.body ?? note.body,
+        (fields.resolved ?? note.resolved) ? 1 : 0,
+        "at_s" in fields ? (fields.at_s ?? null) : note.at_s,
+        this.now(),
+        id,
+      );
+    return this.getNote(id);
+  }
+
+  deleteNote(id: string): boolean {
+    return this.conn.prepare("DELETE FROM book_notes WHERE id=?").run(id).changes > 0;
+  }
+
+  /** Move every note on `from` to `to` (a merge folds one paragraph into another). */
+  moveNotes(from: string, to: string): void {
+    this.conn.prepare("UPDATE book_notes SET segment_id=?, at_s=NULL WHERE segment_id=?").run(to, from);
+  }
+
+  /** Open notes per chapter id. */
+  openNoteCounts(bookId: string): Map<string, number> {
+    const rows = this.conn
+      .prepare(
+        `SELECT c.id AS chapter_id, COUNT(*) AS n FROM book_notes n
+           JOIN story_segments s ON s.id = n.segment_id
+           JOIN book_chapters c ON c.story_id = s.story_id
+          WHERE n.book_id = ? AND n.resolved = 0 AND s.track_index = 0
+          GROUP BY c.id`,
+      )
+      .all(bookId) as { chapter_id: string; n: number }[];
+    return new Map(rows.map((r) => [r.chapter_id, r.n]));
+  }
+
+  /* -------------------------------------------------------------- snapshots */
+
+  saveSnapshot(
+    bookId: string,
+    label: string,
+    data: unknown,
+    counts: { chapters: number; paragraphs: number },
+  ): SnapshotInfo {
+    const id = this.newId();
+    this.conn
+      .prepare(
+        `INSERT INTO book_snapshots (id, book_id, label, data, chapters, paragraphs, created_at)
+         VALUES (?,?,?,?,?,?,?)`,
+      )
+      .run(id, bookId, label, JSON.stringify(data), counts.chapters, counts.paragraphs, this.now());
+    return this.getSnapshot(id)!.info;
+  }
+
+  listSnapshots(bookId: string): SnapshotInfo[] {
+    return this.conn
+      .prepare(
+        `SELECT id, book_id, label, chapters, paragraphs, created_at FROM book_snapshots
+          WHERE book_id=? ORDER BY created_at DESC, rowid DESC`,
+      )
+      .all(bookId) as SnapshotInfo[];
+  }
+
+  getSnapshot(id: string): { info: SnapshotInfo; data: unknown } | null {
+    const row = this.conn.prepare("SELECT * FROM book_snapshots WHERE id=?").get(id) as
+      | (SnapshotInfo & { data: string })
+      | undefined;
+    if (!row) return null;
+    const { data, ...info } = row;
+    return { info, data: parseJson<unknown>(data, null) };
+  }
+
+  deleteSnapshot(id: string): boolean {
+    return this.conn.prepare("DELETE FROM book_snapshots WHERE id=?").run(id).changes > 0;
   }
 
   /** The ParagraphMeta for a row, with defaults for a segment with no row. */

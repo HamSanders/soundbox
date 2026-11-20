@@ -21,6 +21,8 @@ import { HttpError, streamSse } from "./helpers.js";
 type BookParams = { Params: { id: string } };
 type ChapterParams = { Params: { id: string; cid: string } };
 type ParagraphParams = { Params: { id: string; sid: string } };
+type NoteParams = { Params: { id: string; nid: string } };
+type SnapshotParams = { Params: { id: string; snid: string } };
 
 const MAX_COVER_BYTES = 16 * 1024 * 1024;
 
@@ -85,6 +87,8 @@ const reorderSchema = z.object({ ids: z.array(z.string()).min(1) });
 
 const paragraphCreateSchema = z.object({
   text: z.string().max(20000).default(""),
+  kind: z.enum(["line", "pause"]).optional(),
+  duration_s: z.number().min(0.05).max(60).nullish(),
   position: z.number().int().min(0).nullish(),
   character_id: z.string().nullish(),
   is_heading: z.boolean().optional(),
@@ -96,6 +100,19 @@ const paragraphPatchSchema = z.object({
   locked: z.boolean().optional(),
   is_heading: z.boolean().optional(),
   model_id: z.string().max(200).nullish(),
+});
+
+const splitSchema = z.object({ at: z.number().int().min(1) });
+const mergeSchema = z.object({ joiner: z.string().max(10).optional() });
+
+const noteCreateSchema = z.object({
+  body: z.string().trim().min(1).max(4000),
+  at_s: z.number().min(0).nullish(),
+});
+const notePatchSchema = z.object({
+  body: z.string().trim().min(1).max(4000).optional(),
+  resolved: z.boolean().optional(),
+  at_s: z.number().min(0).nullish(),
 });
 
 const castSchema = z.object({
@@ -144,7 +161,8 @@ function routes(app: FastifyInstance, svc: MirliService): void {
     return chapter;
   };
   const requireParagraph = (bookId: string, segmentId: string) => {
-    const chapter = books().chapterForSegment(segmentId);
+    // Track 0 only: a bed clip on another track is not a paragraph.
+    const chapter = books().chapterForParagraph(segmentId);
     if (!chapter || chapter.book_id !== bookId) throw new HttpError(404, "Paragraph not found");
     return chapter;
   };
@@ -220,6 +238,28 @@ function routes(app: FastifyInstance, svc: MirliService): void {
     return reply.code(201).send(books().addChapter(request.params.id, body));
   });
 
+  app.post<BookParams>("/api/audiobooks/:id/duplicate", async (request, reply) => {
+    requireBook(request.params.id);
+    const body = z.object({ title: z.string().max(300).nullish() }).parse(request.body ?? {});
+    return reply.code(201).send(await books().duplicateBook(request.params.id, body.title));
+  });
+
+  /** Paste text; it is split into paragraphs with the importer's cleanup. */
+  app.post<BookParams>("/api/audiobooks/:id/chapters/from-text", async (request, reply) => {
+    requireBook(request.params.id);
+    const body = z
+      .object({
+        text: z.string().min(1).max(2_000_000),
+        title: z.string().max(300).nullish(),
+        kind: kindSchema.optional(),
+        position: z.number().int().min(0).nullish(),
+        markdown: z.boolean().optional(),
+        max_chars: z.number().int().min(80).max(20000).optional(),
+      })
+      .parse(request.body);
+    return reply.code(201).send(books().addChapterFromText(request.params.id, body));
+  });
+
   /** Registered before `:cid` so "reorder" is not read as a chapter id. */
   app.post<BookParams>("/api/audiobooks/:id/chapters/reorder", async (request) => {
     requireBook(request.params.id);
@@ -260,6 +300,30 @@ function routes(app: FastifyInstance, svc: MirliService): void {
     },
   );
 
+  /** Registered before `:sid`-style routes on the same prefix. */
+  app.post<ChapterParams>(
+    "/api/audiobooks/:id/chapters/:cid/paragraphs/reorder",
+    async (request) => {
+      requireChapter(request.params.id, request.params.cid);
+      const body = reorderSchema.parse(request.body);
+      const list = books().reorderParagraphs(request.params.cid, body.ids);
+      if (!list) throw new HttpError(422, "ids must list every paragraph of the chapter exactly once");
+      return list;
+    },
+  );
+
+  app.post<ParagraphParams>("/api/audiobooks/:id/paragraphs/:sid/split", async (request) => {
+    requireParagraph(request.params.id, request.params.sid);
+    const body = splitSchema.parse(request.body);
+    return books().splitParagraph(request.params.sid, body.at);
+  });
+
+  app.post<ParagraphParams>("/api/audiobooks/:id/paragraphs/:sid/merge-next", async (request) => {
+    requireParagraph(request.params.id, request.params.sid);
+    const body = mergeSchema.parse(request.body ?? {});
+    return books().mergeWithNext(request.params.sid, body.joiner);
+  });
+
   /** Cast many paragraphs at once (multi-select). Registered before `:sid`. */
   app.post<BookParams>("/api/audiobooks/:id/paragraphs/cast", async (request) => {
     requireBook(request.params.id);
@@ -288,6 +352,93 @@ function routes(app: FastifyInstance, svc: MirliService): void {
   app.delete<ParagraphParams>("/api/audiobooks/:id/paragraphs/:sid", async (request, reply) => {
     requireParagraph(request.params.id, request.params.sid);
     books().deleteParagraph(request.params.sid);
+    return reply.code(204).send();
+  });
+
+  /* ------------------------------------------------------------------ notes */
+
+  /** `?status=open|resolved|all` (default all), `?chapter_id=`, `?segment_id=`. */
+  app.get<BookParams>("/api/audiobooks/:id/notes", async (request) => {
+    requireBook(request.params.id);
+    const q = request.query as Record<string, string | undefined>;
+    const status = q.status ?? "all";
+    if (!["open", "resolved", "all"].includes(status)) {
+      throw new HttpError(422, "status must be open, resolved or all");
+    }
+    return books().listNotes(request.params.id, {
+      resolved: status === "all" ? undefined : status === "resolved",
+      chapterId: q.chapter_id,
+      segmentId: q.segment_id,
+    });
+  });
+
+  app.post<ParagraphParams>("/api/audiobooks/:id/paragraphs/:sid/notes", async (request, reply) => {
+    requireParagraph(request.params.id, request.params.sid);
+    const body = noteCreateSchema.parse(request.body);
+    return reply.code(201).send(books().addNote(request.params.sid, body.body, body.at_s ?? null));
+  });
+
+  const requireNote = (bookId: string, noteId: string) => {
+    const note = books().getNote(noteId);
+    if (!note || note.book_id !== bookId) throw new HttpError(404, "Note not found");
+    return note;
+  };
+
+  app.patch<NoteParams>("/api/audiobooks/:id/notes/:nid", async (request) => {
+    requireNote(request.params.id, request.params.nid);
+    const body = notePatchSchema.parse(request.body ?? {});
+    const fields: { body?: string; resolved?: boolean; at_s?: number | null } = {};
+    if (body.body !== undefined) fields.body = body.body;
+    if (body.resolved !== undefined) fields.resolved = body.resolved;
+    if (request.body && typeof request.body === "object" && "at_s" in request.body) {
+      fields.at_s = body.at_s ?? null;
+    }
+    return books().updateNote(request.params.nid, fields);
+  });
+
+  app.delete<NoteParams>("/api/audiobooks/:id/notes/:nid", async (request, reply) => {
+    requireNote(request.params.id, request.params.nid);
+    books().deleteNote(request.params.nid);
+    return reply.code(204).send();
+  });
+
+  /* -------------------------------------------------------------- snapshots */
+
+  const requireSnapshot = (bookId: string, snapshotId: string) => {
+    const snap = books().getSnapshot(snapshotId);
+    if (!snap || snap.info.book_id !== bookId) throw new HttpError(404, "Version not found");
+    return snap;
+  };
+
+  app.get<BookParams>("/api/audiobooks/:id/snapshots", async (request) => {
+    requireBook(request.params.id);
+    return books().listSnapshots(request.params.id);
+  });
+
+  app.post<BookParams>("/api/audiobooks/:id/snapshots", async (request, reply) => {
+    requireBook(request.params.id);
+    const body = z.object({ label: z.string().max(200).nullish() }).parse(request.body ?? {});
+    return reply.code(201).send(books().saveSnapshot(request.params.id, body.label));
+  });
+
+  app.get<SnapshotParams>("/api/audiobooks/:id/snapshots/:snid", async (request) => {
+    const snap = requireSnapshot(request.params.id, request.params.snid);
+    return { ...snap.info, data: snap.data };
+  });
+
+  app.get<SnapshotParams>("/api/audiobooks/:id/snapshots/:snid/diff", async (request) => {
+    requireSnapshot(request.params.id, request.params.snid);
+    return books().diffSnapshot(request.params.snid);
+  });
+
+  app.post<SnapshotParams>("/api/audiobooks/:id/snapshots/:snid/restore", async (request) => {
+    requireSnapshot(request.params.id, request.params.snid);
+    return books().restoreSnapshot(request.params.snid);
+  });
+
+  app.delete<SnapshotParams>("/api/audiobooks/:id/snapshots/:snid", async (request, reply) => {
+    requireSnapshot(request.params.id, request.params.snid);
+    books().deleteSnapshot(request.params.snid);
     return reply.code(204).send();
   });
 

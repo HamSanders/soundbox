@@ -9,6 +9,7 @@
  */
 
 import type { ManuscriptSection } from "../types.js";
+import { normaliseDialogue } from "./dialogue.js";
 import { isMultilingualHeading, matterFromTitle } from "./lang.js";
 
 /** Default ceiling on characters per paragraph. Most local TTS models read a
@@ -193,17 +194,18 @@ export function splitLongParagraph(text: string, maxChars: number): string[] {
 export interface CleanOptions {
   /** Ceiling on characters per paragraph; longer ones split at sentences. */
   maxChars?: number;
+  /** Turn guillemets, low quotes and em-dash dialogue into curly quotes
+   *  (see `dialogue.ts`). Default on. */
+  dialogue?: boolean;
 }
 
-/** Clean, drop empties and split long paragraphs. */
+/** Clean, drop empties, make dialogue punctuation consistent, and split long
+ *  paragraphs. */
 export function cleanParagraphs(paragraphs: string[], opts: CleanOptions = {}): string[] {
   const max = Math.max(80, opts.maxChars ?? DEFAULT_MAX_CHARS);
-  const out: string[] = [];
-  for (const p of paragraphs) {
-    const cleaned = cleanParagraph(p);
-    if (cleaned) out.push(...splitLongParagraph(cleaned, max));
-  }
-  return out;
+  let cleaned = paragraphs.map(cleanParagraph).filter(Boolean);
+  if (opts.dialogue !== false) cleaned = normaliseDialogue(cleaned);
+  return cleaned.flatMap((p) => splitLongParagraph(p, max));
 }
 
 /** Title case an ALL CAPS heading ("CHAPTER ONE" → "Chapter One"). Mixed case

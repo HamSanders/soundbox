@@ -160,7 +160,7 @@ export function ImportWizard({ open, onOpenChange, onImported }: ImportWizardPro
         <DialogHeader className="border-b p-4 pr-12">
           <DialogTitle>Import a manuscript</DialogTitle>
           <DialogDescription>
-            EPUB, PDF, Word, text, Markdown, HTML or a web page. Chapters, front matter and the cover are detected for
+            EPUB, PDF, Word, OpenDocument, RTF, FB2, text, Markdown, HTML or a web page. Chapters, front matter and the cover are detected for
             you to check.
           </DialogDescription>
           <ol className="mt-2 flex flex-wrap gap-1.5" aria-label="Steps">
@@ -306,7 +306,7 @@ function SourceStep({ busy, run, onParsed }: { busy: string | null; run: Run; on
         >
           {busy ? <Loader2Icon className="text-muted-foreground size-8 animate-spin" /> : <UploadIcon className="text-muted-foreground size-8" />}
           <span className="font-medium">Drop a manuscript here, or choose a file</span>
-          <span className="text-muted-foreground text-xs">EPUB, PDF, DOCX, TXT, Markdown or HTML, up to 256 MB</span>
+          <span className="text-muted-foreground text-xs">EPUB, PDF, DOCX, ODT, RTF, FB2, TXT, Markdown or HTML, up to 256 MB</span>
           <input
             ref={fileInput}
             type="file"

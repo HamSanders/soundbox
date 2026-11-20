@@ -21,6 +21,7 @@ import { unzipSync } from "fflate";
 import { DomUtils } from "htmlparser2";
 
 import type { Manuscript, ManuscriptSection } from "../types.js";
+import { epubDrm } from "./drm.js";
 import { parseHtmlDocument, htmlToBlocks } from "./html.js";
 import { blocksToSections, emptyManuscript, finishManuscript, makeSection, type Block, type ParseOptions } from "./manuscript.js";
 import { languageCode } from "./plain.js";
@@ -183,12 +184,9 @@ export function parseEpub(bytes: Uint8Array, opts: ParseOptions = {}): Manuscrip
   const opfPath = rootPath ?? zip.names().find((n) => n.toLowerCase().endsWith(".opf"));
   const opfXml = opfPath ? zip.text(opfPath) : null;
   if (!opfPath || !opfXml) throw new Error("This EPUB has no package document (OPF).");
-  if (zip.get("META-INF/encryption.xml") && /EncryptedData/.test(zip.text("META-INF/encryption.xml") ?? "")) {
-    const enc = zip.text("META-INF/encryption.xml") ?? "";
-    // Font obfuscation is harmless; anything else is DRM.
-    if (/<(?:enc:)?CipherReference[^>]*URI="[^"]*\.(?:x?html?|xml)"/i.test(enc)) {
-      throw new Error("This EPUB is DRM-protected, so its text can't be read.");
-    }
+  const drm = epubDrm((p) => zip.text(p));
+  if (drm) {
+    throw new Error(`This EPUB is DRM-protected (${drm}), so its text can't be read. Use a DRM-free copy of the book.`);
   }
   const opf = parseHtmlDocument(opfXml, true);
 

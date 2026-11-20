@@ -114,6 +114,32 @@ export interface ParagraphPatch {
   model_id?: string | null;
 }
 
+/** A saved version of a book, without its data. */
+export interface SnapshotInfo {
+  id: string;
+  book_id: string;
+  label: string;
+  chapters: number;
+  paragraphs: number;
+  created_at: string;
+}
+
+export type DiffStatus = "added" | "removed" | "changed";
+
+/** What changed from a saved version to now. Paragraphs match by id. */
+export interface SnapshotDiff {
+  snapshot: SnapshotInfo;
+  book: { field: string; before: unknown; after: unknown }[];
+  chapters: {
+    chapter_id: string;
+    title: string;
+    status: DiffStatus | "same";
+    title_before?: string;
+    paragraphs: { segment_id: string; status: DiffStatus; before: string | null; after: string | null }[];
+  }[];
+  summary: { added: number; removed: number; changed: number };
+}
+
 export interface SplitResult {
   first: Paragraph;
   second: Paragraph;
@@ -154,6 +180,7 @@ export type AudiobookEvent =
   | { type: "paragraphs"; chapter_id: string; segment_ids?: string[] }
   | { type: "characters" }
   | { type: "notes"; chapter_id: string }
+  | { type: "snapshots" }
   | { type: "deleted" }
   | ({ type: string } & Record<string, unknown>);
 
@@ -182,6 +209,13 @@ export interface AudiobookApi {
   reorderParagraphs(bookId: string, chapterId: string, ids: string[]): Promise<Paragraph[]>;
 
   replace(bookId: string, req: ReplaceRequest): Promise<ReplaceResult>;
+
+  listSnapshots(bookId: string): Promise<SnapshotInfo[]>;
+  saveSnapshot(bookId: string, label?: string | null): Promise<SnapshotInfo>;
+  diffSnapshot(bookId: string, snapshotId: string): Promise<SnapshotDiff>;
+  /** Saves a "Before restoring" version first; returns it as `before`. */
+  restoreSnapshot(bookId: string, snapshotId: string): Promise<{ book: BookDetail; before: SnapshotInfo }>;
+  deleteSnapshot(bookId: string, snapshotId: string): Promise<void>;
 
   listNotes(bookId: string): Promise<BookNote[]>;
   addNote(bookId: string, segmentId: string, body: string, atS?: number | null): Promise<BookNote>;
@@ -276,6 +310,19 @@ const httpAudiobookApi: AudiobookApi = {
 
   replace: (bookId, req) =>
     request<ReplaceResult>(`${base(bookId)}/replace`, { method: "POST", ...json(req) }),
+
+  listSnapshots: (bookId) => request<SnapshotInfo[]>(`${base(bookId)}/snapshots`),
+  saveSnapshot: (bookId, label) =>
+    request<SnapshotInfo>(`${base(bookId)}/snapshots`, { method: "POST", ...json({ label: label ?? null }) }),
+  diffSnapshot: (bookId, snapshotId) =>
+    request<SnapshotDiff>(`${base(bookId)}/snapshots/${encodeURIComponent(snapshotId)}/diff`),
+  restoreSnapshot: (bookId, snapshotId) =>
+    request<{ book: BookDetail; before: SnapshotInfo }>(
+      `${base(bookId)}/snapshots/${encodeURIComponent(snapshotId)}/restore`,
+      { method: "POST", ...json({}) },
+    ),
+  deleteSnapshot: (bookId, snapshotId) =>
+    request<void>(`${base(bookId)}/snapshots/${encodeURIComponent(snapshotId)}`, { method: "DELETE" }),
 
   listNotes: (bookId) => request<BookNote[]>(`${base(bookId)}/notes`),
   addNote: (bookId, segmentId, body, atS = null) =>

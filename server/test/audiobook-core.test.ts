@@ -509,6 +509,71 @@ describe("review notes", () => {
   });
 });
 
+describe("snapshots", () => {
+  it("saves, diffs and restores a version", async () => {
+    const narrator = addVoice("snap-narrator");
+    const book = await json("POST", "/api/audiobooks", {
+      title: "Versions",
+      settings: { narrator_voice_id: narrator, cast_mode: "multi" },
+    });
+    const base = `/api/audiobooks/${book.id}`;
+    const cid = book.chapters[0].id;
+    const a = await json("POST", `${base}/chapters/${cid}/paragraphs`, { text: "Alpha." });
+    const b = await json("POST", `${base}/chapters/${cid}/paragraphs`, { text: "Beta." });
+    const takeA = fakeSound();
+    app.soundbox.updateSegment(a.id, { sound_id: takeA });
+    const hero = audiobooks(app.soundbox).createCharacter(book.id, { name: "Hero" });
+    await json("PATCH", `${base}/paragraphs/${b.id}`, { character_id: hero.id, locked: true });
+
+    const snap = await json("POST", `${base}/snapshots`, { label: "Draft 1" });
+    expect(snap).toMatchObject({ label: "Draft 1", chapters: 1, paragraphs: 2 });
+
+    // Change things after the snapshot.
+    await json("PATCH", base, { title: "Versions, revised" });
+    await json("PATCH", `${base}/paragraphs/${a.id}`, { text: "Alpha, revised." });
+    await json("PATCH", `${base}/paragraphs/${b.id}`, { locked: false });
+    await json("DELETE", `${base}/paragraphs/${b.id}`);
+    const c = await json("POST", `${base}/chapters/${cid}/paragraphs`, { text: "Gamma." });
+    const extra = await json("POST", `${base}/chapters`, { title: "Added later" });
+    audiobooks(app.soundbox).deleteCharacter(hero.id);
+    app.soundbox.updateSegment(a.id, { sound_id: fakeSound() });
+
+    const diff = await json(`GET`, `${base}/snapshots/${snap.id}/diff`);
+    expect(diff.book).toEqual([{ field: "title", before: "Versions", after: "Versions, revised" }]);
+    expect(diff.summary).toEqual({ added: 1, removed: 1, changed: 1 });
+    const ch = diff.chapters.find((x: any) => x.chapter_id === cid);
+    expect(ch.paragraphs).toEqual([
+      { segment_id: a.id, status: "changed", before: "Alpha.", after: "Alpha, revised." },
+      { segment_id: c.id, status: "added", before: null, after: "Gamma." },
+      { segment_id: b.id, status: "removed", before: "Beta.", after: null },
+    ]);
+    expect(diff.chapters.find((x: any) => x.chapter_id === extra.id).status).toBe("added");
+
+    const restored = await json("POST", `${base}/snapshots/${snap.id}/restore`, {});
+    expect(restored.before.label).toBe("Before restoring “Draft 1”");
+    expect(restored.book.title).toBe("Versions");
+    expect(restored.book.chapters.map((x: any) => x.id)).toEqual([cid]);
+    expect(restored.book.characters.map((x: any) => x.id)).toEqual([hero.id]);
+    const paras = await json<any[]>("GET", `${base}/chapters/${cid}/paragraphs`);
+    expect(paras.map((p) => [p.id, p.text])).toEqual([
+      [a.id, "Alpha."],
+      [b.id, "Beta."],
+    ]);
+    expect(paras[0].sound_id).toBe(takeA);
+    expect(paras[0].status).toBe("voiced");
+    expect(paras[1]).toMatchObject({ character_id: hero.id, locked: true, speaker: "Hero" });
+
+    // Nothing differs any more; the pre-restore version is listed.
+    const again = await json(`GET`, `${base}/snapshots/${snap.id}/diff`);
+    expect(again.summary).toEqual({ added: 0, removed: 0, changed: 0 });
+    const list = await json<any[]>("GET", `${base}/snapshots`);
+    expect(list.map((s) => s.label)).toEqual(["Before restoring “Draft 1”", "Draft 1"]);
+
+    await json("DELETE", `${base}/snapshots/${snap.id}`);
+    expect(await json<any[]>("GET", `${base}/snapshots`)).toHaveLength(1);
+  });
+});
+
 describe("find and replace", () => {
   it("replaces across chapters, skips locked paragraphs and reports counts", async () => {
     const book = await audiobooks(app.soundbox).createBookFromManuscript(manuscript);

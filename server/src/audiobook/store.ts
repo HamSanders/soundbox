@@ -111,7 +111,30 @@ CREATE TABLE IF NOT EXISTS book_notes (
 );
 CREATE INDEX IF NOT EXISTS idx_book_notes_book ON book_notes(book_id, resolved);
 CREATE INDEX IF NOT EXISTS idx_book_notes_segment ON book_notes(segment_id);
+
+-- Saved versions of a book: its metadata, cast, chapters and paragraph
+-- text as one JSON document (see BookSnapshotData in service.ts).
+CREATE TABLE IF NOT EXISTS book_snapshots (
+    id         TEXT PRIMARY KEY,
+    book_id    TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    label      TEXT NOT NULL,
+    data       TEXT NOT NULL,
+    chapters   INTEGER NOT NULL DEFAULT 0,
+    paragraphs INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_book_snapshots_book ON book_snapshots(book_id, created_at DESC);
 `;
+
+/** A saved version, without its data. */
+export interface SnapshotInfo {
+  id: string;
+  book_id: string;
+  label: string;
+  chapters: number;
+  paragraphs: number;
+  created_at: string;
+}
 
 /** A review note on one paragraph. */
 export interface BookNote {
@@ -516,9 +539,16 @@ export class AudiobookStore {
   createChapter(
     bookId: string,
     storyId: string,
-    fields: { title: string; kind?: ChapterKind; included?: boolean; position?: number | null },
+    fields: {
+      title: string;
+      kind?: ChapterKind;
+      included?: boolean;
+      position?: number | null;
+      /** Reuse an id (restoring a snapshot). */
+      id?: string;
+    },
   ): Chapter {
-    const id = this.newId();
+    const id = fields.id ?? this.newId();
     const count = (
       this.conn.prepare("SELECT COUNT(*) n FROM book_chapters WHERE book_id=?").get(bookId) as {
         n: number;
@@ -824,6 +854,32 @@ export class AudiobookStore {
     return this.getCharacter(id);
   }
 
+  /** Write a character exactly as given, id included (restoring a snapshot). */
+  putCharacter(c: Character): void {
+    this.conn
+      .prepare(
+        `INSERT INTO book_characters (id, book_id, name, aliases, description, voice_id,
+           model_id, request_options, color, created_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?)
+         ON CONFLICT(id) DO UPDATE SET name=excluded.name, aliases=excluded.aliases,
+           description=excluded.description, voice_id=excluded.voice_id,
+           model_id=excluded.model_id, request_options=excluded.request_options,
+           color=excluded.color`,
+      )
+      .run(
+        c.id,
+        c.book_id,
+        c.name,
+        JSON.stringify(c.aliases),
+        c.description,
+        c.voice_id,
+        c.model_id,
+        JSON.stringify(c.request_options),
+        c.color,
+        this.now(),
+      );
+  }
+
   deleteCharacter(id: string): boolean {
     const current = this.getCharacter(id);
     if (!current) return false;
@@ -932,6 +988,46 @@ export class AudiobookStore {
       )
       .all(bookId) as { chapter_id: string; n: number }[];
     return new Map(rows.map((r) => [r.chapter_id, r.n]));
+  }
+
+  /* -------------------------------------------------------------- snapshots */
+
+  saveSnapshot(
+    bookId: string,
+    label: string,
+    data: unknown,
+    counts: { chapters: number; paragraphs: number },
+  ): SnapshotInfo {
+    const id = this.newId();
+    this.conn
+      .prepare(
+        `INSERT INTO book_snapshots (id, book_id, label, data, chapters, paragraphs, created_at)
+         VALUES (?,?,?,?,?,?,?)`,
+      )
+      .run(id, bookId, label, JSON.stringify(data), counts.chapters, counts.paragraphs, this.now());
+    return this.getSnapshot(id)!.info;
+  }
+
+  listSnapshots(bookId: string): SnapshotInfo[] {
+    return this.conn
+      .prepare(
+        `SELECT id, book_id, label, chapters, paragraphs, created_at FROM book_snapshots
+          WHERE book_id=? ORDER BY created_at DESC, rowid DESC`,
+      )
+      .all(bookId) as SnapshotInfo[];
+  }
+
+  getSnapshot(id: string): { info: SnapshotInfo; data: unknown } | null {
+    const row = this.conn.prepare("SELECT * FROM book_snapshots WHERE id=?").get(id) as
+      | (SnapshotInfo & { data: string })
+      | undefined;
+    if (!row) return null;
+    const { data, ...info } = row;
+    return { info, data: parseJson<unknown>(data, null) };
+  }
+
+  deleteSnapshot(id: string): boolean {
+    return this.conn.prepare("DELETE FROM book_snapshots WHERE id=?").run(id).changes > 0;
   }
 
   /** The ParagraphMeta for a row, with defaults for a segment with no row. */

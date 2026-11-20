@@ -22,6 +22,7 @@ type BookParams = { Params: { id: string } };
 type ChapterParams = { Params: { id: string; cid: string } };
 type ParagraphParams = { Params: { id: string; sid: string } };
 type NoteParams = { Params: { id: string; nid: string } };
+type SnapshotParams = { Params: { id: string; snid: string } };
 
 const MAX_COVER_BYTES = 16 * 1024 * 1024;
 
@@ -375,6 +376,46 @@ function routes(app: FastifyInstance, svc: MirliService): void {
   app.delete<NoteParams>("/api/audiobooks/:id/notes/:nid", async (request, reply) => {
     requireNote(request.params.id, request.params.nid);
     books().deleteNote(request.params.nid);
+    return reply.code(204).send();
+  });
+
+  /* -------------------------------------------------------------- snapshots */
+
+  const requireSnapshot = (bookId: string, snapshotId: string) => {
+    const snap = books().getSnapshot(snapshotId);
+    if (!snap || snap.info.book_id !== bookId) throw new HttpError(404, "Version not found");
+    return snap;
+  };
+
+  app.get<BookParams>("/api/audiobooks/:id/snapshots", async (request) => {
+    requireBook(request.params.id);
+    return books().listSnapshots(request.params.id);
+  });
+
+  app.post<BookParams>("/api/audiobooks/:id/snapshots", async (request, reply) => {
+    requireBook(request.params.id);
+    const body = z.object({ label: z.string().max(200).nullish() }).parse(request.body ?? {});
+    return reply.code(201).send(books().saveSnapshot(request.params.id, body.label));
+  });
+
+  app.get<SnapshotParams>("/api/audiobooks/:id/snapshots/:snid", async (request) => {
+    const snap = requireSnapshot(request.params.id, request.params.snid);
+    return { ...snap.info, data: snap.data };
+  });
+
+  app.get<SnapshotParams>("/api/audiobooks/:id/snapshots/:snid/diff", async (request) => {
+    requireSnapshot(request.params.id, request.params.snid);
+    return books().diffSnapshot(request.params.snid);
+  });
+
+  app.post<SnapshotParams>("/api/audiobooks/:id/snapshots/:snid/restore", async (request) => {
+    requireSnapshot(request.params.id, request.params.snid);
+    return books().restoreSnapshot(request.params.snid);
+  });
+
+  app.delete<SnapshotParams>("/api/audiobooks/:id/snapshots/:snid", async (request, reply) => {
+    requireSnapshot(request.params.id, request.params.snid);
+    books().deleteSnapshot(request.params.snid);
     return reply.code(204).send();
   });
 

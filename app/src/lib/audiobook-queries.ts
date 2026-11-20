@@ -18,6 +18,8 @@ import {
   type ParagraphCreate,
   type ParagraphPatch,
   type ReplaceRequest,
+  type SnapshotDiff,
+  type SnapshotInfo,
 } from "./audiobook-api";
 import { qk } from "./queries";
 
@@ -28,6 +30,8 @@ export const abk = {
     ["audiobook", bookId, "paragraphs", chapterId] as const,
   allParagraphs: (bookId: string) => ["audiobook", bookId, "paragraphs"] as const,
   notes: (bookId: string) => ["audiobook", bookId, "notes"] as const,
+  snapshots: (bookId: string) => ["audiobook", bookId, "snapshots"] as const,
+  diff: (bookId: string, snapshotId: string) => ["audiobook", bookId, "diff", snapshotId] as const,
 };
 
 const fail = (what: string) => (err: unknown) => {
@@ -67,6 +71,10 @@ export function useBookEvents(bookId: string | null, onEvent?: (e: AudiobookEven
     return audiobookApi.subscribe(bookId, (event) => {
       onEvent?.(event);
       if (event.type === "hello") return;
+      if (event.type === "snapshots") {
+        void qc.invalidateQueries({ queryKey: abk.snapshots(bookId) });
+        return;
+      }
       if (event.type === "notes") {
         void qc.invalidateQueries({ queryKey: abk.notes(bookId) });
       } else if (event.type === "paragraphs" && typeof event.chapter_id === "string") {
@@ -291,6 +299,48 @@ export function useCastParagraphs(bookId: string) {
     onSuccess: refresh,
     onError: fail("Could not assign the character"),
   });
+}
+
+export function useSnapshots(bookId: string, enabled = true): UseQueryResult<SnapshotInfo[]> {
+  return useQuery({
+    queryKey: abk.snapshots(bookId),
+    queryFn: () => audiobookApi.listSnapshots(bookId),
+    enabled,
+  });
+}
+
+export function useSnapshotDiff(bookId: string, snapshotId: string | null): UseQueryResult<SnapshotDiff> {
+  return useQuery({
+    queryKey: abk.diff(bookId, snapshotId ?? ""),
+    queryFn: () => audiobookApi.diffSnapshot(bookId, snapshotId!),
+    enabled: !!snapshotId,
+    staleTime: 0,
+  });
+}
+
+export function useSnapshotOps(bookId: string) {
+  const qc = useQueryClient();
+  const list = () => void qc.invalidateQueries({ queryKey: abk.snapshots(bookId) });
+  const save = useMutation({
+    mutationFn: (label: string | null) => audiobookApi.saveSnapshot(bookId, label),
+    onSuccess: list,
+    onError: fail("Could not save the version"),
+  });
+  const restore = useMutation({
+    mutationFn: (snapshotId: string) => audiobookApi.restoreSnapshot(bookId, snapshotId),
+    onSuccess: ({ book }) => {
+      qc.setQueryData(abk.book(bookId), book);
+      void qc.invalidateQueries({ queryKey: ["audiobook", bookId] });
+      void qc.invalidateQueries({ queryKey: abk.books });
+    },
+    onError: fail("Could not restore the version"),
+  });
+  const remove = useMutation({
+    mutationFn: (snapshotId: string) => audiobookApi.deleteSnapshot(bookId, snapshotId),
+    onSuccess: list,
+    onError: fail("Could not delete the version"),
+  });
+  return { save, restore, remove };
 }
 
 export function useNotes(bookId: string): UseQueryResult<BookNote[]> {

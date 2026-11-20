@@ -53,6 +53,12 @@
  *   updateNote(noteId, { body?, resolved?, at_s? }): BookNote | null
  *   deleteNote(noteId): boolean
  *
+ * Snapshots (saved versions)
+ *   saveSnapshot(bookId, label?): SnapshotInfo
+ *   listSnapshots(bookId), getSnapshot(snapshotId), deleteSnapshot(snapshotId)
+ *   diffSnapshot(snapshotId): SnapshotDiff     snapshot -> current, by paragraph id
+ *   restoreSnapshot(snapshotId): Promise<{ book, before }>   saves "Before restoring" first
+ *
  * Characters (table owned here; routes and detection belong to the voice area)
  *   listCharacters(bookId), getCharacter(id), createCharacter(bookId, fields),
  *   updateCharacter(id, fields), deleteCharacter(id)
@@ -80,6 +86,7 @@ import {
   type CharacterFields,
   type ParagraphStatus,
   type SettingsPatch,
+  type SnapshotInfo,
 } from "./store.js";
 import type {
   Book,
@@ -90,7 +97,7 @@ import type {
   ParagraphMeta,
 } from "./types.js";
 
-export type { BookNote, BookStats, ChapterWithStats, ParagraphStatus } from "./store.js";
+export type { BookNote, BookStats, ChapterWithStats, ParagraphStatus, SnapshotInfo } from "./store.js";
 
 /** A paragraph: the story segment, its audiobook state, and a status. */
 export type Paragraph = StorySegment &
@@ -134,6 +141,53 @@ export interface ReplaceResult {
   skipped_matches: number;
   changed: { chapter_id: string; segment_id: string }[];
   dry_run: boolean;
+}
+
+/** One paragraph as a snapshot keeps it. */
+export interface SnapshotParagraph {
+  segment_id: string;
+  kind: "line" | "pause";
+  text: string;
+  duration_s: number | null;
+  character_id: string | null;
+  locked: boolean;
+  is_heading: boolean;
+  model_id: string | null;
+  /** The take on the timeline when the snapshot was saved. */
+  sound_id: string | null;
+  request_options: Record<string, string>;
+}
+
+export interface SnapshotChapter {
+  id: string;
+  story_id: string;
+  title: string;
+  kind: ChapterKind;
+  included: boolean;
+  paragraphs: SnapshotParagraph[];
+}
+
+export interface BookSnapshotData {
+  version: 1;
+  book: Omit<Book, "id" | "created_at" | "updated_at" | "cover_path">;
+  characters: Character[];
+  chapters: SnapshotChapter[];
+}
+
+export type DiffStatus = "added" | "removed" | "changed";
+
+export interface SnapshotDiff {
+  snapshot: SnapshotInfo;
+  /** Book fields whose value differs, by name. */
+  book: { field: string; before: unknown; after: unknown }[];
+  chapters: {
+    chapter_id: string;
+    title: string;
+    status: DiffStatus | "same";
+    title_before?: string;
+    paragraphs: { segment_id: string; status: DiffStatus; before: string | null; after: string | null }[];
+  }[];
+  summary: { added: number; removed: number; changed: number };
 }
 
 export type DeleteScope = { book_id: string; chapter_ids: string[]; story_ids: string[] };
@@ -800,6 +854,239 @@ export class AudiobookService {
     this.store.deleteNote(noteId);
     this.hub.publish(note.book_id, { type: "notes", chapter_id: note.chapter_id });
     return true;
+  }
+
+  /* -------------------------------------------------------------- snapshots */
+
+  private capture(bookId: string): BookSnapshotData {
+    const book = this.store.getBook(bookId);
+    if (!book) throw new ModelError(`Book '${bookId}' not found.`);
+    const { id: _id, created_at: _c, updated_at: _u, cover_path: _cover, ...fields } = book;
+    return {
+      version: 1,
+      book: fields,
+      characters: this.store.listCharacters(bookId),
+      chapters: this.store.listChapters(bookId).map((chapter) => ({
+        id: chapter.id,
+        story_id: chapter.story_id,
+        title: chapter.title,
+        kind: chapter.kind,
+        included: chapter.included,
+        paragraphs: this.paragraphsOf(chapter).map((p) => ({
+          segment_id: p.id,
+          kind: p.kind,
+          text: p.text,
+          duration_s: p.kind === "pause" ? (p.duration_s ?? null) : null,
+          character_id: p.character_id,
+          locked: p.locked,
+          is_heading: p.is_heading,
+          model_id: p.model_id,
+          sound_id: p.sound_id ?? null,
+          request_options: p.request_options ?? {},
+        })),
+      })),
+    };
+  }
+
+  saveSnapshot(bookId: string, label?: string | null): SnapshotInfo {
+    const data = this.capture(bookId);
+    const info = this.store.saveSnapshot(
+      bookId,
+      label?.trim() || `Version of ${new Date().toISOString().slice(0, 16).replace("T", " ")}`,
+      data,
+      {
+        chapters: data.chapters.length,
+        paragraphs: data.chapters.reduce((n, c) => n + c.paragraphs.length, 0),
+      },
+    );
+    this.hub.publish(bookId, { type: "snapshots" });
+    return info;
+  }
+
+  listSnapshots(bookId: string): SnapshotInfo[] {
+    return this.store.listSnapshots(bookId);
+  }
+
+  getSnapshot(snapshotId: string): { info: SnapshotInfo; data: BookSnapshotData } | null {
+    const snap = this.store.getSnapshot(snapshotId);
+    return snap ? { info: snap.info, data: snap.data as BookSnapshotData } : null;
+  }
+
+  deleteSnapshot(snapshotId: string): boolean {
+    const snap = this.store.getSnapshot(snapshotId);
+    if (!snap) return false;
+    this.store.deleteSnapshot(snapshotId);
+    this.hub.publish(snap.info.book_id, { type: "snapshots" });
+    return true;
+  }
+
+  /** What changed from the snapshot to now. Paragraphs match by id. */
+  diffSnapshot(snapshotId: string): SnapshotDiff | null {
+    const snap = this.getSnapshot(snapshotId);
+    if (!snap) return null;
+    const now = this.capture(snap.info.book_id);
+    const was = snap.data;
+    const diff: SnapshotDiff = {
+      snapshot: snap.info,
+      book: [],
+      chapters: [],
+      summary: { added: 0, removed: 0, changed: 0 },
+    };
+    for (const field of Object.keys(now.book) as (keyof BookSnapshotData["book"])[]) {
+      const before = was.book[field];
+      const after = now.book[field];
+      if (JSON.stringify(before) !== JSON.stringify(after)) diff.book.push({ field, before, after });
+    }
+    const wasChapters = new Map(was.chapters.map((c) => [c.id, c]));
+    const nowIds = new Set(now.chapters.map((c) => c.id));
+    const count = (s: DiffStatus) => diff.summary[s]++;
+    for (const c of now.chapters) {
+      const old = wasChapters.get(c.id);
+      const oldParas = new Map((old?.paragraphs ?? []).map((p) => [p.segment_id, p]));
+      const nowParaIds = new Set(c.paragraphs.map((p) => p.segment_id));
+      const paragraphs: SnapshotDiff["chapters"][number]["paragraphs"] = [];
+      for (const p of c.paragraphs) {
+        const before = oldParas.get(p.segment_id);
+        if (!before) {
+          paragraphs.push({ segment_id: p.segment_id, status: "added", before: null, after: p.text });
+          count("added");
+        } else if (before.text !== p.text) {
+          paragraphs.push({ segment_id: p.segment_id, status: "changed", before: before.text, after: p.text });
+          count("changed");
+        }
+      }
+      for (const p of old?.paragraphs ?? []) {
+        if (!nowParaIds.has(p.segment_id)) {
+          paragraphs.push({ segment_id: p.segment_id, status: "removed", before: p.text, after: null });
+          count("removed");
+        }
+      }
+      const renamed = old && old.title !== c.title;
+      diff.chapters.push({
+        chapter_id: c.id,
+        title: c.title,
+        status: !old ? "added" : renamed || paragraphs.length ? "changed" : "same",
+        ...(renamed ? { title_before: old.title } : {}),
+        paragraphs,
+      });
+    }
+    for (const old of was.chapters) {
+      if (nowIds.has(old.id)) continue;
+      diff.chapters.push({
+        chapter_id: old.id,
+        title: old.title,
+        status: "removed",
+        paragraphs: old.paragraphs.map((p) => ({
+          segment_id: p.segment_id,
+          status: "removed" as const,
+          before: p.text,
+          after: null,
+        })),
+      });
+      diff.summary.removed += old.paragraphs.length;
+    }
+    return diff;
+  }
+
+  /**
+   * Put the book back exactly as the snapshot has it: metadata, cast,
+   * chapters and paragraphs (text, casting, lock, heading, model, delivery
+   * and the take on the timeline, where that audio still exists).
+   * Paragraphs and chapters deleted since come back under their old ids;
+   * ones added since are removed, their audio kept in the library. A
+   * "Before restoring" snapshot is saved first, so a restore can itself
+   * be undone.
+   */
+  async restoreSnapshot(snapshotId: string): Promise<{ book: BookDetail; before: SnapshotInfo } | null> {
+    const snap = this.getSnapshot(snapshotId);
+    if (!snap) return null;
+    const bookId = snap.info.book_id;
+    const data = snap.data;
+    const before = this.saveSnapshot(bookId, `Before restoring “${snap.info.label}”`);
+
+    this.store.updateBook(bookId, { ...data.book, settings: data.book.settings });
+
+    const keepCharacters = new Set(data.characters.map((c) => c.id));
+    for (const c of this.store.listCharacters(bookId)) {
+      if (!keepCharacters.has(c.id)) this.store.deleteCharacter(c.id);
+    }
+    for (const c of data.characters) this.store.putCharacter({ ...c, book_id: bookId });
+
+    const keepChapters = new Set(data.chapters.map((c) => c.id));
+    for (const c of this.store.listChapters(bookId)) {
+      if (!keepChapters.has(c.id)) await this.deleteChapter(c.id, false);
+    }
+    const book = this.store.getBook(bookId)!;
+    const now = new Date().toISOString();
+    for (const sc of data.chapters) {
+      let chapter = this.store.getChapter(sc.id);
+      if (!chapter) {
+        const storyId = this.svc.db.getStory(sc.story_id)
+          ? sc.story_id
+          : this.svc.db.createStory(sc.story_id, sc.title, now, book.project_id, "script").id;
+        chapter = this.store.createChapter(bookId, storyId, {
+          id: sc.id,
+          title: sc.title,
+          kind: sc.kind,
+          included: sc.included,
+        });
+      } else {
+        this.store.updateChapter(sc.id, { title: sc.title, kind: sc.kind, included: sc.included });
+      }
+      this.svc.db.renameStory(chapter.story_id, sc.title);
+      this.restoreParagraphs(chapter, sc.paragraphs, keepCharacters, now);
+    }
+    this.store.reorderChapters(bookId, data.chapters.map((c) => c.id));
+    this.syncVoices(bookId, undefined, false);
+    for (const c of this.store.listChapters(bookId)) this.svc.stories.changed(c.story_id);
+    this.hub.publish(bookId, { type: "book" });
+    this.hub.publish(bookId, { type: "chapters" });
+    this.hub.publish(bookId, { type: "characters" });
+    return { book: this.getBook(bookId)!, before };
+  }
+
+  private restoreParagraphs(
+    chapter: Chapter,
+    paragraphs: SnapshotParagraph[],
+    characters: Set<string>,
+    now: string,
+  ): void {
+    const existing = new Map(this.svc.db.listSegments(chapter.story_id).map((s) => [s.id, s]));
+    const keep = new Set(paragraphs.map((p) => p.segment_id));
+    this.store.transaction(() => {
+      for (const s of existing.values()) {
+        if (!keep.has(s.id)) this.svc.db.deleteSegment(s.id);
+      }
+      for (const p of paragraphs) {
+        const sound = p.sound_id ? this.svc.db.getSound(p.sound_id) : null;
+        const current = existing.get(p.segment_id);
+        if (current && current.story_id === chapter.story_id) {
+          this.svc.db.updateSegment(p.segment_id, {
+            text: p.text,
+            sound_id: sound?.id ?? null,
+            request_options: p.request_options,
+            ...(p.kind === "pause" && p.duration_s !== null ? { duration_s: p.duration_s } : {}),
+          });
+        } else {
+          this.svc.db.createSegment(p.segment_id, chapter.story_id, now, {
+            text: p.text,
+            kind: p.kind,
+            sound_id: sound?.id ?? null,
+            durationS: p.kind === "pause" ? p.duration_s : (sound?.duration_s ?? null),
+            request_options: p.request_options,
+            track_index: 0,
+          });
+        }
+        this.store.setMeta(p.segment_id, {
+          character_id: p.character_id && characters.has(p.character_id) ? p.character_id : null,
+          locked: p.locked,
+          is_heading: p.is_heading,
+          model_id: p.model_id,
+        });
+        if (sound) this.store.markVoiced(p.segment_id, p.text);
+      }
+      this.svc.db.reorderSegments(chapter.story_id, paragraphs.map((p) => p.segment_id));
+    });
   }
 
   /* ------------------------------------------------------------- characters */

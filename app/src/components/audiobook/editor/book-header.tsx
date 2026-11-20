@@ -7,6 +7,7 @@
 import { useRef, useState } from "react";
 import {
   DownloadIcon,
+  HistoryIcon,
   ImageIcon,
   InfoIcon,
   SearchIcon,
@@ -44,6 +45,7 @@ import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import { useTts } from "./use-tts";
+import { VersionsDialog } from "./versions-dialog";
 
 const AUTO = "__auto__";
 const NONE = "__none__";
@@ -147,10 +149,13 @@ export function BookHeader({
   book,
   findOpen,
   onToggleFind,
+  onRestored,
 }: {
   book: BookDetail;
   findOpen: boolean;
   onToggleFind: () => void;
+  /** A version was restored. */
+  onRestored: () => void;
 }) {
   const update = useUpdateBook(book.id);
   const cover = useUploadCover(book.id);
@@ -158,6 +163,7 @@ export function BookHeader({
   const file = useRef<HTMLInputElement>(null);
   const [details, setDetails] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [versions, setVersions] = useState(false);
   const pct = bookProgress(book);
   const settings = book.settings;
   const setSettings = (patch: BookPatch["settings"]) => update.mutate({ settings: patch });
@@ -296,6 +302,9 @@ export function BookHeader({
         >
           <SearchIcon />
         </Button>
+        <Button size="icon-sm" variant="ghost" aria-label="Versions" title="Versions" onClick={() => setVersions(true)}>
+          <HistoryIcon />
+        </Button>
         <Button size="icon-sm" variant="ghost" aria-label="Book details" title="Book details" onClick={() => setDetails(true)}>
           <InfoIcon />
         </Button>
@@ -306,6 +315,7 @@ export function BookHeader({
       </div>
       <DetailsDialog book={book} open={details} onOpenChange={setDetails} />
       <ExportDialog bookId={book.id} open={exporting} onOpenChange={setExporting} />
+      <VersionsDialog bookId={book.id} open={versions} onOpenChange={setVersions} onRestored={onRestored} />
     </div>
   );
 }

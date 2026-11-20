@@ -106,7 +106,16 @@ export function AudiobookPage() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2 md:pr-2 md:pb-2">
       <div className={panel}>
-        <BookHeader book={data} findOpen={findOpen} onToggleFind={() => setFindOpen((o) => !o)} />
+        <BookHeader
+          book={data}
+          findOpen={findOpen}
+          onToggleFind={() => setFindOpen((o) => !o)}
+          onRestored={() => {
+            history.clear();
+            setSelectedId(null);
+            setChecked(new Set());
+          }}
+        />
         <RenderBar bookId={data.id} />
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-2 md:flex-row">

@@ -15,6 +15,9 @@ import type {
   BookStats,
   BookSummary,
   ChapterWithStats,
+  DiffStatus,
+  SnapshotDiff,
+  SnapshotInfo,
   Paragraph,
   ParagraphStatus,
   ReplaceResult,
@@ -49,6 +52,20 @@ const meta = new Map<string, Meta>();
 const segmentChapter = new Map<string, string>();
 const covers = new Map<string, string>();
 const notes: BookNote[] = [];
+
+interface MockSnapshot {
+  info: SnapshotInfo;
+  book: Book;
+  characters: Character[];
+  chapters: {
+    id: string;
+    title: string;
+    kind: ChapterKind;
+    included: boolean;
+    paragraphs: Paragraph[];
+  }[];
+}
+const snapshots: MockSnapshot[] = [];
 const listeners = new Map<string, Set<(e: AudiobookEvent) => void>>();
 let seq = 0;
 
@@ -722,6 +739,178 @@ export const mockAudiobookApi: AudiobookApi = {
       if (touched) emit(bookId, { type: "paragraphs", chapter_id: chapter.id });
     }
     return result;
+  },
+
+  async listSnapshots(bookId) {
+    await ready();
+    return snapshots.filter((s) => s.info.book_id === bookId).map((s) => ({ ...s.info })).reverse();
+  },
+
+  async saveSnapshot(bookId, label) {
+    await ready();
+    const book = requireBook(bookId);
+    const list = bookChapters(bookId);
+    const chapterData = await Promise.all(
+      list.map(async (c) => ({
+        id: c.id,
+        title: c.title,
+        kind: c.kind,
+        included: c.included,
+        paragraphs: structuredClone(await paragraphsOf(c)),
+      })),
+    );
+    const info: SnapshotInfo = {
+      id: id("snapshot"),
+      book_id: bookId,
+      label: label?.trim() || `Version of ${now().slice(0, 16).replace("T", " ")}`,
+      chapters: chapterData.length,
+      paragraphs: chapterData.reduce((n, c) => n + c.paragraphs.length, 0),
+      created_at: now(),
+    };
+    snapshots.push({
+      info,
+      book: structuredClone(book),
+      characters: structuredClone(characters.filter((c) => c.book_id === bookId)),
+      chapters: chapterData,
+    });
+    emit(bookId, { type: "snapshots" });
+    return { ...info };
+  },
+
+  async diffSnapshot(bookId, snapshotId) {
+    await ready();
+    const snap = snapshots.find((s) => s.info.id === snapshotId && s.info.book_id === bookId);
+    if (!snap) throw new Error("Version not found");
+    const book = requireBook(bookId);
+    const diff: SnapshotDiff = {
+      snapshot: { ...snap.info },
+      book: [],
+      chapters: [],
+      summary: { added: 0, removed: 0, changed: 0 },
+    };
+    for (const field of ["title", "subtitle", "author", "narrator", "description", "language", "genres", "series", "series_index", "isbn", "publisher", "publication_date", "settings"] as const) {
+      if (JSON.stringify(snap.book[field]) !== JSON.stringify(book[field])) {
+        diff.book.push({ field, before: snap.book[field], after: book[field] });
+      }
+    }
+    const was = new Map(snap.chapters.map((c) => [c.id, c]));
+    const bump = (s: DiffStatus) => diff.summary[s]++;
+    for (const c of bookChapters(bookId)) {
+      const old = was.get(c.id);
+      const oldParas = new Map((old?.paragraphs ?? []).map((p) => [p.id, p]));
+      const current = await paragraphsOf(c);
+      const ids = new Set(current.map((p) => p.id));
+      const paragraphs: SnapshotDiff["chapters"][number]["paragraphs"] = [];
+      for (const p of current) {
+        const before = oldParas.get(p.id);
+        if (!before) {
+          paragraphs.push({ segment_id: p.id, status: "added", before: null, after: p.text });
+          bump("added");
+        } else if (before.text !== p.text) {
+          paragraphs.push({ segment_id: p.id, status: "changed", before: before.text, after: p.text });
+          bump("changed");
+        }
+      }
+      for (const p of old?.paragraphs ?? []) {
+        if (!ids.has(p.id)) {
+          paragraphs.push({ segment_id: p.id, status: "removed", before: p.text, after: null });
+          bump("removed");
+        }
+      }
+      const renamed = old && old.title !== c.title;
+      diff.chapters.push({
+        chapter_id: c.id,
+        title: c.title,
+        status: !old ? "added" : renamed || paragraphs.length ? "changed" : "same",
+        ...(renamed ? { title_before: old.title } : {}),
+        paragraphs,
+      });
+    }
+    const nowIds = new Set(bookChapters(bookId).map((c) => c.id));
+    for (const old of snap.chapters) {
+      if (nowIds.has(old.id)) continue;
+      diff.chapters.push({
+        chapter_id: old.id,
+        title: old.title,
+        status: "removed",
+        paragraphs: old.paragraphs.map((p) => ({ segment_id: p.id, status: "removed" as const, before: p.text, after: null })),
+      });
+      diff.summary.removed += old.paragraphs.length;
+    }
+    return diff;
+  },
+
+  async restoreSnapshot(bookId, snapshotId) {
+    await ready();
+    const snap = snapshots.find((s) => s.info.id === snapshotId && s.info.book_id === bookId);
+    if (!snap) throw new Error("Version not found");
+    const before = await this.saveSnapshot(bookId, `Before restoring “${snap.info.label}”`);
+    const book = requireBook(bookId);
+    Object.assign(book, structuredClone(snap.book), { updated_at: now() });
+    for (let i = characters.length - 1; i >= 0; i--) {
+      if (characters[i]!.book_id === bookId) characters.splice(i, 1);
+    }
+    characters.push(...structuredClone(snap.characters));
+    const keep = new Set(snap.chapters.map((c) => c.id));
+    for (const c of bookChapters(bookId)) if (!keep.has(c.id)) await this.deleteChapter(bookId, c.id);
+    // The mock cannot reuse ids for recreated rows, so they come back as new ones.
+    const order: string[] = [];
+    for (const sc of snap.chapters) {
+      let chapter = chapters.find((c) => c.id === sc.id);
+      if (!chapter) chapter = await addChapter(book, { title: sc.title, kind: sc.kind, included: sc.included });
+      Object.assign(chapter, { title: sc.title, kind: sc.kind, included: sc.included });
+      order.push(chapter.id);
+      const current = await paragraphsOf(chapter);
+      const wanted = new Set(sc.paragraphs.map((p) => p.id));
+      for (const p of current) if (!wanted.has(p.id)) await this.deleteParagraph(bookId, p.id);
+      const ids: string[] = [];
+      for (const p of sc.paragraphs) {
+        let pid = p.id;
+        if (current.some((x) => x.id === p.id)) {
+          await mockApi.updateSegment(chapter.story_id, p.id, {
+            text: p.text,
+            sound_id: p.sound_id ?? null,
+            voice_id: p.voice_id ?? null,
+            speaker: p.speaker ?? null,
+          });
+        } else {
+          const made = await mockApi.createSegment(chapter.story_id, {
+            text: p.text,
+            kind: p.kind,
+            duration_s: p.kind === "pause" ? p.duration_s : null,
+            sound_id: p.sound_id ?? null,
+            voice_id: p.voice_id ?? null,
+            speaker: p.speaker ?? null,
+          });
+          pid = made.id;
+          segmentChapter.set(pid, chapter.id);
+        }
+        Object.assign(metaOf(pid), {
+          character_id: p.character_id,
+          locked: p.locked,
+          is_heading: p.is_heading,
+          model_id: p.model_id,
+          voiced_sound_id: p.sound_id ?? null,
+          voiced_text: p.text,
+          stale_sound_id: null,
+        });
+        ids.push(pid);
+      }
+      await mockApi.reorderSegments(chapter.story_id, ids);
+    }
+    order.forEach((cid, i) => {
+      chapters.find((c) => c.id === cid)!.position = i;
+    });
+    emit(bookId, { type: "chapters" });
+    return { book: await detail(bookId), before };
+  },
+
+  async deleteSnapshot(bookId, snapshotId) {
+    await ready();
+    const i = snapshots.findIndex((s) => s.info.id === snapshotId && s.info.book_id === bookId);
+    if (i < 0) throw new Error("Version not found");
+    snapshots.splice(i, 1);
+    emit(bookId, { type: "snapshots" });
   },
 
   async listNotes(bookId) {

@@ -12,6 +12,7 @@
  *   { type: "paragraphs", chapter_id }        a chapter's paragraphs changed
  *   { type: "characters" }                    the cast changed
  *   { type: "notes", chapter_id }             review notes changed
+ *   { type: "snapshots" }                     a version was saved or deleted
  *   { type: "deleted" }                       the book is gone; the stream ends
  *
  * Other modules use their own `type` (e.g. "render", "export") and any extra

@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { HeaderSlot } from "@/components/header-slot";
 import { ProfileSwitcher } from "@/components/profile-switcher";
 import { QueueIndicator } from "@/components/queue-indicator";
-import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useSound } from "@/lib/queries";
 
@@ -69,7 +68,6 @@ export function AppHeader() {
     <header className="bg-background/85 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 border-b px-3 backdrop-blur">
       <SidebarTrigger className="-ml-1" />
       <HistoryButtons />
-      <Separator orientation="vertical" className="mr-1 !h-4" />
       <nav aria-label="Breadcrumb" className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-sm">
         <span>Mirli</span>
         {soundId ? (

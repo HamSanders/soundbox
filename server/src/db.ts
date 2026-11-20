@@ -473,6 +473,8 @@ export class Database {
   readonly history: HistoryStore;
   readonly audiobooks: AudiobookStore; // [audiobooks:core]
   private readonly conn: Sqlite;
+  /** Shared connection for feature stores that run their own SCHEMA (audiobooks). */
+  get sqlite(): Sqlite { return this.conn; } // [audiobooks:lead]
   /** Statement cache keyed by SQL text — the filter combinations in listSounds
    *  and listMcpCalls generate a small, bounded set of distinct queries. */
   private readonly stmts = new Map<string, Statement>();

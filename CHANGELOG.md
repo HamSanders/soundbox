@@ -6,6 +6,9 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Audiobooks.** Build a book from chapters and paragraphs at **Audiobooks**: each chapter is a script you can also open in the studio timeline, each paragraph shows whether it is voiced, unvoiced, stale or locked, and characters give paragraphs their own voices. Find and replace works across the whole book and leaves locked paragraphs alone. The API is under `/api/audiobooks`.
+
 ## [0.6.0] - 2026-11-20
 
 ### Added

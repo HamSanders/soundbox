@@ -12,6 +12,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import {
   ActivityIcon,
+  BookOpenIcon, // [audiobooks:core]
   BotIcon,
   ChevronDownIcon,
   CpuIcon,
@@ -109,6 +110,7 @@ const NAV_STUDIO: NavItem[] = [
     hue: "studio",
   },
   { to: "/voice/lab", label: "Voice Lab", icon: MicIcon, end: false, hue: "voice" },
+  { to: "/audiobooks", label: "Audiobooks", icon: BookOpenIcon, end: false, hue: "voice" }, // [audiobooks:core]
   // A project is a folder over many samples, not a single kind of one — so
   // unlike Samples below it isn't category-scoped, and it isn't a browse
   // surface either (it's where you organize what Studio work produced). That

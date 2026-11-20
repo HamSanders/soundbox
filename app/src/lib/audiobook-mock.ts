@@ -1,0 +1,659 @@
+/**
+ * In-memory audiobooks for `VITE_MOCK=1`: one sample book with front matter,
+ * three chapters and two characters, seeded on first use. Chapters are real
+ * mock stories (through `mockApi`), so "Open in timeline" works offline too.
+ * Like the rest of the mock, everything resets on reload.
+ */
+
+import type { SegmentPatch, StorySegment } from "./api";
+import type {
+  AudiobookApi,
+  AudiobookEvent,
+  BookDetail,
+  BookPatch,
+  BookStats,
+  BookSummary,
+  ChapterWithStats,
+  Paragraph,
+  ParagraphStatus,
+  ReplaceResult,
+} from "./audiobook-api";
+import type { Book, BookSettings, Chapter, ChapterKind, ChapterStats, Character } from "./audiobook-types";
+import { mockApi } from "./mock";
+
+interface Meta {
+  character_id: string | null;
+  locked: boolean;
+  is_heading: boolean;
+  voiced_sound_id: string | null;
+  voiced_text: string | null;
+  stale_sound_id: string | null;
+}
+
+const DEFAULT_SETTINGS: BookSettings = {
+  model_id: null,
+  narrator_voice_id: null,
+  request_options: {},
+  pacing: { paragraph_gap_s: 0.5, heading_gap_s: 1.5, head_room_tone_s: 0.75, tail_room_tone_s: 2 },
+  mastering: "acx",
+  cast_mode: "single",
+};
+
+const books: Book[] = [];
+const chapters: Chapter[] = [];
+const characters: Character[] = [];
+const meta = new Map<string, Meta>();
+/** segment id -> chapter id, for paragraph routes that only carry the segment. */
+const segmentChapter = new Map<string, string>();
+const covers = new Map<string, string>();
+const listeners = new Map<string, Set<(e: AudiobookEvent) => void>>();
+let seq = 0;
+
+const id = (prefix: string) => `${prefix}-mock-${++seq}`;
+const now = () => new Date().toISOString();
+
+function emit(bookId: string, event: AudiobookEvent): void {
+  for (const fn of listeners.get(bookId) ?? []) setTimeout(() => fn(event), 0);
+}
+
+function metaOf(segmentId: string): Meta {
+  let m = meta.get(segmentId);
+  if (!m) {
+    m = {
+      character_id: null,
+      locked: false,
+      is_heading: false,
+      voiced_sound_id: null,
+      voiced_text: null,
+      stale_sound_id: null,
+    };
+    meta.set(segmentId, m);
+  }
+  return m;
+}
+
+function touch(bookId: string): void {
+  const book = books.find((b) => b.id === bookId);
+  if (book) book.updated_at = now();
+}
+
+function requireBook(bookId: string): Book {
+  const book = books.find((b) => b.id === bookId);
+  if (!book) throw new Error("Book not found");
+  return book;
+}
+
+function requireChapter(bookId: string, chapterId: string): Chapter {
+  const chapter = chapters.find((c) => c.id === chapterId && c.book_id === bookId);
+  if (!chapter) throw new Error("Chapter not found");
+  return chapter;
+}
+
+function chapterOfSegment(bookId: string, segmentId: string): Chapter {
+  const chapter = chapters.find((c) => c.id === segmentChapter.get(segmentId));
+  if (!chapter || chapter.book_id !== bookId) throw new Error("Paragraph not found");
+  return chapter;
+}
+
+function bookChapters(bookId: string): Chapter[] {
+  return chapters.filter((c) => c.book_id === bookId).sort((a, b) => a.position - b.position);
+}
+
+function voiceFor(book: Book, characterId: string | null): string | null {
+  const narrator = book.settings.narrator_voice_id;
+  if (book.settings.cast_mode === "single" || !characterId) return narrator;
+  return characters.find((c) => c.id === characterId)?.voice_id ?? narrator;
+}
+
+/** Same rule as the server: a new take records its text; a later edit, or a
+ *  take marked stale, reads as stale until the next take. */
+function statusOf(segment: StorySegment, m: Meta): ParagraphStatus {
+  if (m.locked) return "locked";
+  if (segment.kind === "pause") return "voiced";
+  if (!segment.sound_id) return "unvoiced";
+  if (m.voiced_sound_id !== segment.sound_id) {
+    m.voiced_sound_id = segment.sound_id;
+    m.voiced_text = segment.text;
+  }
+  if (m.stale_sound_id === segment.sound_id) return "stale";
+  return m.voiced_text !== segment.text ? "stale" : "voiced";
+}
+
+async function paragraphsOf(chapter: Chapter): Promise<Paragraph[]> {
+  const segments = await mockApi.listSegments(chapter.story_id);
+  return segments.map((segment) => {
+    segmentChapter.set(segment.id, chapter.id);
+    const m = metaOf(segment.id);
+    return {
+      ...segment,
+      segment_id: segment.id,
+      chapter_id: chapter.id,
+      character_id: m.character_id,
+      locked: m.locked,
+      is_heading: m.is_heading,
+      status: statusOf(segment, m),
+    };
+  });
+}
+
+async function chapterWithStats(chapter: Chapter): Promise<ChapterWithStats & { stale: number }> {
+  const paragraphs = (await paragraphsOf(chapter)).filter((p) => p.kind === "line");
+  const stats: ChapterStats = {
+    chapter_id: chapter.id,
+    paragraphs: paragraphs.length,
+    voiced: paragraphs.filter((p) => p.sound_id).length,
+    locked: paragraphs.filter((p) => p.locked).length,
+    characters: paragraphs.reduce((n, p) => n + p.text.length, 0),
+    duration_s:
+      Math.round(paragraphs.reduce((n, p) => n + (p.sound_id ? (p.duration_s ?? 0) : 0), 0) * 100) /
+      100,
+  };
+  const status =
+    stats.voiced === 0 ? "empty" : stats.voiced >= stats.paragraphs ? "voiced" : "partial";
+  return {
+    ...chapter,
+    stats,
+    status,
+    stale: paragraphs.filter((p) => p.status === "stale").length,
+  };
+}
+
+async function detail(bookId: string): Promise<BookDetail> {
+  const book = requireBook(bookId);
+  const list = await Promise.all(bookChapters(bookId).map(chapterWithStats));
+  const stats: BookStats = {
+    chapters: list.length,
+    paragraphs: 0,
+    voiced: 0,
+    stale: 0,
+    locked: 0,
+    characters: 0,
+    duration_s: 0,
+  };
+  const out: ChapterWithStats[] = [];
+  for (const { stale, ...c } of list) {
+    stats.paragraphs += c.stats.paragraphs;
+    stats.voiced += c.stats.voiced;
+    stats.locked += c.stats.locked;
+    stats.characters += c.stats.characters;
+    stats.duration_s += c.stats.duration_s;
+    stats.stale += stale;
+    out.push(c);
+  }
+  stats.duration_s = Math.round(stats.duration_s * 100) / 100;
+  return {
+    ...structuredClone(book),
+    chapters: out,
+    characters: structuredClone(characters.filter((c) => c.book_id === bookId)),
+    stats,
+  };
+}
+
+function newBook(fields: BookPatch & { title: string }): Book {
+  const book: Book = {
+    id: id("book"),
+    project_id: fields.project_id ?? null,
+    title: fields.title,
+    subtitle: fields.subtitle ?? null,
+    author: fields.author ?? null,
+    narrator: fields.narrator ?? null,
+    description: fields.description ?? null,
+    language: fields.language ?? "en",
+    genres: fields.genres ?? [],
+    series: fields.series ?? null,
+    series_index: fields.series_index ?? null,
+    isbn: fields.isbn ?? null,
+    publisher: fields.publisher ?? null,
+    publication_date: fields.publication_date ?? null,
+    cover_path: null,
+    settings: {
+      ...DEFAULT_SETTINGS,
+      ...fields.settings,
+      pacing: { ...DEFAULT_SETTINGS.pacing, ...fields.settings?.pacing },
+    },
+    created_at: now(),
+    updated_at: now(),
+  };
+  books.unshift(book);
+  return book;
+}
+
+async function addChapter(
+  book: Book,
+  fields: {
+    title: string;
+    kind?: ChapterKind;
+    included?: boolean;
+    position?: number | null;
+    paragraphs?: (string | { text: string; character?: string; heading?: boolean; voiced?: boolean })[];
+  },
+): Promise<Chapter> {
+  const story = await mockApi.createStory(fields.title, book.project_id, "script");
+  const existing = bookChapters(book.id);
+  const position =
+    fields.position == null ? existing.length : Math.max(0, Math.min(fields.position, existing.length));
+  for (const c of existing) if (c.position >= position) c.position += 1;
+  const chapter: Chapter = {
+    id: id("chapter"),
+    book_id: book.id,
+    story_id: story.id,
+    position,
+    title: fields.title,
+    kind: fields.kind ?? "chapter",
+    included: fields.included ?? true,
+  };
+  chapters.push(chapter);
+  const lines = (fields.paragraphs ?? []).map((p) => (typeof p === "string" ? { text: p } : p));
+  const made = await Promise.all(
+    lines.map((line, i) => {
+      const character = line.character
+        ? characters.find((c) => c.book_id === book.id && c.name === line.character)
+        : undefined;
+      const voiced = "voiced" in line && line.voiced;
+      return mockApi.createSegment(story.id, {
+        text: line.text,
+        speaker: character?.name ?? "Narrator",
+        voice_id: voiceFor(book, character?.id ?? null),
+        language: book.language,
+        // Stand-in takes from the mock library, so some paragraphs are voiced.
+        ...(voiced ? { sound_id: `snd-${String((i % 12) + 1).padStart(3, "0")}` } : {}),
+      });
+    }),
+  );
+  made.forEach((segment, i) => {
+    segmentChapter.set(segment.id, chapter.id);
+    const m = metaOf(segment.id);
+    const line = lines[i]!;
+    m.is_heading = "heading" in line && line.heading === true;
+    m.character_id = line.character
+      ? (characters.find((c) => c.book_id === book.id && c.name === line.character)?.id ?? null)
+      : null;
+  });
+  touch(book.id);
+  return chapter;
+}
+
+/* ------------------------------------------------------------------ seed */
+
+let seeded: Promise<void> | null = null;
+
+function ready(): Promise<void> {
+  seeded ??= seed();
+  return seeded;
+}
+
+async function seed(): Promise<void> {
+  const book = newBook({
+    title: "The Lantern at Gull Point",
+    subtitle: "A coastal mystery",
+    author: "E. Marlow",
+    narrator: "Narrator",
+    description:
+      "When the lighthouse at Gull Point goes dark for one night, the keeper's daughter sets out to learn who climbed the stairs before her.",
+    genres: ["Mystery", "Coastal"],
+    series: "Gull Point",
+    series_index: 1,
+    publisher: "Sample Press",
+    publication_date: "2026",
+    settings: { narrator_voice_id: "voice-mock-narrator", cast_mode: "multi" },
+  });
+  characters.push(
+    {
+      id: id("char"),
+      book_id: book.id,
+      name: "Mara",
+      aliases: ["Mara Quill", "the keeper's daughter"],
+      description: "Seventeen, quick and stubborn. Coastal accent.",
+      voice_id: "voice-mock-ada",
+      model_id: null,
+      request_options: {},
+      color: 1,
+    },
+    {
+      id: id("char"),
+      book_id: book.id,
+      name: "Tomas",
+      aliases: ["old Tomas"],
+      description: "A fisherman in his sixties. Slow, warm, gravelly.",
+      voice_id: null,
+      model_id: null,
+      request_options: {},
+      color: 2,
+    },
+  );
+
+  await addChapter(book, {
+    title: "Copyright",
+    kind: "front_matter",
+    included: false,
+    paragraphs: ["Copyright 2026 E. Marlow. All rights reserved.", "This is a work of fiction."],
+  });
+  await addChapter(book, {
+    title: "Dedication",
+    kind: "front_matter",
+    paragraphs: [{ text: "For everyone who keeps a light on.", voiced: true }],
+  });
+  await addChapter(book, {
+    title: "Chapter One: The Dark Night",
+    paragraphs: [
+      { text: "Chapter One. The Dark Night.", heading: true, voiced: true },
+      {
+        text: "The lamp at Gull Point had turned every night for forty years, and on the forty-first it did not.",
+        voiced: true,
+      },
+      {
+        text: "Mara saw it from the kitchen window: a black gap in the sky where the beam should have been.",
+        voiced: true,
+      },
+      { text: "\"Someone's been up the stairs,\" she said, already reaching for her coat.", character: "Mara", voiced: true },
+      { text: "The wind took the door out of her hand and slammed it against the wall." },
+      { text: "Halfway up the path she met old Tomas coming down, a lantern swinging from his fist." },
+      { text: "\"Go home, girl. There's nothing up there but cold.\"", character: "Tomas" },
+      { text: "\"Then why were you up there?\"", character: "Mara" },
+    ],
+  });
+  await addChapter(book, {
+    title: "Chapter Two: Salt on the Stairs",
+    paragraphs: [
+      { text: "Chapter Two. Salt on the Stairs.", heading: true },
+      { text: "In the morning the stairs were dusted white, as if the sea had climbed them in the night." },
+      { text: "Mara knelt and touched it. Salt, dry and fine, in a trail that ended at the lamp room door." },
+      { text: "\"Tide doesn't come this high,\" she said to nobody.", character: "Mara" },
+      { text: "Below, the harbour bell began to ring, though there was no wind to ring it." },
+    ],
+  });
+  await addChapter(book, {
+    title: "Chapter Three: The Keeper's Log",
+    paragraphs: [
+      { text: "Chapter Three. The Keeper's Log.", heading: true },
+      { text: "Her father's log lay open on the desk, the last entry written in a hand that was not his." },
+      { text: "\"You'll want to read that slowly,\" said Tomas from the doorway.", character: "Tomas" },
+      { text: "She read it twice, then closed the book, and for a long moment neither of them spoke." },
+    ],
+  });
+  await addChapter(book, {
+    title: "About the Author",
+    kind: "back_matter",
+    paragraphs: ["E. Marlow writes about small harbours and the people who stay in them."],
+  });
+
+  // One stale paragraph, so every status shows in the sample: voiced, then edited.
+  const one = bookChapters(book.id)[2]!;
+  const paragraphs = await paragraphsOf(one);
+  const edited = paragraphs[2]!;
+  await mockApi.updateSegment(one.story_id, edited.id, {
+    text: "Mara saw it from the kitchen window: a black gap in the sky where the beam should have swept.",
+  });
+  metaOf(paragraphs[1]!.id).locked = true;
+
+  newBook({
+    title: "Field Notes",
+    author: "A. Writer",
+    genres: ["Nonfiction"],
+  });
+  await addChapter(books[0]!, { title: "Chapter 1", paragraphs: ["Notes begin here."] });
+}
+
+/* ------------------------------------------------------------------- api */
+
+export const mockAudiobookApi: AudiobookApi = {
+  async listBooks(): Promise<BookSummary[]> {
+    await ready();
+    const out: BookSummary[] = [];
+    for (const book of [...books].sort((a, b) => b.updated_at.localeCompare(a.updated_at))) {
+      const d = await detail(book.id);
+      out.push({ ...structuredClone(book), stats: d.stats });
+    }
+    return out;
+  },
+
+  async getBook(bookId) {
+    await ready();
+    return detail(bookId);
+  },
+
+  async createBook(fields = {}) {
+    await ready();
+    const book = newBook({ ...fields, title: fields.title?.trim() || "Untitled book" });
+    await addChapter(book, { title: "Chapter 1" });
+    return detail(book.id);
+  },
+
+  async updateBook(bookId, patch) {
+    await ready();
+    const book = requireBook(bookId);
+    const { settings, ...rest } = patch;
+    Object.assign(book, rest);
+    if (settings) {
+      book.settings = {
+        ...book.settings,
+        ...settings,
+        pacing: { ...book.settings.pacing, ...settings.pacing },
+      };
+    }
+    touch(bookId);
+    emit(bookId, { type: "book" });
+    return detail(bookId);
+  },
+
+  async deleteBook(bookId) {
+    await ready();
+    requireBook(bookId);
+    for (const chapter of bookChapters(bookId)) {
+      await mockApi.deleteStory(chapter.story_id, true);
+      chapters.splice(chapters.indexOf(chapter), 1);
+    }
+    books.splice(
+      books.findIndex((b) => b.id === bookId),
+      1,
+    );
+    emit(bookId, { type: "deleted" });
+  },
+
+  async uploadCover(bookId, file) {
+    await ready();
+    const book = requireBook(bookId);
+    const url = URL.createObjectURL(file);
+    covers.set(bookId, url);
+    book.cover_path = `mock-cover-${++seq}`;
+    emit(bookId, { type: "book" });
+    return detail(bookId);
+  },
+
+  coverUrl: (book) => (book.cover_path ? (covers.get(book.id) ?? null) : null),
+
+  async addChapter(bookId, req = {}) {
+    await ready();
+    const chapter = await addChapter(requireBook(bookId), {
+      title: req.title?.trim() || "New chapter",
+      kind: req.kind,
+      included: req.included,
+      position: req.position,
+      paragraphs: req.paragraphs,
+    });
+    emit(bookId, { type: "chapters" });
+    const { stale: _s, ...out } = await chapterWithStats(chapter);
+    return out;
+  },
+
+  async updateChapter(bookId, chapterId, patch) {
+    await ready();
+    const chapter = requireChapter(bookId, chapterId);
+    if (patch.title?.trim()) {
+      chapter.title = patch.title.trim();
+      await mockApi.renameStory(chapter.story_id, chapter.title);
+    }
+    if (patch.kind) chapter.kind = patch.kind;
+    if (patch.included !== undefined) chapter.included = patch.included;
+    touch(bookId);
+    emit(bookId, { type: "chapters" });
+    const { stale: _s, ...out } = await chapterWithStats(chapter);
+    return out;
+  },
+
+  async reorderChapters(bookId, ids) {
+    await ready();
+    const mine = bookChapters(bookId);
+    if (ids.length !== mine.length || !mine.every((c) => ids.includes(c.id))) {
+      throw new Error("ids must list every chapter of the book exactly once");
+    }
+    ids.forEach((cid, i) => {
+      chapters.find((c) => c.id === cid)!.position = i;
+    });
+    emit(bookId, { type: "chapters" });
+    return (await detail(bookId)).chapters;
+  },
+
+  async deleteChapter(bookId, chapterId) {
+    await ready();
+    const chapter = requireChapter(bookId, chapterId);
+    chapters.splice(chapters.indexOf(chapter), 1);
+    for (const c of bookChapters(bookId)) if (c.position > chapter.position) c.position -= 1;
+    await mockApi.deleteStory(chapter.story_id, true);
+    emit(bookId, { type: "chapters" });
+  },
+
+  async listParagraphs(bookId, chapterId) {
+    await ready();
+    return paragraphsOf(requireChapter(bookId, chapterId));
+  },
+
+  async addParagraph(bookId, chapterId, req) {
+    await ready();
+    const book = requireBook(bookId);
+    const chapter = requireChapter(bookId, chapterId);
+    const segment = await mockApi.createSegment(chapter.story_id, {
+      text: req.text ?? "",
+      position: req.position ?? null,
+      speaker: "Narrator",
+      voice_id: voiceFor(book, null),
+      language: book.language,
+    });
+    segmentChapter.set(segment.id, chapter.id);
+    const m = metaOf(segment.id);
+    m.is_heading = req.is_heading ?? false;
+    if (req.character_id) await this.castParagraphs(bookId, [segment.id], req.character_id);
+    emit(bookId, { type: "paragraphs", chapter_id: chapter.id, segment_ids: [segment.id] });
+    return (await paragraphsOf(chapter)).find((p) => p.id === segment.id)!;
+  },
+
+  async updateParagraph(bookId, segmentId, patch) {
+    await ready();
+    const chapter = chapterOfSegment(bookId, segmentId);
+    const m = metaOf(segmentId);
+    if (patch.text !== undefined) {
+      const current = (await paragraphsOf(chapter)).find((p) => p.id === segmentId)!;
+      if (m.locked && patch.locked !== false && patch.text !== current.text) {
+        throw new Error("This paragraph is locked. Unlock it to edit its text.");
+      }
+      await mockApi.updateSegment(chapter.story_id, segmentId, { text: patch.text });
+    }
+    if (patch.locked !== undefined) m.locked = patch.locked;
+    if (patch.is_heading !== undefined) m.is_heading = patch.is_heading;
+    if ("character_id" in patch) await this.castParagraphs(bookId, [segmentId], patch.character_id ?? null);
+    emit(bookId, { type: "paragraphs", chapter_id: chapter.id, segment_ids: [segmentId] });
+    return (await paragraphsOf(chapter)).find((p) => p.id === segmentId)!;
+  },
+
+  async deleteParagraph(bookId, segmentId) {
+    await ready();
+    const chapter = chapterOfSegment(bookId, segmentId);
+    await mockApi.deleteSegment(chapter.story_id, segmentId);
+    meta.delete(segmentId);
+    segmentChapter.delete(segmentId);
+    emit(bookId, { type: "paragraphs", chapter_id: chapter.id, segment_ids: [segmentId] });
+  },
+
+  async castParagraphs(bookId, segmentIds, characterId) {
+    await ready();
+    const book = requireBook(bookId);
+    const character = characterId ? characters.find((c) => c.id === characterId) : null;
+    if (characterId && (!character || character.book_id !== bookId)) {
+      throw new Error("Character not found");
+    }
+    const touched = new Set<string>();
+    for (const sid of segmentIds) {
+      const chapter = chapterOfSegment(bookId, sid);
+      const m = metaOf(sid);
+      m.character_id = characterId;
+      const update: SegmentPatch = { speaker: character?.name ?? "Narrator" };
+      if (!m.locked) update.voice_id = voiceFor(book, characterId);
+      await mockApi.updateSegment(chapter.story_id, sid, update);
+      touched.add(chapter.id);
+    }
+    for (const cid of touched) emit(bookId, { type: "paragraphs", chapter_id: cid });
+    return { changed: segmentIds.length };
+  },
+
+  async replace(bookId, req): Promise<ReplaceResult> {
+    await ready();
+    requireBook(bookId);
+    let source = req.regex ? req.find : req.find.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (req.whole_word) source = `(?<![\\p{L}\\p{N}_])(?:${source})(?![\\p{L}\\p{N}_])`;
+    const pattern = new RegExp(source, `gu${req.case_sensitive ? "" : "i"}`);
+    const result: ReplaceResult = {
+      matches: 0,
+      paragraphs: 0,
+      skipped_locked: 0,
+      skipped_matches: 0,
+      changed: [],
+      dry_run: req.dry_run === true,
+    };
+    for (const chapter of bookChapters(bookId)) {
+      if (req.chapter_ids?.length && !req.chapter_ids.includes(chapter.id)) continue;
+      let touched = false;
+      for (const p of await paragraphsOf(chapter)) {
+        if (p.kind !== "line") continue;
+        const count = p.text.match(pattern)?.length ?? 0;
+        if (!count) continue;
+        if (p.locked) {
+          result.skipped_locked++;
+          result.skipped_matches += count;
+          continue;
+        }
+        result.matches += count;
+        const next = req.regex ? p.text.replace(pattern, req.replace) : p.text.replace(pattern, () => req.replace);
+        if (next === p.text) continue;
+        result.paragraphs++;
+        result.changed.push({ chapter_id: chapter.id, segment_id: p.id });
+        if (!result.dry_run) {
+          await mockApi.updateSegment(chapter.story_id, p.id, { text: next });
+          touched = true;
+        }
+      }
+      if (touched) emit(bookId, { type: "paragraphs", chapter_id: chapter.id });
+    }
+    return result;
+  },
+
+  subscribe(bookId, onEvent) {
+    let set = listeners.get(bookId);
+    if (!set) {
+      set = new Set();
+      listeners.set(bookId, set);
+    }
+    set.add(onEvent);
+    setTimeout(() => onEvent({ type: "hello" }), 0);
+    return () => {
+      set.delete(onEvent);
+    };
+  },
+};
+
+/** For other areas' mocks: mark paragraphs stale, as a pronunciation change would. */
+export function mockMarkStale(segmentIds: string[]): void {
+  for (const sid of segmentIds) {
+    const m = metaOf(sid);
+    m.stale_sound_id = m.voiced_sound_id;
+  }
+}
+
+/** For other areas' mocks: the mock's characters, which the cast panel edits in place. */
+export function mockCharacters(): Character[] {
+  return characters;
+}
+
+/** For other areas' mocks: tell an open editor something changed. */
+export function mockEmit(bookId: string, event: AudiobookEvent): void {
+  emit(bookId, event);
+}

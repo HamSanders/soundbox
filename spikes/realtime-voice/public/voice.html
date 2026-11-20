@@ -44,17 +44,24 @@ body.speaking .state i { display: inline-block; }
 .clock { font: 13px var(--log); color: var(--pencil); min-width: 3.5em; text-align: right; }
 
 /* The stage: words on top, the line through the middle. */
-.stage { position: relative; display: grid; place-items: center; min-height: 0; }
-canvas#line { position: absolute; inset: 0; width: 100%; height: 100%; }
-.words { position: relative; z-index: 1; width: min(1100px, 100%); text-align: center; display: grid; gap: 18px; pointer-events: none; }
-.said { font: 800 clamp(34px, 6.4vw, 92px)/.98 var(--title); text-transform: uppercase; letter-spacing: .005em; text-wrap: balance; min-height: 1em; transition: opacity .3s var(--ease); }
+/* The words get their own box and are sized to fill it; the line lives in a
+   band underneath so it never runs through the text. */
+.stage { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) clamp(90px, 16dvh, 170px) auto; min-height: 0; padding-top: 8px; }
+.saybox { min-height: 0; display: grid; place-items: center; overflow: hidden; }
+canvas#line { width: 100%; height: 100%; display: block; }
+.words { width: min(1200px, 100%); margin: 0 auto; text-align: center; pointer-events: none; }
+.said { font: 800 64px/.98 var(--title); text-transform: uppercase; letter-spacing: .005em; text-wrap: balance; min-height: 1em; }
 .said .w { opacity: 0; display: inline-block; transform: translateY(.18em); animation: w .38s var(--ease) forwards; }
 @keyframes w { to { opacity: 1; transform: none; } }
-.you { font: 500 clamp(16px, 1.8vw, 21px)/1.4 var(--sans); color: var(--pencil); min-height: 1.4em; max-width: 60ch; margin: 0 auto; }
+.you { font: 500 clamp(16px, 1.8vw, 21px)/1.4 var(--sans); color: var(--pencil); min-height: 1.4em; max-width: 60ch; margin: 0 auto; text-align: center; padding-bottom: 4px; }
+.size { display: inline-flex; border: 1px solid var(--rule-strong); border-radius: 999px; overflow: hidden; }
+.size button { height: 46px; width: 46px; border: 0; background: transparent; cursor: pointer; font: 800 18px/1 var(--title); }
+.size button + button { border-left: 1px solid var(--rule-strong); font-size: 24px; }
+.size button:hover { background: var(--well); }
 .you.live { font-style: italic; }
 
 /* Start screen, same page: the call is one tap away. */
-.start { position: absolute; inset: 0; z-index: 3; display: grid; align-content: center; justify-items: start; gap: 26px; padding: 0 max(20px, 6vw); background: var(--paper); transition: opacity .5s var(--ease), visibility .5s; }
+.start { position: absolute; inset: 0; z-index: 3; grid-row: 1 / -1; display: grid; align-content: center; justify-items: start; gap: 26px; padding: 0 max(20px, 6vw); background: var(--paper); transition: opacity .5s var(--ease), visibility .5s; }
 body.live .start { opacity: 0; visibility: hidden; }
 .start h1 { margin: 0; font: 800 clamp(64px, min(14vw, 19dvh), 220px)/.84 var(--title); text-transform: uppercase; }
 .start h1 em { font-style: normal; color: var(--beak); }
@@ -98,11 +105,9 @@ form.type input:focus { outline: none; border-color: var(--ink); }
   </header>
 
   <main class="stage">
+    <div class="saybox" id="saybox"><div class="words"><div class="said" id="said" aria-live="polite"></div></div></div>
     <canvas id="line" aria-hidden="true"></canvas>
-    <div class="words">
-      <div class="said" id="said" aria-live="polite"></div>
-      <div class="you" id="you"></div>
-    </div>
+    <div class="you" id="you"></div>
 
     <section class="start" id="start">
       <div class="log">No. <span id="callNo">0001</span> · a voice call · runs on this machine</div>
@@ -119,6 +124,7 @@ form.type input:focus { outline: none; border-color: var(--ink); }
 
   <div class="bar">
     <button class="btn" id="mute" aria-pressed="false" aria-label="Mute"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="5.5" y="1.5" width="5" height="8.5" rx="2.5"/><path d="M3 8a5 5 0 0 0 10 0M8 13v2"/></svg><span>Mute</span></button>
+    <span class="size" role="group" aria-label="Text size"><button id="smaller" title="Smaller text" aria-label="Smaller text">A</button><button id="bigger" title="Bigger text" aria-label="Bigger text">A</button></span>
     <button class="btn" id="typeBtn" aria-pressed="false" aria-label="Type instead"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="1.5" y="4" width="13" height="8" rx="2"/><path d="M4 7h1M7 7h1M10 7h2M5 9.5h6"/></svg><span>Type</span></button>
     <form class="type" id="typeForm"><input id="typeIn" placeholder="Type and press Enter" autocomplete="off" aria-label="Message"></form>
     <button class="btn end" id="end"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 5.5c2.6 0 5 .8 6.6 2.2.5.4.5 1.1.1 1.5l-1.2 1.2c-.4.4-1 .4-1.4.1l-1.6-1.2c-.3-.2-.4-.5-.4-.8V7.4a9 9 0 0 0-4.2 0v1.1c0 .3-.2.6-.4.8l-1.6 1.2c-.4.3-1 .3-1.4-.1L1.3 9.2c-.4-.4-.4-1.1.1-1.5C3 6.3 5.4 5.5 8 5.5z"/></svg>End</button>
@@ -165,7 +171,7 @@ function draw() {
   lvl.you += ((muted ? 0 : peak(micAnalyser)) - lvl.you) * 0.18;
   phase.a += 0.035 + lvl.bot * 0.09; phase.b += 0.05 + lvl.you * 0.08;
   g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
-  const mid = H * 0.5, amp = Math.min(H * 0.32, 220), x0 = 24, x1 = W - 24;
+  const mid = H * 0.5, amp = H * 0.42, x0 = 8, x1 = W - 14;
   g.lineWidth = 2.6; g.lineCap = "round"; g.lineJoin = "round"; g.strokeStyle = ink; g.globalAlpha = 0.9;
   g.beginPath();
   let lastY = mid;
@@ -201,7 +207,26 @@ function setReply(text) {
     const s = document.createElement("span"); s.className = "w"; s.textContent = keep[i]; el.append(s, " ");
   }
   replyWords = keep.length;
+  fit();
 }
+// Fit the reply to its box: the biggest size that fits, times the reader's own
+// scale (A / A buttons, remembered). Runs as words arrive and on resize.
+let textScale = Number(store.get("mirli-voice-text") || 1);
+function fit() {
+  const box = $("saybox"), el = $("said");
+  if (!el.textContent.trim()) return;
+  const maxH = box.clientHeight - 8, maxW = box.clientWidth;
+  let lo = 18, hi = Math.min(220, maxH);
+  for (let i = 0; i < 9; i++) {
+    const mid = (lo + hi) / 2;
+    el.style.fontSize = mid + "px";
+    if (el.scrollHeight <= maxH && el.scrollWidth <= maxW) lo = mid; else hi = mid;
+  }
+  el.style.fontSize = Math.max(18, lo * textScale) + "px";
+}
+addEventListener("resize", fit);
+$("smaller").onclick = () => { textScale = Math.max(0.5, +(textScale - 0.1).toFixed(2)); store.set("mirli-voice-text", textScale); fit(); };
+$("bigger").onclick = () => { textScale = Math.min(1, +(textScale + 0.1).toFixed(2)); store.set("mirli-voice-text", textScale); fit(); };
 function clearReply() { $("said").textContent = ""; replyWords = 0; reply = ""; }
 
 // ---- The call ----

@@ -261,6 +261,9 @@ export interface Voice {
   notes?: string | null;
   /** Served URL of a generated avatar (`/artwork/<file>.png`), or null. */
   artwork?: string | null;
+  /** `clone`: when the user confirmed the voice is theirs or used with
+   *  permission. Null if they never did. */
+  consent_at?: string | null;
   /** How many library sounds were read in this voice — single-voice reads and
    *  conversions, the same set `GET /api/sounds?voice_id=` returns. */
   read_count?: number;
@@ -817,6 +820,10 @@ export const voiceCreateSchema = z.object({
    *  off both ends, an over-full-scale peak pulled back. Never boosts or
    *  re-tones it. Off by default so an API caller gets their bytes verbatim. */
   tidy: z.boolean().default(false),
+  /** clone only: the user confirmed this is their voice, or that they have
+   *  permission to use it. Recorded as `consent_at`; a hosted service may
+   *  refuse a clip without it. */
+  consent: z.boolean().optional(),
 });
 
 export type VoiceCreate = z.input<typeof voiceCreateSchema>;
@@ -866,6 +873,8 @@ export const voicePatchSchema = z.object({
   /** Update transcripts by sample id, without changing the audio or its order. */
   samples: z.array(z.object({ id: z.string(), reference_text: referenceTextSchema }))
     .max(5).optional(),
+  /** true records the consent confirmation now; false withdraws it. */
+  consent: z.boolean().optional(),
 });
 
 export type VoicePatch = z.infer<typeof voicePatchSchema>;

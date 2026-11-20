@@ -10,10 +10,14 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 
+import wavefile from "wavefile";
+
+import { decodeWav } from "../audio/dsp.js";
 import { decodeAudio } from "../endpoints/client.js";
 import { CancelledJob, ModelError } from "../errors.js";
-import type { GenerateOptions, GenerationModel, RenderedAudio, SpeakOptions } from "../models/types.js";
+import type { GenerateOptions, GenerationModel, RenderedAudio, SpeakOptions, VoiceRefInfo } from "../models/types.js";
 import { DEFAULT_SUPPORTS, type ModelInfo } from "../schemas.js";
 import { CloudClient, CloudError } from "./client.js";
 import type { CloudModel as CloudModelInfo, JobParams, Task } from "./contract.js";
@@ -33,7 +37,28 @@ export interface CloudContext {
   onSpend?(): void;
 }
 
+const { WaveFile } = wavefile;
+
 const POLL_MS = 1000;
+
+/**
+ * A clip as the gateway takes it: WAV, cut to the model's longest reference.
+ * Uncut clips go as they are on disk. A cut one is re-encoded as 16-bit PCM,
+ * which every speech model reads, from its first `maxS` seconds.
+ */
+export async function clipForUpload(path: string, maxS: number | null): Promise<{ wav: Buffer; trimmed: boolean }> {
+  const bytes = await readFile(path);
+  if (maxS === null) return { wav: bytes, trimmed: false };
+  const { audio, sampleRate } = decodeWav(bytes);
+  const frames = audio[0]?.length ?? 0;
+  const keep = Math.floor(maxS * sampleRate);
+  if (frames <= keep) return { wav: bytes, trimmed: false };
+  const wav = new WaveFile();
+  const channels = audio.map((ch) => Array.from(ch.subarray(0, keep)));
+  wav.fromScratch(channels.length, sampleRate, "32f", channels.length === 1 ? channels[0]! : channels);
+  wav.toBitDepth("16");
+  return { wav: Buffer.from(wav.toBuffer()), trimmed: true };
+}
 
 export class CloudModel implements GenerationModel {
   readonly provider = "cloud" as const;
@@ -58,6 +83,7 @@ export class CloudModel implements GenerationModel {
   describe(): ModelInfo {
     const m = this.info;
     const speech = m.task === "speak";
+    const vc = m.task === "convert";
     return {
       id: m.id,
       // The same open model may also be installed locally; the picker must
@@ -69,14 +95,26 @@ export class CloudModel implements GenerationModel {
       hf_repo: null,
       gated: false,
       family: "cloud",
-      params: [],
-      task: speech ? "tts" : m.task === "separate" ? "sep" : "gen",
+      params: m.languages?.length
+        ? [
+            {
+              name: "language",
+              type: "choice",
+              label: "Language",
+              info: "The language of the text.",
+              group: "voice",
+              default: m.languages[0]!,
+              choices: [...m.languages],
+            },
+          ]
+        : [],
+      task: speech ? "tts" : vc ? "vc" : m.task === "separate" ? "sep" : "gen",
       voice_ids: [...m.voice_ids],
-      requires_voice_reference: false,
+      requires_voice_reference: Boolean(m.reference?.required),
       category: m.category === "stems" ? "utility" : m.category,
       max_duration_s: m.max_duration_s,
-      sample_rate: speech ? 24_000 : 44_100,
-      channels: speech ? 1 : 2,
+      sample_rate: speech || vc ? 24_000 : 44_100,
+      channels: speech || vc ? 1 : 2,
       supports: {
         ...DEFAULT_SUPPORTS,
         negative_prompt: m.supports.negative_prompt,
@@ -85,7 +123,7 @@ export class CloudModel implements GenerationModel {
         cfg: false,
         lyrics: m.supports.lyrics,
         text: speech,
-        voice_reference: false,
+        voice_reference: m.supports.voice_reference,
       },
       defaults: { duration_s: m.default_duration_s },
       vram_estimate_mb: 0,
@@ -132,11 +170,41 @@ export class CloudModel implements GenerationModel {
 
   /* ---------------------------------------------------------------- render */
 
-  private async run(task: Task, params: JobParams, progress?: GenerateOptions["progress"]): Promise<RenderedAudio> {
+  private async run(
+    task: Task,
+    params: JobParams,
+    progress?: GenerateOptions["progress"],
+    clips?: { reference?: string | null; source?: string | null; voice?: VoiceRefInfo | null },
+  ): Promise<RenderedAudio> {
     const client = this.ctx.client();
     if (!client) throw new ModelError(`Sign in to Mirli Cloud in Settings to use ${this.info.name}.`);
     const caps = this.ctx.caps();
     try {
+      if (clips?.reference || clips?.source) {
+        if (clips.reference && !clips.voice?.consentAt) {
+          throw new ModelError(
+            `Before ${clips.voice?.name ? `“${clips.voice.name}”` : "this voice"} can be used on Mirli Cloud, confirm it's your voice ` +
+              `or that you have permission to use it. Open Voice Lab → Edit voice.`,
+          );
+        }
+        progress?.(0.01, "Uploading the clip");
+        const max = this.info.reference?.max_s ?? null;
+        let trimmed = false;
+        if (clips.reference) {
+          const clip = await clipForUpload(clips.reference, max);
+          trimmed = clip.trimmed;
+          const up = await client.upload(clip.wav);
+          params = { ...params, reference_upload: up.upload_id };
+        }
+        if (clips.source) {
+          const up = await client.upload((await clipForUpload(clips.source, null)).wav);
+          params = { ...params, source_upload: up.upload_id };
+        }
+        if (clips.voice?.name) params = { ...params, voice_label: clips.voice.name.slice(0, 200) };
+        // A transcript describes the whole clip; once cut, it no longer matches.
+        const words = clips.voice?.transcript?.trim();
+        if (words && !trimmed) params = { ...params, reference_text: words.slice(0, 2000) };
+      }
       progress?.(0.02, "Checking the price");
       const [quote, account] = await Promise.all([client.quote(this.id, task, params), client.account()]);
       if (quote.credits > caps.perCall) {
@@ -159,7 +227,14 @@ export class CloudModel implements GenerationModel {
       }
 
       progress?.(0.05, `Sending to Mirli Cloud (${quote.credits} credits)`);
-      let job = await client.createJob(this.id, task, params, caps.perCall, randomUUID());
+      let job = await client.createJob(
+        this.id,
+        task,
+        params,
+        caps.perCall,
+        randomUUID(),
+        params.reference_upload ? "own_voice_or_permission" : undefined,
+      );
       const handle = progress?.handle;
       while (job.state === "queued" || job.state === "running") {
         if (handle?.cancelled) {
@@ -210,13 +285,34 @@ export class CloudModel implements GenerationModel {
 
   async speak(text: string, options: SpeakOptions = {}): Promise<RenderedAudio> {
     if (this.info.task !== "speak") throw new ModelError(`${this.info.name} is not a speech model.`);
-    if (options.voiceRefPath) throw new ModelError(`${this.info.name} can't clone a voice yet; pick one of its built-in voices.`);
-    const voice = options.voiceId || this.info.voice_ids[0] || null;
-    return this.run("speak", { text, ...(voice ? { voice } : {}) }, options.progress);
+    const ref = options.voiceRefPath ?? null;
+    if (ref && !this.info.supports.voice_reference) {
+      throw new ModelError(`${this.info.name} can't speak in a cloned voice; pick one of its built-in voices.`);
+    }
+    if (!ref && this.info.reference?.required) {
+      throw new ModelError(`${this.info.name} only speaks in a cloned voice. Pick one of your voices.`);
+    }
+    const voice = ref ? null : options.voiceId || this.info.voice_ids[0] || null;
+    const language = options.requestOptions?.language ?? options.loadOptions?.language ?? null;
+    return this.run(
+      "speak",
+      { text, ...(voice ? { voice } : {}), ...(language ? { language } : {}), ...(this.info.supports.seed && options.seed ? { seed: options.seed } : {}) },
+      options.progress,
+      { reference: ref, voice: options.voiceRef ?? null },
+    );
   }
 
-  async convert(): Promise<RenderedAudio> {
-    throw new ModelError(`${this.info.name} cannot convert voices.`);
+  async convert(
+    sourceWavPath: string,
+    voiceRefPath: string,
+    options: { seed?: number | null; progress?: GenerateOptions["progress"]; voiceRef?: VoiceRefInfo | null } = {},
+  ): Promise<RenderedAudio> {
+    if (this.info.task !== "convert") throw new ModelError(`${this.info.name} cannot convert voices.`);
+    return this.run("convert", {}, options.progress, {
+      reference: voiceRefPath,
+      source: sourceWavPath,
+      voice: options.voiceRef ?? null,
+    });
   }
 
   async separate(): Promise<{ stemName: string; audio: RenderedAudio }[]> {

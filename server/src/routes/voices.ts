@@ -146,6 +146,7 @@ export function registerVoices(app: FastifyInstance, svc: MirliService): void {
         source_sound_id: null,
         reference_text: voiceCreateSchema.shape.reference_text.parse(strQuery(query.reference_text)),
         tidy: boolQuery(query.tidy, "tidy") ?? false,
+        consent: boolQuery(query.consent, "consent") ?? false,
       },
       decoded,
     );

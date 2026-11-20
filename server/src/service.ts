@@ -50,6 +50,7 @@ import { CancelledJob, ModelError, StreamUnsupported } from "./errors.js";
 import { JobHandle, JobManager } from "./jobs.js";
 import { LlmService, type LlmStatus } from "./llm/service.js";
 import type { StudioContext } from "./llm/studio.js";
+import type { VoiceRefInfo } from "./models/types.js";
 import type {
   AssistantModelCard,
   AssistantProposal,
@@ -131,6 +132,13 @@ import { InstrumentLibrary, instrumentManifest } from "./instruments/index.js";
 const log = getLogger("mirli.service");
 
 /** `replace(/\/+$/, "")` backtracks quadratically on a long run of slashes. */
+/** What a remote model is told about a clone voice: its name, the consent
+ *  date, and the clips' transcripts joined in clip order. */
+function voiceRefInfo(voice: Voice): VoiceRefInfo {
+  const words = (voice.samples ?? []).map((x) => x.reference_text?.trim()).filter(Boolean);
+  return { name: voice.name, consentAt: voice.consent_at ?? null, transcript: words.length ? words.join(" ") : null };
+}
+
 function trimTrailingSlashes(value: string): string {
   let end = value.length;
   while (end > 0 && value.charCodeAt(end - 1) === 47) end -= 1;
@@ -979,7 +987,7 @@ export class MirliService {
     if (info.task !== "tts") {
       throw new ModelError(`${info.name} is not a text-to-speech model.`);
     }
-    const { refPath, builtinId, requestOptions } = this.resolveVoice(
+    const { refPath, builtinId, requestOptions, voiceRef } = this.resolveVoice(
       segment.voice_id ?? null, info.family,
       this.deliveryFor(segment, info.family, req.request_options),
     );
@@ -992,6 +1000,7 @@ export class MirliService {
     handle?.phase("generating", "Speaking");
     const clip = await model.speak(segment.text, {
       voiceRefPath: refPath,
+      voiceRef,
       voiceId: builtinId,
       seed: req.seed ?? null,
       steps: req.steps ?? null,
@@ -1450,13 +1459,14 @@ export class MirliService {
     refPath: string | null;
     builtinId: string | null;
     requestOptions: Record<string, string>;
+    voiceRef: VoiceRefInfo | null;
   } {
     const requestOptions = { ...options };
-    if (!voiceId) return { refPath: null, builtinId: null, requestOptions };
+    if (!voiceId) return { refPath: null, builtinId: null, requestOptions, voiceRef: null };
     const voice = this.db.getVoice(voiceId);
     if (voice === null) throw new ModelError(`Voice '${voiceId}' not found.`);
     if (voice.kind === "builtin") {
-      return { refPath: null, builtinId: voice.voice_id ?? null, requestOptions };
+      return { refPath: null, builtinId: voice.voice_id ?? null, requestOptions, voiceRef: null };
     }
     const refPath = this.voiceRefPath(voice.id);
     if (refPath === null) {
@@ -1476,7 +1486,7 @@ export class MirliService {
       }
       requestOptions.reference_text = samples.map((s) => s.reference_text!.trim()).join(" ");
     }
-    return { refPath, builtinId: null, requestOptions };
+    return { refPath, builtinId: null, requestOptions, voiceRef: voiceRefInfo(voice) };
   }
 
   /**
@@ -2260,6 +2270,7 @@ export class MirliService {
         reference_file: `/files/${filename}`,
         model_id: req.model_id ?? null,
         notes: req.notes ?? null,
+        consent_at: req.consent ? created : null,
       },
       filename,
     );
@@ -2612,7 +2623,7 @@ export class MirliService {
     const n = resolved.length;
     for (let i = 0; i < n; i++) {
       handle.checkCancelled();
-      const { line, refPath, builtinId, requestOptions } = resolved[i]!;
+      const { line, refPath, builtinId, requestOptions, voiceRef } = resolved[i]!;
       const base = 0.2 + (i / n) * 0.7;
       const span = 0.7 / n;
       const label = n > 1 ? `Line ${i + 1}/${n}` : "Speaking";
@@ -2635,6 +2646,7 @@ export class MirliService {
       clips.push(
         await lineModel.speak(line.text, {
           voiceRefPath: refPath,
+          voiceRef,
           voiceId: builtinId,
           // One delivery for the whole read: `speak` is the one-off path with
           // no story behind it, so there is nothing per-line to merge.
@@ -2740,7 +2752,7 @@ export class MirliService {
     }
     // Same voice resolution as /api/speak, so a Fish clone gets its clips'
     // reference transcripts (and fails early, before the GPU, without them).
-    const { refPath, builtinId, requestOptions } = this.resolveVoice(
+    const { refPath, builtinId, requestOptions, voiceRef } = this.resolveVoice(
       req.voice_id ?? null,
       info.family,
       withRequirements(info.family, req.request_options),
@@ -2759,6 +2771,7 @@ export class MirliService {
       this.models.touch();
       const chunks = model.speakStream(req.text, {
         voiceRefPath: refPath,
+        voiceRef,
         voiceId: builtinId,
         seed: req.seed ?? null,
         steps: req.steps ?? null,
@@ -2884,7 +2897,9 @@ export class MirliService {
     handle.phase("generating", "Converting voice");
     let converted;
     try {
+      const voiceRow = this.db.getVoice(req.voice_id);
       converted = await model.convert(inputPath, refPath, {
+        voiceRef: voiceRow ? voiceRefInfo(voiceRow) : null,
         seed: req.seed ?? null,
         progress: reporter(handle, 0.3, 0.62, "Converting voice"),
       });

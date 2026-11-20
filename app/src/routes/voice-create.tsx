@@ -45,7 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TidySwitch } from "@/components/voice-clips";
+import { ConsentSwitch, TidySwitch } from "@/components/voice-clips";
 import { formatClock, isReady } from "@/components/voice-shared";
 import { useRecorder } from "@/hooks/use-recorder";
 import { AUDIO_ACCEPT, stemOf, toWav } from "@/lib/audio-file";
@@ -366,6 +366,7 @@ export function VoiceCloneCreatePage() {
   const [notes, setNotes] = useState("");
   const [modelId, setModelId] = useState("");
   const [tidy, setTidy] = useState(true);
+  const [consent, setConsent] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -519,10 +520,16 @@ export function VoiceCloneCreatePage() {
   if (total > MAX_TOTAL_S)
     problems.push(`All clips together must stay under ${MAX_TOTAL_S}s.`);
 
+  // A model that runs elsewhere sends the clip off this machine with every
+  // read, and that service refuses a clip nobody vouched for.
+  const chosen = cloneModels.find((m) => m.id === modelId);
+  const consentRequired = Boolean(chosen && (chosen.provider ?? "local") !== "local");
+
   const canSave =
     clips.length > 0 &&
     name.trim() &&
     modelId &&
+    (consent || !consentRequired) &&
     problems.length === 0 &&
     !saving &&
     !adding &&
@@ -544,6 +551,7 @@ export function VoiceCloneCreatePage() {
               modelId,
               referenceText: text(first),
               tidy,
+              consent,
             })
           : await create.mutateAsync({
               name: name.trim(),
@@ -553,6 +561,7 @@ export function VoiceCloneCreatePage() {
               source_sound_id: first.source.soundId,
               reference_text: text(first),
               tidy,
+              consent,
             });
       createdId = voice.id;
       for (const c of rest) {
@@ -871,10 +880,14 @@ export function VoiceCloneCreatePage() {
             onCheckedChange={setTidy}
           />
         </div>
-        <p className="text-muted-foreground text-xs md:col-span-2">
-          Clone your own voice, or someone who has said yes. Most of these
-          models&apos; licences do not ask for consent, so getting it is on you.
-        </p>
+        <div className="md:col-span-2">
+          <ConsentSwitch
+            id="clone-consent"
+            checked={consent}
+            onCheckedChange={setConsent}
+            required={consentRequired}
+          />
+        </div>
         <div className="flex justify-end gap-2 md:col-span-2">
           <Button variant="ghost" asChild>
             <Link to="/voice/lab">Cancel</Link>

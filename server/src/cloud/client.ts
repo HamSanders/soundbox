@@ -7,6 +7,7 @@
 import { z } from "zod";
 
 import {
+  CONTRACT_VERSION,
   accountResponse,
   checkoutResponse,
   deviceCodeResponse,
@@ -18,6 +19,7 @@ import {
   type PackId,
   quoteResponse,
   type Task,
+  uploadResponse,
 } from "./contract.js";
 
 export type FetchFn = typeof fetch;
@@ -57,6 +59,7 @@ export class CloudClient {
         method,
         headers: {
           accept: "application/json",
+          "x-mirli-contract": String(CONTRACT_VERSION),
           ...(body === undefined ? {} : { "content-type": "application/json" }),
           ...(this.token ? { authorization: `Bearer ${this.token}` } : {}),
           ...headers,
@@ -96,10 +99,54 @@ export class CloudClient {
     return this.call(quoteResponse, "POST", "/v1/quote", { model, task, params });
   }
 
-  createJob(model: string, task: Task, params: JobParams, maxCredits: number, idempotencyKey: string) {
-    return this.call(jobResponse, "POST", "/v1/jobs", { model, task, params, max_credits: maxCredits }, {
-      "idempotency-key": idempotencyKey,
-    });
+  createJob(
+    model: string,
+    task: Task,
+    params: JobParams,
+    maxCredits: number,
+    idempotencyKey: string,
+    consent?: "own_voice_or_permission",
+  ) {
+    return this.call(
+      jobResponse,
+      "POST",
+      "/v1/jobs",
+      { model, task, params, max_credits: maxCredits, ...(consent ? { consent } : {}) },
+      { "idempotency-key": idempotencyKey },
+    );
+  }
+
+  /** Send a WAV clip (a voice reference, or a recording to re-voice). */
+  async upload(wav: Buffer) {
+    let res: Response;
+    try {
+      res = await this.fetchImpl(`${this.baseUrl}/v1/uploads`, {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "content-type": "audio/wav",
+          "x-mirli-contract": String(CONTRACT_VERSION),
+          ...(this.token ? { authorization: `Bearer ${this.token}` } : {}),
+        },
+        body: new Uint8Array(wav),
+        signal: AbortSignal.timeout(120_000),
+      });
+    } catch (e) {
+      throw new CloudError("network", `Couldn't reach Mirli Cloud (${(e as Error).message}).`, 0);
+    }
+    const text = await res.text();
+    let json: unknown = null;
+    try {
+      json = text ? JSON.parse(text) : null;
+    } catch {
+      // Handled below.
+    }
+    if (!res.ok) {
+      const err = errorBody.safeParse(json);
+      if (err.success) throw new CloudError(err.data.error.code, err.data.error.message, res.status, err.data.error.details ?? {});
+      throw new CloudError("backend_error", `Mirli Cloud answered ${res.status} to the upload.`, res.status);
+    }
+    return uploadResponse.parse(json);
   }
 
   job(id: string) {

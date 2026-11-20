@@ -7,12 +7,17 @@
 
 import { z } from "zod";
 
-export const CONTRACT_VERSION = 1;
+/**
+ * 2 added the "convert" task, reference uploads, consent and the voice error
+ * codes. The app sends its version as `x-mirli-contract`; older apps are not
+ * shown models whose task they can't parse.
+ */
+export const CONTRACT_VERSION = 2;
 
 export const priceUnit = z.enum(["render", "minute", "1k_chars", "10s"]);
 export type PriceUnit = z.infer<typeof priceUnit>;
 
-export const task = z.enum(["generate", "speak", "separate"]);
+export const task = z.enum(["generate", "speak", "separate", "convert"]);
 export type Task = z.infer<typeof task>;
 
 /** One model as the app sees it. Mirrors the parts of the app's ModelInfo it needs. */
@@ -35,6 +40,14 @@ export const cloudModel = z.object({
   voice_ids: z.array(z.string()),
   license_note: z.string(),
   watermark: z.boolean(),
+  /**
+   * What a voice reference clip must be, for models that take one. The app
+   * trims a longer clip to `max_s` before uploading. `required`: the model has
+   * no built-in voice and only speaks in a cloned one.
+   */
+  reference: z.object({ min_s: z.number().nonnegative(), max_s: z.number().positive(), required: z.boolean() }).nullish(),
+  /** Languages `params.language` may name, when the model takes one. */
+  languages: z.array(z.string()).optional(),
 });
 export type CloudModel = z.infer<typeof cloudModel>;
 
@@ -50,6 +63,14 @@ export const jobParams = z
     text: z.string().max(5000).optional(),
     voice: z.string().max(200).nullish(),
     language: z.string().max(20).nullish(),
+    /** A voice reference clip, from POST /v1/uploads. Needs `consent`. */
+    reference_upload: z.string().uuid().nullish(),
+    /** The words spoken in the reference clip, when known. */
+    reference_text: z.string().max(2000).nullish(),
+    /** The audio to re-voice, for "convert". From POST /v1/uploads. */
+    source_upload: z.string().uuid().nullish(),
+    /** The name the user gave the voice. Checked, never sent to a model. */
+    voice_label: z.string().max(200).nullish(),
   })
   .strict();
 export type JobParams = z.infer<typeof jobParams>;
@@ -63,6 +84,18 @@ export const createJobRequest = z.object({
   params: jobParams,
   /** The client's per-call cap. A quote above it is refused, not trimmed. */
   max_credits: z.number().int().positive(),
+  /**
+   * Required whenever a reference clip is used: the person ticked "this is my
+   * voice, or I have permission to use it". Logged on the job.
+   */
+  consent: z.literal("own_voice_or_permission").optional(),
+});
+
+/** POST /v1/uploads takes the raw WAV bytes as the body. */
+export const uploadResponse = z.object({
+  upload_id: z.string().uuid(),
+  expires_at: z.string(),
+  duration_s: z.number(),
 });
 
 export const jobState = z.enum(["queued", "running", "succeeded", "failed", "cancelled"]);
@@ -116,6 +149,12 @@ export const errorCode = z.enum([
   "access_denied",
   "paused",
   "backend_error",
+  /** A reference clip was sent without the consent box ticked. */
+  "consent_required",
+  /** Voice cloning opens after the account's first purchase. */
+  "purchase_required",
+  /** The request names a real public figure as the voice to imitate. */
+  "blocked_content",
 ]);
 export type ErrorCode = z.infer<typeof errorCode>;
 export const errorBody = z.object({

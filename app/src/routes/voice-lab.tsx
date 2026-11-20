@@ -84,7 +84,7 @@ import {
 } from "@/components/voice-library";
 import { VoiceAvatar } from "@/components/voice-avatar";
 import { WaveformPlayer } from "@/components/waveform-player";
-import { VoiceClipsDialog, VoiceHistoryDialog } from "@/components/voice-clips";
+import { ConsentSwitch, VoiceClipsDialog, VoiceHistoryDialog } from "@/components/voice-clips";
 import { useJobStream, useJobStreams } from "@/hooks/use-job-stream";
 import {
   useCancelJob,
@@ -103,6 +103,7 @@ import {
   qk,
 } from "@/lib/queries";
 import type { Job, Model, Voice } from "@/lib/api";
+import { cloudPriceLabel } from "@/lib/cloud";
 import { voiceReferenceError } from "@/lib/voice-reference";
 
 /** Below this many voices the search box is pure chrome — you can see them all
@@ -464,6 +465,8 @@ function VoiceConvertPanel({ models, voices }: { models: Model[]; voices: Voice[
 
   const sounds = useSounds({ limit: 100, offset: 0 });
   const convert = useConvertVoice();
+  const update = useUpdateVoice();
+  const [consent, setConsent] = useState(false);
   const { job } = useJobStream(jobId);
 
   // No conversion model installed is not an error state worth a panel — the
@@ -476,8 +479,17 @@ function VoiceConvertPanel({ models, voices }: { models: Model[]; voices: Voice[
   const clones = voices.filter((v) => v.kind === "clone");
   const items = sounds.data?.items ?? [];
 
-  const submit = () => {
+  // A model that runs elsewhere takes the voice's clip off this machine, and
+  // that service refuses a clip nobody vouched for.
+  const target = clones.find((v) => v.id === voiceId);
+  const needsConsent = (model.provider ?? "local") !== "local" && Boolean(target) && !target?.consent_at;
+
+  const submit = async () => {
     if (!soundId || !voiceId) return;
+    if (needsConsent) {
+      if (!consent) return;
+      await update.mutateAsync({ id: voiceId, patch: { consent: true } });
+    }
     convert.mutate(
       { model: model.id, source_sound_id: soundId, voice_id: voiceId },
       { onSuccess: (ref) => setJobId(ref.job_id) },
@@ -555,10 +567,20 @@ function VoiceConvertPanel({ models, voices }: { models: Model[]; voices: Voice[
         match against, which a built-in voice has no equivalent of.
       </p>
 
-      <Button disabled={!soundId || !voiceId || convert.isPending} onClick={submit}>
+      {needsConsent && <ConsentSwitch id="voice-vc-consent" checked={consent} onCheckedChange={setConsent} required />}
+
+      <Button
+        disabled={!soundId || !voiceId || convert.isPending || update.isPending || (needsConsent && !consent)}
+        onClick={() => void submit().catch(() => {})}
+      >
         <UserRoundIcon />
         {convert.isPending ? "Starting…" : "Convert"}
       </Button>
+      {model.price && (
+        <p className="text-muted-foreground text-xs">
+          {cloudPriceLabel(model.price, items.find((x) => x.id === soundId)?.duration_s)} on Mirli Cloud.
+        </p>
+      )}
 
       <JobResult job={job} />
     </div>
@@ -597,6 +619,7 @@ export function VoiceLabPage() {
   }, [fromId, fromSound.data]);
   const [editing, setEditing] = useState<Voice | null>(null);
   const [nameDraft, setNameDraft] = useState("");
+  const [consentDraft, setConsentDraft] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
   const [transcriptDrafts, setTranscriptDrafts] = useState<Record<string, string>>({});
   const [deleting, setDeleting] = useState<Voice | null>(null);
@@ -673,6 +696,7 @@ export function VoiceLabPage() {
   const openEdit = (voice: Voice) => {
     setNameDraft(voice.name);
     setNotesDraft(voice.notes ?? "");
+    setConsentDraft(Boolean(voice.consent_at));
     setTranscriptDrafts(Object.fromEntries(
       (voice.samples ?? []).map((s) => [s.id, s.reference_text ?? ""]),
     ));
@@ -1000,6 +1024,9 @@ export function VoiceLabPage() {
                 </p>
               </div>
             ))}
+            {editing?.kind === "clone" && (
+              <ConsentSwitch id="voice-lab-consent" checked={consentDraft} onCheckedChange={setConsentDraft} />
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditing(null)}>
@@ -1015,6 +1042,9 @@ export function VoiceLabPage() {
                     patch: {
                       name: nameDraft.trim(),
                       notes: notesDraft.trim() || null,
+                      ...(editing.kind === "clone" && consentDraft !== Boolean(editing.consent_at)
+                        ? { consent: consentDraft }
+                        : {}),
                       samples: editing.kind === "clone" ? (editing.samples ?? []).map((s) => ({
                         id: s.id, reference_text: transcriptDrafts[s.id]?.trim() || null,
                       })) : undefined,

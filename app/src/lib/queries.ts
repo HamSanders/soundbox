@@ -775,10 +775,11 @@ export function useUploadVoice() {
       modelId?: string | null;
       tidy?: boolean;
       referenceText?: string | null;
+      consent?: boolean;
     }
   >({
-    mutationFn: ({ name, file, notes, modelId, tidy, referenceText }) =>
-      api.uploadVoice(name, file, notes, modelId, tidy, referenceText),
+    mutationFn: ({ name, file, notes, modelId, tidy, referenceText, consent }) =>
+      api.uploadVoice(name, file, notes, modelId, tidy, referenceText, consent),
     onError: fail("Could not upload the reference clip"),
     onSuccess: (voice) => {
       toast.success(`Saved “${voice.name}”`);

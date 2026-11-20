@@ -45,6 +45,8 @@ export interface GenerateOptions {
 
 export interface SpeakOptions {
   voiceRefPath?: string | null;
+  /** What a remote model needs to know about the cloned voice it is sent. */
+  voiceRef?: VoiceRefInfo | null;
   voiceId?: string | null;
   seed?: number | null;
   steps?: number | null;
@@ -52,6 +54,20 @@ export interface SpeakOptions {
   loadOptions?: Record<string, string>;
   requestOptions?: Record<string, string>;
   progress?: ProgressFn;
+}
+
+/**
+ * About a clone voice's reference clip, for models that send it somewhere
+ * else. A local model reads the file and needs none of this.
+ */
+export interface VoiceRefInfo {
+  /** The voice's name, as the user gave it. */
+  name: string;
+  /** When the user confirmed the voice is theirs or used with permission;
+   *  null if they never did. A remote service may refuse a clip without it. */
+  consentAt: string | null;
+  /** The words spoken in the clip, when known. */
+  transcript: string | null;
 }
 
 /** One item of a streamed read: a chunk of audio, then the end. */
@@ -102,7 +118,7 @@ export interface GenerationModel {
   convert(
     sourceWavPath: string,
     voiceRefPath: string,
-    options?: { seed?: number | null; progress?: ProgressFn },
+    options?: { seed?: number | null; progress?: ProgressFn; voiceRef?: VoiceRefInfo | null },
   ): Promise<RenderedAudio>;
   separate(
     sourceWavPath: string,

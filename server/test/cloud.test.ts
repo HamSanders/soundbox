@@ -4,7 +4,7 @@
  * `cloud/contract.ts`. No network.
  */
 
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -37,11 +37,36 @@ const SFX: CloudModelInfo = {
   watermark: false,
 };
 
-function wav(): Buffer {
+function wav(seconds = 0.1, rate = 22_050): Buffer {
   const w = new WaveFile();
-  w.fromScratch(1, 22_050, "16", Array.from({ length: 2205 }, (_, i) => Math.round(Math.sin(i / 8) * 8000)));
+  const n = Math.round(seconds * rate);
+  w.fromScratch(1, rate, "16", Array.from({ length: n }, (_, i) => Math.round(Math.sin(i / 8) * 8000)));
   return Buffer.from(w.toBuffer());
 }
+
+const CLONE: CloudModelInfo = {
+  ...SFX,
+  id: "cloud:test-clone",
+  name: "Test Clone",
+  task: "speak",
+  category: "voice",
+  price: { unit: "1k_chars", credits_per_unit: 2, min_credits: 2 },
+  supports: { lyrics: false, seed: true, negative_prompt: false, voice_reference: true },
+  voice_ids: ["lucy"],
+  reference: { min_s: 5, max_s: 10, required: false },
+  languages: ["english", "french"],
+};
+
+const CHANGER: CloudModelInfo = {
+  ...SFX,
+  id: "cloud:test-changer",
+  name: "Test Changer",
+  task: "convert",
+  category: "voice",
+  price: { unit: "minute", credits_per_unit: 3, min_credits: 3 },
+  supports: { lyrics: false, seed: false, negative_prompt: false, voice_reference: true },
+  reference: { min_s: 3, max_s: 40, required: true },
+};
 
 /** Enough of the gateway to drive the client: state in closures, fetch out. */
 function fakeGateway() {
@@ -57,6 +82,7 @@ function fakeGateway() {
     cancelled: false,
     created: [] as { body: Record<string, unknown>; key: string | null }[],
     revoked: false,
+    uploads: [] as { type: string | null; seconds: number }[],
   };
   const json = (body: unknown, status = 200) => Response.json(body, { status });
   const err = (status: number, code: string, message: string) => json({ error: { code, message } }, status);
@@ -64,7 +90,7 @@ function fakeGateway() {
     const url = new URL(String(input));
     const method = init?.method ?? "GET";
     const auth = new Headers(init?.headers).get("authorization");
-    const body = init?.body ? JSON.parse(String(init.body)) : null;
+    const body = typeof init?.body === "string" ? JSON.parse(init.body) : null;
     const authed = auth === `Bearer ${g.token}` && !g.revoked;
     if (url.host === "cdn.test") {
       // Outputs are on a CDN: the app's token must not travel there.
@@ -96,6 +122,13 @@ function fakeGateway() {
       return json({ email: "me@example.com", balance: g.balance, held: 0, spent_today: g.spentToday, first_paid: true });
     }
     if (method === "POST" && url.pathname === "/v1/quote") return json({ credits: g.quote, units: 1, price_version: 1 });
+    if (method === "POST" && url.pathname === "/v1/uploads") {
+      const bytes = Buffer.from(init!.body as Uint8Array);
+      const w = new WaveFile(bytes);
+      const seconds = (w.data as { samples: Uint8Array }).samples.length / (w.fmt as { byteRate: number }).byteRate;
+      g.uploads.push({ type: new Headers(init?.headers).get("content-type"), seconds });
+      return json({ upload_id: `00000000-0000-4000-8000-00000000010${g.uploads.length}`, expires_at: "2030-01-01T00:00:00Z", duration_s: seconds }, 201);
+    }
     if (method === "POST" && url.pathname === "/v1/checkout") return json({ url: `${BASE}/checkout/${body.pack}` });
     const job = (state: string, extra: Record<string, unknown> = {}) => ({
       job_id: "00000000-0000-4000-8000-000000000001",
@@ -255,5 +288,73 @@ describe("Mirli Cloud models", () => {
     g.revoked = true;
     const model = new CloudModel(SFX, cloud, async () => {});
     await expect(model.generate("x", 4)).rejects.toThrow(/signed this device out/);
+  });
+});
+
+describe("Mirli Cloud voices", () => {
+  async function clip(seconds: number): Promise<string> {
+    const path = join(dataDir, `clip-${seconds}.wav`);
+    await writeFile(path, wav(seconds, 24_000));
+    return path;
+  }
+  const mine = { name: "My voice", consentAt: "2026-11-20T00:00:00Z", transcript: "the words in the clip" };
+
+  it("describes clone and voice-changer models to the app", () => {
+    const ctx = { client: () => null, caps: () => ({ perCall: 50, perDay: 300 }) };
+    const clone = new CloudModel(CLONE, ctx).describe();
+    expect(clone).toMatchObject({ task: "tts", requires_voice_reference: false, supports: { voice_reference: true } });
+    expect(clone.params).toEqual([expect.objectContaining({ name: "language", type: "choice", choices: ["english", "french"] })]);
+    const changer = new CloudModel(CHANGER, ctx).describe();
+    expect(changer).toMatchObject({ task: "vc", requires_voice_reference: true, sample_rate: 24_000 });
+  });
+
+  it("won't send a clip nobody confirmed, and sends nothing at all", async () => {
+    const { g, cloud } = await signedIn();
+    const model = new CloudModel(CLONE, cloud, async () => {});
+    await expect(
+      model.speak("Hello.", { voiceRefPath: await clip(6), voiceRef: { ...mine, consentAt: null } }),
+    ).rejects.toThrow(/confirm it's your voice/);
+    expect(g.uploads).toHaveLength(0);
+    expect(g.created).toHaveLength(0);
+  });
+
+  it("uploads the clip, cut to the model's longest reference, with consent and the voice's name", async () => {
+    const { g, cloud } = await signedIn();
+    const model = new CloudModel(CLONE, cloud, async () => {});
+    await model.speak("Bonjour.", { voiceRefPath: await clip(15), voiceRef: mine, requestOptions: { language: "french" } });
+    expect(g.uploads).toEqual([{ type: "audio/wav", seconds: 10 }]);
+    const sent = g.created[0]!.body;
+    expect(sent).toMatchObject({ task: "speak", consent: "own_voice_or_permission" });
+    expect(sent.params).toEqual({
+      text: "Bonjour.",
+      language: "french",
+      reference_upload: "00000000-0000-4000-8000-000000000101",
+      voice_label: "My voice",
+      // The clip was cut, so its transcript no longer matches and is left out.
+    });
+  });
+
+  it("keeps the transcript when the clip goes whole, and uses a preset without one", async () => {
+    const { g, cloud } = await signedIn();
+    const model = new CloudModel(CLONE, cloud, async () => {});
+    await model.speak("Hi.", { voiceRefPath: await clip(6), voiceRef: mine });
+    expect(g.uploads[0]!.seconds).toBeCloseTo(6);
+    expect(g.created[0]!.body.params).toMatchObject({ reference_text: "the words in the clip" });
+    await model.speak("Hi.", { voiceId: "lucy" });
+    expect(g.created[1]!.body.params).toEqual({ text: "Hi.", voice: "lucy" });
+    expect(g.created[1]!.body).not.toHaveProperty("consent");
+  });
+
+  it("re-voices a recording: both clips go up, then a convert job", async () => {
+    const { g, cloud } = await signedIn();
+    const model = new CloudModel(CHANGER, cloud, async () => {});
+    const out = await model.convert(await clip(20), await clip(8), { voiceRef: mine });
+    expect(out.sampleRate).toBe(22_050);
+    expect(g.uploads.map((u) => Math.round(u.seconds))).toEqual([8, 20]);
+    expect(g.created[0]!.body).toMatchObject({
+      task: "convert",
+      consent: "own_voice_or_permission",
+      params: { reference_upload: expect.any(String), source_upload: expect.any(String), voice_label: "My voice" },
+    });
   });
 });

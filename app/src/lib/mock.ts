@@ -3213,6 +3213,7 @@ export const mockApi: MirliApi = {
       voice_id: req.voice_id ?? null,
       model_id: req.model_id ?? null,
       notes: req.notes ?? null,
+      consent_at: req.consent ? new Date().toISOString() : null,
     };
     if (voice.kind === "clone" && voice.reference_file) {
       voice.samples = [{ id: nextId("sample"), file: voice.reference_file,
@@ -3243,7 +3244,7 @@ export const mockApi: MirliApi = {
     return sound;
   },
 
-  async uploadVoice(name, file, notes, modelId, _tidy, referenceText): Promise<Voice> {
+  async uploadVoice(name, file, notes, modelId, _tidy, referenceText, consent): Promise<Voice> {
     await wait(140);
     // Real uploaded bytes, so playback works exactly as it would live.
     const url = URL.createObjectURL(file);
@@ -3257,6 +3258,7 @@ export const mockApi: MirliApi = {
       voice_id: null,
       model_id: modelId ?? null,
       notes: notes ?? null,
+      consent_at: consent ? created : null,
       samples: [{ id: nextId("sample"), file: url, duration_s: await mockDuration(file),
         created_at: created, reference_text: referenceText ?? null }],
     };
@@ -3372,6 +3374,7 @@ export const mockApi: MirliApi = {
     if (!voice) throw new Error(`Unknown voice ${id}`);
     if (patch.name !== undefined) voice.name = patch.name;
     if (patch.notes !== undefined) voice.notes = patch.notes ?? null;
+    if (patch.consent !== undefined) voice.consent_at = patch.consent ? (voice.consent_at ?? new Date().toISOString()) : null;
     for (const sample of patch.samples ?? []) {
       const stored = voice.samples?.find((s) => s.id === sample.id);
       if (stored && sample.reference_text !== undefined) stored.reference_text = sample.reference_text;
@@ -4036,6 +4039,7 @@ function hostedCloudModels(): Model[] {
     category: Model["category"],
     description: string,
     price: NonNullable<Model["price"]>,
+    extra: Partial<Model> = {},
   ): Model => ({
     ...base,
     id,
@@ -4048,6 +4052,12 @@ function hostedCloudModels(): Model[] {
     status: "installed",
     vram_estimate_mb: 0,
     active_job_id: null,
+    ...extra,
+  });
+  const clone = (voices: string[]): Partial<Model> => ({
+    task: "tts",
+    voice_ids: voices,
+    supports: { ...base.supports, text: true, voice_reference: true },
   });
   return [
     cloud("cloud:ace-step-1.5", "ACE-Step 1.5", "music",
@@ -4059,5 +4069,17 @@ function hostedCloudModels(): Model[] {
     cloud("cloud:kokoro", "Kokoro", "voice",
       "Fast, natural English speech in 20 preset voices.",
       { unit: "1k_chars", credits_per_unit: 3, min_credits: 1 }),
+    // Voice cloning (gateway contract 2). Placeholder prices: the real ones
+    // come from the gateway at runtime.
+    cloud("cloud:chatterbox-turbo", "Chatterbox Turbo", "voice",
+      "Fast English speech in 20 preset voices, or in a voice cloned from a 5 to 10 second clip.",
+      { unit: "1k_chars", credits_per_unit: 1, min_credits: 1 }, clone(["lucy", "aaron"])),
+    cloud("cloud:qwen3-tts", "Qwen3-TTS 1.7B", "voice",
+      "Expressive speech in 10 languages, in 9 preset voices or a voice cloned from your clip.",
+      { unit: "1k_chars", credits_per_unit: 2, min_credits: 2 }, clone(["Vivian", "Ryan"])),
+    cloud("cloud:voice-changer", "Chatterbox Voice Changer", "voice",
+      "Re-voices a recording in one of your cloned voices, keeping its timing and delivery.",
+      { unit: "minute", credits_per_unit: 1, min_credits: 1 },
+      { task: "vc", requires_voice_reference: true, supports: { ...base.supports, voice_reference: true } }),
   ];
 }

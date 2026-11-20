@@ -236,6 +236,9 @@ export interface Voice {
   /** How many library sounds were read in this voice — what
    *  `listSounds({ voice_id })` returns. Absent on an older server. */
   read_count?: number;
+  /** clone: when the user confirmed it is their voice or used with
+   *  permission; null if they never did. Absent on an older server. */
+  consent_at?: string | null;
   /** clone: the clips this voice is made from, oldest first. With one, it is
    *  `reference_file`; with several, `reference_file` is them joined. */
   samples?: VoiceSample[];
@@ -274,11 +277,15 @@ export interface VoiceCreate {
   /** clone: trim silence off the ends, take out DC offset and pull a hot peak
    *  back. Never boosts or re-tones the clip. */
   tidy?: boolean;
+  /** clone: the user confirmed it is their voice or used with permission. */
+  consent?: boolean;
 }
 
 export interface VoicePatch {
   name?: string;
   notes?: string | null;
+  /** true records the consent confirmation; false withdraws it. */
+  consent?: boolean;
   samples?: { id: string; reference_text?: string | null }[];
 }
 
@@ -1763,6 +1770,7 @@ export interface MirliApi {
     modelId?: string | null,
     tidy?: boolean,
     referenceText?: string | null,
+    consent?: boolean,
   ): Promise<Voice>;
   /** Add a clip to a clone voice: a WAV from disk or the mic, or a library
    *  sound by id. Returns the voice with its new clip list. */
@@ -2277,7 +2285,7 @@ export const httpApi: MirliApi = {
 
   // The WAV is the whole body, so the name/notes ride as query params and the
   // Content-Type override stops `request` from labelling the bytes as JSON.
-  uploadVoice: (name, file, notes, modelId, tidy, referenceText) =>
+  uploadVoice: (name, file, notes, modelId, tidy, referenceText, consent) =>
     request<Voice>(
       `/api/voices/upload${qs({
         name,
@@ -2285,6 +2293,7 @@ export const httpApi: MirliApi = {
         model_id: modelId ?? undefined,
         reference_text: referenceText ?? undefined,
         tidy: tidy ? "true" : undefined,
+        consent: consent ? "true" : undefined,
       })}`,
       {
         method: "POST",

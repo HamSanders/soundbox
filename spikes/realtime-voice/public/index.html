@@ -88,6 +88,12 @@ header .grow { flex: 1; }
 #callBtn .av { width: 46px; height: 46px; border-radius: 50%; overflow: hidden; background: var(--well); flex: none; }
 #callBtn .av img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .cta label { display: flex; align-items: center; gap: 10px; }
+.seg { display: inline-flex; border: 1px solid var(--rule-strong); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button { height: 34px; padding: 0 14px; border-radius: 999px; border: 0; background: transparent; cursor: pointer; font: 500 13.5px/1 var(--sans); color: var(--pencil); white-space: nowrap; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.seg button:disabled { cursor: progress; }
+.engine-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+#engineNote { min-height: 1.2em; }
 
 /* The wall: big portrait cards, tossed on the table. Hover straightens one;
    click picks it; the picked one carries the beak dot. */
@@ -294,6 +300,11 @@ td.over { color: var(--rust); font-weight: 700; }
         <button class="btn ink" id="callBtn"><span class="av"><img id="ctaFace" alt=""></span><span id="ctaTxt">Start call</span></button>
         <label><span class="log">Voice</span><select class="btn" id="voice"><option value="">VoxCPM2 default</option></select></label>
       </div>
+      <div class="engine-row" id="engineRow" hidden>
+        <span class="log">Face model</span>
+        <span class="seg" id="engineSeg" role="group" aria-label="Face model"></span>
+        <span class="log" id="engineNote"></span>
+      </div>
       <span class="log" id="notice"></span>
     </div>
     <div id="faceSection">
@@ -323,7 +334,7 @@ td.over { color: var(--rust); font-weight: 700; }
         </div>
         <svg class="penline" viewBox="0 0 420 46" preserveAspectRatio="none" aria-hidden="true"><path id="penPath" d="M2 23 L414 23"/><circle cx="414" cy="23" r="4.5"/></svg>
       </div>
-      <div id="facePop"><div class="section-h" style="margin-bottom:12px"><h2>Change face</h2><button class="btn" id="facePopClose" style="height:28px;padding:0 12px">Done</button></div></div>
+      <div id="facePop"><div class="engine-row" id="engineRowCall" style="margin-bottom:12px"><span class="log">Face model</span><span class="seg" id="engineSegCall" role="group" aria-label="Face model"></span></div><div class="section-h" style="margin-bottom:12px"><h2>Change face</h2><button class="btn" id="facePopClose" style="height:28px;padding:0 12px">Done</button></div></div>
     </div>
     <div class="controls">
       <button class="btn" id="mute" aria-pressed="false">
@@ -537,6 +548,55 @@ function togglePicker(open) {
 $("faceBtn").onclick = () => togglePicker(!document.body.classList.contains("picking"));
 $("facePopClose").onclick = () => togglePicker(false);
 loadFaces();
+
+// ---- Face model -------------------------------------------------------------
+// The face server runs one model at a time (both don't fit beside the voice
+// stack on a 16 GB card). Switching restarts it on the other model, about 20 s.
+const ENGINE_HINT = { flashhead: "smooth, about 1 s behind", ditto: "sharper mouth, about 0.4 s behind" };
+let engine = null, engineBusy = false;
+async function loadEngine() {
+  if (!FACE_URL) return;
+  let d;
+  try { d = await (await fetch(faceHttp() + "/engine")).json(); } catch { return; }
+  engine = d.current;
+  for (const segId of ["engineSeg", "engineSegCall"]) {
+    const seg = $(segId);
+    seg.innerHTML = "";
+    for (const e of d.available.filter((x) => x.installed)) {
+      const b = document.createElement("button");
+      b.textContent = e.name;
+      b.title = ENGINE_HINT[e.id] ?? "";
+      b.setAttribute("aria-pressed", String(e.id === engine));
+      b.disabled = engineBusy;
+      b.onclick = () => switchEngine(e.id, e.name);
+      seg.append(b);
+    }
+  }
+  $("engineRow").hidden = d.available.filter((x) => x.installed).length < 2;
+  $("engineRowCall").hidden = $("engineRow").hidden;
+  if (!engineBusy) $("engineNote").textContent = ENGINE_HINT[engine] ?? "";
+}
+async function switchEngine(id, name) {
+  if (id === engine || engineBusy) return;
+  engineBusy = true;
+  $("engineNote").textContent = `Loading ${name}, about 20 s…`;
+  if (callStart) sys(`Switching the face model to ${name}. Voice keeps going; the face is back in about 20 s.`);
+  document.querySelectorAll("#engineSeg button, #engineSegCall button").forEach((b) => { b.disabled = true; b.setAttribute("aria-pressed", String(b.textContent === name)); });
+  try { await fetch(faceHttp() + "/engine", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: id }) }); } catch {}
+  // Wait for the new model to answer, then refresh everything that depends on it.
+  for (let i = 0; i < 60; i++) {
+    await new Promise((r) => setTimeout(r, 1500));
+    try {
+      const d = await (await fetch(faceHttp() + "/stats")).json();
+      if (d.engine === id && d.chunks >= 0) break;
+    } catch {}
+  }
+  engineBusy = false;
+  await loadEngine();
+  await loadFaces();
+  if (callStart) sys(`Face model: ${name}.`);
+}
+loadEngine();
 
 // ---- Video from the face server ---------------------------------------------
 // The face server listens to this server's speech and sends back each 0.96 s of

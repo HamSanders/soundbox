@@ -10,8 +10,7 @@ import { Button } from "@/components/ui/button";
 
 import { HeaderSlot } from "@/components/header-slot";
 import { QueueIndicator } from "@/components/queue-indicator";
-import { cn } from "@/lib/utils";
-import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useSound } from "@/lib/queries";
 
 const TITLES: Record<string, string> = {
@@ -63,22 +62,12 @@ export function AppHeader() {
   // you are in is worth saying — it is the difference between the two tools —
   // and the crumb links to that half of the shelf.
   const builder = /^\/studio\/(script|music)\//.exec(pathname)?.[1] ?? null;
-  const { state: sidebarState } = useSidebar();
 
   return (
-    <header className="bg-sidebar fixed top-0 right-0 left-0 z-40 flex h-(--top-h,3.5rem) items-center gap-2 px-3 pt-2 md:pl-0">
-      {/* The sidebar runs the full height with the logo at its top, so the
-          bar starts where the first panel starts. */}
-      <div
-        aria-hidden="true"
-        className={cn(
-          "hidden shrink-0 md:block",
-          sidebarState === "collapsed"
-            ? "w-[calc(var(--sidebar-width-icon)+1rem)]"
-            : "w-(--sidebar-width)",
-        )}
-      />
-      <div className="flex items-center md:-ml-2">
+    // The first row of the page panel, not a bar across the window: the
+    // sidebar keeps the logo, and each panel carries its own controls.
+    <header className="bg-background/90 supports-[backdrop-filter]:bg-background/70 sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 px-3 backdrop-blur">
+      <div className="-ml-1 flex items-center">
         <SidebarTrigger />
         <HistoryButtons />
       </div>

@@ -11,11 +11,11 @@
  * empty one and leaves you where you are; you switch to it when you mean to.
  */
 
+import { SidebarMenuButton } from "@/components/ui/sidebar";
 import { useState } from "react";
-import { Check, FolderOpen, Loader2, Plus } from "lucide-react";
+import { Check, Loader2, Plus } from "lucide-react";
 
 import { ProfileManagerDialog } from "@/components/profile-manager";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,21 +42,22 @@ export function ProfileSwitcher() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground h-7 gap-1.5 px-2"
-            aria-label={`Profile: ${active.name}`}
-          >
-            {activate.isPending ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <FolderOpen className="size-3.5" />
-            )}
-            <span className="max-w-32 truncate text-xs font-medium">{active.name}</span>
-          </Button>
+          <SidebarMenuButton size="lg" tooltip={`Profile: ${active.name}`} aria-label={`Profile: ${active.name}`}>
+            {/* An avatar: the profile's initials on a tile, like an account. */}
+            <span className="bg-muted text-foreground flex size-8 shrink-0 items-center justify-center rounded-md text-xs font-semibold uppercase">
+              {activate.isPending ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                initials(active.name)
+              )}
+            </span>
+            <span className="grid min-w-0 flex-1 text-left leading-tight">
+              <span className="truncate text-sm font-medium">{active.name}</span>
+              <span className="text-muted-foreground truncate text-xs">Profile</span>
+            </span>
+          </SidebarMenuButton>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="start" side="top" className="w-56">
           <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
             Library
           </DropdownMenuLabel>
@@ -83,4 +84,10 @@ export function ProfileSwitcher() {
       <ProfileManagerDialog open={manageOpen} onOpenChange={setManageOpen} profiles={profiles} />
     </>
   );
+}
+
+/** "Unreal NF" → "UN": up to two initials for the avatar tile. */
+function initials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  return (words.length > 1 ? words[0]![0]! + words[1]![0]! : (words[0] ?? "?").slice(0, 2)) || "?";
 }

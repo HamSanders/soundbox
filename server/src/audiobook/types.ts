@@ -28,6 +28,8 @@ export interface PacingSettings {
   head_room_tone_s: number;
   /** Room tone at the tail of each chapter file (ACX: 1–5 s). */
   tail_room_tone_s: number;
+  /** Pause inserted at a scene break inside a chapter, seconds. Default 2.0. */
+  scene_break_s?: number;
 }
 
 export interface BookSettings {
@@ -252,6 +254,8 @@ export interface ManuscriptSection {
   /** Suggested include state (copyright pages default to false). */
   included: boolean;
   paragraphs: string[];
+  /** Scene breaks: a pause goes before paragraphs[i] for each i (ascending, 0 < i < length). */
+  breaks?: number[];
 }
 
 /** Read-along timing for one paragraph inside a rendered chapter file. */

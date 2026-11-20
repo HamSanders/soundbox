@@ -55,6 +55,7 @@ import { StemPickerDialog } from "@/components/stem-picker";
 import { useVoice } from "@/components/voice-avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PeakGlyph } from "@/components/peak-glyph";
+import { NewProjectRow } from "@/components/new-project-row";
 import { WaveformPlayer } from "@/components/waveform-player";
 import { downloadSound, formatBytes, formatDuration, formatRelative } from "@/lib/format";
 import { LicenseChip } from "@/components/license-badge";
@@ -447,6 +448,12 @@ export function SoundCard({
                   Inherited from its session. Moving it here sets a direct override.
                 </p>
               )}
+              <NewProjectRow
+                onCreated={(p) => {
+                  update.mutate({ id: sound.id, patch: { project_id: p.id } });
+                  setProjectMenuOpen(false);
+                }}
+              />
             </PopoverContent>
           </Popover>
 
@@ -460,10 +467,14 @@ export function SoundCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => openDetails(sound)}>
+                <Maximize2Icon />
+                Details
+              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link to={`/sounds/${sound.id}`}>
-                  <Maximize2Icon />
-                  Open details
+                  <ExpandIcon />
+                  Open full page
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -705,12 +716,14 @@ export function SoundCard({
         onClick={(e) => {
           // Buttons and menus inside the row do their own thing.
           if ((e.target as Element).closest("button, a, [role=menu], [role=dialog], [data-track-wave]")) return;
-          openDetails(sound);
+          // A click on the row plays it in the bottom player; the title and
+          // the ··· menus open details.
+          playInBar();
         }}
         className={cn(
-          "relative grid cursor-pointer grid-cols-[3.25rem_2.5rem_minmax(0,1fr)_auto] items-center gap-x-3 rounded-md px-2 py-1.5 transition-colors duration-(--duration-fast) hover:bg-muted/60",
-          "@2xl:grid-cols-[3.25rem_2.5rem_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto]",
-          "@4xl:grid-cols-[3.25rem_2.5rem_minmax(0,16rem)_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto]",
+          "relative grid cursor-pointer grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-3 rounded-md px-2 py-1.5 transition-colors duration-(--duration-fast) hover:bg-muted/60",
+          "@2xl:grid-cols-[2.5rem_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto]",
+          "@4xl:grid-cols-[2.5rem_minmax(0,16rem)_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto]",
           playing &&
             "bg-muted/60 before:bg-signal before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full",
           fresh && "sb-arrive",
@@ -718,9 +731,6 @@ export function SoundCard({
         )}
         style={style}
       >
-        <span className="readout text-muted-foreground truncate text-right tabular-nums" title="Seed">
-          {sound.seed ?? "–"}
-        </span>
         <button
           type="button"
           onClick={playInBar}
@@ -742,7 +752,8 @@ export function SoundCard({
             type="button"
             onClick={() => openDetails(sound)}
             aria-label={`Details for ${sound.name}`}
-            className="focus-visible:ring-ring/50 block max-w-full truncate rounded text-left font-display text-base leading-tight font-bold tracking-[0.01em] uppercase outline-none focus-visible:ring-3"
+            title="Details"
+            className="focus-visible:ring-ring/50 block max-w-full truncate rounded text-left text-sm font-medium outline-none hover:underline focus-visible:ring-3"
           >
             {sound.name}
           </button>

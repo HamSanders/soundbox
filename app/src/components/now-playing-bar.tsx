@@ -16,11 +16,34 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { PauseIcon, PlayIcon, SkipBackIcon, SkipForwardIcon, XIcon } from "lucide-react";
+import {
+  DownloadIcon,
+  ExpandIcon,
+  Maximize2Icon,
+  MoreHorizontalIcon,
+  PauseIcon,
+  PlayIcon,
+  SkipBackIcon,
+  SkipForwardIcon,
+  StarIcon,
+  XIcon,
+} from "lucide-react";
+import { Link } from "react-router-dom";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { SoundTileArt } from "@/components/sound-card";
-import { formatDuration } from "@/lib/format";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { downloadSound, formatDuration } from "@/lib/format";
+import { useDetailStore } from "@/lib/detail-store";
+import { useSettings, useUpdateSound } from "@/lib/queries";
+import type { Sound } from "@/lib/api";
 import { usePlayerStore } from "@/lib/player-store";
 import { applySink, useOutputStore } from "@/lib/audio-output";
 import { cn } from "@/lib/utils";
@@ -228,14 +251,13 @@ export function NowPlayingBar() {
           <SoundTileArt sound={sound} />
         </span>
         <div className="min-w-0">
-          <p className="font-display truncate text-base leading-tight font-bold tracking-[0.01em] uppercase">
-            {sound.name}
-          </p>
+          <p className="truncate text-sm font-medium">{sound.name}</p>
           <p className="readout text-muted-foreground truncate">
             {sound.seed != null ? `No. ${sound.seed} · ` : ""}
             {formatDuration(sound.duration_s)}
           </p>
         </div>
+        <PlayerMenu sound={sound} />
       </div>
 
       {/* Transport and timeline */}
@@ -286,5 +308,59 @@ export function NowPlayingBar() {
         </Button>
       </div>
     </div>
+  );
+}
+
+/**
+ * The playing sound's menu, beside its title in the player: what you most
+ * often want to do with what you are hearing, without finding its row.
+ */
+function PlayerMenu({ sound }: { sound: Sound }) {
+  const openDetails = useDetailStore((s) => s.open);
+  const setSound = usePlayerStore((s) => s.setSound);
+  const update = useUpdateSound();
+  const { data: settings } = useSettings();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon-sm" aria-label={`More actions for ${sound.name}`}>
+          <MoreHorizontalIcon />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" side="top" className="w-48">
+        <DropdownMenuItem onClick={() => openDetails(sound)}>
+          <Maximize2Icon />
+          Details
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to={`/sounds/${sound.id}`}>
+            <ExpandIcon />
+            Open full page
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() =>
+            update.mutate(
+              { id: sound.id, patch: { favorite: !sound.favorite } },
+              { onSuccess: () => setSound({ ...sound, favorite: !sound.favorite }) },
+            )
+          }
+        >
+          <StarIcon className={sound.favorite ? "fill-current" : ""} />
+          {sound.favorite ? "Unfavourite" : "Favourite"}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => {
+            downloadSound(sound.file, sound.name, settings?.output_format).catch(() =>
+              toast.error("Could not download this sound"),
+            );
+          }}
+        >
+          <DownloadIcon />
+          Download
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

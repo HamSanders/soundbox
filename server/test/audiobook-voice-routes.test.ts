@@ -19,6 +19,7 @@ let app: FastifyInstance;
 let dataDir: string;
 let bookId: string;
 let chapterId: string;
+let storyId: string;
 const spoken: string[] = [];
 
 function call(opts: { method: string; url: string; payload?: unknown; headers?: Record<string, string> }) {
@@ -59,6 +60,7 @@ beforeAll(async () => {
     ],
   });
   chapterId = chapter.id;
+  storyId = chapter.story_id;
 });
 
 afterAll(async () => {
@@ -124,17 +126,34 @@ describe("audiobook voice routes", { timeout: 30_000 }, () => {
     expect(ps.map((p) => p.status)).toEqual(["stale", "voiced", "stale"]);
   });
 
+  it("never voices, counts or moves clips off the narration track", async () => {
+    const bed = await json("POST", `/api/stories/${storyId}/segments`, { text: "", track_index: 1, start_s: 3.25 });
+    const est = await json("GET", `/api/audiobooks/${bookId}/estimate?chapter_id=${chapterId}&overwrite=true`);
+    expect(est.chapters[0].paragraphs).toBe(3);
+    const before = spoken.length;
+    const run = await json("POST", `/api/audiobooks/${bookId}/render`, { scope: { kind: "chapter", chapter_id: chapterId }, overwrite: true });
+    const done = await waitFor(() => json("GET", `/api/audiobooks/${bookId}/renders/${run.id}`), (r) => r.status === "done");
+    expect(done.total).toBe(3);
+    expect(spoken.length - before).toBe(3);
+    const after = (await json<any[]>("GET", `/api/stories/${storyId}/segments`)).find((x) => x.id === bed.id);
+    expect(after.start_s).toBe(3.25);
+    expect(after.track_index).toBe(1);
+  });
+
   it("lists, restores and deletes takes", async () => {
     const sid = (await paragraphs())[0].id;
+    const takesUrl = `/api/audiobooks/${bookId}/paragraphs/${sid}/takes`;
+    const start = (await json<any[]>("GET", takesUrl)).length;
     const res = await call({ method: "POST", url: `/api/audiobooks/${bookId}/paragraphs/${sid}/generate`, payload: {} });
     expect(res.statusCode).toBe(202);
-    const takes = await waitFor(() => json<any[]>("GET", `/api/audiobooks/${bookId}/paragraphs/${sid}/takes`), (t) => t.length === 2);
+    expect(typeof res.json().job_id).toBe("string");
+    const takes = await waitFor(() => json<any[]>("GET", takesUrl), (t) => t.length === start + 1);
     expect(takes[0].selected).toBe(true);
-    const sel = await json("POST", `/api/audiobooks/${bookId}/paragraphs/${sid}/takes/${takes[1].id}/select`);
+    const sel = await json("POST", `${takesUrl}/${takes[1].id}/select`);
     expect(sel.selected).toBe(true);
-    const del = await call({ method: "DELETE", url: `/api/audiobooks/${bookId}/paragraphs/${sid}/takes/${takes[0].id}` });
+    const del = await call({ method: "DELETE", url: `${takesUrl}/${takes[0].id}` });
     expect(del.statusCode).toBe(204);
-    expect(await json<any[]>("GET", `/api/audiobooks/${bookId}/paragraphs/${sid}/takes`)).toHaveLength(1);
+    expect(await json<any[]>("GET", takesUrl)).toHaveLength(start);
   });
 
   it("regenerates a selection and reports the plan", async () => {

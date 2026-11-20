@@ -17,7 +17,6 @@
  */
 
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { SearchIcon, XIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -33,6 +32,8 @@ import {
 } from "@/content/sfx/categories";
 import { coverThumb, isPublished, type SfxCategory } from "@/content/sfx/types";
 import { assetUrl } from "@/lib/asset-url";
+import { SiteShelf, SiteShelfTile } from "@/components/site/site-tracks";
+import { ProjectThumb } from "@/components/project-thumb";
 
 /**
  * What a row is matched against when someone types.
@@ -66,42 +67,29 @@ function sampleCount(category: SfxCategory): number {
 const PUBLISHED = SFX_CATEGORIES.filter(isPublished);
 const TOTAL_SAMPLES = PUBLISHED.reduce((n, c) => n + sampleCount(c), 0);
 
-function CategoryRow({ category }: { category: SfxCategory }) {
+function CategoryTile({ category }: { category: SfxCategory }) {
   const count = sampleCount(category);
   return (
-    <li>
-      <Link
-        to={`/sfx/${category.slug}`}
-        className="hover:border-primary/50 hover:bg-muted/40 border-border/60 group flex items-center gap-3 rounded-xl border p-2 transition-colors"
-      >
-        {category.coverImage ? (
+    <SiteShelfTile
+      name={category.name}
+      sub={`${count} sample${count === 1 ? "" : "s"}`}
+      to={`/sfx/${category.slug}`}
+      art={
+        category.coverImage ? (
           <img
             src={assetUrl(coverThumb(category.coverImage))}
             alt=""
             width={96}
             height={96}
-            className="size-12 shrink-0 rounded-lg object-cover"
+            className="size-full object-cover"
             loading="lazy"
             decoding="async"
           />
         ) : (
-          <div
-            className="bg-muted text-muted-foreground/70 flex size-12 shrink-0 items-center justify-center rounded-lg text-sm font-semibold"
-            aria-hidden="true"
-          >
-            {category.name.slice(0, 2)}
-          </div>
-        )}
-        <span className="min-w-0 flex-1">
-          <span className="group-hover:text-primary block text-sm font-medium underline-offset-4 group-hover:underline">
-            {category.name}
-          </span>
-          <span className="text-muted-foreground block truncate text-xs">
-            {count} sample{count === 1 ? "" : "s"}
-          </span>
-        </span>
-      </Link>
-    </li>
+          <ProjectThumb name={category.name} className="size-full [&>span]:hidden" />
+        )
+      }
+    />
   );
 }
 
@@ -156,9 +144,10 @@ export function SfxHubPage() {
       />
 
 
-      <div className="mx-auto w-full max-w-3xl px-4">
+      <div className="mx-auto w-full max-w-5xl px-4 pb-16">
         <header className="py-12">
-          <h1 className="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+          <span className="label-caps text-muted-foreground">Sound effects</span>
+          <h1 className="font-display mt-1.5 text-4xl leading-none font-extrabold tracking-[0.01em] text-balance uppercase sm:text-5xl">
             Sound effect collections
           </h1>
           <p className="text-muted-foreground mt-4 max-w-2xl leading-relaxed">
@@ -200,7 +189,7 @@ export function SfxHubPage() {
             )}
           </div>
 
-          <p className="text-muted-foreground mt-3 text-xs" aria-live="polite">
+          <p className="readout text-muted-foreground mt-3" aria-live="polite">
             {needle
               ? `${matches.length} of ${indexed.length} collections match “${query.trim()}”.`
               : `${indexed.length} collections, ${totalSamples} samples, all generated locally.`}
@@ -222,40 +211,30 @@ export function SfxHubPage() {
           const items = byGroup.get(group) ?? [];
           if (items.length === 0) return null;
           return (
-            <section
-              key={group}
-              aria-labelledby={`group-${group}`}
-              className="border-border/60 border-t py-8"
-            >
-              <div className="flex items-baseline justify-between gap-3">
-                <h2
-                  id={`group-${group}`}
-                  className="font-heading text-lg font-semibold tracking-tight"
-                >
-                  {group}
-                </h2>
-                <span className="text-muted-foreground text-xs">
-                  {items.length} collection{items.length === 1 ? "" : "s"}
-                </span>
-              </div>
-              <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div key={group} className="border-border/60 border-t py-6">
+              <SiteShelf
+                id={`group-${group}`}
+                title={group}
+                more={
+                  <span className="readout text-muted-foreground">
+                    {items.length} collection{items.length === 1 ? "" : "s"}
+                  </span>
+                }
+              >
                 {items.map((c) => (
-                  <CategoryRow key={c.slug} category={c} />
+                  <CategoryTile key={c.slug} category={c} />
                 ))}
                 {!needle &&
                   planned
                     .filter((c) => groupOf(c.slug) === group)
                     .map((c) => (
-                      <li
-                        key={c.slug}
-                        className="text-muted-foreground/60 flex items-center px-2 text-sm"
-                      >
+                      <li key={c.slug} className="text-muted-foreground/60 flex items-center px-2 text-sm">
                         {c.name}
                         <span className="ml-1.5 text-xs">(planned)</span>
                       </li>
                     ))}
-              </ul>
-            </section>
+              </SiteShelf>
+            </div>
           );
         })}
       </div>

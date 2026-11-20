@@ -30,6 +30,7 @@ import { FailureCard } from "@/components/failure-card";
 import { PendingSoundRow } from "@/components/pending-sound-row";
 import { PLAYER_DOCK_HEIGHT_PX } from "@/components/player-dock";
 import { SoundCard } from "@/components/sound-card";
+import { CollectionHeader, LibraryShelves, LibraryTypeChips } from "@/components/library-shelves";
 import { useGenerateSession } from "@/hooks/use-generate-session";
 import { prefillFromSound, usePrefillStore } from "@/lib/generate-store";
 import { usePlayerStore } from "@/lib/player-store";
@@ -264,14 +265,25 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
      * The subtraction is the shell's header (h-12) plus `main`'s own py-6.
      */
     <div className="flex min-h-[calc(100svh-6rem)] flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">{title}</h1>
-          <p className="text-muted-foreground text-sm">
-            {data ? `${items.length} sound${items.length === 1 ? "" : "s"}` : " "}
-          </p>
+      {project ? (
+        <CollectionHeader project={project} sounds={items} />
+      ) : (
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="font-heading text-2xl font-semibold tracking-tight">{title}</h1>
+            <p className="text-muted-foreground text-sm">
+              {data ? `${items.length} sound${items.length === 1 ? "" : "s"}` : " "}
+            </p>
+          </div>
+          <LibraryTypeChips />
         </div>
-      </div>
+      )}
+
+      {/* Shelves only on the plain Library: once a kind, a project, a search
+          or a tag is chosen, the list is the answer and shelves are noise. */}
+      {!category && !project && !q.trim() && tag === ALL && (
+        <LibraryShelves projects={projects ?? []} tags={tags ?? []} onTag={setTag} />
+      )}
 
       {/* ------------------------------------------------------------ filters */}
       {/* Search stays out in the open: it is the filter people reach for. The

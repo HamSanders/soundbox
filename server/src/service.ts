@@ -41,6 +41,7 @@ import {
 } from "./models/audiocpp.js";
 import { listGpus, pickGpu } from "./gpu.js";
 import { HistoryStore } from "./history.js";
+import { beds } from "./audiobook/beds.js"; // [audiobooks:soundscape]
 import { ModelManager } from "./models/manager.js";
 import * as audiocppBinary from "./models/audiocppBinary.js";
 import { migrateLayout } from "./models/audiocppMigrate.js";
@@ -125,7 +126,6 @@ import { McpTelemetry } from "./telemetry.js";
 import { UpdateChecker } from "./updateCheck.js";
 import { envVar } from "./env.js";
 import { InstrumentLibrary, instrumentManifest } from "./instruments/index.js";
-import { beds } from "./audiobook/beds.js"; // [audiobooks:soundscape]
 
 const log = getLogger("mirli.service");
 

@@ -41,6 +41,7 @@ import { ModelError } from "../errors.js";
 import type { MirliService } from "../service.js";
 import { closingCredits, narratorLine, openingCredits, pickSample, SAMPLE_TARGET_S } from "./credits.js";
 import { checkBook } from "./export-qc.js";
+import { type ExportedChapterAudio, setExportAudioProvider } from "./publish/manifest.js";
 import { type ZipEntry, writeZip } from "./export-zip.js";
 import { type BookDetail, audiobooks } from "./service.js";
 import { type ReadAlongChapter, cues, paragraphTimings, readAlong, toSrt, toVtt } from "./timings.js";
@@ -82,6 +83,11 @@ CREATE TABLE IF NOT EXISTS book_chapter_masters (
 );
 `;
 
+/** One chapter's own file inside an export, as the player needs it. */
+export interface ExportChapterFile extends ExportedChapterAudio {
+  chapter_id: string;
+}
+
 /** A BookExport plus what the history list shows. */
 export interface BookExportRecord extends BookExport {
   kind: "book" | "sample";
@@ -112,6 +118,20 @@ interface ExportRow {
 export class ExportStore {
   constructor(private readonly conn: Database) {
     this.conn.exec(SCHEMA);
+    const columns = this.conn.prepare("PRAGMA table_info(book_exports)").all() as { name: string }[];
+    if (!columns.some((c) => c.name === "chapters")) {
+      this.conn.exec("ALTER TABLE book_exports ADD COLUMN chapters TEXT NOT NULL DEFAULT '[]'");
+    }
+  }
+
+  /** Per-chapter playable files an export kept (files layout), for the player. */
+  setChapters(id: string, chapters: ExportChapterFile[]): void {
+    this.conn.prepare("UPDATE book_exports SET chapters = ? WHERE id = ?").run(JSON.stringify(chapters), id);
+  }
+
+  chapters(id: string): ExportChapterFile[] {
+    const r = this.conn.prepare("SELECT chapters FROM book_exports WHERE id = ?").get(id) as { chapters: string } | undefined;
+    return r ? (JSON.parse(r.chapters) as ExportChapterFile[]) : [];
   }
 
   private static row(r: ExportRow): BookExportRecord {
@@ -250,6 +270,7 @@ export interface CreditsResult {
 }
 
 const EXT: Record<ExportRequest["format"], string> = { mp3: "mp3", wav: "wav", flac: "flac", m4b: "m4b" };
+const MIME: Record<string, string> = { mp3: "audio/mpeg", wav: "audio/wav", flac: "audio/flac", m4b: "audio/mp4" };
 
 /** Narration lane; beds sit on lanes 1 and up. */
 const NARRATION_TRACK = 0;
@@ -262,6 +283,7 @@ export class AudiobookExportService {
     this.store = new ExportStore(svc.db.sqlite);
     this.store.failInterrupted();
     this.sweepOrphans();
+    setExportAudioProvider(svc, (bookId) => this.chapterAudio(bookId)); // [audiobooks:export]
     audiobooks(svc).onDelete((scope) => {
       this.store.deleteMasters(scope.chapter_ids);
       // Hooks run before the book row goes, so check again once it has.
@@ -306,6 +328,23 @@ export class AudiobookExportService {
       return picked;
     }
     return book.chapters.filter((c) => c.included);
+  }
+
+  /**
+   * The newest finished export's file for each chapter, for listen's player,
+   * web player and RSS. Only exports that kept one file per chapter count;
+   * a single joined file has no per-chapter file to hand over.
+   */
+  chapterAudio(bookId: string): Map<string, ExportedChapterAudio> {
+    const out = new Map<string, ExportedChapterAudio>();
+    for (const e of this.store.list(bookId)) {
+      if (e.status !== "done" || e.kind !== "book") continue;
+      for (const c of this.store.chapters(e.id)) {
+        if (out.has(c.chapter_id) || !existsSync(c.path)) continue;
+        out.set(c.chapter_id, { path: c.path, mime: c.mime, duration_s: c.duration_s, timings: c.timings });
+      }
+    }
+    return out;
   }
 
   /** Paragraph timings of one chapter in its mastered file, from the last master. */
@@ -474,6 +513,7 @@ export class AudiobookExportService {
       const startIndex = chapters[0]?.kind === "opening_credits" ? 0 : 1;
       const outputs: ZipEntry[] = [];
       const along: ReadAlongChapter[] = [];
+      const kept: ExportChapterFile[] = [];
 
       const encode = async (audio: Audio, rate: number, out: string, tags: Record<string, string>, meta?: string) => {
         if (request.format === "wav") {
@@ -513,6 +553,13 @@ export class AudiobookExportService {
           );
           outputs.push({ name, source: file });
           along.push(alongEntry(r, name, 0));
+          kept.push({
+            chapter_id: r.chapter.id,
+            path: file,
+            mime: MIME[ext],
+            duration_s: Math.round((frameCount(r.audio) / r.sampleRate) * 1000) / 1000,
+            timings: r.timings,
+          });
         }
       } else {
         this.progress(ref, "running", 0.65, "Joining chapters");
@@ -564,9 +611,12 @@ export class AudiobookExportService {
         this.progress(ref, "running", 0.96, "Writing zip");
         path = join(dir, `${acxFileName(0, book.title, "zip").slice(3)}`);
         await writeZip(path, outputs);
-        for (const o of outputs) if (typeof o.source === "string") rmSync(o.source, { force: true });
+        // Chapter files stay beside the zip: listen's player streams them.
+        const keep = new Set(kept.map((k) => k.path));
+        for (const o of outputs) if (typeof o.source === "string" && !keep.has(o.source)) rmSync(o.source, { force: true });
       }
       rmSync(work, { recursive: true, force: true });
+      this.store.setChapters(id, kept);
       this.store.update(id, { status: "done", progress: 1, message: null, path, size_bytes: statSync(path).size });
       this.books.hub.publish(bookId, { type: "export", export_id: id, status: "done", progress: 1 });
     } catch (exc) {

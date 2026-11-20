@@ -211,6 +211,9 @@ h1 { display: inline-block; animation: wobble 4s ease-in-out infinite; }
 <script>
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
+// The voice server: this page's own host when it serves the page, else ?server= or 127.0.0.1:17650.
+const VOICE_HOST = params.get("server") || (location.port === "17650" ? location.host : "127.0.0.1:17650");
+const VOICE_HTTP = "http://" + VOICE_HOST, VOICE_WS = "ws://" + VOICE_HOST + "/ws";
 const SANTA_FACE = params.get("face") || "0fea11caf8194e3d86b337b9-56ea891b";
 const FACE_WS = "ws://127.0.0.1:17660/ws", FACE_HTTP = "http://127.0.0.1:17660";
 
@@ -259,9 +262,12 @@ function fail(err) {
   hangup(false); $("err").textContent = msg;
 }
 
-// ---- Voice: ?voice=<id> wins, else a voice named like Santa, else the server default ----
-fetch("voices").then((r) => r.json()).then((list) => {
-  if (params.get("voice")) { voiceId = params.get("voice"); return; }
+// ---- Voice: ?voice=<id> wins, else a voice named like Santa, else the known "Santa" voice ----
+// /voices has no CORS header, so from another port (e.g. the 17672 static server) the fetch fails: keep the known id then.
+const SANTA_VOICE = "a96d4830-9dd2-4654-bb41-5162c35d3161";
+voiceId = params.get("voice") || SANTA_VOICE;
+if (!params.get("voice")) fetch(VOICE_HTTP + "/voices").then((r) => r.json()).then((list) => {
+  if (list.some((v) => v.id === SANTA_VOICE)) return;
   const rank = (v) => /santa|claus|father christmas|st\.? ?nick/i.test(v.name) ? 3 : /jolly|old|grand|deep/i.test(v.name) ? 1 : 0;
   const best = list.map((v) => [rank(v), v]).filter(([r]) => r > 0).sort((a, b) => b[0] - a[0])[0];
   if (best) voiceId = best[1].id;
@@ -413,7 +419,7 @@ $("callBtn").onclick = () => {
   startRinging(); musicLevel(.45);
   // Put Santa's portrait on the face server before the video starts.
   pickSanta();
-  ws = new WebSocket(`ws://${location.host}/ws`); ws.binaryType = "arraybuffer";
+  ws = new WebSocket(VOICE_WS); ws.binaryType = "arraybuffer";
   ws.onmessage = (e) => typeof e.data !== "string" ? onPcm(e.data) : onJson(JSON.parse(e.data)).catch(fail);
   ws.onerror = () => fail(new Error("Couldn't reach the North Pole (the call server isn't running)."));
   ws.onclose = () => { if (callStart) hangup(true); };

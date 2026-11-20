@@ -47,6 +47,7 @@ const settingsSchema = z
     pacing: pacingSchema,
     mastering: z.enum(["acx", "podcast", "none"]),
     cast_mode: z.enum(["single", "multi"]),
+    dialogue_only: z.boolean(), // [audiobooks:lead]
   })
   .partial();
 

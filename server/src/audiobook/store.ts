@@ -182,6 +182,7 @@ export const DEFAULT_SETTINGS: BookSettings = {
   },
   mastering: "acx",
   cast_mode: "single",
+  dialogue_only: true, // [audiobooks:lead]
 };
 
 export const CHAPTER_KINDS: readonly ChapterKind[] = [

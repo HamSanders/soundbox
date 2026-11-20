@@ -44,6 +44,11 @@ export interface BookSettings {
   mastering: MasteringPresetId;
   /** "single" = narrator only; "multi" = narrator + a voice per character. */
   cast_mode: "single" | "multi";
+  /**
+   * A paragraph cast to a character: the character reads only the quoted
+   * words and the narrator reads the rest ("she said"). Default true.
+   */
+  dialogue_only?: boolean;
 }
 
 export interface Book {

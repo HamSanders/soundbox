@@ -114,7 +114,9 @@ describe("audiobook voice routes", { timeout: 30_000 }, () => {
     const done = await waitFor(() => json("GET", `/api/audiobooks/${bookId}/renders/${run.id}`), (r) => r.status === "done");
     expect(done.done).toBe(3);
     expect(spoken).toContain("The lamp turned all night over VEX-ra Point.");
-    expect(spoken).toContain("“Is anyone there?” asked MAH-rah.");
+    // Dialogue-only casting: Mara reads the quote, the narrator the attribution.
+    expect(spoken).toContain("Is anyone there?");
+    expect(spoken).toContain("asked MAH-rah.");
     let ps = await paragraphs();
     expect(ps.map((p) => p.status)).toEqual(["voiced", "voiced", "voiced"]);
     expect(ps[1].start_s).toBeGreaterThan(ps[0].start_s);
@@ -134,7 +136,8 @@ describe("audiobook voice routes", { timeout: 30_000 }, () => {
     const run = await json("POST", `/api/audiobooks/${bookId}/render`, { scope: { kind: "chapter", chapter_id: chapterId }, overwrite: true });
     const done = await waitFor(() => json("GET", `/api/audiobooks/${bookId}/renders/${run.id}`), (r) => r.status === "done");
     expect(done.total).toBe(3);
-    expect(spoken.length - before).toBe(3);
+    // Three paragraphs; the cast one is two calls (quote, then attribution).
+    expect(spoken.length - before).toBe(4);
     const after = (await json<any[]>("GET", `/api/stories/${storyId}/segments`)).find((x) => x.id === bed.id);
     expect(after.start_s).toBe(3.25);
     expect(after.track_index).toBe(1);

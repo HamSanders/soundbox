@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 
 import * as dsp from "./audio/dsp.js";
+import { partGapS, type SpokenPart } from "./audiobook/dialogue-parts.js"; // [audiobooks:voice]
 import * as reference from "./audio/reference.js";
 import {
   VERSION,
@@ -965,6 +966,7 @@ export class MirliService {
     segmentId: string,
     req: SegmentGenerate,
     handle?: JobHandle,
+    parts?: SpokenPart[], // [audiobooks:voice]
   ): Promise<StorySegment | null> {
     const segment = this.db.getSegment(segmentId);
     if (segment === null) return null;
@@ -987,7 +989,9 @@ export class MirliService {
     this.models.touch();
 
     handle?.phase("generating", "Speaking");
-    const clip = await model.speak(spoken, { // [audiobooks:voice]
+    const clip = parts?.length // [audiobooks:voice] dialogue in the character's voice, the rest narrated
+      ? await this.speakParts(segment, parts, req, handle)
+      : await model.speak(spoken, { // [audiobooks:voice]
       voiceRefPath: refPath,
       voiceId: builtinId,
       seed: req.seed ?? null,
@@ -1472,6 +1476,57 @@ export class MirliService {
    * synthesising anything) and by single-segment generation, so a stale voice
    * id fails the same way in both.
    */
+  /**
+   * Speak a line as several parts, each in its own voice and model, and join
+   * them into one clip. Audiobooks use it so a character reads only the words
+   * inside quotes and the narrator reads the attribution around them. Each
+   * part is trimmed, then the pause between parts follows the punctuation the
+   * earlier part ends on. [audiobooks:voice]
+   */
+  private async speakParts(
+    segment: StorySegment,
+    parts: SpokenPart[],
+    req: SegmentGenerate,
+    handle?: JobHandle,
+  ): Promise<{ audio: dsp.Audio; sampleRate: number }> {
+    const pieces: { audio: dsp.Audio; text: string }[] = [];
+    let rate = 0;
+    for (const [i, part] of parts.entries()) {
+      const m = this.models.get(part.model);
+      const info = m.describe();
+      if (info.task !== "tts") throw new ModelError(`${info.name} is not a text-to-speech model.`);
+      if (!m.loaded) {
+        handle?.phase("loading", `Loading ${info.name}`);
+        await this.models.load(part.model);
+        handle?.phase("generating", "Speaking");
+      }
+      this.models.touch();
+      const v = this.resolveVoice(part.voice_id, info.family, this.deliveryFor(segment, info.family, req.request_options));
+      const clip = await m.speak(part.text, {
+        voiceRefPath: v.refPath,
+        voiceId: v.builtinId,
+        seed: req.seed ?? null,
+        steps: req.steps ?? null,
+        cfg: req.cfg ?? null,
+        loadOptions: req.load_options,
+        requestOptions: v.requestOptions,
+      });
+      handle?.progress(0.2 + (0.7 * (i + 1)) / parts.length, "Speaking", "generating");
+      if (!rate) rate = clip.sampleRate;
+      const audio = clip.sampleRate === rate ? clip.audio : dsp.resampleAudio(clip.audio, clip.sampleRate, rate);
+      pieces.push({ audio: dsp.trimSilence(audio, rate), text: part.text });
+    }
+    const joined: dsp.Audio[] = [];
+    pieces.forEach((p, i) => {
+      if (i > 0) {
+        const gap = Math.round(partGapS(pieces[i - 1]!.text) * rate);
+        joined.push(Array.from({ length: p.audio.length }, () => new Float32Array(gap)));
+      }
+      joined.push(p.audio);
+    });
+    return { audio: dsp.concatAudio(joined, rate), sampleRate: rate };
+  }
+
   private resolveVoice(
     voiceId: string | null,
     family: string,

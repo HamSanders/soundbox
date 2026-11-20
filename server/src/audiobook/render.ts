@@ -29,6 +29,7 @@ import { ModelError } from "../errors.js";
 import type { Job } from "../schemas.js";
 import type { JobHandle } from "../jobs.js";
 import type { MirliService } from "../service.js";
+import { dialogueParts, type SpokenPart } from "./dialogue-parts.js";
 import { applyPronunciations, type PronounceResult } from "./pronounce.js";
 import type { BookAccess, BookParagraph } from "./render-access.js";
 import { voiceStores } from "./render-access.js";
@@ -155,6 +156,24 @@ export class RenderService {
     const pr = opts.spoken !== undefined
       ? { text: opts.spoken, warnings: [] as string[], applied: [] }
       : this.pronounced(chapter.book_id, p.text, choice.model);
+    // Dialogue-only casting: a character reads the quoted words, the narrator
+    // the rest ("she said"). Not for selection fragments, which are already
+    // a piece of one voice's take.
+    const book = this.book.getBook(chapter.book_id);
+    const pieces = opts.spoken === undefined && p.character_id && book?.settings.dialogue_only !== false
+      ? dialogueParts(p.text)
+      : null;
+    let parts: SpokenPart[] | undefined;
+    if (pieces) {
+      const narrator = await this.chooseVoice({ ...p, character_id: null, voice_id: null }, chapter.book_id);
+      parts = pieces.map((piece) => {
+        const c = piece.quote ? choice : narrator;
+        const said = this.pronounced(chapter.book_id, piece.text, c.model);
+        pr.warnings.push(...said.warnings.filter((w) => !pr.warnings.includes(w)));
+        return { text: said.text, voice_id: c.voice_id, model: c.model };
+      });
+    }
+    const spokenText = parts ? parts.map((x) => x.text).join(" ") : pr.text;
     const seed = opts.seed === undefined ? randomInt(0, 2 ** 31 - 1) : opts.seed;
     const origin = opts.origin ?? "generate";
 
@@ -171,8 +190,9 @@ export class RenderService {
         const t0 = performance.now();
         const seg = await this.svc.generateSegment(
           segmentId,
-          { model: choice.model, seed, load_options: {}, text: pr.text },
+          { model: choice.model, seed, load_options: {}, text: spokenText },
           handle,
+          parts,
         );
         if (!seg?.sound_id) throw new ModelError("No audio was written.");
         return { sound_id: seg.sound_id, gen_ms: performance.now() - t0, duration_s: seg.duration_s ?? 0 };
@@ -193,7 +213,7 @@ export class RenderService {
       sound_id: result.sound_id,
       take_id: takeId,
       model: choice.model,
-      spoken_text: pr.text,
+      spoken_text: spokenText,
       warnings: [...choice.notes, ...pr.warnings],
       gen_ms: result.gen_ms,
     };

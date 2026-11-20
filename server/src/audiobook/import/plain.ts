@@ -12,7 +12,7 @@
 
 import type { Manuscript } from "../types.js";
 import { blocksToSections, emptyManuscript, finishManuscript, type Block, type ParseOptions } from "./manuscript.js";
-import { isHeadingLine, tidyTitle } from "./text.js";
+import { isHeadingLine, SCENE_BREAK, tidyTitle } from "./text.js";
 
 /** Strip inline Markdown so it is not read aloud. */
 export function stripMarkdownInline(text: string): string {
@@ -73,7 +73,11 @@ export function textToBlocks(text: string, markdown: boolean): Block[] {
         blocks.push({ type: "heading", level: atx[1]!.length, text: stripMarkdownInline(atx[2]!) });
         continue;
       }
-      if (/^(?:[-*_]\s*){3,}$/.test(trimmed) && !para.length) continue; // thematic break
+      if (/^(?:[-*_]\s*){3,}$/.test(trimmed) && !para.length) {
+        // A thematic break is a scene break.
+        blocks.push({ type: "para", text: SCENE_BREAK });
+        continue;
+      }
       if (/^(?:<!--.*-->|<\/?[a-z][^>]*>)$/i.test(trimmed)) continue; // stray HTML
       if (/^\|.*\|$/.test(trimmed)) continue; // tables
     }

@@ -14,6 +14,7 @@ import { DomUtils, parseDocument } from "htmlparser2";
 import type { Manuscript } from "../types.js";
 import { blocksToSections, emptyManuscript, finishManuscript, type Block, type ParseOptions } from "./manuscript.js";
 import { languageCode } from "./plain.js";
+import { SCENE_BREAK } from "./text.js";
 
 /** Elements whose text is never narration. */
 const SKIP = new Set([
@@ -85,6 +86,12 @@ export function htmlToBlocks(root: Document | Element | ChildNode[]): Block[] {
       }
       if (name === "br") {
         text += "\n";
+        continue;
+      }
+      if (name === "hr") {
+        // A horizontal rule between paragraphs is a scene break.
+        flush();
+        blocks.push({ type: "para", text: SCENE_BREAK });
         continue;
       }
       if (BLOCK.has(name)) {

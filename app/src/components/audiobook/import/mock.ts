@@ -12,11 +12,12 @@ import type { ChapterKind } from "@/lib/audiobook-types";
 import type { ImportApi, ImportPreview, ImportSection } from "./api";
 import { paragraphsFor } from "./sections";
 
-const S = (title: string, kind: ChapterKind, included: boolean, paragraphs: string[]): ImportSection => ({
+const S = (title: string, kind: ChapterKind, included: boolean, paragraphs: string[], breaks?: number[]): ImportSection => ({
   title,
   kind,
   included,
   paragraphs,
+  ...(breaks ? { breaks } : {}),
   characters: paragraphs.reduce((n, p) => n + p.length, 0),
 });
 
@@ -34,7 +35,7 @@ export const SAMPLE_SECTIONS: ImportSection[] = [
     "Mr. Bennet replied that he had not.",
     "“But it is,” returned she; “for Mrs. Long has just been here, and she told me all about it.”",
     "Mr. Bennet made no answer.",
-  ]),
+  ], [4]),
   S("Chapter II", "chapter", true, [
     "Mr. Bennet was among the earliest of those who waited on Mr. Bingley. He had always intended to visit him, though to the last always assuring his wife that he should not go; and till the evening after the visit was paid she had no knowledge of it.",
     "“I hope Mr. Bingley will like it, Lizzy.”",

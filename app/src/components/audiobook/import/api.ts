@@ -16,6 +16,8 @@ export interface ImportSection {
   kind: ChapterKind;
   included: boolean;
   paragraphs: string[];
+  /** Scene breaks: a pause before paragraphs[i] (ascending, 0 < i < length). */
+  breaks?: number[];
   characters: number;
 }
 

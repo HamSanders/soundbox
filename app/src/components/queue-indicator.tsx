@@ -25,49 +25,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useCancelJob, useJobs } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import type { Job } from "@/lib/api";
-
-/** Kinds that run on the generation worker — the ones that queue behind each
- *  other. A model download is not one: it does not compete for the worker, and
- *  listing it here would put "downloading Chatterbox" in a render queue. */
-const GENERATION_KINDS = new Set(["generate", "speak", "convert", "separate"]);
-
-/** Readable names for a job with nothing quotable in its request. */
-const KIND_LABEL: Record<string, string> = {
-  generate: "Generation",
-  speak: "Spoken read",
-  convert: "Voice conversion",
-  separate: "Stem separation",
-  selftest: "Model self-test",
-};
+import { describeJob, GENERATION_KINDS } from "@/lib/job-label";
 
 function isActive(job: Job): boolean {
   return job.status === "queued" || job.status === "running";
-}
-
-/**
- * The prompt, or the closest thing this kind of job has to one.
- *
- * A row that just says "speak" tells you nothing about which of three waiting
- * reads it is, so each kind gets its own answer: a generation has a `prompt`,
- * a read has `lines` (first line's text, since that is what you would
- * recognise it by), and everything else falls back to whatever name it was
- * given.
- */
-function describe(job: Job): string {
-  const req = job.request as Record<string, unknown>;
-  const direct = req.prompt ?? req.name;
-  if (typeof direct === "string" && direct.trim()) return direct.trim();
-
-  const lines = req.lines;
-  if (Array.isArray(lines)) {
-    const first = lines.find(
-      (l): l is { text: string } =>
-        typeof (l as { text?: unknown })?.text === "string" &&
-        (l as { text: string }).text.trim().length > 0,
-    );
-    if (first) return first.text.trim();
-  }
-  return KIND_LABEL[job.kind] ?? job.kind;
 }
 
 function QueueRow({ job }: { job: Job }) {
@@ -85,8 +46,8 @@ function QueueRow({ job }: { job: Job }) {
         )}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-xs" title={describe(job)}>
-          {describe(job)}
+        <p className="truncate text-xs" title={describeJob(job)}>
+          {describeJob(job)}
         </p>
         <p className="text-muted-foreground text-[11px]">
           {running
@@ -104,7 +65,7 @@ function QueueRow({ job }: { job: Job }) {
         // "Remove" for something that has not started, "Stop" for the one that
         // has: cancelling a queued job throws nothing away, and stopping a
         // render at 80% does.
-        aria-label={running ? `Stop ${describe(job)}` : `Remove ${describe(job)} from the queue`}
+        aria-label={running ? `Stop ${describeJob(job)}` : `Remove ${describeJob(job)} from the queue`}
         title={running ? "Stop this render" : "Remove from the queue"}
         onClick={() => cancel.mutate(job.id)}
       >

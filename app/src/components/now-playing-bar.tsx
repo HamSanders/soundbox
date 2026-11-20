@@ -20,10 +20,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DownloadIcon,
   ExpandIcon,
+  ListEndIcon,
   Maximize2Icon,
   MoreHorizontalIcon,
   PauseIcon,
   PlayIcon,
+  Repeat1Icon,
   SkipBackIcon,
   SkipForwardIcon,
   StarIcon,
@@ -46,6 +48,7 @@ import { useDetailStore } from "@/lib/detail-store";
 import { useSettings, useUpdateSound } from "@/lib/queries";
 import type { Sound } from "@/lib/api";
 import { usePlayerStore } from "@/lib/player-store";
+import { usePlaybackPrefs } from "@/lib/playback-prefs";
 import { applySink, useOutputStore } from "@/lib/audio-output";
 import { cn } from "@/lib/utils";
 
@@ -67,6 +70,7 @@ export function NowPlayingBar() {
   const sinkId = useOutputStore((s) => s.sinkId);
   const setPosition = usePlayerStore((s) => s.setPosition);
   const seekRequest = usePlayerStore((s) => s.seekRequest);
+  const { autoplay, repeat, setAutoplay, setRepeat } = usePlaybackPrefs();
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
@@ -234,13 +238,16 @@ export function NowPlayingBar() {
       <audio
         ref={audioRef}
         preload="auto"
+        // Repeat: the element loops on its own, so "ended" never fires.
+        loop={repeat}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || sound.duration_s || 0)}
         onEnded={() => {
           setPlaying(false);
           release(sound.id);
-          if (next) open(next);
+          // A sound plays once and stops, unless Autoplay is on.
+          if (autoplay && next) open(next);
         }}
       />
 
@@ -270,6 +277,17 @@ export function NowPlayingBar() {
       {/* Transport and timeline */}
       <div className="flex min-w-0 flex-col items-center gap-1.5 max-md:order-last max-md:hidden">
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Autoplay the next sound"
+            aria-pressed={autoplay}
+            title={autoplay ? "Autoplay is on: the next sound plays when this one ends" : "Autoplay is off"}
+            className={cn(autoplay ? "text-foreground bg-accent" : "text-muted-foreground")}
+            onClick={() => setAutoplay(!autoplay)}
+          >
+            <ListEndIcon />
+          </Button>
           <Button variant="ghost" size="icon-sm" aria-label="Previous" disabled={!prev} onClick={() => open(prev)}>
             <SkipBackIcon />
           </Button>
@@ -286,6 +304,17 @@ export function NowPlayingBar() {
           </Button>
           <Button variant="ghost" size="icon-sm" aria-label="Next" disabled={!next} onClick={() => open(next)}>
             <SkipForwardIcon />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Repeat this sound"
+            aria-pressed={repeat}
+            title={repeat ? "Repeat is on: this sound loops" : "Repeat is off"}
+            className={cn(repeat ? "text-foreground bg-accent" : "text-muted-foreground")}
+            onClick={() => setRepeat(!repeat)}
+          >
+            <Repeat1Icon />
           </Button>
         </div>
         <div className="flex w-full items-center gap-2">

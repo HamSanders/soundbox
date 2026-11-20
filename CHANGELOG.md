@@ -6,6 +6,9 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **A sound plays once and stops.** The bottom player no longer runs on to the next sound in the list when one ends. Two toggles beside the transport turn on **Autoplay** (play the next sound) and **Repeat** (loop this one); both are off by default and remembered in this browser.
+
 ## [0.6.0] - 2026-11-20
 
 ### Added

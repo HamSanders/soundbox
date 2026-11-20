@@ -32,7 +32,6 @@ import { SoundCard } from "@/components/sound-card";
 import {
   CollectionHeader,
   LibraryKindChips,
-  LibraryTabs,
   type KindFilter,
 } from "@/components/library-shelves";
 import { useGenerateSession } from "@/hooks/use-generate-session";
@@ -289,18 +288,8 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
               {data ? `${items.length} sound${items.length === 1 ? "" : "s"}` : " "}
             </p>
           </div>
-          {!category && (
-            <LibraryKindChips
-              value={kindFilter}
-              onChange={(k) => {
-                setKindFilter(k);
-                setModelId(ALL);
-              }}
-            />
-          )}
         </div>
       )}
-      {!category && !project && <LibraryTabs />}
 
       {/* ------------------------------------------------------------ filters */}
       {/* One row: search, then each filter as a small pill. A dropdown pill
@@ -323,6 +312,17 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
             className="h-9 pl-8"
           />
         </div>
+        {/* Kind sits in the same row as the other filters on the combined
+            Library: one place to narrow the list, not a second tab bar. */}
+        {!category && (
+          <LibraryKindChips
+            value={kindFilter}
+            onChange={(k) => {
+              setKindFilter(k);
+              setModelId(ALL);
+            }}
+          />
+        )}
         <FilterMenu
           label="Tag"
           value={tag === ALL ? null : tag}
@@ -422,11 +422,11 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
               {/* Column heads, md and up: the same grid as a track row. */}
               <div
                 aria-hidden="true"
-                className="label-caps text-muted-foreground border-border mb-1 hidden grid-cols-[3.25rem_2.5rem_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto] gap-x-3 border-b px-2 pb-1.5 @2xl:grid"
+                className="label-caps text-muted-foreground border-border mb-1 hidden grid-cols-[2.5rem_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto] gap-x-3 border-b px-2 pb-1.5 @2xl:grid @4xl:grid-cols-[2.5rem_minmax(0,16rem)_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto]"
               >
-                <span className="text-right">No.</span>
                 <span />
-                <span>Subject</span>
+                <span>Title</span>
+                <span className="hidden @4xl:block" />
                 <span>Licence</span>
                 <span>Model</span>
                 <span className="text-right">Length</span>

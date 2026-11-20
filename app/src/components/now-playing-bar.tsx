@@ -16,11 +16,34 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { PauseIcon, PlayIcon, SkipBackIcon, SkipForwardIcon, XIcon } from "lucide-react";
+import {
+  DownloadIcon,
+  ExpandIcon,
+  Maximize2Icon,
+  MoreHorizontalIcon,
+  PauseIcon,
+  PlayIcon,
+  SkipBackIcon,
+  SkipForwardIcon,
+  StarIcon,
+  XIcon,
+} from "lucide-react";
+import { Link } from "react-router-dom";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { SoundTileArt } from "@/components/sound-card";
-import { formatDuration } from "@/lib/format";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { downloadSound, formatDuration } from "@/lib/format";
+import { useDetailStore } from "@/lib/detail-store";
+import { useSettings, useUpdateSound } from "@/lib/queries";
+import type { Sound } from "@/lib/api";
 import { usePlayerStore } from "@/lib/player-store";
 import { applySink, useOutputStore } from "@/lib/audio-output";
 import { cn } from "@/lib/utils";
@@ -40,6 +63,8 @@ export function NowPlayingBar() {
   const claim = usePlayerStore((s) => s.play);
   const release = usePlayerStore((s) => s.stop);
   const sinkId = useOutputStore((s) => s.sinkId);
+  const setPosition = usePlayerStore((s) => s.setPosition);
+  const seekRequest = usePlayerStore((s) => s.seekRequest);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
@@ -78,6 +103,24 @@ export function NowPlayingBar() {
     if (a) void applySink(a, sinkId);
   }, [sinkId]);
 
+  // A row's waveform asked to play from a point: jump there and play. Runs
+  // after the load effect above, so a new sound is already on the element;
+  // before its metadata arrives, the jump waits for it.
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a || !sound || !seekRequest || seekRequest.id !== sound.id) return;
+    const go = () => {
+      a.currentTime = seekRequest.t;
+      setTime(seekRequest.t);
+      setPosition(seekRequest.t);
+      claim(sound.id);
+      void a.play().catch(() => setPlaying(false));
+    };
+    if (a.readyState >= 1) go();
+    else a.addEventListener("loadedmetadata", go, { once: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- a new request is the trigger
+  }, [seekRequest]);
+
   // Another player took over: pause, keep the position.
   useEffect(() => {
     if (sound && playingId !== sound.id) audioRef.current?.pause();
@@ -90,7 +133,10 @@ export function NowPlayingBar() {
     let raf = 0;
     const tick = () => {
       const a = audioRef.current;
-      if (a && !dragging.current) setTime(a.currentTime);
+      if (a && !dragging.current) {
+        setTime(a.currentTime);
+        setPosition(a.currentTime);
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -115,6 +161,7 @@ export function NowPlayingBar() {
     setTime(t);
     // Written live: playback carries on from wherever the pointer is.
     a.currentTime = t;
+    setPosition(t);
   };
 
   if (!sound) return null;
@@ -204,14 +251,13 @@ export function NowPlayingBar() {
           <SoundTileArt sound={sound} />
         </span>
         <div className="min-w-0">
-          <p className="font-display truncate text-base leading-tight font-bold tracking-[0.01em] uppercase">
-            {sound.name}
-          </p>
+          <p className="truncate text-sm font-medium">{sound.name}</p>
           <p className="readout text-muted-foreground truncate">
             {sound.seed != null ? `No. ${sound.seed} · ` : ""}
             {formatDuration(sound.duration_s)}
           </p>
         </div>
+        <PlayerMenu sound={sound} />
       </div>
 
       {/* Transport and timeline */}
@@ -262,5 +308,59 @@ export function NowPlayingBar() {
         </Button>
       </div>
     </div>
+  );
+}
+
+/**
+ * The playing sound's menu, beside its title in the player: what you most
+ * often want to do with what you are hearing, without finding its row.
+ */
+function PlayerMenu({ sound }: { sound: Sound }) {
+  const openDetails = useDetailStore((s) => s.open);
+  const setSound = usePlayerStore((s) => s.setSound);
+  const update = useUpdateSound();
+  const { data: settings } = useSettings();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon-sm" aria-label={`More actions for ${sound.name}`}>
+          <MoreHorizontalIcon />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" side="top" className="w-48">
+        <DropdownMenuItem onClick={() => openDetails(sound)}>
+          <Maximize2Icon />
+          Details
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to={`/sounds/${sound.id}`}>
+            <ExpandIcon />
+            Open full page
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() =>
+            update.mutate(
+              { id: sound.id, patch: { favorite: !sound.favorite } },
+              { onSuccess: () => setSound({ ...sound, favorite: !sound.favorite }) },
+            )
+          }
+        >
+          <StarIcon className={sound.favorite ? "fill-current" : ""} />
+          {sound.favorite ? "Unfavourite" : "Favourite"}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => {
+            downloadSound(sound.file, sound.name, settings?.output_format).catch(() =>
+              toast.error("Could not download this sound"),
+            );
+          }}
+        >
+          <DownloadIcon />
+          Download
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

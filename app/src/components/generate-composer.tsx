@@ -73,6 +73,7 @@ import type { ComposerBlocker } from "@/lib/composer-blocker";
 import { NOT_READY } from "@/lib/model-ready";
 import { clampDuration, type ComposerSettings } from "@/lib/session-store";
 import { cn } from "@/lib/utils";
+import { NewProjectRow } from "@/components/new-project-row";
 
 /* ------------------------------------------------------------------ pills */
 
@@ -770,6 +771,12 @@ export function GenerateComposer({
                   Everything generated in this thread files into the project
                   automatically.
                 </p>
+                <NewProjectRow
+                  onCreated={(p) => {
+                    onChangeProject(p.id);
+                    setProjectsOpen(false);
+                  }}
+                />
               </PopoverContent>
             </Popover>
           );

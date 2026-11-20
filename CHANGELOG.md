@@ -8,6 +8,7 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - **A sound plays once and stops.** The bottom player no longer runs on to the next sound in the list when one ends. Two toggles beside the transport turn on **Autoplay** (play the next sound) and **Repeat** (loop this one); both are off by default and remembered in this browser.
+- **Desktop updates install at launch.** A new version now installs on the splash screen before the app opens, with its progress shown, and Mirli reopens on it. No more "Update available" dialog over the app after it has started, and on Windows no installer window: the per-user installer runs silently. The check gives up after 5 seconds when offline, and **Settings → Updates → Check for updates** still turns it off.
 - **New screenshots.** The README and the mirli.app home page show the 0.6.0 redesign: the dashboard, the library with the player, the Create panel, the docked details panel, Voice Lab and the voice clone page.
 
 ## [0.6.0] - 2026-11-20

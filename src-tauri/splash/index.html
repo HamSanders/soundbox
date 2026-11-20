@@ -54,8 +54,14 @@
       }
       body[data-stage="starting"] .steps i:nth-child(1),
       body[data-stage="waiting"] .steps i:nth-child(-n+2),
+      body[data-stage="checking"] .steps i:nth-child(-n+2),
       body[data-stage="ready"] .steps i { background: var(--signal); }
       body[data-stage="error"] .steps { display: none; }
+      /* An update installing: one amber bar fills with the download. */
+      .progress { display: none; width: 12rem; height: 3px; margin: 1.25rem auto 0; border-radius: 2px; background: var(--line); overflow: hidden; }
+      .progress span { display: block; height: 100%; width: 0; background: var(--signal); transition: width 0.3s; }
+      body[data-stage="updating"] .steps { display: none; }
+      body[data-stage="updating"] .progress { display: block; }
       .tag { font-size: 0.8125rem; color: var(--muted); margin: 0 0 1rem; }
       h1 { font-size: 1rem; font-weight: 600; margin: 0 0 0.375rem; letter-spacing: -0.01em; }
       p {
@@ -77,6 +83,7 @@
       <p class="tag" id="tag">your AI soundbox</p>
       <p id="status">Starting…</p>
       <div class="steps" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="progress" aria-hidden="true"><span id="bar"></span></div>
       <p class="hint" id="hint">First launch takes a little longer while models warm up.</p>
     </div>
 
@@ -173,6 +180,15 @@
         document.body.dataset.stage = stage ?? "starting";
         if (stage === "ready" || stage === "error") settle();
         if (message) statusEl.textContent = message;
+        if (stage === "updating") {
+          // "Updating to Mirli 0.6.1… 42%": fill the bar from the number.
+          const pct = /(\d+)%$/.exec(message ?? "");
+          if (pct) document.getElementById("bar").style.width = pct[1] + "%";
+          titleEl.textContent = "Updating Mirli";
+          tagEl.textContent = "";
+          hintEl.textContent = "Your models and projects are kept. Mirli reopens by itself when it's done.";
+          clearInterval(tipTimer);
+        }
         if (stage === "error") {
           titleEl.textContent = "Mirli could not start";
           tagEl.textContent = "";

@@ -62,6 +62,9 @@ export const config = {
       env.LLAMA_SERVER_BIN ?? join(mirliData, "bin", "llama", "b10545", "llama-server.exe"),
     gguf: env.LLM_GGUF ?? join(mirliData, "models", "llm", "qwen3-1.7b", "Qwen3-1.7B-Q8_0.gguf"),
     cudaRuntimeDir: env.LLAMA_CUDA_DIR ?? join(scratch, "cudart12"),
+    // 99 = all layers on the GPU. 0 = CPU only, which frees about 2.5 GB of
+    // VRAM for the face model.
+    gpuLayers: num("LLM_GPU_LAYERS", 99),
     maxTokens: num("LLM_MAX_TOKENS", 160),
     system:
       env.LLM_SYSTEM ??

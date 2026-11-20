@@ -3,83 +3,257 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mirli voice spike</title>
+<title>Mirli call</title>
 <style>
-  :root { color-scheme: light dark; font: 15px/1.45 system-ui, sans-serif; }
-  body { margin: 0 auto; padding: 24px 16px; max-width: 880px; background: Canvas; color: CanvasText; }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  p.sub { margin: 0 0 16px; opacity: .7; }
-  button { font: inherit; padding: 8px 18px; border-radius: 8px; border: 1px solid GrayText; background: ButtonFace; color: ButtonText; cursor: pointer; }
-  #state { display: inline-block; margin-left: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid GrayText; min-width: 76px; text-align: center; }
-  #state[data-s=listening] { background: Highlight; color: HighlightText; }
-  #state[data-s=speaking] { outline: 2px solid Highlight; }
-  #log { margin: 18px 0; display: grid; gap: 8px; }
-  .msg { padding: 8px 12px; border-radius: 10px; border: 1px solid color-mix(in srgb, CanvasText 18%, Canvas); }
-  .msg.user { justify-self: end; background: color-mix(in srgb, Highlight 14%, Canvas); }
-  .msg.partial { opacity: .6; font-style: italic; }
-  .scroll { overflow-x: auto; }
-  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 13px; }
-  th, td { text-align: right; padding: 4px 8px; border-bottom: 1px solid color-mix(in srgb, CanvasText 15%, Canvas); }
+  :root {
+    color-scheme: dark;
+    --bg: #0e1014; --panel: #181b22; --line: #2a2f3a; --fg: #eef0f4; --dim: #9aa1ae;
+    --accent: #6ea8ff; --go: #2fbf71; --end: #e5484d;
+    font: 15px/1.45 system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; height: 100dvh; background: var(--bg); color: var(--fg); display: grid; grid-template-rows: auto 1fr auto; overflow: hidden; }
+  button, select { font: inherit; color: inherit; }
+
+  header { display: flex; align-items: baseline; gap: 12px; padding: 14px 20px; }
+  header b { font-size: 17px; }
+  header span { color: var(--dim); font-variant-numeric: tabular-nums; }
+  #state { margin-left: auto; padding: 3px 12px; border-radius: 999px; border: 1px solid var(--line); color: var(--dim); }
+  #state[data-s=listening] { color: var(--go); border-color: var(--go); }
+  #state[data-s=speaking] { color: var(--accent); border-color: var(--accent); }
+  #state[data-s=error] { color: var(--end); border-color: var(--end); }
+
+  #stage { position: relative; display: grid; place-items: center; min-height: 0; padding: 0 16px; }
+  /* Voice call: an avatar whose ring follows the voice. */
+  #avatar { --lvl: 0; width: min(200px, 44vw); aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center;
+            font-size: 64px; font-weight: 600; background: linear-gradient(145deg, #3b5bdb, #7048e8);
+            box-shadow: 0 0 0 calc(6px + var(--lvl) * 46px) color-mix(in srgb, var(--accent) 22%, transparent);
+            transition: box-shadow .08s linear; }
+  /* Video call: the face fills the stage. */
+  #face { display: none; height: 100%; max-height: 100%; max-width: 100%; aspect-ratio: 1; border-radius: 18px; background: var(--panel); }
+  body.video #face { display: block; }
+  body.video #avatar { display: none; }
+  #self { position: absolute; right: 24px; bottom: 12px; display: flex; align-items: center; gap: 8px;
+          padding: 8px 12px; border-radius: 12px; background: color-mix(in srgb, var(--panel) 85%, transparent); border: 1px solid var(--line); color: var(--dim); }
+  #self i { width: 64px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; display: block; }
+  #self i::after { content: ""; display: block; height: 100%; width: calc(var(--mic, 0) * 100%); background: var(--go); }
+  body.muted #self i::after { background: var(--end); width: 100%; opacity: .5; }
+
+  #captions { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); width: min(680px, calc(100% - 32px));
+              display: grid; gap: 6px; text-align: center; pointer-events: none; }
+  #captions div { justify-self: center; max-width: 100%; padding: 6px 14px; border-radius: 12px; background: rgb(0 0 0 / .62); }
+  #captions .you { color: var(--dim); }
+  #captions div:empty { display: none; }
+  body.nocc #captions { display: none; }
+
+  footer { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; padding: 14px 16px 18px; }
+  footer button, footer select { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); cursor: pointer; }
+  footer button[aria-pressed=true] { background: var(--fg); color: var(--bg); }
+  #end { background: var(--end); border-color: var(--end); padding-inline: 26px; }
+
+  /* Before the call. */
+  #lobby { position: fixed; inset: 0; z-index: 2; background: var(--bg); display: grid; place-content: center; justify-items: center; gap: 18px; padding: 16px; text-align: center; }
+  #lobby .who { width: 120px; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; font-size: 44px; font-weight: 600; background: linear-gradient(145deg, #3b5bdb, #7048e8); }
+  #lobby p { margin: 0; color: var(--dim); max-width: 44ch; }
+  #lobby select { padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); }
+  #call { padding: 14px 36px; border-radius: 999px; border: 0; background: var(--go); color: #04130a; font-weight: 600; font-size: 17px; cursor: pointer; }
+  body.live #lobby { display: none; }
+  #notice { color: var(--end); min-height: 1.4em; }
+
+  /* Latency numbers, tucked away. */
+  #stats { position: fixed; right: 12px; top: 56px; bottom: 84px; width: min(560px, calc(100vw - 24px)); z-index: 1; display: none;
+           overflow: auto; padding: 12px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); }
+  body.stats #stats { display: block; }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 12.5px; }
+  th, td { text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--line); }
   th:first-child, td:first-child { text-align: left; }
-  td.over { font-weight: 700; text-decoration: underline; }
-  small { opacity: .7; }
+  td.over { font-weight: 700; color: #ffb454; }
+  small { color: var(--dim); }
 </style>
 </head>
 <body>
-<h1>Mirli voice spike</h1>
-<p class="sub">Talk; it answers in a Mirli voice. Talk over it and it stops. Use headphones, or its own voice may interrupt it.</p>
-<label for="voice" style="margin-right:8px">Voice
-  <select id="voice" style="font:inherit;padding:6px 8px;border-radius:8px;margin-left:4px"><option value="">VoxCPM2 default</option></select>
-</label>
-<button id="go">Start</button><span id="state" data-s="off">off</span>
-<meter id="level" min="0" max="1" value="0" title="mic level" style="margin-left:12px;width:120px"></meter>
-<small id="info"></small>
-<div id="log"></div>
-<div class="scroll">
-<table>
-  <thead><tr><th>turn</th><th>endpoint wait</th><th>EOS → transcript</th><th>EOS → first LLM token</th><th>EOS → first audio</th><th>heard (client)</th><th>VRAM peak</th></tr></thead>
-  <tbody id="turns"></tbody>
-</table>
+<div id="lobby">
+  <div class="who">M</div>
+  <h1 style="margin:0;font-size:24px">Call Mirli</h1>
+  <p>Talk, and it answers in a Mirli voice. Talk over it and it stops. Use headphones, or its own voice may interrupt it.</p>
+  <label>Voice <select id="voice"><option value="">VoxCPM2 default</option></select></label>
+  <button id="call">Start call</button>
+  <div id="notice"></div>
 </div>
-<p><small>All times in ms. EOS = the last moment the VAD heard speech. Target for EOS → first audio: 500 ms. "heard" adds the wait from the first PCM chunk's arrival to the speaker (the browser's reported output latency included).</small></p>
+
+<header>
+  <b>Mirli</b><span id="kind">Voice call</span><span id="clock">0:00</span>
+  <span id="state" data-s="off">connecting</span>
+</header>
+
+<div id="stage">
+  <div id="avatar">M</div>
+  <canvas id="face" width="512" height="512"></canvas>
+  <div id="captions"><div class="you" id="ccYou"></div><div id="ccBot"></div></div>
+  <div id="self">You <i></i></div>
+</div>
+
+<footer>
+  <button id="mute" aria-pressed="false">Mute</button>
+  <select id="voice2" title="Voice"></select>
+  <button id="cc" aria-pressed="true">Captions</button>
+  <button id="statsBtn" aria-pressed="false">Stats</button>
+  <button id="end">End call</button>
+</footer>
+
+<div id="stats">
+  <small id="info"></small>
+  <table>
+    <thead><tr><th>turn</th><th>wait</th><th>→ text</th><th>→ LLM</th><th>→ audio</th><th>heard</th><th>VRAM</th></tr></thead>
+    <tbody id="turns"></tbody>
+  </table>
+  <p><small>Milliseconds from the last moment the VAD heard speech. Target for "→ audio": 500 ms. "heard" adds the time until the sound left the speaker; in a video call that includes the face model's delay.</small></p>
+</div>
+
 <script>
 const $ = (id) => document.getElementById(id);
-let ctx, ws, player, partialEl, replyEl;
-let firstChunkAt = null, lastHeard = null;
+let ctx, ws, player, analyser, micStream, muted = false, callStart = 0;
+let firstChunkAt = null, lastHeard = null, botText = "";
 
 function setState(s) { $("state").textContent = s; $("state").dataset.s = s; }
-function bubble(cls, text) {
-  const d = document.createElement("div");
-  d.className = "msg " + cls; d.textContent = text;
-  $("log").append(d); d.scrollIntoView({ block: "nearest" });
-  return d;
+function notice(text) { $("notice").textContent = text; $("ccBot").textContent = text; }
+function fail(err) {
+  setState("error");
+  notice(err?.name === "NotAllowedError"
+    ? "Microphone access was refused. Allow it for this page (lock icon in the address bar) and reload."
+    : "Error: " + (err?.message ?? err));
 }
 
-// Your saved Mirli voices. The choice is remembered in this browser.
+// ---- Voices: your saved Mirli voices, remembered in this browser. -------
 const sendVoice = () => ws?.readyState === 1 && ws.send(JSON.stringify({ type: "voice", id: $("voice").value }));
 fetch("voices").then((r) => r.json()).then((list) => {
   for (const v of list) $("voice").append(new Option(v.name, v.id));
   let saved = "";
   try { saved = localStorage.getItem("spike-voice") ?? ""; } catch {}
   if (list.some((v) => v.id === saved)) $("voice").value = saved;
-}).catch(() => {});
-$("voice").onchange = () => {
-  try { localStorage.setItem("spike-voice", $("voice").value); } catch {}
-  sendVoice();
-};
-
-function fail(err) {
-  setState("error");
-  bubble("bot", err?.name === "NotAllowedError"
-    ? "Microphone access was refused. Allow it for this page (lock icon in the address bar) and reload."
-    : "error: " + (err?.message ?? err));
+}).catch(() => {}).finally(() => { $("voice2").innerHTML = $("voice").innerHTML; $("voice2").value = $("voice").value; });
+for (const [a, b] of [["voice", "voice2"], ["voice2", "voice"]]) {
+  $(a).onchange = () => {
+    $(b).value = $(a).value;
+    try { localStorage.setItem("spike-voice", $("voice").value); } catch {}
+    sendVoice();
+  };
 }
 
+// ---- Controls ------------------------------------------------------------
+const toggle = (btn, cls, on) => { $(btn).setAttribute("aria-pressed", String(on)); document.body.classList.toggle(cls, cls === "nocc" ? !on : on); };
+$("mute").onclick = () => { muted = !muted; toggle("mute", "muted", muted); };
+$("cc").onclick = () => toggle("cc", "nocc", document.body.classList.contains("nocc"));
+$("statsBtn").onclick = () => toggle("statsBtn", "stats", !document.body.classList.contains("stats"));
+$("end").onclick = () => {
+  try { ws?.close(); face.ws?.close(); micStream?.getTracks().forEach((t) => t.stop()); ctx?.close(); } catch {}
+  location.reload();
+};
+setInterval(() => {
+  if (!callStart) return;
+  const s = Math.floor((Date.now() - callStart) / 1000);
+  $("clock").textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}, 500);
+
+// ---- Video: the face server ----------------------------------------------
+// When spikes/realtime-face/server.py is running with --tap, it listens to
+// this server's speech and sends back each 0.96 s of audio together with the
+// 24 frames made from it. The call then becomes a video call and the page
+// plays THAT audio instead of its own copy, so mouth and sound share one
+// clock. The price is the face model's delay on every reply.
+// ?face=off keeps it a voice call; ?face=ws://host:port/ws points elsewhere.
+const faceParam = new URLSearchParams(location.search).get("face");
+const FACE_URL = faceParam === "off" ? null : (faceParam || "ws://127.0.0.1:17660/ws");
+const face = { ws: null, on: false, gen: 0, next: 0, frames: [], sources: [], speechFrom: Infinity, speechUntil: 0, playing: false };
+
+function faceFlush() {
+  face.gen++;
+  for (const s of face.sources) try { s.stop(); } catch {}
+  for (const f of face.frames) f.bm.close();
+  face.sources = []; face.frames = []; face.next = 0; face.speechFrom = Infinity; face.speechUntil = 0;
+}
+function setVideo(on) {
+  if (face.on === on) return;
+  face.on = on;
+  document.body.classList.toggle("video", on);
+  $("kind").textContent = on ? "Video call" : "Voice call";
+  player?.port.postMessage("flush");
+  faceFlush();
+  if (!on && face.playing) { face.playing = false; ws?.readyState === 1 && ws.send(JSON.stringify({ type: "playback", playing: false })); }
+}
+function faceConnect() {
+  if (!FACE_URL || !ctx || ctx.state === "closed") return;
+  const s = face.ws = new WebSocket(FACE_URL);
+  s.binaryType = "arraybuffer";
+  s.onopen = () => setVideo(true);
+  s.onmessage = (e) => onFace(e).catch(fail);
+  s.onerror = () => {};
+  // No face server (or it went away): stay a voice call and look again later.
+  s.onclose = () => { setVideo(false); setTimeout(faceConnect, 4000); };
+}
+async function onFace(ev) {
+  if (typeof ev.data === "string") {
+    if (JSON.parse(ev.data).type === "flush") faceFlush();
+    return;
+  }
+  const dv = new DataView(ev.data), hl = dv.getUint32(0, true);
+  const h = JSON.parse(new TextDecoder().decode(new Uint8Array(ev.data, 4, hl)));
+  let off = 4 + hl;
+  const pcm = new Int16Array(ev.data.slice(off, off + h.samples * 2)); off += h.samples * 2;
+  const blobs = h.frames.map((n) => { const b = new Blob([new Uint8Array(ev.data, off, n)], { type: "image/jpeg" }); off += n; return b; });
+  const gen = face.gen;
+  const bitmaps = await Promise.all(blobs.map((b) => createImageBitmap(b)));
+  if (gen !== face.gen || !face.on) return bitmaps.forEach((b) => b.close()); // interrupted while decoding
+  const buf = ctx.createBuffer(1, h.samples, h.rate), ch = buf.getChannelData(0);
+  for (let i = 0; i < pcm.length; i++) ch[i] = pcm[i] / 32768;
+  const src = ctx.createBufferSource(); src.buffer = buf; src.connect(ctx.destination);
+  if (face.next < ctx.currentTime + 0.03) face.next = ctx.currentTime + 0.06;
+  src.start(face.next); face.sources.push(src);
+  src.onended = () => { const i = face.sources.indexOf(src); if (i >= 0) face.sources.splice(i, 1); };
+  bitmaps.forEach((bm, i) => face.frames.push({ t: face.next + i / h.fps, bm }));
+  const end = face.next + h.samples / h.rate;
+  if (h.kind === "speech") {
+    if (face.speechUntil < face.next - 0.01) face.speechFrom = face.next;
+    face.speechUntil = end;
+  }
+  face.next = end;
+}
+
+// ---- One animation loop: frames, levels, and "is it audible" --------------
+const levels = new Uint8Array(256);
+function tick() {
+  requestAnimationFrame(tick);
+  if (!ctx || ctx.state === "closed") return;
+  if (face.on) {
+    const t = ctx.currentTime - (ctx.outputLatency || 0);
+    let f = null;
+    while (face.frames.length && face.frames[0].t <= t) { f?.bm.close(); f = face.frames.shift(); }
+    if (f) { $("face").getContext("2d").drawImage(f.bm, 0, 0, 512, 512); f.bm.close(); }
+    // Tell the voice server when speech is really audible: it uses this to
+    // decide whether your voice is an interruption or a new turn.
+    const playing = ctx.currentTime >= face.speechFrom && ctx.currentTime < face.speechUntil;
+    if (playing !== face.playing) { face.playing = playing; reportPlaying(playing); }
+  } else if (analyser) {
+    analyser.getByteTimeDomainData(levels);
+    let peak = 0;
+    for (const v of levels) peak = Math.max(peak, Math.abs(v - 128));
+    $("avatar").style.setProperty("--lvl", Math.min(1, peak / 90).toFixed(2));
+  }
+}
+function reportPlaying(playing) {
+  if (ws?.readyState === 1) ws.send(JSON.stringify({ type: "playback", playing }));
+  if (playing && firstChunkAt !== null) {
+    lastHeard = Math.round(performance.now() - firstChunkAt + (ctx.outputLatency || 0) * 1000);
+    firstChunkAt = null;
+  }
+}
+
+// ---- The call --------------------------------------------------------------
 // Everything audio starts inside the click: Chrome keeps an AudioContext
 // made outside a user gesture suspended, and then nothing is captured.
-$("go").onclick = () => {
-  $("go").disabled = true;
-  setState("starting");
+$("call").onclick = () => {
+  $("call").disabled = true;
+  $("notice").textContent = "Connecting…";
   try {
     // 48 kHz is VoxCPM2's rate; the hello message checks it.
     ctx = new AudioContext({ sampleRate: 48000, latencyHint: "interactive" });
@@ -92,62 +266,59 @@ $("go").onclick = () => {
     onJson(JSON.parse(e.data)).catch(fail);
   };
   ws.onerror = () => fail(new Error("could not connect to the spike server"));
-  ws.onclose = () => setState("closed");
+  ws.onclose = () => setState("call ended");
 };
 
 async function onJson(m) {
   if (m.type === "voice") {
-    bubble("bot", `Voice: ${m.name}. The first reply in a new voice can take a few seconds.`);
-    return;
-  }
-  if (m.type === "hello") {
+    $("ccBot").textContent = `Voice: ${m.name}. The first reply in a new voice can take a few seconds.`;
+  } else if (m.type === "hello") {
     sendVoice();
-    if (ctx.sampleRate !== m.tts.sample_rate) bubble("bot", `warning: TTS is ${m.tts.sample_rate} Hz, page plays at ${ctx.sampleRate} Hz`);
+    if (ctx.sampleRate !== m.tts.sample_rate) notice(`Warning: TTS is ${m.tts.sample_rate} Hz, page plays at ${ctx.sampleRate} Hz`);
     await ctx.audioWorklet.addModule("capture-worklet.js");
     await ctx.audioWorklet.addModule("playback-worklet.js");
-    const mic = await navigator.mediaDevices.getUserMedia({
+    micStream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
     });
     const capture = new AudioWorkletNode(ctx, "capture");
     capture.port.onmessage = (e) => {
-      if (ws.readyState === 1) ws.send(e.data);
-      // Mic level, so you can see it hears you.
-      const s = new Int16Array(e.data);
+      // Muted: keep the frames coming, but silent, so the server's clock and
+      // voice detector carry on.
+      const buf = muted ? new ArrayBuffer(e.data.byteLength) : e.data;
+      if (ws.readyState === 1) ws.send(buf);
+      const s = new Int16Array(buf);
       let peak = 0;
       for (let i = 0; i < s.length; i++) peak = Math.max(peak, Math.abs(s[i]));
-      $("level").value = Math.max(peak / 32768, $("level").value * 0.85);
+      micLevel = Math.max(peak / 32768, micLevel * 0.85);
+      $("self").style.setProperty("--mic", Math.min(1, micLevel * 2).toFixed(2));
     };
-    ctx.createMediaStreamSource(mic).connect(capture);
+    ctx.createMediaStreamSource(micStream).connect(capture);
     player = new AudioWorkletNode(ctx, "playback", { outputChannelCount: [1] });
-    player.port.onmessage = (e) => {
-      ws.send(JSON.stringify({ type: "playback", playing: e.data.playing }));
-      if (e.data.playing && firstChunkAt !== null) {
-        lastHeard = Math.round(performance.now() - firstChunkAt + (ctx.outputLatency || 0) * 1000);
-        firstChunkAt = null;
-      }
-    };
-    player.connect(ctx.destination);
+    player.port.onmessage = (e) => { if (!face.on) reportPlaying(e.data.playing); };
+    analyser = ctx.createAnalyser(); analyser.fftSize = 256;
+    player.connect(analyser); player.connect(ctx.destination);
     if (ctx.state !== "running") await ctx.resume();
-    $("info").textContent = ` audio ${ctx.state} · TTS ${m.tts.sample_rate} Hz · engines +${m.vram.total} MiB VRAM · endpoint ${m.vad.endpointMs} ms`;
+    $("info").textContent = `audio ${ctx.state} · TTS ${m.tts.sample_rate} Hz · engines +${m.vram.total} MiB VRAM · endpoint ${m.vad.endpointMs} ms`;
+    callStart = Date.now();
+    document.body.classList.add("live");
     setState("idle");
+    faceConnect();
+    requestAnimationFrame(tick);
   } else if (m.type === "state") {
     setState(m.state);
     if (m.state === "speaking") firstChunkAt = performance.now();
-  } else if (m.type === "partial") {
-    partialEl ??= bubble("user partial", "");
-    partialEl.textContent = m.text;
-  } else if (m.type === "final") {
-    partialEl ??= bubble("user", "");
-    partialEl.textContent = m.text;
-    partialEl.classList.remove("partial");
-    partialEl = null; replyEl = null;
+  } else if (m.type === "partial" || m.type === "final") {
+    $("ccYou").textContent = m.text;
+    if (m.type === "final") botText = "";
   } else if (m.type === "reply_delta") {
-    replyEl ??= bubble("bot", "");
-    replyEl.textContent += m.text;
+    botText += m.text;
+    // Captions show the tail of the reply, like live subtitles.
+    $("ccBot").textContent = botText.length > 180 ? "…" + botText.slice(-180) : botText;
   } else if (m.type === "flush") {
     player?.port.postMessage("flush");
+    faceFlush();
   } else if (m.type === "turn") {
-    if (m.discarded) { partialEl?.remove(); partialEl = null; }
+    if (m.discarded) $("ccYou").textContent = "";
     const tr = document.createElement("tr");
     const cells = [
       m.turn + (m.barged_in ? " (interrupted)" : "") + (m.discarded ? " (dropped)" : ""),
@@ -164,11 +335,13 @@ async function onJson(m) {
     $("turns").prepend(tr);
     lastHeard = null;
   } else if (m.type === "error") {
-    bubble("bot", "error: " + m.message);
+    notice("Error: " + m.message);
   }
 }
+let micLevel = 0;
 
 function onPcm(buf) {
+  if (face.on) return; // in a video call the face server sends the audio back with its frames
   const i16 = new Int16Array(buf);
   const f32 = new Float32Array(i16.length);
   for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 32768;

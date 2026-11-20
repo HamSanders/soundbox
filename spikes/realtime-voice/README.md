@@ -61,6 +61,7 @@ Start-up takes 10 to 25 s and loads three engines as child processes: two
 | --- | --- | --- |
 | `LLM_PROVIDER` | `local` | `local` starts llama-server on `LLM_GGUF`. `openai` uses any OpenAI-compatible endpoint. |
 | `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` | unset | For `LLM_PROVIDER=openai`. The key is only ever read from the environment. |
+| `LLM_GPU_LAYERS` | `99` | llama-server layers on the GPU. `0` runs the LLM on the CPU and frees about 2.5 GB of VRAM for the face model. Untested so far. |
 | `LLM_GGUF`, `LLAMA_SERVER_BIN` | Mirli's Qwen3 1.7B and llama-server | Local model and binary. |
 | `SPIKE_VOICE_REF` | unset | Path to a WAV to clone by default. Unset uses VoxCPM2's seeded default voice. The page's **Voice** menu overrides it. |
 | `VAD_ENDPOINT_MS` | `400` | Trailing silence that ends your turn. |
@@ -85,6 +86,23 @@ read with that clip, then 157 to 176 ms. Earlier Mirli measurements reported 4
 to 5 s for the first reads with a new clip; on this build it is under half a
 second. A voice made on another model (Chatterbox, VibeVoice) still clones from
 its clip here, but will sound like VoxCPM2's take on it.
+
+## Call screen, and video calls
+
+The page is a call screen: a lobby with **Start call**, then the call itself
+with a timer, live captions, **Mute**, a voice picker, **Stats** (the latency
+table) and **End call**.
+
+If the face spike's server is running with `--tap` pointed at this server, the
+page finds it at `ws://127.0.0.1:17660/ws` and the call becomes a video call:
+the page stops playing its own copy of the speech and plays the audio the face
+server sends back with its frames, so mouth and sound share one clock. It also
+reports "speech is audible" from that delayed audio, so barge-in still knows
+when Mirli is talking. `?face=off` keeps it a voice call; `?face=ws://…`
+points at another face server. `../realtime-call.sh` starts both servers.
+
+**None of this has been run yet**: the card was busy when it was written. The
+page script parses and that is all that has been checked.
 
 ## How it works
 

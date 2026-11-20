@@ -113,7 +113,7 @@ export async function startLlm() {
     "-c", "4096",
     "--no-webui",
     "--parallel", "1",
-    "-ngl", "99",
+    "-ngl", String(l.gpuLayers),
   ], env);
   const baseUrl = `http://127.0.0.1:${config.llmPort}`;
   try {

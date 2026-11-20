@@ -10,6 +10,7 @@ import type {
   AudiobookApi,
   AudiobookEvent,
   BookDetail,
+  BookNote,
   BookPatch,
   BookStats,
   BookSummary,
@@ -47,6 +48,7 @@ const meta = new Map<string, Meta>();
 /** segment id -> chapter id, for paragraph routes that only carry the segment. */
 const segmentChapter = new Map<string, string>();
 const covers = new Map<string, string>();
+const notes: BookNote[] = [];
 const listeners = new Map<string, Set<(e: AudiobookEvent) => void>>();
 let seq = 0;
 
@@ -139,6 +141,10 @@ async function paragraphsOf(chapter: Chapter): Promise<Paragraph[]> {
   });
 }
 
+function openNotes(chapterId: string): number {
+  return notes.filter((n) => n.chapter_id === chapterId && !n.resolved).length;
+}
+
 async function chapterWithStats(chapter: Chapter): Promise<ChapterWithStats & { stale: number }> {
   const paragraphs = (await paragraphsOf(chapter)).filter((p) => p.kind === "line");
   const stats: ChapterStats = {
@@ -157,6 +163,7 @@ async function chapterWithStats(chapter: Chapter): Promise<ChapterWithStats & { 
     ...chapter,
     stats,
     status,
+    open_notes: openNotes(chapter.id),
     stale: paragraphs.filter((p) => p.status === "stale").length,
   };
 }
@@ -172,6 +179,7 @@ async function detail(bookId: string): Promise<BookDetail> {
     locked: 0,
     characters: 0,
     duration_s: 0,
+    open_notes: 0,
   };
   const out: ChapterWithStats[] = [];
   for (const { stale, ...c } of list) {
@@ -181,6 +189,7 @@ async function detail(bookId: string): Promise<BookDetail> {
     stats.characters += c.stats.characters;
     stats.duration_s += c.stats.duration_s;
     stats.stale += stale;
+    stats.open_notes += c.open_notes;
     out.push(c);
   }
   stats.duration_s = Math.round(stats.duration_s * 100) / 100;
@@ -388,6 +397,31 @@ async function seed(): Promise<void> {
     text: "Mara saw it from the kitchen window: a black gap in the sky where the beam should have swept.",
   });
   metaOf(paragraphs[1]!.id).locked = true;
+  const at = now();
+  notes.push(
+    {
+      id: id("note"),
+      book_id: book.id,
+      segment_id: paragraphs[3]!.id,
+      chapter_id: one.id,
+      body: "A little breathless here; try a calmer read.",
+      at_s: 1.2,
+      resolved: false,
+      created_at: at,
+      updated_at: at,
+    },
+    {
+      id: id("note"),
+      book_id: book.id,
+      segment_id: paragraphs[1]!.id,
+      chapter_id: one.id,
+      body: "Check the pronunciation of Gull Point.",
+      at_s: null,
+      resolved: true,
+      created_at: at,
+      updated_at: at,
+    },
+  );
 
   newBook({
     title: "Field Notes",
@@ -570,6 +604,7 @@ export const mockAudiobookApi: AudiobookApi = {
     await mockApi.deleteSegment(chapter.story_id, segmentId);
     meta.delete(segmentId);
     segmentChapter.delete(segmentId);
+    for (let i = notes.length - 1; i >= 0; i--) if (notes[i]!.segment_id === segmentId) notes.splice(i, 1);
     emit(bookId, { type: "paragraphs", chapter_id: chapter.id, segment_ids: [segmentId] });
   },
 
@@ -632,6 +667,9 @@ export const mockAudiobookApi: AudiobookApi = {
     if (p.locked || next.locked) throw new Error("Unlock both paragraphs to merge them.");
     const sep = p.text && next.text ? joiner : "";
     await mockApi.updateSegment(chapter.story_id, segmentId, { text: p.text + sep + next.text });
+    for (const n of notes) {
+      if (n.segment_id === next.id) Object.assign(n, { segment_id: segmentId, at_s: null });
+    }
     await this.deleteParagraph(bookId, next.id);
     const paragraph = (await paragraphsOf(chapter)).find((x) => x.id === segmentId)!;
     return { paragraph, removed_id: next.id, split_at: p.text.length + sep.length };
@@ -684,6 +722,55 @@ export const mockAudiobookApi: AudiobookApi = {
       if (touched) emit(bookId, { type: "paragraphs", chapter_id: chapter.id });
     }
     return result;
+  },
+
+  async listNotes(bookId) {
+    await ready();
+    requireBook(bookId);
+    const order = new Map(bookChapters(bookId).map((c, i) => [c.id, i]));
+    return structuredClone(
+      notes
+        .filter((n) => n.book_id === bookId)
+        .sort((a, b) => (order.get(a.chapter_id) ?? 0) - (order.get(b.chapter_id) ?? 0)),
+    );
+  },
+
+  async addNote(bookId, segmentId, body, atS = null) {
+    await ready();
+    const chapter = chapterOfSegment(bookId, segmentId);
+    if (!body.trim()) throw new Error("A note needs some text.");
+    const at = now();
+    const note: BookNote = {
+      id: id("note"),
+      book_id: bookId,
+      segment_id: segmentId,
+      chapter_id: chapter.id,
+      body: body.trim(),
+      at_s: atS,
+      resolved: false,
+      created_at: at,
+      updated_at: at,
+    };
+    notes.push(note);
+    emit(bookId, { type: "notes", chapter_id: chapter.id });
+    return structuredClone(note);
+  },
+
+  async updateNote(bookId, noteId, patch) {
+    await ready();
+    const note = notes.find((n) => n.id === noteId && n.book_id === bookId);
+    if (!note) throw new Error("Note not found");
+    Object.assign(note, patch, { updated_at: now() });
+    emit(bookId, { type: "notes", chapter_id: note.chapter_id });
+    return structuredClone(note);
+  },
+
+  async deleteNote(bookId, noteId) {
+    await ready();
+    const i = notes.findIndex((n) => n.id === noteId && n.book_id === bookId);
+    if (i < 0) throw new Error("Note not found");
+    const [note] = notes.splice(i, 1);
+    emit(bookId, { type: "notes", chapter_id: note!.chapter_id });
   },
 
   subscribe(bookId, onEvent) {

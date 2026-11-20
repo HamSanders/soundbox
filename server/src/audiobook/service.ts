@@ -47,6 +47,12 @@
  *   markVoiced(segmentId, spokenText): void   the render path records what it spoke
  *   replace(bookId, ReplaceRequest): ReplaceResult   find/replace, skips locked paragraphs
  *
+ * Review notes
+ *   listNotes(bookId, { resolved?, chapterId?, segmentId? }): BookNote[]
+ *   addNote(segmentId, body, at_s?): BookNote
+ *   updateNote(noteId, { body?, resolved?, at_s? }): BookNote | null
+ *   deleteNote(noteId): boolean
+ *
  * Characters (table owned here; routes and detection belong to the voice area)
  *   listCharacters(bookId), getCharacter(id), createCharacter(bookId, fields),
  *   updateCharacter(id, fields), deleteCharacter(id)
@@ -68,6 +74,7 @@ import {
   AudiobookStore,
   chapterStatus,
   type BookFields,
+  type BookNote,
   type BookStats,
   type ChapterWithStats,
   type CharacterFields,
@@ -83,7 +90,7 @@ import type {
   ParagraphMeta,
 } from "./types.js";
 
-export type { BookStats, ChapterWithStats, ParagraphStatus } from "./store.js";
+export type { BookNote, BookStats, ChapterWithStats, ParagraphStatus } from "./store.js";
 
 /** A paragraph: the story segment, its audiobook state, and a status. */
 export type Paragraph = StorySegment &
@@ -140,7 +147,16 @@ const COVER_MIME: Record<string, string> = {
 };
 
 function emptyTotals(): BookStats {
-  return { chapters: 0, paragraphs: 0, voiced: 0, stale: 0, locked: 0, characters: 0, duration_s: 0 };
+  return {
+    chapters: 0,
+    paragraphs: 0,
+    voiced: 0,
+    stale: 0,
+    locked: 0,
+    characters: 0,
+    duration_s: 0,
+    open_notes: 0,
+  };
 }
 
 function stringOptions(options: Record<string, unknown>): Record<string, string> {
@@ -193,6 +209,7 @@ export class AudiobookService {
     const book = this.store.getBook(id);
     if (!book) return null;
     const stats = this.store.chapterStats(id);
+    const notes = this.store.openNoteCounts(id);
     const totals = emptyTotals();
     const chapters: ChapterWithStats[] = this.store.listChapters(id).map((chapter) => {
       const s = stats.get(chapter.id)!;
@@ -203,8 +220,15 @@ export class AudiobookService {
       totals.locked += s.locked;
       totals.characters += s.characters;
       totals.duration_s += s.duration_s;
+      const open = notes.get(chapter.id) ?? 0;
+      totals.open_notes += open;
       const { stale: _stale, ...chapterStats } = s;
-      return { ...chapter, stats: chapterStats, status: chapterStatus(chapterStats) };
+      return {
+        ...chapter,
+        stats: chapterStats,
+        status: chapterStatus(chapterStats),
+        open_notes: open,
+      };
     });
     totals.duration_s = Math.round(totals.duration_s * 100) / 100;
     return { ...book, chapters, characters: this.store.listCharacters(id), stats: totals };
@@ -598,6 +622,7 @@ export class AudiobookService {
     const splitAt = p.text.length + sep.length;
     this.store.syncVoiced([chapter.story_id]);
     this.svc.updateSegment(segmentId, { text: p.text + sep + next.text });
+    this.store.moveNotes(next.id, segmentId);
     this.svc.deleteSegment(next.id);
     this.publishParagraphs(chapter, [segmentId, next.id]);
     return { paragraph: this.getParagraph(segmentId)!, removed_id: next.id, split_at: splitAt };
@@ -737,6 +762,44 @@ export class AudiobookService {
     for (const chapter of seen.values()) {
       this.hub.publish(chapter.book_id, { type: "paragraphs", chapter_id: chapter.id });
     }
+  }
+
+  /* ------------------------------------------------------------------ notes */
+
+  listNotes(
+    bookId: string,
+    opts: { resolved?: boolean; chapterId?: string; segmentId?: string } = {},
+  ): BookNote[] {
+    return this.store.listNotes(bookId, opts);
+  }
+
+  getNote(noteId: string): BookNote | null {
+    return this.store.getNote(noteId);
+  }
+
+  addNote(segmentId: string, body: string, atS: number | null = null): BookNote {
+    const chapter = this.store.chapterForSegment(segmentId);
+    if (!chapter) throw new ModelError("Paragraph not found.");
+    const note = this.store.createNote(chapter.book_id, segmentId, body.trim(), atS);
+    this.hub.publish(chapter.book_id, { type: "notes", chapter_id: chapter.id });
+    return note;
+  }
+
+  updateNote(
+    noteId: string,
+    fields: { body?: string; resolved?: boolean; at_s?: number | null },
+  ): BookNote | null {
+    const note = this.store.updateNote(noteId, fields);
+    if (note) this.hub.publish(note.book_id, { type: "notes", chapter_id: note.chapter_id });
+    return note;
+  }
+
+  deleteNote(noteId: string): boolean {
+    const note = this.store.getNote(noteId);
+    if (!note) return false;
+    this.store.deleteNote(noteId);
+    this.hub.publish(note.book_id, { type: "notes", chapter_id: note.chapter_id });
+    return true;
   }
 
   /* ------------------------------------------------------------- characters */

@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Redo2Icon, Undo2Icon } from "lucide-react";
+import { MessageSquareTextIcon, Redo2Icon, Undo2Icon } from "lucide-react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { BookHeader } from "@/components/audiobook/editor/book-header";
@@ -19,7 +19,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEditHistory } from "@/hooks/use-edit-history";
-import { useBook, useBookEvents, useParagraphs } from "@/lib/audiobook-queries";
+import { useBook, useBookEvents, useNotes, useParagraphs } from "@/lib/audiobook-queries";
 
 export function AudiobookPage() {
   const { id = "" } = useParams();
@@ -28,6 +28,8 @@ export function AudiobookPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [findOpen, setFindOpen] = useState(false);
+  const [openNotesOnly, setOpenNotesOnly] = useState(false);
+  const notes = useNotes(id);
   useBookEvents(id);
   const history = useEditHistory();
   const ops = useBookOps(id, history);
@@ -114,6 +116,7 @@ export function AudiobookPage() {
             selectedId={chapter?.id ?? null}
             onSelect={selectChapter}
             onReorder={(before, after) => void ops.reorderChapters(before, after)}
+            noteCounts={Object.fromEntries(data.chapters.map((c) => [c.id, c.open_notes]))}
           />
         </aside>
         <section className={`${panel} min-h-[50vh] flex-1 md:min-h-0`} aria-label="Paragraphs">
@@ -124,8 +127,22 @@ export function AudiobookPage() {
               book={data}
               chapter={chapter}
               ops={ops}
+              notes={notes.data}
+              openNotesOnly={openNotesOnly}
               toolbar={
                 <>
+                  {(data.stats.open_notes > 0 || openNotesOnly) && (
+                    <Button
+                      size="sm"
+                      variant={openNotesOnly ? "secondary" : "ghost"}
+                      aria-pressed={openNotesOnly}
+                      title="Show only paragraphs with open review notes"
+                      onClick={() => setOpenNotesOnly((v) => !v)}
+                    >
+                      <MessageSquareTextIcon />
+                      Open notes ({chapter.open_notes})
+                    </Button>
+                  )}
                   <Button
                     size="icon-sm"
                     variant="ghost"

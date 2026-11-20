@@ -9,6 +9,7 @@ import {
   audiobookApi,
   type AudiobookEvent,
   type BookDetail,
+  type BookNote,
   type BookPatch,
   type BookSummary,
   type ChapterCreate,
@@ -26,6 +27,7 @@ export const abk = {
   paragraphs: (bookId: string, chapterId: string) =>
     ["audiobook", bookId, "paragraphs", chapterId] as const,
   allParagraphs: (bookId: string) => ["audiobook", bookId, "paragraphs"] as const,
+  notes: (bookId: string) => ["audiobook", bookId, "notes"] as const,
 };
 
 const fail = (what: string) => (err: unknown) => {
@@ -65,7 +67,9 @@ export function useBookEvents(bookId: string | null, onEvent?: (e: AudiobookEven
     return audiobookApi.subscribe(bookId, (event) => {
       onEvent?.(event);
       if (event.type === "hello") return;
-      if (event.type === "paragraphs" && typeof event.chapter_id === "string") {
+      if (event.type === "notes") {
+        void qc.invalidateQueries({ queryKey: abk.notes(bookId) });
+      } else if (event.type === "paragraphs" && typeof event.chapter_id === "string") {
         void qc.invalidateQueries({ queryKey: abk.paragraphs(bookId, event.chapter_id) });
       } else if (event.type === "chapters" || event.type === "characters") {
         void qc.invalidateQueries({ queryKey: abk.allParagraphs(bookId) });
@@ -287,6 +291,41 @@ export function useCastParagraphs(bookId: string) {
     onSuccess: refresh,
     onError: fail("Could not assign the character"),
   });
+}
+
+export function useNotes(bookId: string): UseQueryResult<BookNote[]> {
+  return useQuery({ queryKey: abk.notes(bookId), queryFn: () => audiobookApi.listNotes(bookId) });
+}
+
+export function useNoteOps(bookId: string) {
+  const qc = useQueryClient();
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: abk.notes(bookId) });
+    void qc.invalidateQueries({ queryKey: abk.book(bookId), exact: true });
+  };
+  const add = useMutation({
+    mutationFn: ({ segmentId, body, atS }: { segmentId: string; body: string; atS?: number | null }) =>
+      audiobookApi.addNote(bookId, segmentId, body, atS),
+    onSuccess: refresh,
+    onError: fail("Could not add the note"),
+  });
+  const update = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: { body?: string; resolved?: boolean } }) =>
+      audiobookApi.updateNote(bookId, id, patch),
+    onMutate: ({ id, patch }) => {
+      qc.setQueryData<BookNote[]>(abk.notes(bookId), (list) =>
+        list?.map((n) => (n.id === id ? { ...n, ...patch } : n)),
+      );
+    },
+    onSettled: refresh,
+    onError: fail("Could not update the note"),
+  });
+  const remove = useMutation({
+    mutationFn: (id: string) => audiobookApi.deleteNote(bookId, id),
+    onSuccess: refresh,
+    onError: fail("Could not delete the note"),
+  });
+  return { add, update, remove };
 }
 
 export function useReplace(bookId: string) {

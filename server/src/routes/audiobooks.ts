@@ -21,6 +21,7 @@ import { HttpError, streamSse } from "./helpers.js";
 type BookParams = { Params: { id: string } };
 type ChapterParams = { Params: { id: string; cid: string } };
 type ParagraphParams = { Params: { id: string; sid: string } };
+type NoteParams = { Params: { id: string; nid: string } };
 
 const MAX_COVER_BYTES = 16 * 1024 * 1024;
 
@@ -102,6 +103,16 @@ const paragraphPatchSchema = z.object({
 
 const splitSchema = z.object({ at: z.number().int().min(1) });
 const mergeSchema = z.object({ joiner: z.string().max(10).optional() });
+
+const noteCreateSchema = z.object({
+  body: z.string().trim().min(1).max(4000),
+  at_s: z.number().min(0).nullish(),
+});
+const notePatchSchema = z.object({
+  body: z.string().trim().min(1).max(4000).optional(),
+  resolved: z.boolean().optional(),
+  at_s: z.number().min(0).nullish(),
+});
 
 const castSchema = z.object({
   segment_ids: z.array(z.string()).min(1).max(5000),
@@ -317,6 +328,53 @@ function routes(app: FastifyInstance, svc: MirliService): void {
   app.delete<ParagraphParams>("/api/audiobooks/:id/paragraphs/:sid", async (request, reply) => {
     requireParagraph(request.params.id, request.params.sid);
     books().deleteParagraph(request.params.sid);
+    return reply.code(204).send();
+  });
+
+  /* ------------------------------------------------------------------ notes */
+
+  /** `?status=open|resolved|all` (default all), `?chapter_id=`, `?segment_id=`. */
+  app.get<BookParams>("/api/audiobooks/:id/notes", async (request) => {
+    requireBook(request.params.id);
+    const q = request.query as Record<string, string | undefined>;
+    const status = q.status ?? "all";
+    if (!["open", "resolved", "all"].includes(status)) {
+      throw new HttpError(422, "status must be open, resolved or all");
+    }
+    return books().listNotes(request.params.id, {
+      resolved: status === "all" ? undefined : status === "resolved",
+      chapterId: q.chapter_id,
+      segmentId: q.segment_id,
+    });
+  });
+
+  app.post<ParagraphParams>("/api/audiobooks/:id/paragraphs/:sid/notes", async (request, reply) => {
+    requireParagraph(request.params.id, request.params.sid);
+    const body = noteCreateSchema.parse(request.body);
+    return reply.code(201).send(books().addNote(request.params.sid, body.body, body.at_s ?? null));
+  });
+
+  const requireNote = (bookId: string, noteId: string) => {
+    const note = books().getNote(noteId);
+    if (!note || note.book_id !== bookId) throw new HttpError(404, "Note not found");
+    return note;
+  };
+
+  app.patch<NoteParams>("/api/audiobooks/:id/notes/:nid", async (request) => {
+    requireNote(request.params.id, request.params.nid);
+    const body = notePatchSchema.parse(request.body ?? {});
+    const fields: { body?: string; resolved?: boolean; at_s?: number | null } = {};
+    if (body.body !== undefined) fields.body = body.body;
+    if (body.resolved !== undefined) fields.resolved = body.resolved;
+    if (request.body && typeof request.body === "object" && "at_s" in request.body) {
+      fields.at_s = body.at_s ?? null;
+    }
+    return books().updateNote(request.params.nid, fields);
+  });
+
+  app.delete<NoteParams>("/api/audiobooks/:id/notes/:nid", async (request, reply) => {
+    requireNote(request.params.id, request.params.nid);
+    books().deleteNote(request.params.nid);
     return reply.code(204).send();
   });
 

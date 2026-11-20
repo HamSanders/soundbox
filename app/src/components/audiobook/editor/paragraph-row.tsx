@@ -109,8 +109,6 @@ export interface ParagraphRowProps {
   /** Where a dragged paragraph would land relative to this one. */
   dropEdge: "before" | "after" | null;
   highlight: RegExp | null;
-  /** Bumps when something outside the row (notes) changes what it shows. */
-  version?: number;
   actions: RowActions;
 }
 

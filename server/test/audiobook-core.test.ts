@@ -475,6 +475,40 @@ describe("paragraph operations", () => {
   });
 });
 
+describe("review notes", () => {
+  it("adds, resolves, filters, counts and follows a merge", async () => {
+    const book = await json("POST", "/api/audiobooks", { title: "Notes" });
+    const cid = book.chapters[0].id;
+    const base = `/api/audiobooks/${book.id}`;
+    const a = await json("POST", `${base}/chapters/${cid}/paragraphs`, { text: "One." });
+    const b = await json("POST", `${base}/chapters/${cid}/paragraphs`, { text: "Two." });
+
+    const n1 = await json("POST", `${base}/paragraphs/${a.id}/notes`, { body: "Too fast", at_s: 1.5 });
+    expect(n1).toMatchObject({ body: "Too fast", at_s: 1.5, resolved: false, chapter_id: cid });
+    const n2 = await json("POST", `${base}/paragraphs/${b.id}/notes`, { body: "Wrong name" });
+    expect((await json("GET", base)).chapters[0].open_notes).toBe(2);
+    expect((await json("GET", base)).stats.open_notes).toBe(2);
+
+    const resolved = await json("PATCH", `${base}/notes/${n1.id}`, { resolved: true });
+    expect(resolved.resolved).toBe(true);
+    expect((await json<any[]>("GET", `${base}/notes?status=open`)).map((n) => n.id)).toEqual([n2.id]);
+    expect((await json<any[]>("GET", `${base}/notes?status=resolved`)).map((n) => n.id)).toEqual([n1.id]);
+    expect(await json<any[]>("GET", `${base}/notes?segment_id=${b.id}`)).toHaveLength(1);
+    expect((await json("GET", base)).chapters[0].open_notes).toBe(1);
+
+    // Merging b into a keeps b's note, now on a.
+    await json("POST", `${base}/paragraphs/${a.id}/merge-next`, {});
+    const all = await json<any[]>("GET", `${base}/notes`);
+    expect(all.every((n) => n.segment_id === a.id)).toBe(true);
+    expect(all).toHaveLength(2);
+
+    await json("DELETE", `${base}/notes/${n2.id}`);
+    expect(await json<any[]>("GET", `${base}/notes`)).toHaveLength(1);
+    const bad = await call({ method: "POST", url: `${base}/paragraphs/${a.id}/notes`, payload: { body: " " } });
+    expect(bad.statusCode).toBe(422);
+  });
+});
+
 describe("find and replace", () => {
   it("replaces across chapters, skips locked paragraphs and reports counts", async () => {
     const book = await audiobooks(app.soundbox).createBookFromManuscript(manuscript);

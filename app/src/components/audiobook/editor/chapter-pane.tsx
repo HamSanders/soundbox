@@ -35,12 +35,13 @@ import {
 import { Kbd } from "@/components/ui/kbd";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, errorMessage } from "@/lib/api";
-import type { BookDetail, ChapterWithStats, Paragraph } from "@/lib/audiobook-api";
+import type { BookDetail, BookNote, ChapterWithStats, Paragraph } from "@/lib/audiobook-api";
 import { abk, useParagraphs } from "@/lib/audiobook-queries";
 
 import { characterById } from "./cast-colors";
 import { CharacterMenuItems } from "./character-chip";
 import { FindReplaceBar } from "./find-replace-bar";
+import { NotesButton } from "./notes";
 import { ParagraphRow, type RowActions } from "./paragraph-row";
 import type { BookOps } from "./use-book-ops";
 import { useParagraphPlayer } from "./use-paragraph-player";
@@ -68,9 +69,8 @@ export function ChapterPane({
   onChecked,
   findOpen,
   onFindOpen,
-  filter,
-  rowExtra,
-  rowVersion,
+  notes,
+  openNotesOnly = false,
   toolbar,
 }: {
   book: BookDetail;
@@ -82,12 +82,10 @@ export function ChapterPane({
   onChecked: (next: Set<string>) => void;
   findOpen: boolean;
   onFindOpen: (open: boolean) => void;
-  /** Show only paragraphs this returns true for (e.g. open notes). */
-  filter?: ((p: Paragraph) => boolean) | null;
-  /** Extra per-row controls from other editor features (notes). */
-  rowExtra?: (p: Paragraph) => React.ReactNode;
-  /** Bumps when what `rowExtra` shows changes. */
-  rowVersion?: number;
+  /** The book's review notes. */
+  notes?: BookNote[];
+  /** Show only paragraphs with an open note. */
+  openNotesOnly?: boolean;
   /** Extra controls at the end of the chapter toolbar. */
   toolbar?: React.ReactNode;
 }) {
@@ -103,7 +101,24 @@ export function ChapterPane({
   const player = useParagraphPlayer(onSelect);
 
   const all = useMemo(() => paragraphs.data ?? [], [paragraphs.data]);
-  const list = useMemo(() => (filter ? all.filter(filter) : all), [all, filter]);
+  const notesBySegment = useMemo(() => {
+    const m = new Map<string, BookNote[]>();
+    for (const n of notes ?? []) {
+      if (n.chapter_id !== chapter.id) continue;
+      m.set(n.segment_id, [...(m.get(n.segment_id) ?? []), n]);
+    }
+    return m;
+  }, [notes, chapter.id]);
+  const filter = openNotesOnly
+    ? (p: Paragraph) => (notesBySegment.get(p.id) ?? []).some((n) => !n.resolved)
+    : null;
+  const list = useMemo(
+    () =>
+      openNotesOnly
+        ? all.filter((p) => (notesBySegment.get(p.id) ?? []).some((n) => !n.resolved))
+        : all,
+    [all, notesBySegment, openNotesOnly],
+  );
   const lines = useMemo(() => list.filter((p) => p.kind === "line"), [list]);
   const selected = list.find((p) => p.id === selectedId) ?? null;
 
@@ -246,7 +261,25 @@ export function ChapterPane({
     [insertAfter],
   );
 
-  const rowActions = useMemo<RowActions>(() => ({ ...actions, extra: rowExtra }), [actions, rowExtra]);
+  const playAt = player.playAt;
+  const position = player.position;
+  const playingId = player.playingId;
+  const rowActions = useMemo<RowActions>(
+    () => ({
+      ...actions,
+      extra: (p) =>
+        p.kind === "line" ? (
+          <NotesButton
+            bookId={book.id}
+            paragraph={p}
+            notes={notesBySegment.get(p.id) ?? []}
+            position={() => (playingId === p.id ? position() : null)}
+            onPlayAt={(t) => playAt(p, t)}
+          />
+        ) : null,
+    }),
+    [actions, book.id, notesBySegment, playAt, playingId, position],
+  );
 
   // Keyboard.
   useEffect(() => {
@@ -477,7 +510,6 @@ export function ChapterPane({
               dragging={p.id === dragId}
               dropEdge={drop?.id === p.id && dragId !== p.id ? (drop.after ? "after" : "before") : null}
               highlight={highlight}
-              version={rowVersion}
               actions={rowActions}
             />
           ))

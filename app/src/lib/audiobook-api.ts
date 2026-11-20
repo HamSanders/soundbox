@@ -40,11 +40,28 @@ export interface BookStats {
   locked: number;
   characters: number;
   duration_s: number;
+  open_notes: number;
 }
 
 export interface ChapterWithStats extends Chapter {
   stats: ChapterStats;
   status: ChapterStatus;
+  /** Unresolved review notes in this chapter. */
+  open_notes: number;
+}
+
+/** A review note on one paragraph. */
+export interface BookNote {
+  id: string;
+  book_id: string;
+  segment_id: string;
+  chapter_id: string;
+  body: string;
+  /** Seconds into the paragraph's audio, or null for the whole paragraph. */
+  at_s: number | null;
+  resolved: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface BookSummary extends Book {
@@ -136,6 +153,7 @@ export type AudiobookEvent =
   | { type: "chapters" }
   | { type: "paragraphs"; chapter_id: string; segment_ids?: string[] }
   | { type: "characters" }
+  | { type: "notes"; chapter_id: string }
   | { type: "deleted" }
   | ({ type: string } & Record<string, unknown>);
 
@@ -164,6 +182,15 @@ export interface AudiobookApi {
   reorderParagraphs(bookId: string, chapterId: string, ids: string[]): Promise<Paragraph[]>;
 
   replace(bookId: string, req: ReplaceRequest): Promise<ReplaceResult>;
+
+  listNotes(bookId: string): Promise<BookNote[]>;
+  addNote(bookId: string, segmentId: string, body: string, atS?: number | null): Promise<BookNote>;
+  updateNote(
+    bookId: string,
+    noteId: string,
+    patch: { body?: string; resolved?: boolean; at_s?: number | null },
+  ): Promise<BookNote>;
+  deleteNote(bookId: string, noteId: string): Promise<void>;
 
   /** Live events for one book. Returns the unsubscribe. */
   subscribe(bookId: string, onEvent: (event: AudiobookEvent) => void): () => void;
@@ -249,6 +276,20 @@ const httpAudiobookApi: AudiobookApi = {
 
   replace: (bookId, req) =>
     request<ReplaceResult>(`${base(bookId)}/replace`, { method: "POST", ...json(req) }),
+
+  listNotes: (bookId) => request<BookNote[]>(`${base(bookId)}/notes`),
+  addNote: (bookId, segmentId, body, atS = null) =>
+    request<BookNote>(`${base(bookId)}/paragraphs/${encodeURIComponent(segmentId)}/notes`, {
+      method: "POST",
+      ...json({ body, at_s: atS }),
+    }),
+  updateNote: (bookId, noteId, patch) =>
+    request<BookNote>(`${base(bookId)}/notes/${encodeURIComponent(noteId)}`, {
+      method: "PATCH",
+      ...json(patch),
+    }),
+  deleteNote: (bookId, noteId) =>
+    request<void>(`${base(bookId)}/notes/${encodeURIComponent(noteId)}`, { method: "DELETE" }),
 
   subscribe(bookId, onEvent) {
     let source: EventSource | null = null;

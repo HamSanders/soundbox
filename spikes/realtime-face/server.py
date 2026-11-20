@@ -4,6 +4,8 @@
             Closing the connection, or 250 ms without data, ends the utterance.
   Browser : http://127.0.0.1:17660/  (WebSocket /ws carries audio + JPEG frames per 0.96 s chunk)
   Control : POST /flush (barge-in: drop everything queued), GET /stats
+  Faces   : GET /faces (list), GET /faces/<id> (image), POST /faces (upload, raw image body),
+            GET|POST /face (current portrait; POST {"id": ...} switches it, ~0.5 s, no restart)
 
 The model works in fixed steps of 24 frames = 0.96 s of audio, so that is the unit everywhere.
 """
@@ -13,6 +15,8 @@ import json
 import struct
 import subprocess
 import threading
+import hashlib
+import os
 import time
 from pathlib import Path
 
@@ -35,6 +39,30 @@ ap.add_argument("--compile", action="store_true")
 ap.add_argument("--jpeg-quality", type=int, default=85)
 ap.add_argument("--log", default=None, help="append one JSON line per chunk and per browser report")
 args = ap.parse_args()
+
+# Portraits you can switch between. Uploads live outside the repo, beside the weights.
+FACES = Path(os.environ.get("MIRLI_FACE_HOME", Path.home() / "mirli-spike-face")) / "faces"
+FACES.mkdir(parents=True, exist_ok=True)
+MAX_UPLOAD = 15 * 1024 * 1024
+
+
+def face_id_for(path):
+    return Path(path).stem
+
+
+def seed_faces():
+    """Make sure the starting portrait (--image) is in the list."""
+    src = Path(args.image)
+    dst = FACES / (src.stem + ".png")
+    if not dst.exists():
+        img = cv2.imread(str(src))
+        if img is not None:
+            cv2.imwrite(str(dst), img)
+    return dst.stem
+
+
+current_face = seed_faces()
+pending_face = None   # set by POST /face, applied by the engine thread between steps
 
 CHUNK_S = E.CHUNK_FRAMES / E.FPS
 IN_CHUNK = args.input_rate * E.CHUNK_FRAMES // E.FPS  # input samples per model step
@@ -120,9 +148,9 @@ def take_chunk():
 
 
 def engine_thread():
-    global play_head
+    global play_head, current_face, pending_face
     eng = E.FaceEngine(compile_model=args.compile, compile_vae=args.compile)
-    eng.set_image(args.image)
+    eng.set_image(FACES / f"{current_face}.png")
     for _ in range(2):  # warm-up: the first step is ~1.5 s slower (cuDNN autotune, allocator)
         eng.step(np.zeros(E.CHUNK_SAMPLES, dtype=np.float32))
     eng.reset()
@@ -131,6 +159,14 @@ def engine_thread():
     enc = [cv2.IMWRITE_JPEG_QUALITY, args.jpeg_quality]
     seq = 0
     while True:
+        if pending_face is not None:
+            want, pending_face = pending_face, None
+            t = time.time()
+            flush()
+            eng.set_image(FACES / f"{want}.png")
+            current_face = want
+            print(f"face -> {want} in {time.time() - t:.2f}s", flush=True)
+            broadcast(json.dumps({"type": "face", "id": want}))
         job = take_chunk()
         if job is None:
             wake.wait(0.02)
@@ -245,6 +281,65 @@ async def stats_handler(_request):
     })
 
 
+def list_faces():
+    files = sorted(FACES.glob("*.png"), key=lambda p: p.stat().st_mtime)
+    return [{"id": p.stem, "name": p.stem.split("-")[0]} for p in files]
+
+
+async def faces_handler(_request):
+    return web.json_response({"faces": list_faces(), "current": current_face})
+
+
+async def face_image_handler(request):
+    fid = request.match_info["id"]
+    p = FACES / f"{fid}.png"
+    if "/" in fid or "\\" in fid or not p.exists():
+        raise web.HTTPNotFound()
+    return web.FileResponse(p)
+
+
+async def upload_handler(request):
+    body = await request.read()
+    if not body or len(body) > MAX_UPLOAD:
+        raise web.HTTPBadRequest(text="send one image, up to 15 MB")
+    img = cv2.imdecode(np.frombuffer(body, np.uint8), cv2.IMREAD_COLOR)
+    if img is None:
+        raise web.HTTPBadRequest(text="not an image cv2 can read (png, jpg, webp, bmp)")
+    # Centre-crop to a square and store at 512, as the model will see it.
+    h, w = img.shape[:2]
+    side = min(h, w)
+    y, x = (h - side) // 2, (w - side) // 2
+    img = cv2.resize(img[y:y + side, x:x + side], (512, 512), interpolation=cv2.INTER_AREA)
+    name = "".join(c for c in request.headers.get("X-Name", "photo") if c.isalnum())[:24] or "photo"
+    fid = f"{name}-{hashlib.sha1(body).hexdigest()[:8]}"
+    cv2.imwrite(str(FACES / f"{fid}.png"), img)
+    return web.json_response({"id": fid})
+
+
+async def face_handler(request):
+    global pending_face
+    if request.method == "POST":
+        fid = (await request.json()).get("id", "")
+        if not (FACES / f"{fid}.png").exists() or "/" in fid or "\\" in fid:
+            raise web.HTTPNotFound(text="no such face")
+        pending_face = fid
+        wake.set()
+    return web.json_response({"current": current_face, "pending": pending_face})
+
+
+@web.middleware
+async def cors(request, handler):
+    # The call page is served by the voice server on another port.
+    if request.method == "OPTIONS":
+        resp = web.Response()
+    else:
+        resp = await handler(request)
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Name"
+    resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    return resp
+
+
 async def index(_request):
     return web.FileResponse(Path(__file__).parent / "web" / "index.html")
 
@@ -257,9 +352,12 @@ async def main():
     await asyncio.start_server(pcm_client, "127.0.0.1", args.pcm_port)
     if args.tap:
         asyncio.create_task(tap_client(args.tap))
-    app = web.Application()
+    app = web.Application(middlewares=[cors], client_max_size=MAX_UPLOAD + 1024)
     app.add_routes([web.get("/", index), web.get("/ws", ws_handler), web.post("/flush", flush_handler),
-                    web.get("/stats", stats_handler)])
+                    web.get("/stats", stats_handler), web.get("/faces", faces_handler),
+                    web.post("/faces", upload_handler), web.get("/faces/{id}", face_image_handler),
+                    web.get("/face", face_handler), web.post("/face", face_handler),
+                    web.options("/{tail:.*}", lambda r: web.Response())])
     runner = web.AppRunner(app)
     await runner.setup()
     await web.TCPSite(runner, "127.0.0.1", args.http_port).start()

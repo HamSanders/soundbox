@@ -53,12 +53,27 @@
 
   /* Before the call. */
   #lobby { position: fixed; inset: 0; z-index: 2; background: var(--bg); display: grid; place-content: center; justify-items: center; gap: 18px; padding: 16px; text-align: center; }
-  #lobby .who { width: 120px; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; font-size: 44px; font-weight: 600; background: linear-gradient(145deg, #3b5bdb, #7048e8); }
+  #lobby .who { overflow: hidden; width: 120px; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; font-size: 44px; font-weight: 600; background: linear-gradient(145deg, #3b5bdb, #7048e8); }
   #lobby p { margin: 0; color: var(--dim); max-width: 44ch; }
   #lobby select { padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); }
   #call { padding: 14px 36px; border-radius: 999px; border: 0; background: var(--go); color: #04130a; font-weight: 600; font-size: 17px; cursor: pointer; }
   body.live #lobby { display: none; }
   #notice { color: var(--end); min-height: 1.4em; }
+
+  /* Face picker: in the lobby, and as a sheet during a call. */
+  #faces { display: none; gap: 10px; justify-content: center; flex-wrap: wrap; max-width: 560px; }
+  body.hasface #faces { display: flex; }
+  #faces button { width: 76px; aspect-ratio: 1; padding: 0; border-radius: 50%; overflow: hidden; cursor: pointer;
+                  border: 3px solid transparent; background: var(--panel); color: var(--dim); font-size: 26px; }
+  #faces button img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #faces button[aria-pressed=true] { border-color: var(--go); }
+  #faces button.busy { opacity: .5; }
+  #faceHint { color: var(--dim); font-size: 13px; min-height: 1.2em; }
+  #faceSheet { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 1; display: none;
+               padding: 14px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); text-align: center; }
+  body.picking #faceSheet { display: block; }
+  #faceBtn { display: none; }
+  body.hasface #faceBtn { display: inline-block; }
 
   /* Latency numbers, tucked away. */
   #stats { position: fixed; right: 12px; top: 56px; bottom: 84px; width: min(560px, calc(100vw - 24px)); z-index: 1; display: none;
@@ -73,9 +88,11 @@
 </head>
 <body>
 <div id="lobby">
-  <div class="who">M</div>
+  <div class="who" id="who">M</div>
   <h1 style="margin:0;font-size:24px">Call Mirli</h1>
   <p>Talk, and it answers in a Mirli voice. Talk over it and it stops. Use headphones, or its own voice may interrupt it.</p>
+  <div id="faceHome"><div id="faces"></div><div id="faceHint"></div></div>
+  <input type="file" id="upload" accept="image/*" hidden>
   <label>Voice <select id="voice"><option value="">VoxCPM2 default</option></select></label>
   <button id="call">Start call</button>
   <div id="notice"></div>
@@ -96,10 +113,13 @@
 <footer>
   <button id="mute" aria-pressed="false">Mute</button>
   <select id="voice2" title="Voice"></select>
+  <button id="faceBtn" aria-pressed="false">Face</button>
   <button id="cc" aria-pressed="true">Captions</button>
   <button id="statsBtn" aria-pressed="false">Stats</button>
   <button id="end">End call</button>
 </footer>
+
+<div id="faceSheet"></div>
 
 <div id="stats">
   <small id="info"></small>
@@ -155,6 +175,73 @@ setInterval(() => {
   $("clock").textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }, 500);
 
+// ---- Face picker -------------------------------------------------------------
+// Asks the face server for its portraits. Picking one switches the face live
+// (about half a second, no restart); "+" uploads a photo, which the server
+// crops to a square. Hidden when no face server is running.
+const faceHttp = () => FACE_URL && FACE_URL.replace(/^ws/, "http").replace(/\/ws$/, "");
+let currentFace = null;
+async function loadFaces() {
+  if (!FACE_URL) return;
+  let data;
+  try { data = await (await fetch(faceHttp() + "/faces")).json(); } catch { return; }
+  document.body.classList.add("hasface");
+  currentFace = data.current;
+  const box = $("faces");
+  box.innerHTML = "";
+  for (const f of data.faces) {
+    const b = document.createElement("button");
+    b.title = f.name;
+    b.dataset.id = f.id;
+    b.setAttribute("aria-pressed", String(f.id === currentFace));
+    b.innerHTML = `<img alt="${f.name}" src="${faceHttp()}/faces/${encodeURIComponent(f.id)}">`;
+    b.onclick = () => pickFace(f.id, b);
+    box.append(b);
+  }
+  const add = document.createElement("button");
+  add.textContent = "+"; add.title = "Upload a photo";
+  add.onclick = () => $("upload").click();
+  box.append(add);
+  showWho();
+}
+function showWho() {
+  if (!currentFace) return;
+  $("who").innerHTML = `<img alt="" style="width:100%;height:100%;object-fit:cover" src="${faceHttp()}/faces/${encodeURIComponent(currentFace)}">`;
+}
+async function pickFace(id, btn) {
+  btn?.classList.add("busy");
+  $("faceHint").textContent = "Switching face…";
+  try {
+    const r = await fetch(faceHttp() + "/face", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    if (!r.ok) throw new Error(await r.text());
+    currentFace = id;
+    for (const b of $("faces").querySelectorAll("button[data-id]")) b.setAttribute("aria-pressed", String(b.dataset.id === id));
+    $("faceHint").textContent = "";
+    showWho();
+  } catch (e) { $("faceHint").textContent = "Could not switch: " + e.message; }
+  btn?.classList.remove("busy");
+}
+$("upload").onchange = async () => {
+  const file = $("upload").files[0];
+  $("upload").value = "";
+  if (!file) return;
+  $("faceHint").textContent = "Uploading…";
+  try {
+    const r = await fetch(faceHttp() + "/faces", { method: "POST", headers: { "X-Name": file.name.replace(/\.[^.]+$/, "") }, body: file });
+    if (!r.ok) throw new Error(await r.text());
+    const { id } = await r.json();
+    await loadFaces();
+    await pickFace(id, null);
+  } catch (e) { $("faceHint").textContent = "Upload failed: " + e.message; }
+};
+// During a call the same picker opens as a sheet above the controls.
+$("faceBtn").onclick = () => {
+  const open = !document.body.classList.contains("picking");
+  document.body.classList.toggle("picking", open);
+  $("faceBtn").setAttribute("aria-pressed", String(open));
+  (open ? $("faceSheet") : $("faceHome")).append($("faces"), $("faceHint"));
+};
+
 // ---- Video: the face server ----------------------------------------------
 // When spikes/realtime-face/server.py is running with --tap, it listens to
 // this server's speech and sends back each 0.96 s of audio together with the
@@ -185,7 +272,7 @@ function faceConnect() {
   if (!FACE_URL || !ctx || ctx.state === "closed") return;
   const s = face.ws = new WebSocket(FACE_URL);
   s.binaryType = "arraybuffer";
-  s.onopen = () => setVideo(true);
+  s.onopen = () => { setVideo(true); loadFaces(); };
   s.onmessage = (e) => onFace(e).catch(fail);
   s.onerror = () => {};
   // No face server (or it went away): stay a voice call and look again later.
@@ -193,7 +280,9 @@ function faceConnect() {
 }
 async function onFace(ev) {
   if (typeof ev.data === "string") {
-    if (JSON.parse(ev.data).type === "flush") faceFlush();
+    const m = JSON.parse(ev.data);
+    if (m.type === "flush") faceFlush();
+    if (m.type === "face" && m.id !== currentFace) loadFaces();
     return;
   }
   const dv = new DataView(ev.data), hl = dv.getUint32(0, true);
@@ -339,6 +428,7 @@ async function onJson(m) {
   }
 }
 let micLevel = 0;
+loadFaces();
 
 function onPcm(buf) {
   if (face.on) return; // in a video call the face server sends the audio back with its frames

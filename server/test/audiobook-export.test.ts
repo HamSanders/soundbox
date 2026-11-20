@@ -6,6 +6,7 @@
 
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -19,6 +20,7 @@ import { buildApp } from "../src/app.js";
 import { decodeWav, writeWav } from "../src/audio/dsp.js";
 import { prng } from "../src/audio/master.js";
 import { audiobookExports } from "../src/audiobook/export.js";
+import { exportedAudio } from "../src/audiobook/publish/manifest.js";
 import { audiobooks } from "../src/audiobook/service.js";
 import type { ChapterQc, Manuscript } from "../src/audiobook/types.js";
 import { Config } from "../src/config.js";
@@ -206,6 +208,15 @@ describe("export", () => {
 
     const history = await json<any[]>("GET", `/api/audiobooks/${book.id}/exports`);
     expect(history[0].id).toBe(done.id);
+
+    // Listen's player gets the mastered chapter files and their timings.
+    const served = exportedAudio(app.soundbox, book.id);
+    expect([...served.keys()].sort()).toEqual(book.chapters.map((c) => c.id).sort());
+    const first = served.get(book.chapters[0].id)!;
+    expect(first.mime).toBe("audio/wav");
+    expect(decodeWav(readFileSync(first.path)).sampleRate).toBe(44_100);
+    expect(first.timings!.length).toBeGreaterThan(0);
+    expect(first.duration_s).toBeGreaterThan(30);
   });
 
   it("refuses formats that need ffmpeg when it is missing, with the reason", async () => {

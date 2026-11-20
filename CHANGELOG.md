@@ -6,6 +6,8 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-11-20
+
 ### Fixed
 - **Scrubbing the player works.** Dragging the yellow ball on the player's timeline now moves playback there. The server sent sound files without byte-range support, so the browser (and the desktop app's window) treated them as unseekable and every scrub snapped back. `/files/{name}` now answers `Range` requests with `206 Partial Content`.
 
@@ -348,7 +350,8 @@ Initial public release, MIT-licensed. Everything below is new.
   `SOUNDBOX_ALLOWED_HOSTS`), and requires JSON or an `X-Soundbox` header on
   mutating API requests.
 
-[Unreleased]: https://github.com/HamSanders/soundbox/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/HamSanders/soundbox/compare/v0.6.2...HEAD
+[0.6.2]: https://github.com/HamSanders/soundbox/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/HamSanders/soundbox/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/HamSanders/soundbox/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/HamSanders/soundbox/compare/v0.4.1...v0.5.0

@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.HamSanders/mirli",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "title": "Mirli",
   "description": "Local AI sound effects, music, speech and voice cloning on your own GPU. Returns WAV paths.",
   "websiteUrl": "https://mirli.app/developers/",
@@ -12,7 +12,7 @@
   "packages": [
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/hamsanders/soundbox:v0.6.1",
+      "identifier": "ghcr.io/hamsanders/soundbox:v0.6.2",
       "transport": {
         "type": "streamable-http",
         "url": "http://localhost:17494/mcp"

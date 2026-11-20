@@ -256,6 +256,16 @@ pub fn run() {
                     return;
                 }
 
+                // Updates install here, on the splash, before the app opens:
+                // never as a dialog over it later. Only an installed copy
+                // updates itself (a checkout run with `npm run desktop` is
+                // updated with git), and only when "Check for updates" is on
+                // in Settings → Updates: off means the app asks nobody,
+                // GitHub included.
+                if home.bundled && backend::update_check_enabled(port) {
+                    updater::update_at_launch(&handle, &notify);
+                }
+
                 notify("ready", "Ready");
                 if let Some(win) = handle.get_webview_window("main") {
                     match tauri::Url::parse(&backend::base_url(port)) {
@@ -268,13 +278,6 @@ pub fn run() {
                     }
                 }
 
-                // Only an installed copy updates itself: a checkout run with
-                // `npm run desktop` is updated with git.
-                // And only when "Check for updates" is on in Settings → Updates:
-                // off means the app asks nobody, GitHub included.
-                if home.bundled && backend::update_check_enabled(port) {
-                    updater::check_and_offer(&handle);
-                }
             });
 
             let _ = window;

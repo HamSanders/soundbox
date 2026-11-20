@@ -40,6 +40,9 @@ const MusicStudioPage = lazy(() => import("@/routes/music-studio").then((m) => (
 const ProjectsPage = lazy(() => import("@/routes/projects").then((m) => ({ default: m.ProjectsPage })));
 const StudioIndexPage = lazy(() => import("@/routes/studio-index").then((m) => ({ default: m.StudioIndexPage })));
 const StudioPage = lazy(() => import("@/routes/studio").then((m) => ({ default: m.StudioPage })));
+const VoiceCreatePage = lazy(() => import("@/routes/voice-create").then((m) => ({ default: m.VoiceCreatePage })));
+const VoiceCloneCreatePage = lazy(() => import("@/routes/voice-create").then((m) => ({ default: m.VoiceCloneCreatePage })));
+const VoiceBuiltinCreatePage = lazy(() => import("@/routes/voice-create").then((m) => ({ default: m.VoiceBuiltinCreatePage })));
 const VoiceLabPage = lazy(() => import("@/routes/voice-lab").then((m) => ({ default: m.VoiceLabPage })));
 const ModelsPage = lazy(() => import("@/routes/models").then((m) => ({ default: m.ModelsPage })));
 const AgentsPage = lazy(() => import("@/routes/agents").then((m) => ({ default: m.AgentsPage })));
@@ -163,6 +166,9 @@ function AppShell() {
                 what comes out of it is an input to the Script Builder rather
                 than a piece of work in it. */}
             <Route path="/voice/lab" element={<VoiceLabPage />} />
+            <Route path="/voice/new" element={<VoiceCreatePage />} />
+            <Route path="/voice/new/clone" element={<VoiceCloneCreatePage />} />
+            <Route path="/voice/new/builtin" element={<VoiceBuiltinCreatePage />} />
             {/* The unfiltered library still exists, unlinked from the nav —
                 it's where a Projects sidebar/list entry deep-links to
                 (`/library?project=…`), spanning every category rather than

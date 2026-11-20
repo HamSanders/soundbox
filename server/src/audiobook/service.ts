@@ -34,7 +34,11 @@
  * Paragraphs (one paragraph = one story_segments row)
  *   getParagraphs(chapterId): Paragraph[] | null
  *   getParagraph(segmentId): Paragraph | null
- *   addParagraph(chapterId, { text, position?, character_id?, is_heading? }): Paragraph
+ *   addParagraph(chapterId, { text, position?, character_id?, is_heading?, kind?, duration_s? }): Paragraph
+ *                                             kind "pause" is a beat of silence of duration_s
+ *   splitParagraph(segmentId, at): { first, second }    split the text at a character offset
+ *   mergeWithNext(segmentId, joiner?): { paragraph, removed_id, split_at }
+ *   reorderParagraphs(chapterId, ids): Paragraph[] | null
  *   updateParagraph(segmentId, { text?, character_id?, locked?, is_heading?, model_id? }): Paragraph | null
  *   modelFor(segmentId): string | null        paragraph override, else character's, else book's
  *   deleteParagraph(segmentId): boolean
@@ -470,20 +474,38 @@ export class AudiobookService {
       position?: number | null;
       character_id?: string | null;
       is_heading?: boolean;
+      kind?: "line" | "pause";
+      duration_s?: number | null;
     },
   ): Paragraph {
     const chapter = this.store.getChapter(chapterId);
     if (!chapter) throw new ModelError(`Chapter '${chapterId}' not found.`);
     const book = this.store.getBook(chapter.book_id)!;
-    const segment = this.svc.createSegment(chapter.story_id, {
-      text: fields.text,
-      position: fields.position ?? null,
-      voice_id: this.existingVoice(book.settings.narrator_voice_id),
-      speaker: NARRATOR_SPEAKER,
-      language: book.language,
-      track_index: 0,
-      kind: "line",
-    });
+    const pause = fields.kind === "pause";
+    const segment = this.svc.createSegment(
+      chapter.story_id,
+      pause
+        ? {
+            text: "",
+            position: fields.position ?? null,
+            track_index: 0,
+            kind: "pause",
+            duration_s: fields.duration_s ?? 1,
+          }
+        : {
+            text: fields.text,
+            position: fields.position ?? null,
+            voice_id: this.existingVoice(book.settings.narrator_voice_id),
+            speaker: NARRATOR_SPEAKER,
+            language: book.language,
+            track_index: 0,
+            kind: "line",
+          },
+    );
+    if (pause) {
+      this.publishParagraphs(chapter, [segment.id]);
+      return this.getParagraph(segment.id)!;
+    }
     if (fields.is_heading) this.store.setMeta(segment.id, { is_heading: true });
     if (fields.character_id) this.setParagraphCharacter([segment.id], fields.character_id);
     this.publishParagraphs(chapter, [segment.id]);
@@ -524,6 +546,70 @@ export class AudiobookService {
     if ("character_id" in fields) this.setParagraphCharacter([segmentId], fields.character_id ?? null);
     this.publishParagraphs(chapter, [segmentId]);
     return this.getParagraph(segmentId);
+  }
+
+  /**
+   * Split a paragraph's text at a character offset. The first half keeps the
+   * segment (and its take, now stale); the second is a new, unvoiced
+   * paragraph read by the same character.
+   */
+  splitParagraph(segmentId: string, at: number): { first: Paragraph; second: Paragraph } {
+    const p = this.getParagraph(segmentId);
+    if (!p) throw new ModelError("Paragraph not found.");
+    if (p.kind !== "line") throw new ModelError("Only a spoken paragraph can be split.");
+    if (p.locked) throw new ModelError("This paragraph is locked. Unlock it to split it.");
+    const head = p.text.slice(0, at).trimEnd();
+    const tail = p.text.slice(at).trimStart();
+    if (!head || !tail) throw new ModelError("Split inside the text, not at its start or end.");
+    const chapter = this.store.getChapter(p.chapter_id)!;
+    this.store.syncVoiced([chapter.story_id]);
+    this.svc.updateSegment(segmentId, { text: head });
+    const second = this.addParagraph(chapter.id, {
+      text: tail,
+      position: p.position + 1,
+      character_id: p.character_id,
+    });
+    if (p.model_id) this.store.setMeta(second.id, { model_id: p.model_id });
+    this.publishParagraphs(chapter, [segmentId, second.id]);
+    return { first: this.getParagraph(segmentId)!, second: this.getParagraph(second.id)! };
+  }
+
+  /**
+   * Append the next paragraph's text to this one and delete the next. The
+   * first keeps its casting; its take goes stale. `split_at` is where the
+   * second half starts in the merged text, so a caller can undo by
+   * splitting there.
+   */
+  mergeWithNext(
+    segmentId: string,
+    joiner = " ",
+  ): { paragraph: Paragraph; removed_id: string; split_at: number } {
+    const p = this.getParagraph(segmentId);
+    if (!p) throw new ModelError("Paragraph not found.");
+    const chapter = this.store.getChapter(p.chapter_id)!;
+    const list = this.paragraphsOf(chapter);
+    const next = list[list.findIndex((x) => x.id === segmentId) + 1];
+    if (!next) throw new ModelError("There is no paragraph after this one.");
+    if (p.kind !== "line" || next.kind !== "line") {
+      throw new ModelError("Only two spoken paragraphs can be merged.");
+    }
+    if (p.locked || next.locked) throw new ModelError("Unlock both paragraphs to merge them.");
+    const sep = p.text && next.text ? joiner : "";
+    const splitAt = p.text.length + sep.length;
+    this.store.syncVoiced([chapter.story_id]);
+    this.svc.updateSegment(segmentId, { text: p.text + sep + next.text });
+    this.svc.deleteSegment(next.id);
+    this.publishParagraphs(chapter, [segmentId, next.id]);
+    return { paragraph: this.getParagraph(segmentId)!, removed_id: next.id, split_at: splitAt };
+  }
+
+  /** `ids` must be every segment of the chapter, in the new reading order. */
+  reorderParagraphs(chapterId: string, ids: string[]): Paragraph[] | null {
+    const chapter = this.store.getChapter(chapterId);
+    if (!chapter) return null;
+    if (!this.svc.reorderSegments(chapter.story_id, ids)) return null;
+    this.publishParagraphs(chapter, ids);
+    return this.paragraphsOf(chapter);
   }
 
   deleteParagraph(segmentId: string): boolean {

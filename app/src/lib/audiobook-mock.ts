@@ -525,13 +525,18 @@ export const mockAudiobookApi: AudiobookApi = {
     await ready();
     const book = requireBook(bookId);
     const chapter = requireChapter(bookId, chapterId);
-    const segment = await mockApi.createSegment(chapter.story_id, {
-      text: req.text ?? "",
-      position: req.position ?? null,
-      speaker: "Narrator",
-      voice_id: voiceFor(book, null),
-      language: book.language,
-    });
+    const segment = await mockApi.createSegment(
+      chapter.story_id,
+      req.kind === "pause"
+        ? { text: "", position: req.position ?? null, kind: "pause", duration_s: req.duration_s ?? 1 }
+        : {
+            text: req.text ?? "",
+            position: req.position ?? null,
+            speaker: "Narrator",
+            voice_id: voiceFor(book, null),
+            language: book.language,
+          },
+    );
     segmentChapter.set(segment.id, chapter.id);
     const m = metaOf(segment.id);
     m.is_heading = req.is_heading ?? false;
@@ -593,6 +598,51 @@ export const mockAudiobookApi: AudiobookApi = {
     }
     for (const cid of touched) emit(bookId, { type: "paragraphs", chapter_id: cid });
     return { changed: segmentIds.length };
+  },
+
+  async splitParagraph(bookId, segmentId, at) {
+    await ready();
+    const chapter = chapterOfSegment(bookId, segmentId);
+    const p = (await paragraphsOf(chapter)).find((x) => x.id === segmentId)!;
+    if (p.kind !== "line") throw new Error("Only a spoken paragraph can be split.");
+    if (p.locked) throw new Error("This paragraph is locked. Unlock it to split it.");
+    const head = p.text.slice(0, at).trimEnd();
+    const tail = p.text.slice(at).trimStart();
+    if (!head || !tail) throw new Error("Split inside the text, not at its start or end.");
+    await mockApi.updateSegment(chapter.story_id, segmentId, { text: head });
+    const second = await this.addParagraph(bookId, chapter.id, {
+      text: tail,
+      position: p.position + 1,
+      character_id: p.character_id,
+    });
+    metaOf(second.id).model_id = p.model_id;
+    const list = await paragraphsOf(chapter);
+    return { first: list.find((x) => x.id === segmentId)!, second: list.find((x) => x.id === second.id)! };
+  },
+
+  async mergeWithNext(bookId, segmentId, joiner = " ") {
+    await ready();
+    const chapter = chapterOfSegment(bookId, segmentId);
+    const list = await paragraphsOf(chapter);
+    const i = list.findIndex((x) => x.id === segmentId);
+    const p = list[i]!;
+    const next = list[i + 1];
+    if (!next) throw new Error("There is no paragraph after this one.");
+    if (p.kind !== "line" || next.kind !== "line") throw new Error("Only two spoken paragraphs can be merged.");
+    if (p.locked || next.locked) throw new Error("Unlock both paragraphs to merge them.");
+    const sep = p.text && next.text ? joiner : "";
+    await mockApi.updateSegment(chapter.story_id, segmentId, { text: p.text + sep + next.text });
+    await this.deleteParagraph(bookId, next.id);
+    const paragraph = (await paragraphsOf(chapter)).find((x) => x.id === segmentId)!;
+    return { paragraph, removed_id: next.id, split_at: p.text.length + sep.length };
+  },
+
+  async reorderParagraphs(bookId, chapterId, ids) {
+    await ready();
+    const chapter = requireChapter(bookId, chapterId);
+    await mockApi.reorderSegments(chapter.story_id, ids);
+    emit(bookId, { type: "paragraphs", chapter_id: chapterId });
+    return paragraphsOf(chapter);
   },
 
   async replace(bookId, req): Promise<ReplaceResult> {

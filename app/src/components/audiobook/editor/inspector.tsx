@@ -40,6 +40,7 @@ import { toast } from "sonner";
 import { characterById } from "./cast-colors";
 import { CastDot } from "./character-chip";
 import { StatusBadge } from "./paragraph-row";
+import type { BookOps } from "./use-book-ops";
 import { resolveModel, useTts } from "./use-tts";
 
 const BOOK_DEFAULT = "__book__";
@@ -58,10 +59,12 @@ function ParagraphInspector({
   book,
   chapter,
   paragraph,
+  ops,
 }: {
   book: BookDetail;
   chapter: ChapterWithStats;
   paragraph: Paragraph;
+  ops: BookOps;
 }) {
   const qc = useQueryClient();
   const tts = useTts();
@@ -98,7 +101,7 @@ function ParagraphInspector({
         <Select
           value={paragraph.character_id ?? NARRATOR}
           onValueChange={(v) =>
-            update.mutate({ id: paragraph.id, patch: { character_id: v === NARRATOR ? null : v } })
+            void ops.cast([paragraph], v === NARRATOR ? null : v)
           }
         >
           <SelectTrigger size="sm" className="w-full">
@@ -154,7 +157,7 @@ function ParagraphInspector({
           Locked
           <Switch
             checked={paragraph.locked}
-            onCheckedChange={(locked) => update.mutate({ id: paragraph.id, patch: { locked } })}
+            onCheckedChange={(locked) => void ops.setLocked([paragraph], locked)}
           />
         </label>
         <label className="flex items-center justify-between gap-2 text-sm">
@@ -253,12 +256,14 @@ export function Inspector({
   paragraph,
   selectedCount,
   onLockSelection,
+  ops,
 }: {
   book: BookDetail;
   chapter: ChapterWithStats | null;
   paragraph: Paragraph | null;
   selectedCount: number;
   onLockSelection: (locked: boolean) => void;
+  ops: BookOps;
 }) {
   return (
     <Tabs defaultValue="inspect" className="flex min-h-0 flex-1 flex-col gap-0">
@@ -286,7 +291,7 @@ export function Inspector({
             </div>
           </div>
         ) : paragraph && chapter ? (
-          <ParagraphInspector book={book} chapter={chapter} paragraph={paragraph} />
+          <ParagraphInspector book={book} chapter={chapter} paragraph={paragraph} ops={ops} />
         ) : chapter ? (
           <ChapterInspector book={book} chapter={chapter} />
         ) : null}

@@ -2,11 +2,13 @@
  * The editor's centre: one chapter's paragraphs.
  *
  * Keyboard (when not typing): j / k move, Enter edits, Space plays or stops,
- * L locks, G generates, Shift+Enter adds a paragraph after the selected one,
- * Ctrl/Cmd+F opens find and replace, Escape clears the selection.
+ * L locks, G generates, M merges with the next paragraph, P inserts a pause,
+ * Shift+Enter adds a paragraph after the selected one, Delete removes it,
+ * Ctrl/Cmd+F opens find and replace, Escape clears the selection. While
+ * editing, Alt+Enter splits at the cursor. Every edit here can be undone.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -34,19 +36,13 @@ import { Kbd } from "@/components/ui/kbd";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, errorMessage } from "@/lib/api";
 import type { BookDetail, ChapterWithStats, Paragraph } from "@/lib/audiobook-api";
-import {
-  abk,
-  useAddParagraph,
-  useCastParagraphs,
-  useDeleteParagraph,
-  useParagraphs,
-  useUpdateParagraph,
-} from "@/lib/audiobook-queries";
+import { abk, useParagraphs } from "@/lib/audiobook-queries";
 
 import { characterById } from "./cast-colors";
 import { CharacterMenuItems } from "./character-chip";
 import { FindReplaceBar } from "./find-replace-bar";
-import { ParagraphRow } from "./paragraph-row";
+import { ParagraphRow, type RowActions } from "./paragraph-row";
+import type { BookOps } from "./use-book-ops";
 import { useParagraphPlayer } from "./use-paragraph-player";
 import { resolveModel, useTts } from "./use-tts";
 
@@ -65,36 +61,49 @@ function isTyping(target: EventTarget | null): boolean {
 export function ChapterPane({
   book,
   chapter,
+  ops,
   selectedId,
   onSelect,
   checked,
   onChecked,
   findOpen,
   onFindOpen,
+  filter,
+  rowExtra,
+  rowVersion,
+  toolbar,
 }: {
   book: BookDetail;
   chapter: ChapterWithStats;
+  ops: BookOps;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
   checked: Set<string>;
   onChecked: (next: Set<string>) => void;
   findOpen: boolean;
   onFindOpen: (open: boolean) => void;
+  /** Show only paragraphs this returns true for (e.g. open notes). */
+  filter?: ((p: Paragraph) => boolean) | null;
+  /** Extra per-row controls from other editor features (notes). */
+  rowExtra?: (p: Paragraph) => React.ReactNode;
+  /** Bumps when what `rowExtra` shows changes. */
+  rowVersion?: number;
+  /** Extra controls at the end of the chapter toolbar. */
+  toolbar?: React.ReactNode;
 }) {
   const qc = useQueryClient();
   const paragraphs = useParagraphs(book.id, chapter.id);
-  const update = useUpdateParagraph(book.id, chapter.id);
-  const add = useAddParagraph(book.id, chapter.id);
-  const remove = useDeleteParagraph(book.id, chapter.id);
-  const cast = useCastParagraphs(book.id);
   const tts = useTts();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [anchor, setAnchor] = useState<string | null>(null);
   const [generating, setGenerating] = useState<Set<string>>(new Set());
   const [highlight, setHighlight] = useState<RegExp | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [drop, setDrop] = useState<{ id: string; after: boolean } | null>(null);
   const player = useParagraphPlayer(onSelect);
 
-  const list = useMemo(() => paragraphs.data ?? [], [paragraphs.data]);
+  const all = useMemo(() => paragraphs.data ?? [], [paragraphs.data]);
+  const list = useMemo(() => (filter ? all.filter(filter) : all), [all, filter]);
   const lines = useMemo(() => list.filter((p) => p.kind === "line"), [list]);
   const selected = list.find((p) => p.id === selectedId) ?? null;
 
@@ -154,40 +163,90 @@ export function ChapterPane({
     [book, chapter.id, chapter.story_id, qc, tts.allVoices, tts.models],
   );
 
-  const toggleLock = useCallback(
-    (p: Paragraph) => update.mutate({ id: p.id, patch: { locked: !p.locked } }),
-    [update],
+  // Latest values for the stable row actions below.
+  const latest = useRef({ all, checked, anchor, dragId, drop, chapter, ops, player, generate, onSelect, onChecked });
+  useEffect(() => {
+    latest.current = { all, checked, anchor, dragId, drop, chapter, ops, player, generate, onSelect, onChecked };
+  });
+
+  const byId = (id: string) => latest.current.all.find((p) => p.id === id) ?? null;
+
+  const insertAfter = useCallback(async (after: Paragraph | null, kind: "line" | "pause") => {
+    const { ops, chapter, onSelect } = latest.current;
+    const made = await ops.insert(chapter.id, after, kind);
+    if (made) {
+      onSelect(made.id);
+      if (kind === "line") setEditingId(made.id);
+    }
+  }, []);
+
+  const actions = useMemo<RowActions>(
+    () => ({
+      select: (id) => latest.current.onSelect(id),
+      check: (id, range) => {
+        const { checked, anchor, all, onChecked } = latest.current;
+        const next = new Set(checked);
+        if (range && anchor) {
+          const a = all.findIndex((p) => p.id === anchor);
+          const b = all.findIndex((p) => p.id === id);
+          const [lo, hi] = a < b ? [a, b] : [b, a];
+          for (const p of all.slice(lo, hi + 1)) if (p.kind === "line") next.add(p.id);
+        } else if (next.has(id)) next.delete(id);
+        else next.add(id);
+        setAnchor(id);
+        onChecked(next);
+      },
+      edit: setEditingId,
+      commit: (id, text) => {
+        const p = byId(id);
+        if (p) void latest.current.ops.setText(p, text);
+      },
+      split: (id, text, at) => {
+        const p = byId(id);
+        if (!p) return;
+        void latest.current.ops.split(p, text, at).then((second) => {
+          if (second) latest.current.onSelect(second.id);
+        });
+      },
+      mergeNext: (id) => {
+        const p = byId(id);
+        if (p) void latest.current.ops.mergeNext(p);
+      },
+      insertAfter: (id, kind) => void insertAfter(byId(id), kind),
+      remove: (id) => {
+        const p = byId(id);
+        if (p) void latest.current.ops.remove([p]);
+      },
+      play: (p) => latest.current.player.toggle(p),
+      lock: (p) => void latest.current.ops.setLocked([p], !p.locked),
+      generate: (p) => latest.current.generate([p]),
+      cast: (id, characterId) => {
+        const p = byId(id);
+        if (p) void latest.current.ops.cast([p], characterId);
+      },
+      dragStart: (id) => setDragId(id),
+      dragOver: (id, after) =>
+        setDrop((d) => (d?.id === id && d.after === after ? d : { id, after })),
+      drop: () => {
+        const { dragId, drop, all, ops, chapter } = latest.current;
+        setDragId(null);
+        setDrop(null);
+        if (!dragId || !drop || dragId === drop.id) return;
+        const before = all.map((p) => p.id);
+        const after = before.filter((id) => id !== dragId);
+        const at = after.indexOf(drop.id) + (drop.after ? 1 : 0);
+        after.splice(at, 0, dragId);
+        if (after.join() !== before.join()) void ops.reorderParagraphs(chapter.id, before, after);
+      },
+      dragEnd: () => {
+        setDragId(null);
+        setDrop(null);
+      },
+    }),
+    [insertAfter],
   );
 
-  const onCheck = useCallback(
-    (id: string, range: boolean) => {
-      const next = new Set(checked);
-      if (range && anchor) {
-        const a = list.findIndex((p) => p.id === anchor);
-        const b = list.findIndex((p) => p.id === id);
-        const [lo, hi] = a < b ? [a, b] : [b, a];
-        for (const p of list.slice(lo, hi + 1)) if (p.kind === "line") next.add(p.id);
-      } else if (next.has(id)) next.delete(id);
-      else next.add(id);
-      setAnchor(id);
-      onChecked(next);
-    },
-    [anchor, checked, list, onChecked],
-  );
-
-  const addAfter = useCallback(
-    (after: Paragraph | null) =>
-      add.mutate(
-        { text: "", position: after ? after.position + 1 : null },
-        {
-          onSuccess: (p) => {
-            onSelect(p.id);
-            setEditingId(p.id);
-          },
-        },
-      ),
-    [add, onSelect],
-  );
+  const rowActions = useMemo<RowActions>(() => ({ ...actions, extra: rowExtra }), [actions, rowExtra]);
 
   // Keyboard.
   useEffect(() => {
@@ -199,6 +258,7 @@ export function ChapterPane({
       }
       if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target)) return;
       const i = selected ? lines.findIndex((p) => p.id === selected.id) : -1;
+      const targets = checked.size > 0 ? all.filter((p) => checked.has(p.id)) : selected ? [selected] : [];
       switch (e.key) {
         case "j":
         case "ArrowDown": {
@@ -221,8 +281,8 @@ export function ChapterPane({
         case "Enter":
           if (selected && e.shiftKey) {
             e.preventDefault();
-            addAfter(selected);
-          } else if (selected && !selected.locked) {
+            void insertAfter(selected, "line");
+          } else if (selected && !selected.locked && selected.kind === "line") {
             e.preventDefault();
             setEditingId(selected.id);
           }
@@ -235,20 +295,39 @@ export function ChapterPane({
           break;
         case "l":
         case "L":
-          if (selected) {
+          if (targets.length) {
             e.preventDefault();
-            toggleLock(selected);
+            void ops.setLocked(targets, !targets.every((p) => p.locked));
           }
           break;
         case "g":
-        case "G": {
-          const targets = checked.size > 0 ? list.filter((p) => checked.has(p.id)) : selected ? [selected] : [];
+        case "G":
           if (targets.length) {
             e.preventDefault();
             generate(targets);
           }
           break;
-        }
+        case "m":
+        case "M":
+          if (selected) {
+            e.preventDefault();
+            void ops.mergeNext(selected);
+          }
+          break;
+        case "p":
+        case "P":
+          if (selected) {
+            e.preventDefault();
+            void insertAfter(selected, "pause");
+          }
+          break;
+        case "Delete":
+          if (targets.length) {
+            e.preventDefault();
+            void ops.remove(targets);
+            onChecked(new Set());
+          }
+          break;
         case "Escape":
           if (findOpen) onFindOpen(false);
           else if (checked.size) onChecked(new Set());
@@ -258,9 +337,9 @@ export function ChapterPane({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [addAfter, checked, findOpen, generate, lines, list, onChecked, onFindOpen, onSelect, player, selected, toggleLock]);
+  }, [all, checked, findOpen, generate, insertAfter, lines, onChecked, onFindOpen, onSelect, ops, player, selected]);
 
-  const checkedList = list.filter((p) => checked.has(p.id));
+  const checkedList = all.filter((p) => checked.has(p.id));
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -288,26 +367,18 @@ export function ChapterPane({
                 <CharacterMenuItems
                   characters={book.characters}
                   value={undefined}
-                  onSelect={(id) => cast.mutate({ ids: [...checked], characterId: id })}
+                  onSelect={(id) => void ops.cast(checkedList, id)}
                 />
               </DropdownMenuContent>
             </DropdownMenu>
             <Button size="sm" variant="outline" onClick={() => generate(checkedList)}>
               Generate
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => checkedList.forEach((p) => !p.locked && update.mutate({ id: p.id, patch: { locked: true } }))}
-            >
+            <Button size="sm" variant="ghost" onClick={() => void ops.setLocked(checkedList, true)}>
               <LockIcon />
               Lock
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => checkedList.forEach((p) => p.locked && update.mutate({ id: p.id, patch: { locked: false } }))}
-            >
+            <Button size="sm" variant="ghost" onClick={() => void ops.setLocked(checkedList, false)}>
               <UnlockIcon />
               Unlock
             </Button>
@@ -316,10 +387,8 @@ export function ChapterPane({
               variant="ghost"
               className="text-destructive"
               onClick={() => {
-                if (window.confirm(`Delete ${checked.size} paragraph${checked.size === 1 ? "" : "s"}?`)) {
-                  checkedList.forEach((p) => remove.mutate(p.id));
-                  onChecked(new Set());
-                }
+                void ops.remove(checkedList);
+                onChecked(new Set());
               }}
             >
               <Trash2Icon />
@@ -332,6 +401,7 @@ export function ChapterPane({
         ) : (
           <>
             <h2 className="min-w-0 flex-1 truncate text-sm font-medium">{chapter.title}</h2>
+            {toolbar}
             {player.continuous ? (
               <Button size="sm" variant="outline" onClick={player.stop}>
                 <SquareIcon />
@@ -360,7 +430,14 @@ export function ChapterPane({
         )}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto py-2" role="list" aria-label={`${chapter.title} paragraphs`}>
+      <div
+        className="min-h-0 flex-1 overflow-y-auto py-2"
+        role="list"
+        aria-label={`${chapter.title} paragraphs`}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDrop(null);
+        }}
+      >
         {paragraphs.isLoading ? (
           <div className="space-y-2 px-4">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -372,21 +449,24 @@ export function ChapterPane({
             size="sm"
             className="mx-4"
             action={
-              <Button size="sm" variant="outline" onClick={() => addAfter(null)}>
-                <PlusIcon />
-                Add paragraph
-              </Button>
+              !filter && (
+                <Button size="sm" variant="outline" onClick={() => void insertAfter(null, "line")}>
+                  <PlusIcon />
+                  Add paragraph
+                </Button>
+              )
             }
           >
-            This chapter has no paragraphs yet.
+            {filter ? "No paragraphs match the filter in this chapter." : "This chapter has no paragraphs yet."}
           </EmptyState>
         ) : (
-          list.map((p, i) => (
+          list.map((p) => (
             <ParagraphRow
               key={p.id}
               bookId={book.id}
               paragraph={p}
-              index={i}
+              index={all.indexOf(p)}
+              isLast={all[all.length - 1]?.id === p.id}
               character={characterById(book.characters, p.character_id)}
               characters={book.characters}
               selected={p.id === selectedId}
@@ -394,23 +474,23 @@ export function ChapterPane({
               editing={p.id === editingId}
               playing={p.id === player.playingId}
               generating={generating.has(p.id)}
+              dragging={p.id === dragId}
+              dropEdge={drop?.id === p.id && dragId !== p.id ? (drop.after ? "after" : "before") : null}
               highlight={highlight}
-              onSelect={onSelect}
-              onCheck={onCheck}
-              onEdit={setEditingId}
-              onCommit={(id, text) => update.mutate({ id, patch: { text } })}
-              onPlay={player.toggle}
-              onLock={toggleLock}
-              onGenerate={(para) => generate([para])}
-              onCast={(id, characterId) => update.mutate({ id, patch: { character_id: characterId } })}
+              version={rowVersion}
+              actions={rowActions}
             />
           ))
         )}
-        {list.length > 0 && (
-          <div className="px-4 pt-2 pb-6">
-            <Button size="sm" variant="ghost" onClick={() => addAfter(list[list.length - 1] ?? null)}>
+        {all.length > 0 && !filter && (
+          <div className="flex gap-1 px-4 pt-2 pb-6">
+            <Button size="sm" variant="ghost" onClick={() => void insertAfter(all[all.length - 1] ?? null, "line")}>
               <PlusIcon />
               Add paragraph
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => void insertAfter(all[all.length - 1] ?? null, "pause")}>
+              <PlusIcon />
+              Add pause
             </Button>
           </div>
         )}
@@ -419,10 +499,13 @@ export function ChapterPane({
       <div className="border-border/60 text-muted-foreground hidden flex-wrap gap-x-3 gap-y-1 border-t px-4 py-1.5 text-[0.7rem] lg:flex">
         <span><Kbd>j</Kbd>/<Kbd>k</Kbd> move</span>
         <span><Kbd>Enter</Kbd> edit</span>
+        <span><Kbd>Alt</Kbd>+<Kbd>Enter</Kbd> split</span>
+        <span><Kbd>M</Kbd> merge</span>
+        <span><Kbd>P</Kbd> pause</span>
         <span><Kbd>Space</Kbd> play</span>
         <span><Kbd>L</Kbd> lock</span>
         <span><Kbd>G</Kbd> generate</span>
-        <span><Kbd>Shift</Kbd>+<Kbd>Enter</Kbd> new paragraph</span>
+        <span><Kbd>Ctrl</Kbd>+<Kbd>Z</Kbd> undo</span>
         <span><Kbd>Ctrl</Kbd>+<Kbd>F</Kbd> find</span>
       </div>
     </div>

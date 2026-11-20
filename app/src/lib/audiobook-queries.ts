@@ -241,6 +241,44 @@ export function useDeleteParagraph(bookId: string, chapterId: string) {
   });
 }
 
+/** Split, merge and reorder, for one chapter. Each refreshes the chapter
+ *  and the book stats when it lands. */
+export function useParagraphOps(bookId: string, chapterId: string) {
+  const qc = useQueryClient();
+  const key = abk.paragraphs(bookId, chapterId);
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: key });
+    void qc.invalidateQueries({ queryKey: abk.book(bookId), exact: true });
+  };
+  const split = useMutation({
+    mutationFn: ({ id, at }: { id: string; at: number }) => audiobookApi.splitParagraph(bookId, id, at),
+    onSuccess: refresh,
+    onError: fail("Could not split the paragraph"),
+  });
+  const merge = useMutation({
+    mutationFn: ({ id, joiner }: { id: string; joiner?: string }) =>
+      audiobookApi.mergeWithNext(bookId, id, joiner),
+    onSuccess: refresh,
+    onError: fail("Could not merge the paragraphs"),
+  });
+  const reorder = useMutation({
+    mutationFn: (ids: string[]) => audiobookApi.reorderParagraphs(bookId, chapterId, ids),
+    onMutate: (ids) => {
+      qc.setQueryData<Paragraph[]>(key, (list) => {
+        if (!list) return list;
+        const byId = new Map(list.map((p) => [p.id, p]));
+        return ids.map((id, i) => ({ ...byId.get(id)!, position: i })).filter((p) => p.id);
+      });
+    },
+    onSuccess: (list) => qc.setQueryData(key, list),
+    onError: (err) => {
+      refresh();
+      fail("Could not reorder the paragraphs")(err);
+    },
+  });
+  return { split, merge, reorder };
+}
+
 export function useCastParagraphs(bookId: string) {
   const refresh = useRefreshBook(bookId);
   return useMutation({

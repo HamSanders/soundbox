@@ -5,18 +5,21 @@
  * the header. `?chapter=` keeps the open chapter in the URL.
  */
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Redo2Icon, Undo2Icon } from "lucide-react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { BookHeader } from "@/components/audiobook/editor/book-header";
 import { ChapterList } from "@/components/audiobook/editor/chapter-list";
 import { ChapterPane } from "@/components/audiobook/editor/chapter-pane";
 import { Inspector } from "@/components/audiobook/editor/inspector";
+import { useBookOps } from "@/components/audiobook/editor/use-book-ops";
 import { RenderBar } from "@/components/audiobook/render";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useBook, useBookEvents, useParagraphs, useUpdateParagraph } from "@/lib/audiobook-queries";
+import { useEditHistory } from "@/hooks/use-edit-history";
+import { useBook, useBookEvents, useParagraphs } from "@/lib/audiobook-queries";
 
 export function AudiobookPage() {
   const { id = "" } = useParams();
@@ -26,6 +29,27 @@ export function AudiobookPage() {
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [findOpen, setFindOpen] = useState(false);
   useBookEvents(id);
+  const history = useEditHistory();
+  const ops = useBookOps(id, history);
+
+  // Undo and redo, unless a text field has its own.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
+      const key = e.key.toLowerCase();
+      if (key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        history.undo();
+      } else if ((key === "z" && e.shiftKey) || key === "y") {
+        e.preventDefault();
+        history.redo();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [history]);
 
   const chapters = useMemo(() => book.data?.chapters ?? [], [book.data]);
   const chapterId = params.get("chapter");
@@ -36,7 +60,6 @@ export function AudiobookPage() {
     null;
 
   const paragraphs = useParagraphs(id, chapter?.id ?? null);
-  const update = useUpdateParagraph(id, chapter?.id ?? "");
   const paragraph = paragraphs.data?.find((p) => p.id === selectedId) ?? null;
 
   const selectChapter = useCallback(
@@ -86,7 +109,12 @@ export function AudiobookPage() {
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-2 md:flex-row">
         <aside className={`${panel} md:w-60 md:shrink-0`} aria-label="Chapters">
-          <ChapterList book={data} selectedId={chapter?.id ?? null} onSelect={selectChapter} />
+          <ChapterList
+            book={data}
+            selectedId={chapter?.id ?? null}
+            onSelect={selectChapter}
+            onReorder={(before, after) => void ops.reorderChapters(before, after)}
+          />
         </aside>
         <section className={`${panel} min-h-[50vh] flex-1 md:min-h-0`} aria-label="Paragraphs">
           {chapter ? (
@@ -95,6 +123,31 @@ export function AudiobookPage() {
               key={chapter.id}
               book={data}
               chapter={chapter}
+              ops={ops}
+              toolbar={
+                <>
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    aria-label="Undo"
+                    title={history.undoLabel ? `Undo ${history.undoLabel} (Ctrl+Z)` : "Undo (Ctrl+Z)"}
+                    disabled={!history.canUndo}
+                    onClick={history.undo}
+                  >
+                    <Undo2Icon />
+                  </Button>
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    aria-label="Redo"
+                    title="Redo (Ctrl+Shift+Z)"
+                    disabled={!history.canRedo}
+                    onClick={history.redo}
+                  >
+                    <Redo2Icon />
+                  </Button>
+                </>
+              }
               selectedId={selectedId}
               onSelect={setSelectedId}
               checked={checked}
@@ -112,11 +165,10 @@ export function AudiobookPage() {
             chapter={chapter}
             paragraph={paragraph}
             selectedCount={checked.size}
-            onLockSelection={(locked) => {
-              for (const p of paragraphs.data ?? []) {
-                if (checked.has(p.id) && p.locked !== locked) update.mutate({ id: p.id, patch: { locked } });
-              }
-            }}
+            ops={ops}
+            onLockSelection={(locked) =>
+              void ops.setLocked((paragraphs.data ?? []).filter((p) => checked.has(p.id)), locked)
+            }
           />
         </aside>
       </div>

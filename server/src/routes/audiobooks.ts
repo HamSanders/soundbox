@@ -85,6 +85,8 @@ const reorderSchema = z.object({ ids: z.array(z.string()).min(1) });
 
 const paragraphCreateSchema = z.object({
   text: z.string().max(20000).default(""),
+  kind: z.enum(["line", "pause"]).optional(),
+  duration_s: z.number().min(0.05).max(60).nullish(),
   position: z.number().int().min(0).nullish(),
   character_id: z.string().nullish(),
   is_heading: z.boolean().optional(),
@@ -97,6 +99,9 @@ const paragraphPatchSchema = z.object({
   is_heading: z.boolean().optional(),
   model_id: z.string().max(200).nullish(),
 });
+
+const splitSchema = z.object({ at: z.number().int().min(1) });
+const mergeSchema = z.object({ joiner: z.string().max(10).optional() });
 
 const castSchema = z.object({
   segment_ids: z.array(z.string()).min(1).max(5000),
@@ -259,6 +264,30 @@ function routes(app: FastifyInstance, svc: MirliService): void {
       return reply.code(201).send(books().addParagraph(request.params.cid, body));
     },
   );
+
+  /** Registered before `:sid`-style routes on the same prefix. */
+  app.post<ChapterParams>(
+    "/api/audiobooks/:id/chapters/:cid/paragraphs/reorder",
+    async (request) => {
+      requireChapter(request.params.id, request.params.cid);
+      const body = reorderSchema.parse(request.body);
+      const list = books().reorderParagraphs(request.params.cid, body.ids);
+      if (!list) throw new HttpError(422, "ids must list every paragraph of the chapter exactly once");
+      return list;
+    },
+  );
+
+  app.post<ParagraphParams>("/api/audiobooks/:id/paragraphs/:sid/split", async (request) => {
+    requireParagraph(request.params.id, request.params.sid);
+    const body = splitSchema.parse(request.body);
+    return books().splitParagraph(request.params.sid, body.at);
+  });
+
+  app.post<ParagraphParams>("/api/audiobooks/:id/paragraphs/:sid/merge-next", async (request) => {
+    requireParagraph(request.params.id, request.params.sid);
+    const body = mergeSchema.parse(request.body ?? {});
+    return books().mergeWithNext(request.params.sid, body.joiner);
+  });
 
   /** Cast many paragraphs at once (multi-select). Registered before `:sid`. */
   app.post<BookParams>("/api/audiobooks/:id/paragraphs/cast", async (request) => {

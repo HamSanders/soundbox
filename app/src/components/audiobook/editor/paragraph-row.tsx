@@ -1,21 +1,37 @@
 /**
- * One paragraph in the editor: its voice chip, its text (click or Enter to
- * edit), its status, and play / lock / generate controls.
+ * One paragraph in the editor: its voice chip, its text (double-click or
+ * Enter to edit), its status, and play / generate / lock controls. The grip
+ * drags it to a new place; the menu splits, merges, inserts and deletes.
  */
 
 import { memo, useEffect, useRef, useState } from "react";
 import {
+  GripVerticalIcon,
   HeadingIcon,
   Loader2Icon,
   LockIcon,
+  MergeIcon,
+  MoreHorizontalIcon,
   PauseIcon,
   PlayIcon,
+  PlusIcon,
+  ScissorsIcon,
   SparklesIcon,
+  TimerIcon,
+  Trash2Icon,
   UnlockIcon,
 } from "lucide-react";
 
 import { TakesPopover } from "@/components/audiobook/takes";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import type { Paragraph, ParagraphStatus } from "@/lib/audiobook-api";
 import type { Character } from "@/lib/audiobook-types";
@@ -53,10 +69,35 @@ export function StatusBadge({ status }: { status: ParagraphStatus }) {
   );
 }
 
+/** Everything a row can ask the chapter to do. One stable object, so rows
+ *  re-render only when their own paragraph or state changes. */
+export interface RowActions {
+  select: (id: string) => void;
+  check: (id: string, range: boolean) => void;
+  edit: (id: string | null) => void;
+  commit: (id: string, text: string) => void;
+  /** Save `text` (if it changed), then split it at `at`. */
+  split: (id: string, text: string, at: number) => void;
+  mergeNext: (id: string) => void;
+  insertAfter: (id: string, kind: "line" | "pause") => void;
+  remove: (id: string) => void;
+  play: (paragraph: Paragraph) => void;
+  lock: (paragraph: Paragraph) => void;
+  generate: (paragraph: Paragraph) => void;
+  cast: (id: string, characterId: string | null) => void;
+  dragStart: (id: string) => void;
+  dragOver: (id: string, after: boolean) => void;
+  drop: () => void;
+  dragEnd: () => void;
+  /** Extra controls for a row, from other features (notes). */
+  extra?: (paragraph: Paragraph) => React.ReactNode;
+}
+
 export interface ParagraphRowProps {
   bookId: string;
   paragraph: Paragraph;
   index: number;
+  isLast: boolean;
   character: Character | null;
   characters: Character[];
   selected: boolean;
@@ -64,15 +105,13 @@ export interface ParagraphRowProps {
   editing: boolean;
   playing: boolean;
   generating: boolean;
+  dragging: boolean;
+  /** Where a dragged paragraph would land relative to this one. */
+  dropEdge: "before" | "after" | null;
   highlight: RegExp | null;
-  onSelect: (id: string) => void;
-  onCheck: (id: string, range: boolean) => void;
-  onEdit: (id: string | null) => void;
-  onCommit: (id: string, text: string) => void;
-  onPlay: (paragraph: Paragraph) => void;
-  onLock: (paragraph: Paragraph) => void;
-  onGenerate: (paragraph: Paragraph) => void;
-  onCast: (id: string, characterId: string | null) => void;
+  /** Bumps when something outside the row (notes) changes what it shows. */
+  version?: number;
+  actions: RowActions;
 }
 
 function Highlighted({ text, pattern }: { text: string; pattern: RegExp | null }) {
@@ -95,21 +134,37 @@ function Highlighted({ text, pattern }: { text: string; pattern: RegExp | null }
 
 /** The text box while editing. Mounted fresh per edit, so it starts from
  *  the paragraph's current text. Blur or Ctrl/Cmd+Enter saves; Escape
- *  cancels. */
-function EditBox({ text, onDone }: { text: string; onDone: (text: string | null) => void }) {
+ *  cancels; Alt+Enter splits at the cursor. */
+function EditBox({
+  text,
+  onDone,
+  onSplit,
+}: {
+  text: string;
+  onDone: (text: string | null) => void;
+  onSplit: (text: string, at: number) => void;
+}) {
   const [draft, setDraft] = useState(text);
+  const splitting = useRef(false);
   return (
     <Textarea
       autoFocus
       value={draft}
       aria-label="Paragraph text"
+      aria-description="Alt+Enter splits at the cursor"
       onClick={(e) => e.stopPropagation()}
       onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => onDone(draft)}
+      onBlur={() => {
+        if (!splitting.current) onDone(draft);
+      }}
       onKeyDown={(e) => {
         if (e.key === "Escape") {
           e.preventDefault();
           onDone(null);
+        } else if (e.key === "Enter" && e.altKey) {
+          e.preventDefault();
+          splitting.current = true;
+          onSplit(draft, e.currentTarget.selectionStart);
         } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
           e.preventDefault();
           onDone(draft);
@@ -120,10 +175,85 @@ function EditBox({ text, onDone }: { text: string; onDone: (text: string | null)
   );
 }
 
+function RowMenu({ p, isLast, actions }: { p: Paragraph; isLast: boolean; actions: RowActions }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button size="icon-xs" variant="ghost" aria-label="More paragraph actions">
+          <MoreHorizontalIcon />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        {p.kind === "line" && (
+          <>
+            <DropdownMenuItem
+              disabled={p.locked}
+              onSelect={() => {
+                actions.select(p.id);
+                actions.edit(p.id);
+              }}
+            >
+              <ScissorsIcon />
+              Split at cursor…
+              <DropdownMenuShortcut>Alt+Enter</DropdownMenuShortcut>
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled={p.locked || isLast} onSelect={() => actions.mergeNext(p.id)}>
+              <MergeIcon />
+              Merge with next
+              <DropdownMenuShortcut>M</DropdownMenuShortcut>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+        <DropdownMenuItem onSelect={() => actions.insertAfter(p.id, "line")}>
+          <PlusIcon />
+          Paragraph after
+          <DropdownMenuShortcut>Shift+Enter</DropdownMenuShortcut>
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => actions.insertAfter(p.id, "pause")}>
+          <TimerIcon />
+          Pause after
+          <DropdownMenuShortcut>P</DropdownMenuShortcut>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" disabled={p.locked} onSelect={() => actions.remove(p.id)}>
+          <Trash2Icon />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function Grip({ id, actions }: { id: string; actions: RowActions }) {
+  return (
+    <span
+      draggable
+      role="button"
+      tabIndex={-1}
+      aria-label="Drag to reorder"
+      title="Drag to reorder"
+      onClick={(e) => e.stopPropagation()}
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", id);
+        const row = (e.currentTarget as HTMLElement).closest("[data-paragraph-id]");
+        if (row) e.dataTransfer.setDragImage(row, 16, 16);
+        actions.dragStart(id);
+      }}
+      onDragEnd={actions.dragEnd}
+      className="text-muted-foreground/50 hover:text-muted-foreground cursor-grab opacity-0 group-hover:opacity-100 active:cursor-grabbing"
+    >
+      <GripVerticalIcon className="size-3.5" />
+    </span>
+  );
+}
+
 export const ParagraphRow = memo(function ParagraphRow({
   bookId,
   paragraph: p,
   index,
+  isLast,
   character,
   characters,
   selected,
@@ -131,15 +261,10 @@ export const ParagraphRow = memo(function ParagraphRow({
   editing,
   playing,
   generating,
+  dragging,
+  dropEdge,
   highlight,
-  onSelect,
-  onCheck,
-  onEdit,
-  onCommit,
-  onPlay,
-  onLock,
-  onGenerate,
-  onCast,
+  actions,
 }: ParagraphRowProps) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -147,20 +272,51 @@ export const ParagraphRow = memo(function ParagraphRow({
     if (selected) ref.current?.scrollIntoView({ block: "nearest" });
   }, [selected]);
 
+  const dnd = {
+    onDragOver: (e: React.DragEvent) => {
+      e.preventDefault();
+      const box = e.currentTarget.getBoundingClientRect();
+      actions.dragOver(p.id, e.clientY > box.top + box.height / 2);
+    },
+    onDrop: (e: React.DragEvent) => {
+      e.preventDefault();
+      actions.drop();
+    },
+  };
+  const edge = dropEdge && (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "bg-primary pointer-events-none absolute right-2 left-2 h-0.5 rounded-full",
+        dropEdge === "before" ? "-top-px" : "-bottom-px",
+      )}
+    />
+  );
+
   if (p.kind === "pause") {
     return (
       <div
         ref={ref}
         data-paragraph-id={p.id}
-        onClick={() => onSelect(p.id)}
+        role="listitem"
+        aria-selected={selected}
+        onClick={() => actions.select(p.id)}
+        {...dnd}
         className={cn(
-          "text-muted-foreground mx-2 flex items-center gap-2 rounded-md px-3 py-1 text-xs",
+          "group text-muted-foreground relative mx-2 flex items-center gap-2 rounded-md py-1 pr-2 pl-3 text-xs",
           selected && "bg-accent",
+          dragging && "opacity-40",
         )}
       >
+        {edge}
+        <Grip id={p.id} actions={actions} />
         <span className="bg-border h-px flex-1" />
+        <TimerIcon className="size-3" />
         Pause {p.duration_s ? `${p.duration_s.toFixed(1)}s` : ""}
         <span className="bg-border h-px flex-1" />
+        <span onClick={(e) => e.stopPropagation()} className="opacity-0 group-hover:opacity-100">
+          <RowMenu p={p} isLast={isLast} actions={actions} />
+        </span>
       </div>
     );
   }
@@ -173,20 +329,26 @@ export const ParagraphRow = memo(function ParagraphRow({
       data-paragraph-id={p.id}
       role="listitem"
       aria-selected={selected}
-      onClick={() => onSelect(p.id)}
+      onClick={() => actions.select(p.id)}
+      {...dnd}
       className={cn(
-        "group relative mx-2 flex gap-3 rounded-lg border border-transparent py-2.5 pr-2 pl-3 transition-colors",
+        "group relative mx-2 flex gap-2 rounded-lg border border-transparent py-2.5 pr-2 pl-2 transition-colors",
         selected ? "bg-accent/60 border-border" : "hover:bg-accent/30",
         checked && "bg-primary/5 border-primary/30",
         playing && "border-primary/50",
+        dragging && "opacity-40",
       )}
     >
+      {edge}
       {/* The voice's colour, as a rail, so a page of dialogue reads at a glance. */}
       <span
         aria-hidden="true"
         className="absolute top-2 bottom-2 left-0 w-0.5 rounded-full"
         style={{ background: castColor(color, character ? 0.9 : 0.35) }}
       />
+      <div className="flex shrink-0 items-start pt-0.5">
+        <Grip id={p.id} actions={actions} />
+      </div>
       <div className="flex w-6 shrink-0 flex-col items-center gap-1 pt-0.5">
         <input
           type="checkbox"
@@ -198,7 +360,7 @@ export const ParagraphRow = memo(function ParagraphRow({
           }}
           onClick={(e) => {
             e.stopPropagation();
-            onCheck(p.id, e.shiftKey);
+            actions.check(p.id, e.shiftKey);
           }}
           onChange={() => {}}
           className={cn(
@@ -214,7 +376,7 @@ export const ParagraphRow = memo(function ParagraphRow({
           <CharacterChip
             character={character}
             characters={characters}
-            onChange={(id) => onCast(p.id, id)}
+            onChange={(id) => actions.cast(p.id, id)}
           />
           {p.is_heading && (
             <span className="text-muted-foreground inline-flex items-center gap-0.5 text-[0.65rem] tracking-wide uppercase">
@@ -228,18 +390,23 @@ export const ParagraphRow = memo(function ParagraphRow({
               {formatDuration(p.duration_s)}
             </span>
           ) : null}
+          {actions.extra?.(p)}
         </div>
         {editing ? (
           <EditBox
             text={p.text}
             onDone={(text) => {
-              if (text !== null && text !== p.text) onCommit(p.id, text);
-              onEdit(null);
+              if (text !== null && text !== p.text) actions.commit(p.id, text);
+              actions.edit(null);
+            }}
+            onSplit={(text, at) => {
+              actions.edit(null);
+              actions.split(p.id, text, at);
             }}
           />
         ) : (
           <p
-            onDoubleClick={() => !p.locked && onEdit(p.id)}
+            onDoubleClick={() => !p.locked && actions.edit(p.id)}
             className={cn(
               "text-[0.95rem] leading-relaxed break-words whitespace-pre-wrap",
               p.is_heading && "font-heading text-base font-semibold",
@@ -265,7 +432,7 @@ export const ParagraphRow = memo(function ParagraphRow({
           aria-label={playing ? "Stop" : "Play paragraph"}
           title={p.sound ? "Play (Space)" : "Not voiced yet"}
           disabled={!p.sound && !playing}
-          onClick={() => onPlay(p)}
+          onClick={() => actions.play(p)}
         >
           {playing ? <PauseIcon /> : <PlayIcon />}
         </Button>
@@ -275,7 +442,7 @@ export const ParagraphRow = memo(function ParagraphRow({
           aria-label={p.sound ? "Regenerate paragraph" : "Generate paragraph"}
           title={p.locked ? "Unlock to regenerate" : "Generate (G)"}
           disabled={p.locked || generating || !p.text.trim()}
-          onClick={() => onGenerate(p)}
+          onClick={() => actions.generate(p)}
         >
           {generating ? <Loader2Icon className="animate-spin" /> : <SparklesIcon />}
         </Button>
@@ -285,11 +452,12 @@ export const ParagraphRow = memo(function ParagraphRow({
           aria-label={p.locked ? "Unlock paragraph" : "Lock paragraph"}
           aria-pressed={p.locked}
           title={p.locked ? "Unlock (L)" : "Lock (L)"}
-          onClick={() => onLock(p)}
+          onClick={() => actions.lock(p)}
         >
           {p.locked ? <LockIcon /> : <UnlockIcon />}
         </Button>
         <TakesPopover bookId={bookId} segmentId={p.id} />
+        <RowMenu p={p} isLast={isLast} actions={actions} />
       </div>
     </div>
   );

@@ -81,6 +81,9 @@ export interface ChapterPatch {
 
 export interface ParagraphCreate {
   text?: string;
+  /** "pause" adds a beat of silence of `duration_s` instead of a line. */
+  kind?: "line" | "pause";
+  duration_s?: number | null;
   position?: number | null;
   character_id?: string | null;
   is_heading?: boolean;
@@ -92,6 +95,18 @@ export interface ParagraphPatch {
   locked?: boolean;
   is_heading?: boolean;
   model_id?: string | null;
+}
+
+export interface SplitResult {
+  first: Paragraph;
+  second: Paragraph;
+}
+
+export interface MergeResult {
+  paragraph: Paragraph;
+  removed_id: string;
+  /** Where the second half starts in the merged text; split there to undo. */
+  split_at: number;
 }
 
 export interface ReplaceRequest {
@@ -144,6 +159,9 @@ export interface AudiobookApi {
   updateParagraph(bookId: string, segmentId: string, patch: ParagraphPatch): Promise<Paragraph>;
   deleteParagraph(bookId: string, segmentId: string): Promise<void>;
   castParagraphs(bookId: string, segmentIds: string[], characterId: string | null): Promise<{ changed: number }>;
+  splitParagraph(bookId: string, segmentId: string, at: number): Promise<SplitResult>;
+  mergeWithNext(bookId: string, segmentId: string, joiner?: string): Promise<MergeResult>;
+  reorderParagraphs(bookId: string, chapterId: string, ids: string[]): Promise<Paragraph[]>;
 
   replace(bookId: string, req: ReplaceRequest): Promise<ReplaceResult>;
 
@@ -212,6 +230,22 @@ const httpAudiobookApi: AudiobookApi = {
       method: "POST",
       ...json({ segment_ids: segmentIds, character_id: characterId }),
     }),
+
+  splitParagraph: (bookId, segmentId, at) =>
+    request<SplitResult>(`${base(bookId)}/paragraphs/${encodeURIComponent(segmentId)}/split`, {
+      method: "POST",
+      ...json({ at }),
+    }),
+  mergeWithNext: (bookId, segmentId, joiner) =>
+    request<MergeResult>(`${base(bookId)}/paragraphs/${encodeURIComponent(segmentId)}/merge-next`, {
+      method: "POST",
+      ...json(joiner === undefined ? {} : { joiner }),
+    }),
+  reorderParagraphs: (bookId, chapterId, ids) =>
+    request<Paragraph[]>(
+      `${base(bookId)}/chapters/${encodeURIComponent(chapterId)}/paragraphs/reorder`,
+      { method: "POST", ...json({ ids }) },
+    ),
 
   replace: (bookId, req) =>
     request<ReplaceResult>(`${base(bookId)}/replace`, { method: "POST", ...json(req) }),

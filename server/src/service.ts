@@ -59,6 +59,7 @@ import type {
 import { ImageService, type ImageStatus } from "./image/service.js";
 import { EndpointService } from "./endpoints/service.js";
 import { EndpointSource } from "./endpoints/source.js";
+import { type Capabilities, capabilitiesFromEnv } from "./capabilities.js";
 
 /**
  * What `GET /api/models/audiocpp/runtime` answers. Shaped like `LlmStatus`'s
@@ -231,6 +232,8 @@ export class MirliService {
    *  call time, so the reassignment is the whole of it. */
   db: Database;
   readonly models: ModelManager;
+  /** What this server lets its user do. Read once at start; see capabilities.ts. */
+  readonly capabilities: Capabilities;
   readonly jobs: JobManager;
   readonly llm: LlmService;
   readonly image: ImageService;
@@ -249,15 +252,24 @@ export class MirliService {
   constructor(config: Config) {
     this.config = config;
     this.db = openDatabase(config.paths.db, true);
-    const endpointSource = new EndpointSource(config.settings.audio_endpoints);
+    this.capabilities = capabilitiesFromEnv();
+    const endpointSource = new EndpointSource(
+      this.capabilities.custom_endpoints ? config.settings.audio_endpoints : [],
+    );
     this.models = new ModelManager(
       config.paths.models,
       config.settings.effectiveHfToken(),
       config.settings.enabled_audiocpp_models,
       config.settings.effectiveAudiocppModelsDir(config.paths),
       [endpointSource],
+      this.capabilities.local_models,
     );
-    this.endpoints = new EndpointService(config, this.models, endpointSource);
+    this.endpoints = new EndpointService(
+      config,
+      this.models,
+      endpointSource,
+      this.capabilities.custom_endpoints,
+    );
     this.jobs = new JobManager();
     this.llm = new LlmService(config);
     this.image = new ImageService(config);
@@ -271,7 +283,7 @@ export class MirliService {
     this.jobs.start();
     // Tests and the dev server must not phone anyone: the endpoint counts
     // requests, and a contributor's restarts are not installs.
-    if (!process.env.VITEST) this.updates.start();
+    if (!process.env.VITEST && this.capabilities.updates) this.updates.start();
   }
 
   async close(): Promise<void> {
@@ -294,7 +306,8 @@ export class MirliService {
     // so `device` comes from the same ggml backend detection the model uses,
     // and the hardware detail comes from nvidia-smi (see gpu.ts). Without it
     // (Metal, AMD, Intel, CPU) those fields stay null rather than being guessed.
-    const gpu = pickGpu(await listGpus());
+    // A server that doesn't show its hardware doesn't run nvidia-smi for it.
+    const gpu = this.capabilities.gpu_status ? pickGpu(await listGpus()) : null;
     return {
       status: "ok",
       version: VERSION,

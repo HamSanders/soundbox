@@ -47,6 +47,8 @@ export class EndpointService {
     private readonly config: Config,
     private readonly models: ModelManager,
     private readonly source: EndpointSource,
+    /** False when this server doesn't allow custom endpoints: none are offered. */
+    private readonly enabled = true,
   ) {}
 
   private get stored(): AudioEndpoint[] {
@@ -113,7 +115,7 @@ export class EndpointService {
 
   /** Re-register after a profile switch, whose settings.json has its own list. */
   async reload(): Promise<void> {
-    this.source.set(this.stored);
+    this.source.set(this.enabled ? this.stored : []);
     await this.models.refreshSource(this.source);
   }
 

@@ -214,6 +214,7 @@ Studio's MIDI dry render can play. See `docs/STUDIO.md`.
 | Method | Path | What it does |
 |---|---|---|
 | GET / PATCH | `/api/settings` | Read or change settings |
+| GET | `/api/capabilities` | What this server lets its user do (see [Capabilities](#capabilities)) |
 | GET | `/api/update` | What the daily update check last learned: `enabled`, `current`, `latest`, `available`, `url`, `checked_at` |
 | POST | `/api/update/check` | Ask now (the Settings button). Does nothing when the check is off |
 | GET | `/api/logs` | Tail of the server log (`?lines`) |
@@ -249,6 +250,24 @@ otherwise a JSON stub saying it has not.
 hardware `gpu_name` and the `vram_*` fields come from `nvidia-smi`, for the
 first GPU in `CUDA_VISIBLE_DEVICES` or GPU 0 when that is unset. Without
 `nvidia-smi` (Metal, AMD, Intel, CPU) they are `null`.
+
+## Capabilities
+
+`GET /api/capabilities`
+```json
+{ "sandboxed": false, "settings_locked": [],
+  "filesystem": true, "reveal": true, "downloads": true, "local_models": true,
+  "custom_endpoints": true, "updates": true, "gpu_status": true,
+  "agent_connect": true, "skills_install": true, "logs": true, "setup_wizard": true }
+```
+Each flag says whether the server allows something, and the UI shows only what
+is allowed. On a desktop everything is `true`. With `MIRLI_SANDBOXED=1` every
+flag is `false`. `settings_locked` lists the settings that need a flag that is
+off (a path on the host, a local engine, or a URL the server would fetch), which
+`PATCH /api/settings` then ignores. A request a flag turns off gets **403**
+`{"detail": "This server doesn't allow that."}`; without `gpu_status`,
+`/api/health` reports the GPU fields as `null`. See
+[INSTALL.md](./INSTALL.md#running-mirli-for-someone-else).
 
 ## Models
 

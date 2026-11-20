@@ -42,11 +42,12 @@ type Entry = { kind: "local"; spec: ModelSpec } | { kind: "source"; source: Mode
  * wins, so a source can never shadow a local model.
  */
 function registry(
-  enabledAudiocppIds: ReadonlySet<string>,
+  enabledAudiocppIds: ReadonlySet<string> | null,
   sources: readonly ModelSource[],
 ): Map<string, Entry> {
   const entries = new Map<string, Entry>();
-  for (const spec of modelSpecs(enabledAudiocppIds)) {
+  // null: this server runs no local models at all (see capabilities.ts).
+  for (const spec of enabledAudiocppIds ? modelSpecs(enabledAudiocppIds) : []) {
     entries.set(spec.id, { kind: "local", spec });
   }
   for (const source of sources) {
@@ -110,13 +111,15 @@ export class ModelManager {
     enabledAudiocppModels: string[] = [],
     audiocppRoot?: string,
     sources: readonly ModelSource[] = [],
+    /** False on a server that must not run models itself: only sources. */
+    private readonly localModels = true,
   ) {
     this.modelsDir = modelsDir;
     this.hfToken = hfToken;
     this.audiocppRoot = audiocppRoot ?? join(modelsDir, "audiocpp");
     this.enabledAudiocpp = new Set(enabledAudiocppModels);
     this.sources = [...sources];
-    this.specs = registry(this.audiocppEnabled(), this.sources);
+    this.specs = registry(this.localIds(), this.sources);
   }
 
   /**
@@ -127,6 +130,11 @@ export class ModelManager {
    */
   private audiocppEnabled(): ReadonlySet<string> {
     return new Set([...this.enabledAudiocpp, ...this.presentAudiocpp]);
+  }
+
+  /** What `registry()` takes for the local models: none when they are off. */
+  private localIds(): ReadonlySet<string> | null {
+    return this.localModels ? this.audiocppEnabled() : null;
   }
 
   /**
@@ -166,7 +174,7 @@ export class ModelManager {
     if (!added.length && !dropped.length) return [];
     await this.locked(async () => {
       this.presentAudiocpp = present;
-      const next = registry(this.audiocppEnabled(), this.sources);
+      const next = registry(this.localIds(), this.sources);
       for (const id of this.specs.keys()) {
         if (next.has(id) || !this.instances.has(id)) continue;
         if (this._resident === id) await this.unloadInner(id);
@@ -195,7 +203,7 @@ export class ModelManager {
   async refreshSource(source: ModelSource): Promise<void> {
     await this.locked(async () => {
       const previous = this.specs;
-      this.specs = registry(this.audiocppEnabled(), this.sources);
+      this.specs = registry(this.localIds(), this.sources);
       for (const id of [...this.instances.keys()]) {
         const entry = previous.get(id);
         if (entry?.kind !== "source" || entry.source !== source) continue;
@@ -286,7 +294,7 @@ export class ModelManager {
   async setAudiocppEnabled(enabledIds: string[]): Promise<void> {
     await this.locked(async () => {
       this.enabledAudiocpp = new Set(enabledIds);
-      const next = registry(this.audiocppEnabled(), this.sources);
+      const next = registry(this.localIds(), this.sources);
       for (const id of this.specs.keys()) {
         if (next.has(id) || !this.instances.has(id)) continue;
         if (this._resident === id) await this.unloadInner(id);

@@ -1,0 +1,284 @@
+/**
+ * What this server lets its user do, reported at `GET /api/capabilities`.
+ *
+ * The app reads this instead of guessing from the deployment ("is this a
+ * desktop?", "is this behind a proxy?"), and the server's own guards are built
+ * from the same object, so what the UI offers and what the server allows
+ * cannot drift apart.
+ *
+ * On a desktop everything is on. `MIRLI_SANDBOXED=1` is for running Mirli on a
+ * machine the person using it doesn't own (a shared server, a NAS, a container
+ * behind a signing-in proxy): nothing in the UI may touch the host, so folder
+ * browsing, revealing files, downloads and engine installs, local models,
+ * custom endpoints (a server must not fetch whatever URL a page hands it), the
+ * update check and installing agent skills are all off, and the settings that
+ * name things on the host are locked. `MIRLI_DISABLE` turns off single
+ * capabilities on top of either, e.g. `MIRLI_DISABLE=reveal,updates`.
+ */
+
+import type { FastifyInstance } from "fastify";
+
+import { envVar } from "./env.js";
+
+/** The switchable capabilities, each a yes/no the UI and the guards share. */
+export const CAPABILITY_KEYS = [
+  /** Browse folders, set folder paths, see where a profile's data lives, and
+   *  make or remove profiles (each is a directory on this machine). */
+  "filesystem",
+  /** Show a sound's file in the system file manager. */
+  "reveal",
+  /** Download model weights, engines and sample packs. */
+  "downloads",
+  /** Run models on this machine (audio.cpp). Off: only models from elsewhere. */
+  "local_models",
+  /** Add and edit custom endpoints. */
+  "custom_endpoints",
+  /** The daily update check and the update notice. */
+  "updates",
+  /** Show this machine's GPU and memory. */
+  "gpu_status",
+  /** Hand out an MCP endpoint and stdio command for agents to connect with. */
+  "agent_connect",
+  /** Install the bundled agent skills into a client's folder on this machine. */
+  "skills_install",
+  /** Read the server's log, which names paths and hardware on this machine. */
+  "logs",
+  /** The first-run setup dialog (which models to download). */
+  "setup_wizard",
+] as const;
+
+export type CapabilityKey = (typeof CAPABILITY_KEYS)[number];
+
+export type Capabilities = Record<CapabilityKey, boolean> & {
+  /** Set by `MIRLI_SANDBOXED=1`; the UI uses it only for wording. */
+  sandboxed: boolean;
+  /** Settings keys that PATCH /api/settings ignores. */
+  settings_locked: string[];
+};
+
+/** Off when sandboxed: each touches the machine underneath. */
+const HOST_CAPABILITIES: readonly CapabilityKey[] = [
+  "filesystem",
+  "reveal",
+  "downloads",
+  "local_models",
+  "custom_endpoints",
+  "updates",
+  "gpu_status",
+  "agent_connect",
+  "skills_install",
+  "logs",
+  "setup_wizard",
+];
+
+/**
+ * Settings that only make sense with a capability, ignored on PATCH without
+ * it: a path on the host, a local engine, or a URL the server would fetch.
+ */
+const SETTINGS_NEEDING: Partial<Record<CapabilityKey, readonly string[]>> = {
+  filesystem: ["sounds_dir", "audiocpp_models_dir"],
+  downloads: ["hf_token"],
+  local_models: ["audiocpp_mode", "enabled_audiocpp_models", "device", "llm_mode", "llm_model", "image_mode", "image_model"],
+  custom_endpoints: [
+    "audio_endpoints",
+    "otel_endpoint",
+    "llm_external_base_url",
+    "llm_external_model",
+    "llm_external_api_key",
+    "image_external_kind",
+    "image_external_base_url",
+    "image_external_model",
+    "image_external_api_key",
+  ],
+};
+
+function truthy(value: string | undefined): boolean {
+  return ["1", "true", "yes", "on"].includes((value ?? "").trim().toLowerCase());
+}
+
+export function capabilitiesFromEnv(env: NodeJS.ProcessEnv = process.env): Capabilities {
+  const sandboxed = truthy(envVar("MIRLI_SANDBOXED", env));
+  const disabled = new Set(
+    (envVar("MIRLI_DISABLE", env) ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+  );
+  const caps = { sandboxed, settings_locked: [] as string[] } as Capabilities;
+  for (const key of CAPABILITY_KEYS) {
+    caps[key] = !(sandboxed && HOST_CAPABILITIES.includes(key)) && !disabled.has(key);
+    if (!caps[key]) caps.settings_locked.push(...(SETTINGS_NEEDING[key] ?? []));
+  }
+  return caps;
+}
+
+/**
+ * Routes refused when a capability is off, keyed by method and the route
+ * pattern Fastify matched (`request.routeOptions.url`), never the raw URL: the
+ * router decodes the path before matching, so `/api/%66s/dirs` reaches the
+ * `/api/fs/dirs` handler, and a regex on `request.url` would let it through.
+ *
+ * Every registered route is either here or in `UNGUARDED_ROUTES`; a test fails
+ * when a new route is in neither, so adding one means deciding which it is.
+ */
+export const GUARDED_ROUTES: Record<string, CapabilityKey> = {
+  "GET /api/fs/dirs": "filesystem",
+  "POST /api/profiles": "filesystem",
+  "DELETE /api/profiles/:id": "filesystem",
+  "GET /api/endpoints": "custom_endpoints",
+  "POST /api/endpoints/test": "custom_endpoints",
+  "PUT /api/endpoints/:id": "custom_endpoints",
+  "DELETE /api/endpoints/:id": "custom_endpoints",
+  "POST /api/models/:model_id/download": "downloads",
+  "DELETE /api/models/:model_id/weights": "downloads",
+  "POST /api/models/audiocpp/engine/install": "downloads",
+  "POST /api/llm/engine/install": "downloads",
+  "POST /api/llm/models/:model_id/download": "downloads",
+  "DELETE /api/llm/models/:model_id": "downloads",
+  "POST /api/image/engine/install": "downloads",
+  "POST /api/image/models/:model_id/download": "downloads",
+  "DELETE /api/image/models/:model_id": "downloads",
+  "POST /api/instruments/:id/download": "downloads",
+  "DELETE /api/instruments/:id": "downloads",
+  "POST /api/models/:model_id/load": "local_models",
+  "POST /api/models/:model_id/unload": "local_models",
+  "POST /api/models/:model_id/selftest": "local_models",
+  "POST /api/mcp/skills/install": "skills_install",
+  "POST /api/sounds/:sound_id/reveal": "reveal",
+  "POST /api/update/check": "updates",
+  "GET /api/logs": "logs",
+};
+
+/**
+ * Routes that stay open whatever the capabilities, because they touch only the
+ * library and the server's own data directory. Some still trim what they say:
+ * `/api/health` leaves out the GPU without `gpu_status`, and PATCH
+ * `/api/settings` ignores the keys in `settings_locked`. The web UI's own
+ * static files (served when the server hosts the app) are open too.
+ */
+export const UNGUARDED_ROUTES: readonly string[] = [
+  "GET /api/auth/status",
+  "POST /api/auth/login",
+  "POST /api/auth/logout",
+  "POST /api/assistant/chat",
+  "POST /api/assistant/openers",
+  "GET /api/health",
+  "GET /api/models",
+  "GET /api/models/audiocpp/catalog",
+  "GET /api/models/audiocpp/runtime",
+  "GET /api/models/:model_id",
+  "GET /api/mcp/status",
+  "GET /api/mcp/calls",
+  "POST /api/mcp/calls",
+  "GET /api/mcp/calls/events",
+  "PATCH /api/mcp/calls/:call_id",
+  "GET /api/instruments",
+  "GET /api/instruments/:id",
+  "GET /api/instruments/:id/files/*",
+  "GET /api/image/status",
+  "POST /api/generate",
+  "POST /api/separate",
+  "GET /api/sessions",
+  "POST /api/sessions",
+  "GET /api/sessions/:session_id",
+  "PATCH /api/sessions/:session_id",
+  "DELETE /api/sessions/:session_id",
+  "GET /api/settings",
+  "PATCH /api/settings",
+  "POST /api/speak",
+  "POST /api/speak/stream",
+  "GET /api/sounds",
+  "POST /api/sounds/upload",
+  "GET /api/sounds/:sound_id",
+  "PATCH /api/sounds/:sound_id",
+  "DELETE /api/sounds/:sound_id",
+  "POST /api/sounds/:sound_id/edit",
+  "POST /api/sounds/:sound_id/artwork",
+  "DELETE /api/sounds/:sound_id/artwork",
+  "GET /api/stories",
+  "POST /api/stories",
+  "POST /api/stories/from-sound",
+  "GET /api/stories/:story_id",
+  "PATCH /api/stories/:story_id",
+  "DELETE /api/stories/:story_id",
+  "GET /api/stories/:story_id/events",
+  "POST /api/stories/:story_id/export",
+  "GET /api/stories/:story_id/tracks",
+  "PATCH /api/stories/:story_id/tracks/:track_index",
+  "DELETE /api/stories/:story_id/tracks/:track_index",
+  "GET /api/stories/:story_id/segments",
+  "POST /api/stories/:story_id/segments",
+  "PUT /api/stories/:story_id/segments/reorder",
+  "PATCH /api/stories/:story_id/segments/:segment_id",
+  "DELETE /api/stories/:story_id/segments/:segment_id",
+  "POST /api/stories/:story_id/segments/:segment_id/generate",
+  "POST /api/stories/:story_id/segments/:segment_id/split",
+  "POST /api/studio/command",
+  "POST /api/repaint",
+  "POST /api/render",
+  "POST /api/convert",
+  "GET /api/conversations",
+  "POST /api/conversations",
+  "GET /api/conversations/:conversation_id",
+  "PATCH /api/conversations/:conversation_id",
+  "DELETE /api/conversations/:conversation_id",
+  "GET /api/conversations/:conversation_id/entries",
+  "POST /api/conversations/:conversation_id/entries",
+  "GET /api/capabilities",
+  "GET /api/jobs",
+  "GET /api/jobs/:job_id",
+  "POST /api/jobs/:job_id/cancel",
+  "GET /api/jobs/:job_id/events",
+  "GET /api/tags",
+  "POST /api/transcribe",
+  "GET /api/voices",
+  "POST /api/voices",
+  "POST /api/voices/upload",
+  "POST /api/voices/import",
+  "GET /api/voices/:voice_id",
+  "PATCH /api/voices/:voice_id",
+  "DELETE /api/voices/:voice_id",
+  "POST /api/voices/:voice_id/samples",
+  "DELETE /api/voices/:voice_id/samples/:sample_id",
+  "GET /api/voices/:voice_id/export",
+  "POST /api/voices/:voice_id/artwork",
+  "DELETE /api/voices/:voice_id/artwork",
+  "GET /api/projects",
+  "POST /api/projects",
+  "DELETE /api/projects/:project_id",
+  "GET /api/profiles",
+  "PATCH /api/profiles/:id",
+  "POST /api/profiles/:id/activate",
+  "GET /api/update",
+  "GET /api/llm/status",
+  "POST /api/enhance",
+  "POST /api/enhance/lyrics",
+  "GET /artwork/:filename",
+  "GET /files/:filename",
+  "POST /mcp",
+  "GET /mcp",
+  "DELETE /mcp",
+  "POST /mcp/",
+  "GET /mcp/",
+  "DELETE /mcp/",
+];
+
+/**
+ * The capability a request needs that this server has turned off, or null.
+ * `route` is the matched pattern, not the URL. HEAD is checked as GET.
+ */
+export function refusedBy(caps: Capabilities, method: string, route: string | undefined): CapabilityKey | null {
+  if (route === undefined) return null;
+  const cap = GUARDED_ROUTES[`${method === "HEAD" ? "GET" : method} ${route}`];
+  return cap && !caps[cap] ? cap : null;
+}
+
+export function registerCapabilityGuards(app: FastifyInstance, caps: Capabilities): void {
+  // onRequest runs after routing, so the matched pattern is already known and
+  // nothing (body parsing included) happens for a refused request.
+  app.addHook("onRequest", async (request, reply) => {
+    if (refusedBy(caps, request.method, request.routeOptions.url)) {
+      return reply.code(403).send({ detail: "This server doesn't allow that." });
+    }
+  });
+}

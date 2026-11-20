@@ -5,6 +5,7 @@
  */
 
 import type { Job } from "@/lib/api";
+import { mockApi } from "@/lib/mock";
 import { mockAudiobookApi, mockCharacters, mockEmit, mockMarkStale } from "@/lib/audiobook-mock";
 import type { Character, PronunciationRule } from "@/lib/audiobook-types";
 
@@ -192,6 +193,11 @@ export const mockVoiceApi: VoiceApi = {
     return { job: doneJob("speak", MOCK_SOUNDS[3]!), text: o.draft?.term ?? "term", spoken: o.draft?.replacement, warnings: [] };
   },
 
+  async generateParagraph(bookId, segmentId) {
+    const p = (await allParagraphs(bookId)).find((x) => x.id === segmentId);
+    if (!p) throw new Error("Paragraph not found");
+    return mockApi.generateSegment(p.story_id, segmentId, { model: "audiocpp-kokoro", load_options: {} });
+  },
   async listTakes(bookId, segmentId) {
     const p = (await allParagraphs(bookId)).find((x) => x.id === segmentId);
     const list = seedTakes(segmentId, p?.sound_id, p?.text ?? "");

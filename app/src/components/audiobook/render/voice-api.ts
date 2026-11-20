@@ -5,7 +5,7 @@
  * `voice-mock.ts`.
  */
 
-import { IS_MOCK, request, type Job } from "@/lib/api";
+import { IS_MOCK, request, type Job, type JobRef } from "@/lib/api";
 import type { Character, PronunciationKind, PronunciationRule, RenderScope, RenderStatus, Take } from "@/lib/audiobook-types";
 
 import { mockVoiceApi } from "./voice-mock";
@@ -132,6 +132,10 @@ export interface VoiceApi {
   suggestTerms(bookId: string): Promise<TermSuggestion[]>;
   playTerm(bookId: string, opts: { rule_id?: string; draft?: RuleInput }): Promise<PlayResult>;
 
+  /** Voice one paragraph: pronunciation applied, model and voice from the
+   *  cast, recorded as a take. Answers with the queued job, like
+   *  `api.generateSegment`. */
+  generateParagraph(bookId: string, segmentId: string): Promise<JobRef>;
   listTakes(bookId: string, segmentId: string): Promise<TakeRow[]>;
   selectTake(bookId: string, segmentId: string, takeId: string): Promise<TakeRow>;
   deleteTake(bookId: string, segmentId: string, takeId: string): Promise<void>;
@@ -177,6 +181,7 @@ const httpVoiceApi: VoiceApi = {
   suggestTerms: (b) => request(`${base(b)}/pronunciations/suggest`, { method: "POST" }),
   playTerm: (b, o) => request(`${base(b)}/pronunciations/play`, { method: "POST", ...json(o) }),
 
+  generateParagraph: (b, s) => request(`${base(b)}/paragraphs/${enc(s)}/generate`, { method: "POST", ...json({}) }),
   listTakes: (b, s) => request(`${base(b)}/paragraphs/${enc(s)}/takes`),
   selectTake: (b, s, t) => request(`${base(b)}/paragraphs/${enc(s)}/takes/${enc(t)}/select`, { method: "POST" }),
   deleteTake: (b, s, t) => request(`${base(b)}/paragraphs/${enc(s)}/takes/${enc(t)}`, { method: "DELETE" }),

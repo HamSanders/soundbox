@@ -3,14 +3,12 @@
  * Navigation, device status and theme live in the sidebar now.
  */
 
-import { BrandMark, Wordmark } from "@/components/brand-mark";
-import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
 import { HeaderSlot } from "@/components/header-slot";
-import { ProfileSwitcher } from "@/components/profile-switcher";
 import { QueueIndicator } from "@/components/queue-indicator";
 import { cn } from "@/lib/utils";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
@@ -68,27 +66,18 @@ export function AppHeader() {
   const { state: sidebarState } = useSidebar();
 
   return (
-    <header className="bg-sidebar fixed inset-x-0 top-0 z-40 flex h-(--top-h,3.5rem) items-center gap-2 px-3 pt-2 md:pl-0">
-      {/* The logo sits in a cell as wide as the sidebar, centred over the
-          icon rail when it is folded; the toggle, back and forward then
-          start where the first panel starts. */}
+    <header className="bg-sidebar fixed top-0 right-0 left-0 z-40 flex h-(--top-h,3.5rem) items-center gap-2 px-3 pt-2 md:pl-0">
+      {/* The sidebar runs the full height with the logo at its top, so the
+          bar starts where the first panel starts. */}
       <div
+        aria-hidden="true"
         className={cn(
-          "flex shrink-0 items-center",
+          "hidden shrink-0 md:block",
           sidebarState === "collapsed"
-            ? "md:w-[calc(var(--sidebar-width-icon)+1rem)] md:justify-center"
-            : "md:w-(--sidebar-width) md:pl-4",
+            ? "w-[calc(var(--sidebar-width-icon)+1rem)]"
+            : "w-(--sidebar-width)",
         )}
-      >
-        <NavLink to="/" end aria-label="Mirli home" className="flex items-center gap-2 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
-          <span className="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 items-center justify-center rounded-sm">
-            <BrandMark inset={0.04} className="size-6" />
-          </span>
-          {sidebarState !== "collapsed" && (
-            <Wordmark className="hidden text-lg leading-none font-extrabold md:inline" />
-          )}
-        </NavLink>
-      </div>
+      />
       <div className="flex items-center md:-ml-2">
         <SidebarTrigger />
         <HistoryButtons />
@@ -122,13 +111,6 @@ export function AppHeader() {
           from — see `queue-indicator.tsx`. */}
       <QueueIndicator />
 
-      {/* Last in the bar, after whatever the page put in the slot — which
-          already takes the free space with `flex-1`. Which library you are
-          generating into is context for the whole window, not a control
-          belonging to the page in front of you. */}
-      <div className="flex shrink-0 items-center">
-        <ProfileSwitcher />
-      </div>
     </header>
   );
 }

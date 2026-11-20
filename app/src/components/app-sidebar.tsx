@@ -5,6 +5,8 @@
  * rail (Ctrl/Cmd+B, or the trigger in the header).
  */
 
+import { BrandMark, Wordmark } from "@/components/brand-mark";
+import { ProfileSwitcher } from "@/components/profile-switcher";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
@@ -32,6 +34,7 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarHeader,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -676,6 +679,21 @@ export function AppSidebar() {
       {/* pr-2.5: panels sit 8px apart, the same as their margin from the
           window edges. */}
       <Sidebar collapsible="icon" variant="inset" className="pr-2.5">
+        {/* The logo, top left, on the same line as the header bar beside it. */}
+        <SidebarHeader className="h-12 justify-center">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" asChild tooltip="Mirli home">
+                <NavLink to="/" end onClick={() => setOpenMobile(false)}>
+                  <span className="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-sm">
+                    <BrandMark inset={0.04} className="size-6" />
+                  </span>
+                  <Wordmark className="truncate text-lg leading-none font-extrabold" />
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
 
         <SidebarContent>
           {/* Create and Library first: making a sound and finding one are
@@ -693,6 +711,10 @@ export function AppSidebar() {
 
         <SidebarFooter>
           <SidebarMenu>
+            {/* Which library you are working in, where it is easy to see. */}
+            <SidebarMenuItem className="overflow-hidden">
+              <ProfileSwitcher />
+            </SidebarMenuItem>
             {/* The landing page is part of the public site now, not the app,
                 so this leaves the app rather than routing inside it — the
                 app has no /welcome route any more. */}

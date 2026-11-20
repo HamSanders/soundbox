@@ -15,10 +15,9 @@ speech to the first audio** (507 ms with default settings, 476 ms with tighter
 ones; 745 ms without the speculation trick), using **8.4 GB of VRAM at rest
 and about 8.6 GB at peak**. Barge-in works: audio stops and none arrives
 afterwards. The 500 ms target is met on roughly half the turns, not all of
-them. All numbers come from a scripted client playing synthesised speech into
-the socket; **nobody has yet spoken to it through a real microphone** (the
-page loads and connects, but mic capture could not be tested from the agent's
-browser).
+them. Most numbers come from a scripted client playing synthesised speech
+into the socket; a short real-microphone session afterwards gave a median of
+485 ms (see "Real microphone test").
 
 ## How to run it
 
@@ -145,6 +144,29 @@ Measured with `npm run bench:tts` (VoxCPM2 q8_0, warm, 5 runs per line,
   about whether a client abort needs the audio.cpp process killed; on this
   build it does not.
 - Model load is about 5 s.
+
+## Real microphone test (2026-11-20)
+
+The owner talked to it through Chrome and a real microphone for about three
+minutes (31 turns, default settings, `runs/turns.jsonl` is not committed) and
+said it "works pretty well". From the server's log of those turns:
+
+| | Median | 90th percentile | Range |
+| --- | --- | --- | --- |
+| End of speech → final transcript | 207 ms | 463 ms | 175 to 495 |
+| End of speech → first LLM token | 237 ms | 501 ms | 203 to 527 |
+| End of speech → first audio | **485 ms** | 724 ms | 457 to 876 |
+
+- 18 of 31 turns at or under 500 ms, slightly better than the scripted runs.
+- 13 speculative replies were thrown away because the speaker carried on after
+  a pause, and the turn was answered at the endpoint instead (the 600 to
+  800 ms turns). Real speech pauses mid-sentence more than the test clips do.
+- Very short words ("One", "Either", "I") were heard fine but sometimes cut a
+  sentence in two: a 400 ms pause ends the turn.
+- The small LLM shows: it echoes the user ("All right, this is working pretty
+  well." → the same sentence) and kept offering to count to a hundred.
+- No barge-in was tried, so that still rests on the scripted test.
+- Peak VRAM 9.9 GB (card total, with the desktop).
 
 ## Step 3: latency per turn
 
@@ -312,7 +334,8 @@ catalogue entry for VoxCPM2 still says its licence needs confirming.
 
 ## Limits of this spike
 
-- Not tried with a human voice, a real microphone, or speakers (echo).
+- Tried with a real microphone for three minutes only, with headphones; not
+  with speakers (echo), and barge-in not tried by a person.
 - The conversation history stores the whole generated reply after a barge-in,
   not the part that was heard.
 - One conversation at a time. A second browser tab would share the engines
@@ -331,8 +354,8 @@ give up cloned voices, which is the reason the pipeline was chosen.
 
 What I would do next, in order:
 
-1. **Talk to it.** Ten minutes with a headset will show whether 400 ms
-   endpointing cuts people off and whether the first-word problem is real.
+1. **Talk to it more.** The first three minutes show 400 ms endpointing does
+   cut people off mid-sentence; try barge-in and speakers.
 2. **Replace silence endpointing with a turn-detection model** (a small
    classifier over the partial transcript or the audio). That is where the
    remaining latency and most of the unnaturalness are.

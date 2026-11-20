@@ -1,0 +1,38 @@
+{
+ "talk_idle_a": {
+  "model": "minimax/h3/image-to-video",
+  "resolution": "768P",
+  "rawDurationS": 5.18,
+  "speedup": 2.07,
+  "firstMAD": 6.25,
+  "lastMAD": 6.16,
+  "seamOK": true
+ },
+ "talk_idle_b": {
+  "model": "minimax/h3/image-to-video",
+  "resolution": "768P",
+  "rawDurationS": 5.18,
+  "speedup": 2.07,
+  "firstMAD": 6.28,
+  "lastMAD": 6.25,
+  "seamOK": true
+ },
+ "talk_to_list": {
+  "model": "minimax/h3/image-to-video",
+  "resolution": "768P",
+  "rawDurationS": 5.18,
+  "speedup": 1.73,
+  "firstMAD": 6.3,
+  "lastMAD": 6.51,
+  "seamOK": true
+ },
+ "list_to_talk": {
+  "model": "minimax/h3/image-to-video",
+  "resolution": "768P",
+  "rawDurationS": 5.18,
+  "speedup": 1.73,
+  "firstMAD": 6.71,
+  "lastMAD": 6.16,
+  "seamOK": true
+ }
+}

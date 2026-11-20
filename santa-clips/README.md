@@ -82,3 +82,11 @@ fal endpoints that take a first and a last frame, as of 2026-11-20:
 **MiniMax H3 licence:** this is a closed partner model run through fal. fal's model page marks it "Commercial use", and use falls
 under fal's terms (https://fal.ai/terms). No weights are downloaded, and there is no separate open licence. The valid duration range
 isn't stated (the default is 5 s), so the 2 s idles may come back at 5 s and need retiming or trimming.
+
+### fal proof results (2026-11-20)
+
+All 4 clips were rendered with `render_fal.py` (MiniMax H3, 768P). fal's minimum is 5 s, so each clip was retimed to its manifest length.
+Seam check (mean absolute difference against the still, 0–255): talk_idle_a 6.25/6.16, talk_idle_b 6.28/6.25, talk_to_list 6.30/6.51,
+list_to_talk 6.71/6.16. All are under 8. The difference is encoding and colour drift, not pose drift. `seam-report.json` has the details.
+Cost: 4 × 5 s × $0.06 = $1.20, plus about $0.30 for one accidental duplicate submit of talk_idle_b.
+`preview_talk_list_talk.mp4` is the talk→list→talk proof (two clips joined).

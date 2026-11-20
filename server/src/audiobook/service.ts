@@ -357,6 +357,8 @@ export class AudiobookService {
         included: section.included,
         paragraphs: section.paragraphs,
         headings: opts.headings ?? true,
+        breaks: section.breaks,
+        sceneBreakS: book.settings.pacing.scene_break_s ?? 2,
       });
     }
     if (manuscript.cover) await this.setCover(book.id, manuscript.cover.bytes, manuscript.cover.mime);
@@ -485,6 +487,10 @@ export class AudiobookService {
       headings?: boolean;
       /** Indexes into `paragraphs` to mark as headings. */
       headingIndexes?: number[];
+      /** Scene breaks: a pause goes before `paragraphs[i]` for each i. */
+      breaks?: number[];
+      /** Length of a scene-break pause, seconds. */
+      sceneBreakS?: number;
     },
   ): Chapter {
     const book = this.store.getBook(bookId);
@@ -497,28 +503,42 @@ export class AudiobookService {
       const options = stringOptions(book.settings.request_options);
       if (Object.keys(options).length > 0) this.svc.db.setStoryOptions(story.id, options);
       const chapter = this.store.createChapter(bookId, story.id, { ...fields, title });
-      const paragraphs = (fields.paragraphs ?? []).map((p) => p.trim()).filter(Boolean);
-      const heading =
-        fields.headings === true &&
-        (fields.kind ?? "chapter") === "chapter" &&
-        paragraphs[0]?.toLowerCase() !== title.toLowerCase();
-      const lines = heading ? [title, ...paragraphs] : paragraphs;
-      const offset = heading ? 1 : 0;
-      const marked = new Set((fields.headingIndexes ?? []).map((i) => i + offset));
-      lines.forEach((text, i) => {
+      // Headings and breaks index the paragraphs as given; empty ones are
+      // dropped, so both are carried on each kept paragraph rather than
+      // recomputed after.
+      const headingAt = new Set(fields.headingIndexes ?? []);
+      const breakAt = new Set(fields.breaks ?? []);
+      const kept: { text: string; heading: boolean; breakBefore: boolean }[] = [];
+      let pendingBreak = false;
+      (fields.paragraphs ?? []).forEach((raw, i) => {
+        if (breakAt.has(i)) pendingBreak = true;
+        const text = raw.trim();
+        if (!text) return;
+        // A break before the first paragraph is not a break inside the chapter.
+        kept.push({ text, heading: headingAt.has(i), breakBefore: pendingBreak && kept.length > 0 });
+        pendingBreak = false;
+      });
+      const firstIsTitle = kept[0]?.text.toLowerCase() === title.toLowerCase();
+      const heading = fields.headings === true && (fields.kind ?? "chapter") === "chapter" && !firstIsTitle;
+      if (heading) kept.unshift({ text: title, heading: true, breakBefore: false });
+      else if (firstIsTitle) kept[0]!.heading = true;
+      const pauseS = fields.sceneBreakS ?? 2;
+      for (const line of kept) {
+        if (line.breakBefore && pauseS > 0) {
+          this.svc.db.createSegment(randomUUID(), story.id, now, {
+            text: "",
+            kind: "pause",
+            durationS: pauseS,
+          });
+        }
         const segment = this.svc.db.createSegment(randomUUID(), story.id, now, {
-          text,
+          text: line.text,
           voice_id: narrator,
           speaker: NARRATOR_SPEAKER,
           language: book.language,
         });
-        if (
-          marked.has(i) ||
-          (i === 0 && (heading || paragraphs[0]?.toLowerCase() === title.toLowerCase()))
-        ) {
-          this.store.setMeta(segment.id, { is_heading: true });
-        }
-      });
+        if (line.heading) this.store.setMeta(segment.id, { is_heading: true });
+      }
       return chapter;
     });
   }

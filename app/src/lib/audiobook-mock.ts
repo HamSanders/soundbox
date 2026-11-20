@@ -39,7 +39,13 @@ const DEFAULT_SETTINGS: BookSettings = {
   model_id: null,
   narrator_voice_id: null,
   request_options: {},
-  pacing: { paragraph_gap_s: 0.5, heading_gap_s: 1.5, head_room_tone_s: 0.75, tail_room_tone_s: 2 },
+  pacing: {
+    paragraph_gap_s: 0.5,
+    heading_gap_s: 1.5,
+    head_room_tone_s: 0.75,
+    tail_room_tone_s: 2,
+    scene_break_s: 2,
+  },
   mastering: "acx",
   cast_mode: "single",
 };

@@ -35,6 +35,7 @@ const pacingSchema = z
     heading_gap_s: z.number().min(0).max(30),
     head_room_tone_s: z.number().min(0).max(10),
     tail_room_tone_s: z.number().min(0).max(10),
+    scene_break_s: z.number().min(0).max(30),
   })
   .partial();
 

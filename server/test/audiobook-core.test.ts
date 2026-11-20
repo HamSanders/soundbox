@@ -244,6 +244,50 @@ describe("createBookFromManuscript", () => {
   });
 });
 
+describe("scene breaks", () => {
+  it("become pauses of scene_break_s at each break", async () => {
+    const book = await audiobooks(app.soundbox).createBookFromManuscript(
+      {
+        ...manuscript,
+        sections: [
+          {
+            title: "Chapter One",
+            kind: "chapter",
+            included: true,
+            // Empty paragraph at 2 is dropped; the breaks still land right.
+            paragraphs: ["First.", "Second.", "   ", "Third.", "Fourth."],
+            breaks: [0, 3, 4],
+          },
+        ],
+      },
+      { pacing: { scene_break_s: 3.5 } },
+    );
+    const paras = audiobooks(app.soundbox).getParagraphs(book.chapters[0]!.id)!;
+    expect(paras.map((p) => (p.kind === "pause" ? `pause ${p.duration_s}` : p.text))).toEqual([
+      "Chapter One",
+      "First.",
+      "Second.",
+      "pause 3.5",
+      "Third.",
+      "pause 3.5",
+      "Fourth.",
+    ]);
+    // Pauses aren't counted as paragraphs to voice.
+    expect(book.chapters[0]!.stats.paragraphs).toBe(5);
+
+    // Default 2 s, and settable through PATCH.
+    const plain = await audiobooks(app.soundbox).createBookFromManuscript({
+      ...manuscript,
+      sections: [{ title: "Two", kind: "chapter", included: true, paragraphs: ["A.", "B."], breaks: [1] }],
+    });
+    expect(plain.settings.pacing.scene_break_s).toBe(2);
+    const p2 = audiobooks(app.soundbox).getParagraphs(plain.chapters[0]!.id)!;
+    expect(p2.filter((p) => p.kind === "pause").map((p) => p.duration_s)).toEqual([2]);
+    const patched = await json("PATCH", `/api/audiobooks/${plain.id}`, { settings: { pacing: { scene_break_s: 1.25 } } });
+    expect(patched.settings.pacing.scene_break_s).toBe(1.25);
+  });
+});
+
 describe("chapters", () => {
   it("adds, renames, reorders and deletes", async () => {
     const book = await json("POST", "/api/audiobooks", { title: "Chapters" });

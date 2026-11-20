@@ -42,7 +42,6 @@ export function NowPlayingBar() {
   const sinkId = useOutputStore((s) => s.sinkId);
 
   const audioRef = useRef<HTMLAudioElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
   const [playing, setPlaying] = useState(false);
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -108,8 +107,7 @@ export function NowPlayingBar() {
   };
 
   /* ------------------------------------------------------------ scrubbing */
-  const seekFromPointer = (clientX: number) => {
-    const el = trackRef.current;
+  const seekFromPointer = (el: HTMLElement, clientX: number) => {
     const a = audioRef.current;
     if (!el || !a || !duration) return;
     const r = el.getBoundingClientRect();
@@ -121,6 +119,57 @@ export function NowPlayingBar() {
 
   if (!sound) return null;
   const pct = duration ? Math.min(100, (time / duration) * 100) : 0;
+  const scrubber = (cls: string) => (
+    <div
+      role="slider"
+      tabIndex={0}
+      aria-label="Position"
+      aria-valuemin={0}
+      aria-valuemax={Math.round(duration)}
+      aria-valuenow={Math.round(time)}
+      aria-valuetext={`${clock(time)} of ${clock(duration)}`}
+      className={cn("group/scrub focus-visible:ring-ring/50 flex cursor-pointer touch-none items-center rounded outline-none focus-visible:ring-2", cls)}
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        dragging.current = true;
+        seekFromPointer(e.currentTarget, e.clientX);
+      }}
+      onPointerMove={(e) => {
+        if (dragging.current) seekFromPointer(e.currentTarget, e.clientX);
+      }}
+      onPointerUp={(e) => {
+        dragging.current = false;
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }}
+      onPointerCancel={() => {
+        dragging.current = false;
+      }}
+      onKeyDown={(e) => {
+        const a = audioRef.current;
+        if (!a) return;
+        const step = e.shiftKey ? 15 : 5;
+        if (e.key === "ArrowRight") a.currentTime = Math.min(duration, a.currentTime + step);
+        else if (e.key === "ArrowLeft") a.currentTime = Math.max(0, a.currentTime - step);
+        else if (e.key === "Home") a.currentTime = 0;
+        else return;
+        e.preventDefault();
+        setTime(a.currentTime);
+      }}
+    >
+      <span className="bg-border relative h-1 w-full overflow-hidden rounded-full group-hover/scrub:h-1.5">
+        <span className="bg-foreground absolute inset-y-0 left-0" style={{ width: `${pct}%` }} />
+      </span>
+      {/* The playhead: the beak, the one yellow on screen. */}
+      <span
+        aria-hidden="true"
+        className={cn(
+          "bg-signal absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full transition-transform",
+          "scale-75 group-hover/scrub:scale-100",
+        )}
+        style={{ left: `${pct}%` }}
+      />
+    </div>
+  );
 
   return (
     <div
@@ -140,6 +189,11 @@ export function NowPlayingBar() {
           if (next) open(next);
         }}
       />
+
+      {/* Narrow windows have no room for the centre column; the timeline runs
+          along the dock's top edge instead, with a taller hit area than it
+          looks. */}
+      {scrubber("absolute inset-x-0 -top-2 h-4 md:hidden")}
 
       {/* The sound */}
       <div className="flex min-w-0 items-center gap-3">
@@ -183,56 +237,7 @@ export function NowPlayingBar() {
         </div>
         <div className="flex w-full items-center gap-2">
           <span className="readout text-muted-foreground w-10 text-right tabular-nums">{clock(time)}</span>
-          <div
-            ref={trackRef}
-            role="slider"
-            tabIndex={0}
-            aria-label="Position"
-            aria-valuemin={0}
-            aria-valuemax={Math.round(duration)}
-            aria-valuenow={Math.round(time)}
-            aria-valuetext={`${clock(time)} of ${clock(duration)}`}
-            className="group/scrub focus-visible:ring-ring/50 relative flex h-4 flex-1 cursor-pointer touch-none items-center rounded outline-none focus-visible:ring-2"
-            onPointerDown={(e) => {
-              e.currentTarget.setPointerCapture(e.pointerId);
-              dragging.current = true;
-              seekFromPointer(e.clientX);
-            }}
-            onPointerMove={(e) => {
-              if (dragging.current) seekFromPointer(e.clientX);
-            }}
-            onPointerUp={(e) => {
-              dragging.current = false;
-              e.currentTarget.releasePointerCapture(e.pointerId);
-            }}
-            onPointerCancel={() => {
-              dragging.current = false;
-            }}
-            onKeyDown={(e) => {
-              const a = audioRef.current;
-              if (!a) return;
-              const step = e.shiftKey ? 15 : 5;
-              if (e.key === "ArrowRight") a.currentTime = Math.min(duration, a.currentTime + step);
-              else if (e.key === "ArrowLeft") a.currentTime = Math.max(0, a.currentTime - step);
-              else if (e.key === "Home") a.currentTime = 0;
-              else return;
-              e.preventDefault();
-              setTime(a.currentTime);
-            }}
-          >
-            <span className="bg-border relative h-1 w-full overflow-hidden rounded-full group-hover/scrub:h-1.5">
-              <span className="bg-foreground absolute inset-y-0 left-0" style={{ width: `${pct}%` }} />
-            </span>
-            {/* The playhead: the beak, the one yellow on screen. */}
-            <span
-              aria-hidden="true"
-              className={cn(
-                "bg-signal absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full transition-transform",
-                "scale-75 group-hover/scrub:scale-100",
-              )}
-              style={{ left: `${pct}%` }}
-            />
-          </div>
+          {scrubber("relative h-4 flex-1")}
           <span className="readout text-muted-foreground w-10 tabular-nums">{clock(duration)}</span>
         </div>
       </div>

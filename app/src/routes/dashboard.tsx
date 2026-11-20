@@ -117,14 +117,14 @@ export function DashboardPage() {
       )}
 
       {/* --------------------------------------------------------- quick links */}
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-3 gap-2">
         {QUICK_LINKS.map(({ to, icon: Icon, label, hint }) => (
           <Link key={to} to={to} className="group/tile rounded-xl">
-            <Card className="group-hover/tile:bg-accent/50 group-hover/tile:ring-border-strong/50 flex h-full flex-row items-center gap-3 px-4 py-3 transition-[background-color,box-shadow] duration-(--duration-fast)">
+            <Card className="group-hover/tile:bg-accent/50 group-hover/tile:ring-border-strong/50 flex h-full flex-col items-start gap-2 px-3 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-4 transition-[background-color,box-shadow] duration-(--duration-fast)">
               <Icon className="text-muted-foreground group-hover/tile:text-primary size-5 transition-colors" aria-hidden="true" />
               <div>
                 <p className="text-sm font-medium">{label}</p>
-                <p className="text-muted-foreground text-xs">{hint}</p>
+                <p className="text-muted-foreground hidden text-xs sm:block">{hint}</p>
               </div>
             </Card>
           </Link>

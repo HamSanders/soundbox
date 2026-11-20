@@ -11,6 +11,7 @@
 
 import { spawn } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
+import { open } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import type { Audio } from "./dsp.js";
@@ -194,7 +195,9 @@ export function ffmetadata(tags: Record<string, string>, chapters: ChapterMark[]
 
 export interface EncodeJob {
   format: Exclude<ExportFormat, "wav">;
+  /** A WAV file, or with `concat` an ffmpeg concat list of WAV files. */
   input: string;
+  concat?: boolean;
   output: string;
   /** MP3/M4B bitrate. ACX wants 192 kbps CBR MP3. */
   bitrateKbps?: number;
@@ -208,7 +211,9 @@ export const DEFAULT_BITRATE: Record<"mp3" | "m4b", number> = { mp3: 192, m4b: 1
 
 /** ffmpeg arguments for one encode. Pure. */
 export function buildEncodeArgs(job: EncodeJob): string[] {
-  const args = ["-y", "-hide_banner", "-loglevel", "error", "-i", job.input];
+  const args = ["-y", "-hide_banner", "-loglevel", "error"];
+  if (job.concat) args.push("-f", "concat", "-safe", "0");
+  args.push("-i", job.input);
   let next = 1;
   const metaIndex = job.metadataFile ? next++ : null;
   if (job.metadataFile) args.push("-f", "ffmetadata", "-i", job.metadataFile);
@@ -303,4 +308,70 @@ export function wav16Bytes(audio: Audio, sampleRate: number): Buffer {
 export function writeWav16(path: string, audio: Audio, sampleRate: number): void {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, wav16Bytes(audio, sampleRate));
+}
+
+/* ----------------------------------------------------------- joining */
+
+/** An ffmpeg concat-demuxer list (https://ffmpeg.org/ffmpeg-formats.html#concat). */
+export function concatList(paths: string[]): string {
+  // Forward slashes work on every platform; a quote closes, escapes and reopens.
+  return paths.map((p) => `file '${p.replace(/\\/g, "/").replace(/'/g, "'\\''")}'`).join("\n") + "\n";
+}
+
+const WAV_HEADER = 44;
+const WAV_MAX_DATA = 0xffffffff - 36;
+
+/**
+ * Join 16-bit WAV files written by `writeWav16` into one, streaming: the
+ * whole book never sits in memory. All inputs must share rate and layout.
+ * Plain WAV stops at 4 GiB (about 6.7 hours of 16-bit mono at 44.1 kHz).
+ */
+export async function concatWav16(paths: string[], out: string): Promise<void> {
+  const heads: { rate: number; channels: number; bytes: number }[] = [];
+  for (const p of paths) {
+    const fh = await open(p, "r");
+    try {
+      const h = Buffer.alloc(WAV_HEADER);
+      await fh.read(h, 0, WAV_HEADER, 0);
+      heads.push({ rate: h.readUInt32LE(24), channels: h.readUInt16LE(22), bytes: h.readUInt32LE(40) });
+    } finally {
+      await fh.close();
+    }
+  }
+  const first = heads[0];
+  if (!first) throw new Error("Nothing to join.");
+  if (heads.some((h) => h.rate !== first.rate || h.channels !== first.channels)) {
+    throw new Error("Chapters differ in sample rate or channels and can't be joined.");
+  }
+  const total = heads.reduce((n, h) => n + h.bytes, 0);
+  if (total > WAV_MAX_DATA) {
+    throw new Error("The book is too long for one WAV file (4 GB). Export one file per chapter, or use FLAC or M4B.");
+  }
+  mkdirSync(dirname(out), { recursive: true });
+  const header = wav16Bytes(Array.from({ length: first.channels }, () => new Float32Array(0)), first.rate);
+  header.writeUInt32LE(36 + total, 4);
+  header.writeUInt32LE(total, 40);
+  const dst = await open(out, "w");
+  try {
+    await dst.write(header);
+    const buf = Buffer.alloc(1 << 20);
+    for (let i = 0; i < paths.length; i++) {
+      const src = await open(paths[i], "r");
+      try {
+        let pos = WAV_HEADER;
+        let left = heads[i].bytes;
+        while (left > 0) {
+          const { bytesRead } = await src.read(buf, 0, Math.min(buf.length, left), pos);
+          if (bytesRead === 0) break;
+          await dst.write(buf.subarray(0, bytesRead));
+          pos += bytesRead;
+          left -= bytesRead;
+        }
+      } finally {
+        await src.close();
+      }
+    }
+  } finally {
+    await dst.close();
+  }
 }

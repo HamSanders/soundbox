@@ -42,6 +42,7 @@ import {
 import { listGpus, pickGpu } from "./gpu.js";
 import { HistoryStore } from "./history.js";
 import { beds } from "./audiobook/beds.js"; // [audiobooks:soundscape]
+import { EmptyMixError, type MixPlan, type PlannedClip, renderMixLanes, sumLanes } from "./audiobook/export-mix.js"; // [audiobooks:export]
 import { ModelManager } from "./models/manager.js";
 import * as audiocppBinary from "./models/audiocppBinary.js";
 import { migrateLayout } from "./models/audiocppMigrate.js";
@@ -1331,15 +1332,13 @@ export class MirliService {
   }
 
   /**
-   * The mixdown behind `exportStory`, returned as a buffer rather than
-   * written: every audible clip at its `start_s` with trims, fades,
-   * crossfades and clip + track gain applied. Timeline second t is frame
-   * t * sampleRate of the result. Null when the story does not exist; throws
-   * when nothing in it has audio. [audiobooks:export]
+   * What `mixStory` will mix, as data: the audible clips of a story with
+   * their files, placement, trims, fades and gains, and the chapter's bed
+   * lanes. Reads the database only. Null when the story does not exist;
+   * throws when no line has audio. [audiobooks:export]
    */
-  mixStory(
+  planMix(
     storyId: string,
-    handle?: JobHandle,
     options: { tracks?: (lane: number) => boolean; includeBeds?: boolean } = {},
   ) {
     const story = this.db.getStory(storyId);
@@ -1404,58 +1403,63 @@ export class MirliService {
       }
     }
 
-    handle?.phase("encoding", "Reading clips");
-    const placed: { audio: dsp.Audio; startS: number; lane: number }[] = [];
-    let sampleRate = 0;
+    // [audiobooks:export] The clips as data: the file each reads from, its
+    // trim, fades (with the crossfades above) and gain. `renderMixLanes`
+    // does the reading and DSP, here or on the audiobook export worker.
+    const clips: PlannedClip[] = [];
     for (const segment of segments) {
       const filename = this.db.getFilename(segment.sound_id!);
       if (filename === null) continue; // sound deleted out from under the story
-      const clip = dsp.readWav(join(this.config.paths.sounds, filename));
-      // Everything mixes at one rate, and the first clip's is as good a choice
-      // as any — the same call `runSpeak` makes when joining lines.
-      if (sampleRate === 0) sampleRate = clip.sampleRate;
-      let audio =
-        clip.sampleRate === sampleRate
-          ? clip.audio
-          : dsp.resampleAudio(clip.audio, clip.sampleRate, sampleRate);
-
-      // Honour the clip's trim: what plays is `duration_s` of the source
-      // starting at `trim_start_s`, not the whole file. Dropped entirely if
-      // the trim leaves nothing, rather than exporting a zero-length clip.
-      const from = segment.trim_start_s ?? 0;
-      const length = segment.duration_s ?? null;
-      if (from > 0 || length !== null) {
-        const full = dsp.frameCount(audio) / sampleRate;
-        const to = length === null ? full : Math.min(full, from + length);
-        if (to <= from) continue;
-        if (from > 0 || to < full) audio = dsp.trimRange(audio, sampleRate, from, to);
-      }
-
-      const gainDb = segment.gain_db + (trackGain(segment.track_index) ?? 0);
-      // Fades last, after the trim that decides where the clip's edges are.
-      // The lengths are the clip's own plus whatever an overlap on this lane
-      // asks for — see `crossfades`.
-      const fades = crossfades.get(segment.id);
-      const faded =
-        fades && (fades.in > 0 || fades.out > 0)
-          ? dsp.applyFades(audio, sampleRate, fades.in, fades.out)
-          : audio;
-      placed.push({
-        audio: gainDb ? dsp.applyGainDb(faded, gainDb) : faded,
-        startS: segment.start_s,
+      const fades = crossfades.get(segment.id)!;
+      clips.push({
+        path: join(this.config.paths.sounds, filename),
+        start_s: segment.start_s,
         lane: segment.track_index,
+        trim_start_s: segment.trim_start_s ?? 0,
+        length_s: segment.duration_s ?? null,
+        fade_in_s: fades.in,
+        fade_out_s: fades.out,
+        gain_db: segment.gain_db + (trackGain(segment.track_index) ?? 0),
       });
     }
-    if (placed.length === 0) {
-      throw new ModelError("Nothing to export: every line's audio is missing from disk.");
-    }
+    const plan: MixPlan = {
+      clips,
+      beds: [...beds(this).bedTracks(storyId)], // [audiobooks:export]
+      includeBeds: options.includeBeds ?? true,
+    };
+    return { story, segments, plan };
+  }
 
+  /**
+   * The mixdown behind `exportStory`, returned as a buffer rather than
+   * written: every audible clip at its `start_s` with trims, fades,
+   * crossfades and clip + track gain applied. Timeline second t is frame
+   * t * sampleRate of the result. Null when the story does not exist; throws
+   * when nothing in it has audio. [audiobooks:export]
+   */
+  mixStory(
+    storyId: string,
+    handle?: JobHandle,
+    options: { tracks?: (lane: number) => boolean; includeBeds?: boolean } = {},
+  ) {
+    const planned = this.planMix(storyId, options);
+    if (planned === null) return null;
+    const { story, segments, plan } = planned;
+    handle?.phase("encoding", "Reading clips");
+    let rendered;
+    try {
+      rendered = renderMixLanes(plan, dsp.readWav);
+    } catch (exc) {
+      if (exc instanceof EmptyMixError) throw new ModelError(exc.message);
+      throw exc;
+    }
+    const { sampleRate } = rendered;
     handle?.progress(0.7, "Mixing timeline", "encoding");
-    // [audiobooks:export] Each track is laid into its own lane buffer (same
-    // rate, length and channels, all starting at 0) before the lanes are
-    // summed and clipped, which is exactly what `mixTimeline` does in one go.
-    // Lanes exist so audiobook beds can be ducked under narration here.
-    let lanes = layLanes(placed, sampleRate);
+    // Each track is laid into its own lane buffer (same rate, length and
+    // channels, all starting at 0) before the lanes are summed and clipped,
+    // which is exactly what `mixTimeline` does in one go. Lanes exist so
+    // audiobook beds can be ducked under narration here.
+    let lanes = rendered.lanes;
     lanes = beds(this).duckChapterLanes(story.id, lanes, sampleRate, options.includeBeds ?? true); // [audiobooks:soundscape]
     return { story, segments, audio: sumLanes(lanes), sampleRate };
   }
@@ -3825,52 +3829,4 @@ export function toPcm16(audio: dsp.Audio): Buffer {
     }
   }
   return out;
-}
-
-/**
- * Lay placed clips into one buffer per track, every lane the same length and
- * channel count, unclipped. [audiobooks:export]
- */
-export function layLanes(
-  placed: { audio: dsp.Audio; startS: number; lane: number }[],
-  sampleRate: number,
-): Map<number, dsp.Audio> {
-  const present = placed.filter((c) => c.audio.length > 0 && dsp.frameCount(c.audio) > 0);
-  const lanes = new Map<number, dsp.Audio>();
-  if (present.length === 0) return lanes;
-  const channels = Math.max(...present.map((c) => c.audio.length));
-  const offsets = present.map((c) => Math.max(0, Math.round(c.startS * sampleRate)));
-  const total = Math.max(...present.map((c, i) => offsets[i] + dsp.frameCount(c.audio)));
-  present.forEach((c, i) => {
-    let lane = lanes.get(c.lane);
-    if (!lane) {
-      lane = Array.from({ length: channels }, () => new Float32Array(total));
-      lanes.set(c.lane, lane);
-    }
-    const frames = dsp.frameCount(c.audio);
-    for (let ch = 0; ch < channels; ch++) {
-      // Mono into stereo duplicates channel 0, as mixTimeline does.
-      const src = c.audio[Math.min(ch, c.audio.length - 1)];
-      const dst = lane[ch];
-      for (let f = 0; f < frames; f++) dst[offsets[i] + f] += src[f];
-    }
-  });
-  return lanes;
-}
-
-/** Sum lane buffers in track order and clip, as `mixTimeline` does. [audiobooks:export] */
-export function sumLanes(lanes: Map<number, dsp.Audio>): dsp.Audio {
-  const list = [...lanes.entries()].sort((a, b) => a[0] - b[0]).map(([, a]) => a);
-  if (list.length === 0) return [new Float32Array(0)];
-  const channels = Math.max(...list.map((a) => a.length));
-  const frames = Math.max(...list.map((a) => dsp.frameCount(a)));
-  const out: dsp.Audio = Array.from({ length: channels }, () => new Float32Array(frames));
-  for (const lane of list) {
-    for (let ch = 0; ch < channels; ch++) {
-      const src = lane[Math.min(ch, lane.length - 1)];
-      const dst = out[ch];
-      for (let f = 0; f < src.length; f++) dst[f] += src[f];
-    }
-  }
-  return dsp.clip(out);
 }

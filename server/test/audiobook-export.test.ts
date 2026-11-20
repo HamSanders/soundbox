@@ -412,10 +412,135 @@ describe("beds in the export", () => {
     expect(toneDb(audio[0], sampleRate, 1000, 3, 6)).toBeCloseTo(20 * Math.log10(0.3), 0);
   });
 
+  it("the worker's mix matches the in-process mixStory exactly (beds ducked)", async () => {
+    const { renderMix } = await import("../src/audiobook/export-mix.js");
+    const { book, chapter } = await bedBook();
+    const inline = app.soundbox.mixStory(chapter.story_id)!;
+    const planned = app.soundbox.planMix(chapter.story_id)!;
+    const viaPlan = renderMix(planned.plan);
+    expect(viaPlan.sampleRate).toBe(inline.sampleRate);
+    expect(viaPlan.audio.length).toBe(inline.audio.length);
+    for (let c = 0; c < inline.audio.length; c++) {
+      expect(viaPlan.audio[c].length).toBe(inline.audio[c].length);
+      let worst = 0;
+      for (let i = 0; i < inline.audio[c].length; i++) worst = Math.max(worst, Math.abs(viaPlan.audio[c][i] - inline.audio[c][i]));
+      expect(worst).toBe(0);
+    }
+    expect(book.id).toBeTruthy();
+  });
+
+  it("files mix mono and stereo chapters to one layout across the book", async () => {
+    const book = await audiobooks(app.soundbox).createBookFromManuscript(manuscript);
+    voiceBook(book.id, 3); // mono narration everywhere
+    // Chapter two gets a stereo bed: its mix would be stereo on its own.
+    const ch2 = book.chapters[1];
+    const id = randomUUID();
+    const tone = new Float32Array(10 * RATE).map((_, i) => 0.05 * Math.sin(i / 30));
+    writeWav(join(app.soundbox.config.paths.sounds, `${id}.wav`), [tone, tone], RATE);
+    app.soundbox.db.insertSound(
+      { id, created_at: new Date().toISOString(), model: "t", prompt: "", duration_s: 10, sample_rate: RATE, channels: 2, file: "", peaks: [], favorite: false, tags: [], name: "st", size_bytes: 0, source: "api" },
+      `${id}.wav`,
+    );
+    await json("POST", `/api/audiobooks/${book.id}/chapters/${ch2.id}/beds`, { sound_id: id, kind: "music", loop: true, gain_db: 0 });
+    const qc = await json<ChapterQc[]>("POST", `/api/audiobooks/${book.id}/master/analyze`, { mastering: "podcast" });
+    expect(qc.map((c) => c.report.channels)).toEqual([1, 1]);
+    expect(qc.every((c) => c.checks.find((k) => k.id === "channels")!.pass)).toBe(true);
+    const { id: eid } = await json("POST", `/api/audiobooks/${book.id}/exports`, {
+      format: "wav", layout: "files", mastering: "podcast", include_cover: false, include_transcripts: false,
+    });
+    const done = await finished(book.id, eid);
+    expect(done.status, done.error).toBe("done");
+    const dl = await call({ method: "GET", url: `/api/audiobooks/${book.id}/exports/${eid}/download` });
+    const names = zipNames(dl.rawPayload);
+    for (const n of names) expect(decodeWav(zipFile(dl.rawPayload, n)).audio.length).toBe(1);
+  });
+
+  it("splits a chapter longer than the file limit, at a heading paragraph, with room tone on each part", async () => {
+    const ex = audiobookExports(app.soundbox);
+    const book = await audiobooks(app.soundbox).createBookFromManuscript({
+      ...manuscript,
+      sections: [{ title: "Long One", kind: "chapter", included: true, paragraphs: Array.from({ length: 8 }, (_, i) => `Para ${i}.`) }],
+    });
+    voiceBook(book.id, 9); // 8 x 9 s + gaps: about 76 s
+    const chapter = book.chapters[0];
+    const paras = audiobooks(app.soundbox).getParagraphs(chapter.id)!;
+    // Mark the paragraph at about 40 s as the secondary header.
+    const header = paras.find((p) => p.start_s >= 38)!;
+    await json("PATCH", `/api/audiobooks/${book.id}/paragraphs/${header.id}`, { is_heading: true });
+    const before = ex.maxFileS;
+    ex.maxFileS = 50; // stand-in for 120 minutes
+    try {
+      const qc = await json<ChapterQc[]>("POST", `/api/audiobooks/${book.id}/master/analyze`, { mastering: "acx" });
+      expect(qc[0].checks.find((c) => c.id === "secondary_header")!.pass).toBe(true);
+      expect(qc[0].checks.find((c) => c.id === "max_length")!.message).toMatch(/Split into 2 files/);
+      const { id } = await json("POST", `/api/audiobooks/${book.id}/exports`, {
+        format: "wav", layout: "files", mastering: "acx", include_cover: false, include_transcripts: true,
+      });
+      const done = await finished(book.id, id);
+      expect(done.status, done.error).toBe("done");
+      const dl = await call({ method: "GET", url: `/api/audiobooks/${book.id}/exports/${id}/download` });
+      const names = zipNames(dl.rawPayload).filter((n) => n.endsWith(".wav"));
+      expect(names).toEqual(["01_Long One Part 1.wav", "02_Long One Part 2.wav"]);
+      const { measure } = await import("../src/audio/meter.js");
+      for (const n of names) {
+        const { audio, sampleRate } = decodeWav(zipFile(dl.rawPayload, n));
+        const r = measure(audio, sampleRate);
+        expect(r.duration_s).toBeLessThanOrEqual(50 + 3);
+        expect(r.head_silence_s).toBeGreaterThanOrEqual(0.5);
+        expect(r.tail_silence_s).toBeGreaterThanOrEqual(1);
+        expect(r.noise_floor_db).toBeGreaterThan(-100); // room tone, not zeros
+      }
+      // Part two's read-along starts with the header paragraph near its head.
+      const along = JSON.parse(zipFile(dl.rawPayload, "read-along.json").toString());
+      expect(along.chapters[1].paragraphs[0].segment_id).toBe(header.id);
+      expect(along.chapters[1].paragraphs[0].start_s).toBeLessThan(1.5);
+      // Split chapters are not handed to the player as one file.
+      expect(exportedAudio(app.soundbox, book.id).has(chapter.id)).toBe(false);
+    } finally {
+      ex.maxFileS = before;
+    }
+  });
+
   it("a retail_sample chapter never carries the bed", async () => {
     const { book, chapter } = await bedBook();
     await json("PATCH", `/api/audiobooks/${book.id}/chapters/${chapter.id}`, { kind: "retail_sample" });
     const { audio, sampleRate } = await exportWav(book.id, chapter.id, true);
     expect(toneDb(audio[0], sampleRate, BED_HZ, 11, 13)).toBeLessThan(-80);
+  });
+});
+
+describe("listen serves exported audio", () => {
+  it("the listen manifest switches from the live mix to the mastered export, with its timings", async () => {
+    const book = await audiobooks(app.soundbox).createBookFromManuscript(manuscript);
+    voiceBook(book.id, 3);
+    const before = await json("GET", `/api/audiobooks/${book.id}/listen`);
+    expect(before.chapters.map((c: any) => c.source)).toEqual(["live", "live"]);
+
+    const { id } = await json("POST", `/api/audiobooks/${book.id}/exports`, {
+      format: "wav",
+      layout: "files",
+      mastering: "acx",
+      include_cover: false,
+      include_transcripts: false,
+    });
+    expect((await finished(book.id, id)).status).toBe("done");
+
+    const after = await json("GET", `/api/audiobooks/${book.id}/listen`);
+    const served = exportedAudio(app.soundbox, book.id);
+    for (const chapter of after.chapters) {
+      expect(chapter.source).toBe("export");
+      const file = served.get(chapter.id)!;
+      expect(chapter.duration_s).toBeCloseTo(file.duration_s, 2);
+      // Paragraph times are the mastered file's, shifted by the head room tone.
+      const voiced = chapter.paragraphs.filter((p: any) => p.start_s !== null);
+      expect(voiced.map((p: any) => p.start_s)).toEqual(file.timings!.map((t) => t.start_s));
+      const live = before.chapters.find((c: any) => c.id === chapter.id).paragraphs.find((p: any) => p.start_s !== null);
+      expect(voiced[0].start_s).toBeGreaterThan(live.start_s);
+
+      const res = await call({ method: "GET", url: chapter.audio_url });
+      expect(res.statusCode).toBe(200);
+      expect(res.rawPayload.equals(readFileSync(file.path))).toBe(true);
+      expect(decodeWav(res.rawPayload).sampleRate).toBe(44_100);
+    }
   });
 });

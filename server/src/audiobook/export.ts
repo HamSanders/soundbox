@@ -17,7 +17,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import type { Database } from "better-sqlite3";
@@ -28,6 +28,8 @@ import {
   type FfmpegInfo,
   acxFileName,
   buildEncodeArgs,
+  concatList,
+  concatWav16,
   detectFfmpeg,
   ffmetadata,
   formatUnavailable,
@@ -35,12 +37,15 @@ import {
   tagMetadata,
   writeWav16,
 } from "../audio/encode.js";
-import { ROOM_TONE_DB, master, resampleFast, roomTone } from "../audio/master.js";
+import { ROOM_TONE_DB, roomTone } from "../audio/master.js";
 import { measure } from "../audio/meter.js";
 import { ModelError } from "../errors.js";
 import type { MirliService } from "../service.js";
 import { closingCredits, narratorLine, openingCredits, pickSample, SAMPLE_TARGET_S } from "./credits.js";
-import { checkBook } from "./export-qc.js";
+import { checkBook, checkReport, splitChecks } from "./export-qc.js";
+import { runMaster } from "./export-runner.js";
+import { MAX_FILE_S, SPLIT_MARGIN_S } from "./export-split.js";
+import type { MasterPart } from "./export-worker.js";
 import { type ExportedChapterAudio, setExportAudioProvider } from "./publish/manifest.js";
 import { type ZipEntry, writeZip } from "./export-zip.js";
 import { type BookDetail, audiobooks } from "./service.js";
@@ -240,13 +245,35 @@ export class ExportStore {
 
 /* ---------------------------------------------------------------- service */
 
+export interface RenderedPart extends MasterPart {
+  /** Paragraph timings inside this part's own file. */
+  timings: ParagraphTiming[];
+  duration_s: number;
+}
+
 export interface RenderedChapter {
   chapter: Chapter;
-  audio: Audio;
   sampleRate: number;
+  channels: number;
   shiftS: number;
+  durationS: number;
+  /** Whole chapter. */
   report: LoudnessReport;
   timings: ParagraphTiming[];
+  /** One per file: several when the chapter was split at 120 minutes. */
+  parts: RenderedPart[];
+  /** The mastered audio, only when asked for. */
+  audio: Audio | null;
+}
+
+export interface RenderOptions {
+  includeBeds?: boolean;
+  /** Write each part as 16-bit WAV here (part n > 0 gets `.partN`). */
+  wavPath?: string | null;
+  conform?: { rate?: number; channels: number } | null;
+  /** Split at ACX's 120-minute limit (files layout and QC). */
+  split?: boolean;
+  returnAudio?: boolean;
 }
 
 export interface AnalyzeOptions {
@@ -277,6 +304,8 @@ const NARRATION_TRACK = 0;
 
 export class AudiobookExportService {
   readonly store: ExportStore;
+  /** Longest file before a chapter is split (ACX: 120 min, less a margin). */
+  maxFileS = MAX_FILE_S - SPLIT_MARGIN_S;
   private queue: Promise<void> = Promise.resolve();
 
   constructor(private readonly svc: MirliService) {
@@ -355,58 +384,134 @@ export class AudiobookExportService {
     return paragraphTimings(paragraphs, m?.shift_s ?? 0, m?.duration_s);
   }
 
-  /** Mix, master and measure one chapter. Throws when it has no audio. */
-  renderChapter(
+  /**
+   * Channel count every file of the book should have: 1 for ACX (it writes
+   * mono), otherwise the layout most included chapters mix to, read from
+   * the clips' metadata without decoding anything.
+   */
+  bookChannels(book: BookDetail, preset: MasteringPresetId, includeBeds = true): number {
+    if (preset === "acx") return 1;
+    const counts = new Map<number, number>();
+    for (const chapter of book.chapters.filter((c) => c.included)) {
+      let ch = 0;
+      for (const s of this.svc.listSegments(chapter.story_id)) {
+        if (s.muted || !s.sound_id) continue;
+        if (s.track_index !== NARRATION_TRACK && (!includeBeds || chapter.kind === "retail_sample")) continue;
+        ch = Math.max(ch, s.sound?.channels ?? this.svc.getSound(s.sound_id)?.channels ?? 1);
+      }
+      if (ch > 0) counts.set(ch, (counts.get(ch) ?? 0) + 1);
+    }
+    let best = 1;
+    let n = 0;
+    for (const [ch, c] of counts) if (c > n || (c === n && ch < best)) [best, n] = [ch, c];
+    return best;
+  }
+
+  /**
+   * Mix one chapter (here: it needs the database), then master, measure,
+   * split and write it on the worker thread. Throws when it has no audio.
+   */
+  async renderChapter(
     chapter: Chapter,
     preset: MasteringPresetId,
     book: BookDetail,
-    options: { includeBeds?: boolean } = {},
-  ): RenderedChapter {
+    options: RenderOptions = {},
+  ): Promise<RenderedChapter> {
     const beds = options.includeBeds !== false && chapter.kind !== "retail_sample";
-    let mix;
+    const fail = (exc: unknown) =>
+      new ModelError(`${chapter.title}: ${exc instanceof Error ? exc.message : String(exc)}`);
+    let planned;
     try {
-      mix = this.svc.mixStory(chapter.story_id, undefined, {
+      planned = this.svc.planMix(chapter.story_id, {
         tracks: beds ? undefined : (lane) => lane === NARRATION_TRACK,
         includeBeds: beds,
       });
     } catch (exc) {
-      throw new ModelError(`${chapter.title}: ${exc instanceof Error ? exc.message : String(exc)}`);
+      throw fail(exc);
     }
-    if (!mix) throw new ModelError(`${chapter.title}: the chapter's story is missing.`);
-    const mastered = master(mix.audio, mix.sampleRate, preset, book.settings.pacing);
-    const duration = frameCount(mastered.audio) / mastered.sampleRate;
-    this.store.setMaster(chapter.id, preset, mastered.shiftS, duration);
+    if (!planned) throw new ModelError(`${chapter.title}: the chapter's story is missing.`);
     const paragraphs = this.books.getParagraphs(chapter.id) ?? [];
+    const heading = new Map(paragraphs.map((p) => [p.id, p.is_heading]));
+    const timeline = paragraphTimings(paragraphs);
+    const result = await runMaster({
+      mix: planned.plan,
+      preset,
+      pacing: book.settings.pacing,
+      wavPath: options.wavPath ?? null,
+      conform: options.conform ?? null,
+      returnAudio: options.returnAudio,
+      split: options.split
+        ? {
+            paragraphs: timeline.map((t) => ({
+              start_s: t.start_s,
+              end_s: t.end_s,
+              is_heading: heading.get(t.segment_id) ?? false,
+            })),
+            maxS: this.maxFileS,
+          }
+        : null,
+    }).catch((exc: unknown) => {
+      throw fail(exc);
+    });
+    const durationS = result.frames / result.sampleRate;
+    this.store.setMaster(chapter.id, preset, result.shiftS, durationS);
+    const timings = paragraphTimings(paragraphs, result.shiftS, durationS);
+    const parts: RenderedPart[] = result.parts.map((part, n) => {
+      const next = result.parts[n + 1]?.from_s ?? Infinity;
+      const dur = part.frames / result.sampleRate;
+      return {
+        ...part,
+        duration_s: round3(dur),
+        timings: timings
+          .filter((t) => t.start_s >= part.from_s && t.start_s < next)
+          .map((t) => ({
+            ...t,
+            start_s: round3(t.start_s - part.from_s + part.shift_s),
+            end_s: round3(Math.min(dur, t.end_s - part.from_s + part.shift_s)),
+          })),
+      };
+    });
     return {
       chapter,
-      audio: mastered.audio,
-      sampleRate: mastered.sampleRate,
-      shiftS: mastered.shiftS,
-      report: measure(mastered.audio, mastered.sampleRate),
-      timings: paragraphTimings(paragraphs, mastered.shiftS, duration),
+      sampleRate: result.sampleRate,
+      channels: result.channels,
+      shiftS: result.shiftS,
+      durationS,
+      report: result.report,
+      timings,
+      parts,
+      audio: result.audio,
     };
   }
 
   /**
-   * QC every chosen chapter as it would ship. A chapter with no audio gets
-   * one failing `audio` check instead of a report.
+   * QC every chosen chapter as it would ship (one file per chapter, split
+   * at 120 minutes). A chapter with no audio gets one failing `audio` check
+   * instead of a report.
    */
   async analyze(bookId: string, options: AnalyzeOptions = {}): Promise<ChapterQc[]> {
     const book = this.book(bookId);
     const preset = options.mastering ?? book.settings.mastering;
-    const measured: { chapter_id: string; report: LoudnessReport }[] = [];
+    const channels = this.bookChannels(book, preset, options.include_beds);
+    const measured: RenderedChapter[] = [];
     const missing: ChapterQc[] = [];
-    for (const chapter of this.chaptersFor(book, options.chapter_ids)) {
+    const chosen = this.chaptersFor(book, options.chapter_ids);
+    for (const chapter of chosen) {
       try {
-        const r = this.renderChapter(chapter, preset, book, { includeBeds: options.include_beds });
-        measured.push({ chapter_id: chapter.id, report: r.report });
+        measured.push(
+          await this.renderChapter(chapter, preset, book, {
+            includeBeds: options.include_beds,
+            split: true,
+            // Exports always bring every file to the book's layout.
+            conform: { channels },
+          }),
+        );
       } catch (exc) {
         missing.push(emptyQc(chapter.id, exc));
       }
-      await yieldLoop();
     }
-    const judged = checkBook(measured, preset);
-    const order = new Map(this.chaptersFor(book, options.chapter_ids).map((c, i) => [c.id, i]));
+    const judged = judge(measured, preset, channels);
+    const order = new Map(chosen.map((c, i) => [c.id, i]));
     return [...judged, ...missing].sort((a, b) => order.get(a.chapter_id)! - order.get(b.chapter_id)!);
   }
 
@@ -486,114 +591,142 @@ export class AudiobookExportService {
     mkdirSync(work, { recursive: true });
     try {
       const chapters = this.chaptersFor(book, request.chapter_ids);
-      const rendered: RenderedChapter[] = [];
-      for (let i = 0; i < chapters.length; i++) {
-        this.progress(ref, "running", (i / chapters.length) * 0.6, `Mastering ${chapters[i].title}`);
-        rendered.push(this.renderChapter(chapters[i], request.mastering, book, { includeBeds: request.include_beds }));
-        await yieldLoop();
-      }
-      const qc = checkBook(
-        rendered.map((r) => ({ chapter_id: r.chapter.id, report: r.report })),
-        request.mastering,
-      );
-      this.store.update(id, { qc });
-
+      const files = request.layout === "files";
+      const ext = EXT[request.format];
+      const channels = this.bookChannels(book, request.mastering, request.include_beds);
       const cover = request.include_cover ? await this.writeCover(bookId, work) : null;
-      const year = book.publication_date?.slice(0, 4) ?? null;
       const baseTags = {
         album: book.title,
         author: book.author,
         narrator: book.narrator,
-        year,
+        year: book.publication_date?.slice(0, 4) ?? null,
         publisher: book.publisher,
         language: book.language,
         comment: narratorLine(book.narrator),
       };
-      const ext = EXT[request.format];
-      const startIndex = chapters[0]?.kind === "opening_credits" ? 0 : 1;
+      const encodeFile = async (input: string, out: string, tags: Record<string, string>, extra: { meta?: string; concat?: boolean } = {}) => {
+        const r = await runFfmpeg(
+          buildEncodeArgs({
+            format: request.format as Exclude<ExportRequest["format"], "wav">,
+            input,
+            concat: extra.concat,
+            output: out,
+            bitrateKbps: request.bitrate_kbps,
+            tags,
+            metadataFile: extra.meta ?? null,
+            cover,
+          }),
+        );
+        if (!r.ok) throw new ModelError(`Encoding failed: ${r.error}`);
+      };
+
+      // Master every chapter on the worker, which writes each file (or part)
+      // as 16-bit WAV: no chapter's audio is held here, so a long book never
+      // sits in memory and the event loop stays free.
+      const rendered: RenderedChapter[] = [];
+      let rate: number | undefined;
+      for (let i = 0; i < chapters.length; i++) {
+        this.progress(ref, "running", (i / chapters.length) * 0.7, `Mastering ${chapters[i].title}`);
+        const r = await this.renderChapter(chapters[i], request.mastering, book, {
+          includeBeds: request.include_beds,
+          wavPath: join(work, `${String(i).padStart(3, "0")}.wav`),
+          // A joined file needs one rate; files only need one layout.
+          conform: { channels, rate: files ? undefined : rate },
+          split: files,
+        });
+        rate ??= r.sampleRate;
+        rendered.push(r);
+      }
+      const qc = judge(rendered, request.mastering, channels);
+      this.store.update(id, { qc });
+
       const outputs: ZipEntry[] = [];
       const along: ReadAlongChapter[] = [];
       const kept: ExportChapterFile[] = [];
 
-      const encode = async (audio: Audio, rate: number, out: string, tags: Record<string, string>, meta?: string) => {
-        if (request.format === "wav") {
-          writeWav16(out, audio, rate);
-          return;
-        }
-        const tmp = join(work, `${randomUUID()}.wav`);
-        // Lossless formats get the dithered 16-bit file; lossy encoders
-        // take 16-bit too, which is what every retail delivery is anyway.
-        writeWav16(tmp, audio, rate);
-        const r = await runFfmpeg(
-          buildEncodeArgs({
-            format: request.format as Exclude<ExportRequest["format"], "wav">,
-            input: tmp,
-            output: out,
-            bitrateKbps: request.bitrate_kbps,
-            tags,
-            metadataFile: meta ?? null,
-            cover,
-          }),
-        );
-        rmSync(tmp, { force: true });
-        if (!r.ok) throw new ModelError(`Encoding failed: ${r.error}`);
-      };
-
-      if (request.layout === "files") {
-        for (let i = 0; i < rendered.length; i++) {
-          const r = rendered[i];
-          const name = acxFileName(startIndex + i, r.chapter.title, ext);
-          this.progress(ref, "running", 0.6 + (i / rendered.length) * 0.35, `Encoding ${name}`);
-          const file = join(dir, name);
-          await encode(
-            r.audio,
-            r.sampleRate,
-            file,
-            tagMetadata({ ...baseTags, title: r.chapter.title, track: i + 1, totalTracks: rendered.length }),
-          );
-          outputs.push({ name, source: file });
-          along.push(alongEntry(r, name, 0));
-          kept.push({
-            chapter_id: r.chapter.id,
-            path: file,
-            mime: MIME[ext],
-            duration_s: Math.round((frameCount(r.audio) / r.sampleRate) * 1000) / 1000,
-            timings: r.timings,
-          });
+      if (files) {
+        const total = rendered.reduce((n, r) => n + r.parts.length, 0);
+        let index = chapters[0]?.kind === "opening_credits" ? 0 : 1;
+        let track = 0;
+        for (const r of rendered) {
+          for (let n = 0; n < r.parts.length; n++) {
+            const part = r.parts[n];
+            const title = r.parts.length > 1 ? `${r.chapter.title} Part ${n + 1}` : r.chapter.title;
+            const name = acxFileName(index++, title, ext);
+            track++;
+            this.progress(ref, "running", 0.7 + (track / total) * 0.25, `Encoding ${name}`);
+            const file = join(dir, name);
+            if (request.format === "wav") renameSync(part.wav!, file);
+            else {
+              await encodeFile(part.wav!, file, tagMetadata({ ...baseTags, title, track, totalTracks: total }));
+              rmSync(part.wav!, { force: true });
+            }
+            outputs.push({ name, source: file });
+            along.push({
+              chapter_id: r.chapter.id,
+              title,
+              file: name,
+              start_s: 0,
+              duration_s: part.duration_s,
+              paragraphs: part.timings,
+            });
+            // The player plays a chapter as one file; split chapters stay
+            // with listen's live mix.
+            if (r.parts.length === 1) {
+              kept.push({ chapter_id: r.chapter.id, path: file, mime: MIME[ext], duration_s: part.duration_s, timings: part.timings });
+            }
+          }
         }
       } else {
-        this.progress(ref, "running", 0.65, "Joining chapters");
-        const joined = joinChapters(rendered);
-        const name = `${acxFileName(0, book.title, ext).slice(3)}`;
+        const name = acxFileName(0, book.title, ext).slice(3);
         const file = join(dir, name);
-        const marks = rendered.map((r, i) => ({
-          title: r.chapter.title,
-          start_s: joined.starts[i],
-          end_s: joined.starts[i] + frameCount(r.audio) / r.sampleRate,
-        }));
-        const tags = tagMetadata({ ...baseTags, title: book.title });
-        let meta: string | undefined;
-        if (request.format !== "wav") {
-          meta = join(work, "chapters.txt");
-          writeFileSync(meta, ffmetadata(tags, marks));
+        const wavs = rendered.map((r) => r.parts[0].wav!);
+        const starts: number[] = [];
+        let at = 0;
+        for (const r of rendered) {
+          starts.push(round3(at));
+          at += r.parts[0].frames / r.sampleRate;
         }
+        const tags = tagMetadata({ ...baseTags, title: book.title });
         this.progress(ref, "running", 0.75, `Encoding ${name}`);
-        await encode(joined.audio, joined.sampleRate, file, tags, meta);
+        if (request.format === "wav") await concatWav16(wavs, file);
+        else {
+          const meta = join(work, "chapters.txt");
+          writeFileSync(
+            meta,
+            ffmetadata(
+              tags,
+              rendered.map((r, i) => ({ title: r.chapter.title, start_s: starts[i], end_s: starts[i] + r.parts[0].duration_s })),
+            ),
+          );
+          const list = join(work, "list.txt");
+          writeFileSync(list, concatList(wavs));
+          await encodeFile(list, file, tags, { meta, concat: true });
+        }
         outputs.push({ name, source: file });
-        rendered.forEach((r, i) => along.push(alongEntry(r, name, joined.starts[i])));
+        rendered.forEach((r, i) =>
+          along.push({
+            chapter_id: r.chapter.id,
+            title: r.chapter.title,
+            file: name,
+            start_s: starts[i],
+            duration_s: r.parts[0].duration_s,
+            paragraphs: r.parts[0].timings,
+          }),
+        );
       }
 
       if (request.include_transcripts) {
-        const all = along.flatMap((c) =>
-          c.paragraphs.map((p) => ({ ...p, start_s: p.start_s + c.start_s, end_s: p.end_s + c.start_s })),
-        );
-        if (request.layout === "files") {
+        if (files) {
           for (const c of along) {
             const stem = c.file.replace(/\.[^.]+$/, "");
             outputs.push({ name: `${stem}.srt`, source: Buffer.from(toSrt(cues(c.paragraphs))) });
             outputs.push({ name: `${stem}.vtt`, source: Buffer.from(toVtt(cues(c.paragraphs))) });
           }
         } else {
+          const all = along.flatMap((c) =>
+            c.paragraphs.map((p) => ({ ...p, start_s: p.start_s + c.start_s, end_s: p.end_s + c.start_s })),
+          );
           const stem = outputs[0].name.replace(/\.[^.]+$/, "");
           outputs.push({ name: `${stem}.srt`, source: Buffer.from(toSrt(cues(all))) });
           outputs.push({ name: `${stem}.vtt`, source: Buffer.from(toVtt(cues(all))) });
@@ -701,7 +834,8 @@ export class AudiobookExportService {
     mkdirSync(dir, { recursive: true });
     try {
       this.progress(ref, "running", 0.2, `Mastering ${chapter.title}`);
-      const r = this.renderChapter(chapter, "acx", book, { includeBeds: false });
+      const r = await this.renderChapter(chapter, "acx", book, { includeBeds: false, returnAudio: true });
+      const mastered = r.audio!;
       // Skip the chapter's spoken heading: a sample starts with the story.
       const body = r.timings.filter((t, i) => !(i === 0 && t.text.trim().toLowerCase() === chapter.title.trim().toLowerCase()));
       const span = pickSample(body.length ? body : r.timings, targetS);
@@ -709,10 +843,10 @@ export class AudiobookExportService {
       const head = book.settings.pacing.head_room_tone_s;
       const tail = Math.max(1, Math.min(2, book.settings.pacing.tail_room_tone_s));
       const from = Math.max(0, Math.round((span.start_s - head) * r.sampleRate));
-      const to = Math.min(frameCount(r.audio), Math.round(span.end_s * r.sampleRate));
+      const to = Math.min(frameCount(mastered), Math.round(span.end_s * r.sampleRate));
       const tailFrames = Math.round(tail * r.sampleRate);
       const bed = roomTone(tailFrames, ROOM_TONE_DB, 9);
-      const audio = r.audio.map((ch) => {
+      const audio = mastered.map((ch) => {
         const o = new Float32Array(to - from + tailFrames);
         o.set(ch.subarray(from, to));
         o.set(bed, to - from);
@@ -776,44 +910,17 @@ function emptyQc(chapterId: string, exc: unknown): ChapterQc {
   };
 }
 
-function alongEntry(r: RenderedChapter, file: string, startS: number): ReadAlongChapter {
-  return {
+/** QC for rendered chapters: the report checks against one book-wide
+ *  channel count, plus the split checks for chapters cut at 120 minutes. */
+function judge(rendered: RenderedChapter[], preset: MasteringPresetId, bookChannels: number): ChapterQc[] {
+  return rendered.map((r) => ({
     chapter_id: r.chapter.id,
-    title: r.chapter.title,
-    file,
-    start_s: Math.round(startS * 1000) / 1000,
-    duration_s: Math.round((frameCount(r.audio) / r.sampleRate) * 1000) / 1000,
-    paragraphs: r.timings,
-  };
+    report: r.report,
+    checks: splitChecks(checkReport(r.report, preset, { bookChannels }), r.parts, r.chapter.title),
+  }));
 }
 
-/**
- * Join mastered chapters end to end. Each already carries its own head and
- * tail room tone, so no gap is added. A `none` master may leave chapters at
- * different rates or layouts; they are brought to the first one's rate and
- * the widest layout.
- */
-export function joinChapters(chapters: { audio: Audio; sampleRate: number }[]): {
-  audio: Audio;
-  sampleRate: number;
-  starts: number[];
-} {
-  const rate = chapters[0]?.sampleRate ?? 44_100;
-  const channels = Math.max(1, ...chapters.map((c) => c.audio.length));
-  const parts = chapters.map((c) => (c.sampleRate === rate ? c.audio : resampleFast(c.audio, c.sampleRate, rate)));
-  const total = parts.reduce((n, p) => n + frameCount(p), 0);
-  const out: Audio = Array.from({ length: channels }, () => new Float32Array(total));
-  const starts: number[] = [];
-  let offset = 0;
-  for (const p of parts) {
-    starts.push(offset / rate);
-    for (let c = 0; c < channels; c++) out[c].set(p[Math.min(c, p.length - 1)], offset);
-    offset += frameCount(p);
-  }
-  return { audio: out, sampleRate: rate, starts };
-}
-
-const yieldLoop = () => new Promise<void>((resolve) => setImmediate(resolve));
+const round3 = (v: number) => Math.round(v * 1000) / 1000;
 
 const services = new WeakMap<MirliService, AudiobookExportService>();
 

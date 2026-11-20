@@ -63,6 +63,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import {
   useDeleteSession,
   useHealth,
+  useHosted,
   useModelAction,
   useModels,
   useSessions,
@@ -672,6 +673,7 @@ function ThemeToggle() {
 
 export function AppSidebar() {
   const { setOpenMobile } = useSidebar();
+  const hosted = useHosted();
   useRailOnImmersivePages();
 
   return (
@@ -722,13 +724,16 @@ export function AppSidebar() {
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <UpdateNotice />
+            {/* Mirli on the web: updates and the GPU are the host's business. */}
+            {!hosted && <UpdateNotice />}
             <SidebarMenuItem>
               <ThemeToggle />
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <DeviceStatus />
-            </SidebarMenuItem>
+            {!hosted && (
+              <SidebarMenuItem>
+                <DeviceStatus />
+              </SidebarMenuItem>
+            )}
             {/* The profile, last, like an account: whose library this is. */}
             <SidebarMenuItem>
               <ProfileSwitcher />

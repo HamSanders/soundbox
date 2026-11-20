@@ -66,9 +66,11 @@ const DEFAULTS = {
 
 export function SettingsPage() {
   const { data: settings, isLoading, isError, error } = useSettings();
-  const { data: cloud } = useCloud();
+  const { data: cloud, isLoading: cloudLoading } = useCloud();
 
-  if (isLoading) {
+  // Wait for /api/cloud too: until it answers, the groups a hosted or cloud
+  // setup hides would show (and the endpoints card would ask for endpoints).
+  if (isLoading || cloudLoading) {
     return (
       <div className="mx-auto max-w-3xl space-y-4">
         <Skeleton className="h-8 w-40" />
@@ -90,30 +92,33 @@ export function SettingsPage() {
     );
   }
 
+  // Simple setup (and always on the web): nothing about running models here.
+  const cloudOnly = Boolean(cloud?.hosted || (cloud?.enabled && settings.run_mode === "cloud"));
+
   return (
     <SettingsLayout
       hiddenGroups={[
         ...(cloud?.enabled ? [] : ["cloud"]),
-        // Simple setup: nothing about running models on this machine.
-        ...(cloud?.enabled && settings.run_mode === "cloud" ? ["performance", "models", "helpers"] : []),
+        ...(cloudOnly ? ["performance", "models", "helpers"] : []),
         // On the web, folders and updates belong to the server, not the person.
-        ...(cloud?.hosted ? ["storage", "privacy"] : []),
+        // Nor the token and setup wizard in Danger: there is no download or setup there.
+        ...(cloud?.hosted ? ["storage", "privacy", "danger"] : []),
       ]}
     >
       <div className="space-y-8">
         <SoundGroup settings={settings} />
         {cloud?.enabled && <CloudGroup settings={settings} status={cloud} />}
-        {!(cloud?.enabled && settings.run_mode === "cloud") && (
+        {!cloudOnly && (
           <>
             <PerformanceGroup settings={settings} />
             <ModelsGroup settings={settings} />
           </>
         )}
-        {!(cloud?.enabled && settings.run_mode === "cloud") && <HelpersGroup settings={settings} />}
+        {!cloudOnly && <HelpersGroup settings={settings} />}
         {!cloud?.hosted && <StorageGroup settings={settings} />}
         <InterfaceGroup />
         {!cloud?.hosted && <PrivacyGroup settings={settings} />}
-        <DangerGroup settings={settings} />
+        {!cloud?.hosted && <DangerGroup settings={settings} />}
       </div>
     </SettingsLayout>
   );
@@ -338,7 +343,10 @@ function CapInput({
 function CloudGroup({ settings, status }: { settings: Settings; status: CloudStatus }) {
   const { save } = useSettingSave();
   return (
-    <SettingsGroup id="cloud">
+    <SettingsGroup
+      id="cloud"
+      description={status.hosted ? "Your account: the balance every render is paid from, and your spending limits." : undefined}
+    >
       <SettingRow id="cloud-account" stack>
         <CloudAccountPanel status={status} />
       </SettingRow>

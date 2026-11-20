@@ -88,6 +88,18 @@ describe("hosted app", () => {
     expect(s.cloud_signed_in).toBe(true);
   });
 
+  it("keeps setup done even when \"Run setup again\" clears it", async () => {
+    const r = await app.inject({
+      method: "PATCH",
+      url: "/api/settings",
+      headers: { "content-type": "application/json" },
+      payload: { onboarded_at: "" },
+    });
+    expect(r.statusCode).toBe(200);
+    const s = (await app.inject({ method: "GET", url: "/api/settings" })).json();
+    expect(s.onboarded_at).toBeTruthy();
+  });
+
   it("lists no local models: there is nothing to run them on", async () => {
     const models = (await app.inject({ method: "GET", url: "/api/models" })).json() as { provider: string }[];
     expect(models.every((m) => m.provider === "cloud")).toBe(true);

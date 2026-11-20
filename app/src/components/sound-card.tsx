@@ -62,6 +62,7 @@ import { LicenseChip } from "@/components/license-badge";
 import {
   useStories,
   useDeleteSound,
+  useHosted,
   useModels,
   useProjects,
   useRevealSound,
@@ -131,6 +132,8 @@ export function SoundCard({
   const update = useUpdateSound();
   const remove = useDeleteSound();
   const reveal = useRevealSound();
+  // Mirli on the web: the file is on a server; Download is how you get it.
+  const hosted = useHosted();
   const { data: settings } = useSettings();
   const [downloading, setDownloading] = useState(false);
   const { data: projects } = useProjects();
@@ -531,10 +534,12 @@ export function SoundCard({
                 <DownloadIcon />
                 Download
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => reveal.mutate(sound.id)}>
-                <FolderOpenIcon />
-                Open in Finder
-              </DropdownMenuItem>
+              {!hosted && (
+                <DropdownMenuItem onClick={() => reveal.mutate(sound.id)}>
+                  <FolderOpenIcon />
+                  Open in Finder
+                </DropdownMenuItem>
+              )}
               {/* Where a sound goes next. Three destinations, one verb, so the
                   menu does not grow a row per place a sound could land. */}
               <DropdownMenuSub>

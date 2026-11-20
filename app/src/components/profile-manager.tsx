@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCreateProfile, useDeleteProfile, useRenameProfile } from "@/lib/queries";
+import { useCreateProfile, useDeleteProfile, useHosted, useRenameProfile } from "@/lib/queries";
 import type { Profile } from "@/lib/api";
 
 /** Kept out of the dropdown itself — a menu that switches profile on click
@@ -42,6 +42,8 @@ export function ProfileManagerDialog({
   const create = useCreateProfile();
   const rename = useRenameProfile();
   const remove = useDeleteProfile();
+  // Mirli on the web: the folder is on a server the person never sees.
+  const hosted = useHosted();
 
   const submitNew = (): void => {
     const trimmed = name.trim();
@@ -96,9 +98,11 @@ export function ProfileManagerDialog({
                   </div>
                   {/* The folder is the profile, so it is worth showing: it is
                       what you back up, and what you point a second tool at. */}
-                  <div className="text-muted-foreground truncate font-mono text-[11px]">
-                    {profile.data_dir}
-                  </div>
+                  {!hosted && (
+                    <div className="text-muted-foreground truncate font-mono text-[11px]">
+                      {profile.data_dir}
+                    </div>
+                  )}
                 </div>
               )}
               <Button
@@ -121,6 +125,13 @@ export function ProfileManagerDialog({
                 // server-side too; this only saves the round trip.
                 disabled={profile.id === "default" || profile.active}
                 onClick={() => {
+                  if (hosted) {
+                    // A folder left behind on the server would be unreachable, so it goes too.
+                    if (window.confirm(`Delete "${profile.name}" and every sound in it?`)) {
+                      remove.mutate({ id: profile.id, deleteData: true });
+                    }
+                    return;
+                  }
                   const alsoData = window.confirm(
                     `Delete "${profile.name}"?\n\nOK also deletes its folder and every sound ` +
                       `in it (${profile.data_dir}).\nCancel just removes it from this list, ` +

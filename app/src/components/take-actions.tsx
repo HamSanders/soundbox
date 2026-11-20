@@ -37,7 +37,7 @@ import { DEFAULT_INSTRUMENT, INSTRUMENTS, notesDuration, renderNotes } from "@/l
 import { useMidiStore } from "@/lib/midi-store";
 import type { TakeSource } from "@/lib/midi-store";
 import { formatDuration } from "@/lib/format";
-import { useInstruments } from "@/lib/queries";
+import { useHosted, useInstruments } from "@/lib/queries";
 import { libraryId, SamplesUnavailable, sampledId } from "@/lib/sampler";
 
 /** What to ask a model for, once the dry take is placed. */
@@ -144,6 +144,8 @@ export function TakeActions({
   const { data: sampled } = useInstruments();
   const installed = (sampled ?? []).filter((i) => i.installed);
   const [samplesOpen, setSamplesOpen] = useState(false);
+  // Mirli on the web can't download sample packs (the server refuses).
+  const hosted = useHosted();
   const duration = notesDuration(notes);
   const disabled = readOnly || busy;
 
@@ -213,17 +215,21 @@ export function TakeActions({
           </Select>
         </div>
 
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8"
-          disabled={disabled}
-          onClick={() => setSamplesOpen(true)}
-        >
-          <LibraryIcon />
-          Samples
-        </Button>
-        <InstrumentSamplesDialog open={samplesOpen} onOpenChange={setSamplesOpen} />
+        {!hosted && (
+          <>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8"
+              disabled={disabled}
+              onClick={() => setSamplesOpen(true)}
+            >
+              <LibraryIcon />
+              Samples
+            </Button>
+            <InstrumentSamplesDialog open={samplesOpen} onOpenChange={setSamplesOpen} />
+          </>
+        )}
 
         <div className="grid min-w-48 flex-1 gap-1">
           <Label htmlFor="take-prompt" className="text-muted-foreground text-[0.7rem]">

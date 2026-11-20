@@ -19,6 +19,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { BriefcaseIcon, CpuIcon, DownloadIcon, HardDriveIcon, SearchIcon, Trash2Icon } from "lucide-react";
 
+import { CloudModelsPage } from "@/components/cloud-models";
 import { EmptyState } from "@/components/empty-state";
 import { LicenseChip } from "@/components/license-badge";
 import { UnverifiedTag } from "@/components/model-detail-panel";
@@ -44,6 +45,7 @@ import { formatBytes, formatMb } from "@/lib/format";
 import { useModelDetailStore } from "@/lib/model-detail-store";
 import {
   useAudioCppCatalog,
+  useCloud,
   useHealth,
   useLlmEngineInstall,
   useLlmModelDelete,
@@ -294,7 +296,22 @@ function CatalogRowBody({ entry }: { entry: AudioCppCatalogEntry }) {
   );
 }
 
+/** Mirli on the web has no GPU and nothing to download: it gets the cloud list. */
 export function ModelsPage() {
+  const { data: cloud, isLoading, isError } = useCloud();
+  if (isLoading && !isError) {
+    return (
+      <div className="space-y-5">
+        <Skeleton className="h-8 w-40 rounded-lg" />
+        <Skeleton className="h-24 rounded-xl" />
+      </div>
+    );
+  }
+  if (cloud?.hosted) return <CloudModelsPage cloud={cloud} />;
+  return <LocalModelsPage />;
+}
+
+function LocalModelsPage() {
   const { data: models, isLoading, isError, error } = useModels();
   const { data: catalog } = useAudioCppCatalog();
   const { data: settings } = useSettings();

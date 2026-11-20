@@ -412,6 +412,18 @@ export function useCloud(): UseQueryResult<CloudStatus> {
   });
 }
 
+/** Mirli on the web: false until /api/cloud has answered, so gate local-only
+ *  UI with `useHostedState()` where a flash of it would matter. */
+export function useHosted(): boolean {
+  return useCloud().data?.hosted ?? false;
+}
+
+/** `hosted`, plus whether it is known yet. */
+export function useHostedState(): { hosted: boolean; known: boolean } {
+  const q = useCloud();
+  return { hosted: q.data?.hosted ?? false, known: q.isSuccess || q.isError };
+}
+
 function useCloudMutation<TIn, TOut>(fn: (input: TIn) => Promise<TOut>, failure: string) {
   const qc = useQueryClient();
   return useMutation<TOut, Error, TIn>({

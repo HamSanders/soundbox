@@ -339,7 +339,16 @@ export function SettingsLayout({ children, hiddenGroups = [] }: { children: Reac
 // ------------------------------------------------------------------- groups
 
 /** One group card. Hidden while searching when none of its rows match. */
-export function SettingsGroup({ id, children }: { id: string; children: ReactNode }) {
+export function SettingsGroup({
+  id,
+  description,
+  children,
+}: {
+  id: string;
+  /** Replaces the index's description, for a setup where it doesn't fit. */
+  description?: string;
+  children: ReactNode;
+}) {
   const { query } = useSettingsUi();
   const group = SETTINGS_GROUPS.find((g) => g.id === id);
   if (!group) throw new Error(`Unknown settings group: ${id}`);
@@ -354,7 +363,7 @@ export function SettingsGroup({ id, children }: { id: string; children: ReactNod
         >
           {group.title}
         </h2>
-        <p className="text-muted-foreground text-xs">{group.description}</p>
+        <p className="text-muted-foreground text-xs">{description ?? group.description}</p>
       </div>
       <div
         className={cn(

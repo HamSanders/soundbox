@@ -24,6 +24,7 @@ import { GENERATE_EVENT } from "@/hooks/use-generate-session";
 import {
   useActivateProfile,
   useCancelJob,
+  useHosted,
   useModelAction,
   useModels,
   useProfiles,
@@ -56,16 +57,16 @@ const PAGES: { label: string; to: string }[] = [
 
 /** Settings rows, by the words people search for. Each lands on its section
  *  of the one Settings page. Hidden until typed: see the file comment. */
-const SETTINGS: { label: string; section: string; keywords: string }[] = [
+const SETTINGS: { label: string; section: string; keywords: string; local?: true }[] = [
   { label: "Output format", section: "audio", keywords: "wav mp3 output device" },
   { label: "Loudness and silence", section: "audio", keywords: "normalise lufs trim silence" },
-  { label: "Prompt assistant", section: "generation", keywords: "llm assistant enhance rewrite ollama" },
-  { label: "Device and auto-unload", section: "generation", keywords: "cuda cpu gpu unload minutes vram idle" },
-  { label: "Artwork", section: "generation", keywords: "cover art image thumbnails" },
-  { label: "Endpoints", section: "endpoints", keywords: "remote audio.cpp custom endpoint api key" },
-  { label: "Storage and folders", section: "storage", keywords: "data directory models folder sounds folder disk path" },
-  { label: "Hugging Face token", section: "accounts", keywords: "hf token gated accounts" },
-  { label: "MCP telemetry", section: "advanced", keywords: "otel opentelemetry collector traces advanced" },
+  { label: "Prompt assistant", section: "generation", keywords: "llm assistant enhance rewrite ollama", local: true },
+  { label: "Device and auto-unload", section: "generation", keywords: "cuda cpu gpu unload minutes vram idle", local: true },
+  { label: "Artwork", section: "generation", keywords: "cover art image thumbnails", local: true },
+  { label: "Endpoints", section: "endpoints", keywords: "remote audio.cpp custom endpoint api key", local: true },
+  { label: "Storage and folders", section: "storage", keywords: "data directory models folder sounds folder disk path", local: true },
+  { label: "Hugging Face token", section: "accounts", keywords: "hf token gated accounts", local: true },
+  { label: "MCP telemetry", section: "advanced", keywords: "otel opentelemetry collector traces advanced", local: true },
 ];
 
 /** Pages whose composer is the one `GENERATE_EVENT` reaches. */
@@ -88,6 +89,8 @@ function pageOwnsTheKey(pathname: string): boolean {
 /** What the row for a model offers, by its state. Null when nothing applies
  *  (downloading, or a state the palette should not poke). */
 function modelVerb(model: Model): "Load" | "Unload" | null {
+  // Only a model on this machine loads into memory; cloud and endpoint ones don't.
+  if (model.provider && model.provider !== "local") return null;
   switch (model.status) {
     case "loaded":
       return "Unload";
@@ -115,6 +118,8 @@ export function AppCommandPalette() {
   const { data: voices } = useVoices();
   const { data: models } = useModels();
   const modelAction = useModelAction();
+  // Mirli on the web: none of the machine's own settings are there to visit.
+  const hosted = useHosted();
   const cancel = useCancelJob();
   const prompt = useSessionStore((s) => s.settings.prompt);
   const jobId = useSessionStore((s) => s.jobId);
@@ -241,7 +246,7 @@ export function AppCommandPalette() {
       };
     });
 
-    const settingRows: Command[] = SETTINGS.map((row) => ({
+    const settingRows: Command[] = SETTINGS.filter((row) => !(hosted && row.local)).map((row) => ({
       id: `settings:${row.section}:${row.label}`,
       label: row.label,
       detail: "Settings",
@@ -287,6 +292,7 @@ export function AppCommandPalette() {
     modelAction,
     navigate,
     goToSettings,
+    hosted,
   ]);
 
   return (

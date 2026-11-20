@@ -19,6 +19,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "dev:mock": "cross-env VITE_MOCK=1 vite",
+    "dev:mock:hosted": "cross-env VITE_MOCK=1 VITE_MOCK_HOSTED=1 vite",
     "typecheck": "tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {

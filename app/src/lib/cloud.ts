@@ -38,3 +38,8 @@ export function cloudPriceLabel(
   const unit = { minute: "minute", "10s": "10 s", "1k_chars": "1,000 characters" }[price.unit] ?? price.unit;
   return `${price.credits_per_unit} credits / ${unit}`;
 }
+
+/** "1 credit", "1,250 credits". */
+export function creditsLabel(n: number): string {
+  return `${n.toLocaleString()} credit${n === 1 ? "" : "s"}`;
+}

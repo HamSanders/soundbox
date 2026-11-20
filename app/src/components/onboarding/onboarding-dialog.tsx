@@ -101,7 +101,7 @@ export function OnboardingDialog() {
   const { data: catalog } = useAudioCppCatalog();
   const { data: llm } = useLlmStatus();
   const { data: image } = useImageStatus();
-  const { data: cloud } = useCloud();
+  const { data: cloud, isPending: cloudPending } = useCloud();
   const cloudOn = Boolean(cloud?.enabled);
 
   const update = useUpdateSettings();
@@ -135,9 +135,11 @@ export function OnboardingDialog() {
   // Opened from the queries rather than held open by them: once it is up, a
   // refetch that flips `shouldOnboard` (the first download landing, say) must
   // not yank the dialog out from under whoever is halfway through it.
+  // Mirli on the web has nothing to set up (the host signs it in), so wait
+  // for /api/cloud to say which this is before opening.
   useEffect(() => {
-    if (shouldOnboard(settings, models)) setOpen(true);
-  }, [settings, models]);
+    if (!cloudPending && !cloud?.hosted && shouldOnboard(settings, models)) setOpen(true);
+  }, [settings, models, cloudPending, cloud?.hosted]);
 
   const recommendations = useMemo(
     () =>

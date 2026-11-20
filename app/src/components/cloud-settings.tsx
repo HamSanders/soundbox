@@ -10,6 +10,7 @@ import { CheckCircle2Icon, CloudIcon, ExternalLinkIcon, Loader2Icon } from "luci
 
 import { Button } from "@/components/ui/button";
 import type { CloudPack, CloudStatus } from "@/lib/api";
+import { creditsLabel } from "@/lib/cloud";
 import { useCloudCancelSignIn, useCloudCheckout, useCloudSignIn, useCloudSignOut } from "@/lib/queries";
 
 const PACKS: { id: CloudPack; label: string; note?: string }[] = [
@@ -18,9 +19,7 @@ const PACKS: { id: CloudPack; label: string; note?: string }[] = [
   { id: "p50", label: "$50 · 5,500 credits", note: "+10%" },
 ];
 
-function credits(n: number): string {
-  return `${n.toLocaleString()} credit${n === 1 ? "" : "s"}`;
-}
+const credits = creditsLabel;
 
 export function CloudAccountPanel({ status }: { status: CloudStatus }) {
   const signIn = useCloudSignIn();

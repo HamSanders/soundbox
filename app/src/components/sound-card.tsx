@@ -14,6 +14,7 @@ import {
   MicIcon,
   MoreHorizontalIcon,
   PencilIcon,
+  PlayIcon,
   ScrollTextIcon,
   SendIcon,
   RotateCcwIcon,
@@ -70,6 +71,7 @@ import {
 } from "@/lib/queries";
 import { api } from "@/lib/api";
 import { usePlayerStore } from "@/lib/player-store";
+import { useDetailStore } from "@/lib/detail-store";
 import { instrumentIcon } from "@/lib/instrument-icons";
 import { recipeLine } from "@/lib/recipe";
 import { cn } from "@/lib/utils";
@@ -157,6 +159,7 @@ export function SoundCard({
   const playSound = usePlayerStore((s) => s.play);
   const setNowPlaying = usePlayerStore((s) => s.setSound);
   const playing = usePlayerStore((s) => s.sound?.id === sound.id);
+  const openDetails = useDetailStore((s) => s.open);
   const [opening, setOpening] = useState(false);
   const navigate = useNavigate();
   const [separating, setSeparating] = useState(false);
@@ -698,8 +701,14 @@ export function SoundCard({
       .join(" · ");
     return (
       <div
+        data-sound-row
+        onClick={(e) => {
+          // Buttons and menus inside the row do their own thing.
+          if ((e.target as Element).closest("button, a, [role=menu], [role=dialog]")) return;
+          openDetails(sound);
+        }}
         className={cn(
-          "relative grid grid-cols-[3.25rem_2.5rem_minmax(0,1fr)_auto] items-center gap-x-3 rounded-md px-2 py-1.5 transition-colors duration-(--duration-fast) hover:bg-muted/60",
+          "relative grid cursor-pointer grid-cols-[3.25rem_2.5rem_minmax(0,1fr)_auto] items-center gap-x-3 rounded-md px-2 py-1.5 transition-colors duration-(--duration-fast) hover:bg-muted/60",
           "md:grid-cols-[3.25rem_2.5rem_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto]",
           playing &&
             "bg-muted/60 before:bg-signal before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full",
@@ -715,15 +724,23 @@ export function SoundCard({
           type="button"
           onClick={playInBar}
           aria-label={`Play ${sound.name}`}
-          className="focus-visible:ring-ring/50 bg-muted text-foreground/55 ring-border flex size-10 items-center justify-center overflow-hidden rounded-sm ring-1 ring-inset outline-none focus-visible:ring-3"
+          className="group/tile focus-visible:ring-ring/50 bg-muted text-foreground/55 ring-border relative flex size-10 items-center justify-center overflow-hidden rounded-sm ring-1 ring-inset outline-none focus-visible:ring-3"
         >
           <SoundTileArt sound={sound} />
+          {/* On hover (or focus) the tile says what a click does: a play
+              button over a dimmed tile. */}
+          <span
+            aria-hidden="true"
+            className="bg-background/70 text-foreground absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-(--duration-fast) group-hover/tile:opacity-100 group-focus-visible/tile:opacity-100"
+          >
+            <PlayIcon className="size-4 fill-current" />
+          </span>
         </button>
         <div className="min-w-0">
           <button
             type="button"
-            onClick={playInBar}
-            aria-label={`Play ${sound.name}`}
+            onClick={() => openDetails(sound)}
+            aria-label={`Details for ${sound.name}`}
             className="focus-visible:ring-ring/50 block max-w-full truncate rounded text-left font-display text-base leading-tight font-bold tracking-[0.01em] uppercase outline-none focus-visible:ring-3"
           >
             {sound.name}

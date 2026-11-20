@@ -16,6 +16,7 @@ import { HeaderSlotProvider } from "@/components/header-slot";
 import { AppSidebar } from "@/components/app-sidebar";
 import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog";
 import { NowPlayingBar } from "@/components/now-playing-bar";
+import { SoundDetailPanel } from "@/components/sound-detail-panel";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { PLAYER_DOCK_HEIGHT_PX } from "@/components/player-dock";
 import { usePlayerStore } from "@/lib/player-store";
@@ -181,6 +182,7 @@ function AppShell() {
             excludes the sidebar's width, so `position="sticky"` here never
             draws over the sidebar the way a viewport-`fixed` dock would. */}
         <NowPlayingBar />
+        <SoundDetailPanel />
       </SidebarInset>
       {/* Inside the shell, not the app root: it offers the shell's pages and
           reads the route to know when to stand down. */}

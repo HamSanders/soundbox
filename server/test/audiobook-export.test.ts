@@ -419,3 +419,39 @@ describe("beds in the export", () => {
     expect(toneDb(audio[0], sampleRate, BED_HZ, 11, 13)).toBeLessThan(-80);
   });
 });
+
+describe("listen serves exported audio", () => {
+  it("the listen manifest switches from the live mix to the mastered export, with its timings", async () => {
+    const book = await audiobooks(app.soundbox).createBookFromManuscript(manuscript);
+    voiceBook(book.id, 3);
+    const before = await json("GET", `/api/audiobooks/${book.id}/listen`);
+    expect(before.chapters.map((c: any) => c.source)).toEqual(["live", "live"]);
+
+    const { id } = await json("POST", `/api/audiobooks/${book.id}/exports`, {
+      format: "wav",
+      layout: "files",
+      mastering: "acx",
+      include_cover: false,
+      include_transcripts: false,
+    });
+    expect((await finished(book.id, id)).status).toBe("done");
+
+    const after = await json("GET", `/api/audiobooks/${book.id}/listen`);
+    const served = exportedAudio(app.soundbox, book.id);
+    for (const chapter of after.chapters) {
+      expect(chapter.source).toBe("export");
+      const file = served.get(chapter.id)!;
+      expect(chapter.duration_s).toBeCloseTo(file.duration_s, 2);
+      // Paragraph times are the mastered file's, shifted by the head room tone.
+      const voiced = chapter.paragraphs.filter((p: any) => p.start_s !== null);
+      expect(voiced.map((p: any) => p.start_s)).toEqual(file.timings!.map((t) => t.start_s));
+      const live = before.chapters.find((c: any) => c.id === chapter.id).paragraphs.find((p: any) => p.start_s !== null);
+      expect(voiced[0].start_s).toBeGreaterThan(live.start_s);
+
+      const res = await call({ method: "GET", url: chapter.audio_url });
+      expect(res.statusCode).toBe(200);
+      expect(res.rawPayload.equals(readFileSync(file.path))).toBe(true);
+      expect(decodeWav(res.rawPayload).sampleRate).toBe(44_100);
+    }
+  });
+});

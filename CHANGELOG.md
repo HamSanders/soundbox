@@ -6,6 +6,8 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-20
+
 ### Added
 - **Export a MIDI take as `.mid`.** The MIDI panel and the piano roll can save the current take as a Standard MIDI File, at the roll's tempo and with each note's velocity. Render the part on another instrument, in a DAW or elsewhere, and drag the WAV back onto a lane.
 - **MIDI takes keep their notes.** A take placed from the MIDI panel or the piano roll now stores its notes, tempo, instrument and cover prompt with the clip. Right-click the dry clip or its cover and choose **Edit notes** to open the take in the piano roll, fix it, and **Re-render dry** or **Re-render instrument**. The new audio replaces the old in place, and Undo brings the old take back. Clips placed before this are unchanged and stay audio only. `soundbox.get_story` and the segments API return the notes as `midi`.
@@ -335,7 +337,8 @@ Initial public release, MIT-licensed. Everything below is new.
   `SOUNDBOX_ALLOWED_HOSTS`), and requires JSON or an `X-Soundbox` header on
   mutating API requests.
 
-[Unreleased]: https://github.com/HamSanders/soundbox/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/HamSanders/soundbox/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/HamSanders/soundbox/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/HamSanders/soundbox/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/HamSanders/soundbox/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/HamSanders/soundbox/compare/v0.3.0...v0.4.0

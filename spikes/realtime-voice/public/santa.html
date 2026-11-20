@@ -265,7 +265,7 @@ function setVideo(on) { if (face.on === on) return; face.on = on; document.body.
 function faceConnect() {
   if (!ctx || ctx.state === "closed") return;
   const s = face.ws = new WebSocket(FACE_WS); s.binaryType = "arraybuffer";
-  s.onopen = () => setVideo(true);
+  s.onopen = () => { pickSanta(); setVideo(true); };
   s.onmessage = (e) => onFace(e).catch(() => {});
   s.onclose = () => { setVideo(false); if (callStart) setTimeout(faceConnect, 4000); };
 }
@@ -322,6 +322,8 @@ function setMode(chat, byUser) {
 $("mVideo").onclick = () => setMode(false, true);
 $("mChat").onclick = () => setMode(true, true);
 
+const pickSanta = () => fetch(FACE_HTTP + "/face", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: SANTA_FACE }) }).catch(() => {});
+
 // Santa "picks up": leave the ringing screen and have him say hello first.
 function answer() {
   if (greeted || !callStart) return; greeted = true;
@@ -336,7 +338,7 @@ $("callBtn").onclick = () => {
   try { ctx = new AudioContext({ sampleRate: 48000, latencyHint: "interactive" }); ctx.resume(); } catch (e) { return fail(e); }
   startRinging();
   // Put Santa's portrait on the face server before the video starts.
-  fetch(FACE_HTTP + "/face", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: SANTA_FACE }) }).catch(() => {});
+  pickSanta();
   ws = new WebSocket(`ws://${location.host}/ws`); ws.binaryType = "arraybuffer";
   ws.onmessage = (e) => typeof e.data !== "string" ? onPcm(e.data) : onJson(JSON.parse(e.data)).catch(fail);
   ws.onerror = () => fail(new Error("Couldn't reach the North Pole (the call server isn't running)."));

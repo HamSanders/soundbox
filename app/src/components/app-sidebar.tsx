@@ -702,7 +702,7 @@ export function AppSidebar() {
     // asking the question — a dialog mounted inside would go with it.
     <>
       {picker.dialog}
-      <Sidebar collapsible="icon">
+      <Sidebar collapsible="icon" variant="inset">
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>

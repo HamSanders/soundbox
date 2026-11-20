@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, useEffect, type CSSProperties } from "react";
 import {
   Navigate,
   Route,
@@ -17,6 +17,8 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog";
 import { NowPlayingBar } from "@/components/now-playing-bar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { PLAYER_DOCK_HEIGHT_PX } from "@/components/player-dock";
+import { usePlayerStore } from "@/lib/player-store";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { DashboardPage } from "@/routes/dashboard";
@@ -75,8 +77,17 @@ function isFullBleed(pathname: string): boolean {
 function AppShell() {
   const { pathname } = useLocation();
   const fullBleed = isFullBleed(pathname);
+  const nowPlaying = usePlayerStore((s) => s.sound !== null);
   return (
-    <SidebarProvider defaultOpen={false}>
+    // Floating shell: the sidebar and the page are two panels on the
+    // sidebar's ground (the `inset` variant), and the player runs full width
+    // along the bottom under both, outside either panel. `--dock-h` is how
+    // much room that strip takes, so both panels stop above it.
+    <SidebarProvider
+      defaultOpen={false}
+      className="pb-(--dock-h)"
+      style={{ "--dock-h": nowPlaying ? `${PLAYER_DOCK_HEIGHT_PX}px` : "0px" } as CSSProperties}
+    >
       <AppSidebar />
       {/* The header and the page it belongs to share a provider so a page can
           render controls into the bar above it — see `header-slot`. */}
@@ -92,7 +103,7 @@ function AppShell() {
           have always had. */}
       <SidebarInset
         className={`bg-background text-foreground min-w-0${
-          fullBleed ? " h-svh overflow-hidden" : ""
+          fullBleed ? " h-[calc(100svh-var(--dock-h))] md:h-[calc(100svh-1rem-var(--dock-h))] overflow-hidden" : ""
         }`}
       >
         <AppHeader />

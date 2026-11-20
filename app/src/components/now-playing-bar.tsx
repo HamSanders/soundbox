@@ -30,7 +30,8 @@ export function NowPlayingBar() {
 
   return (
     <PlayerDock
-      position="sticky"
+      position="fixed"
+      ground
       title={sound.name}
       player={<WaveformPlayer key={sound.id} sound={sound} autoPlay />}
       trailing={

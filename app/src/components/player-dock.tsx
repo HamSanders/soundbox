@@ -44,6 +44,9 @@ interface PlayerDockProps {
    * overlaps it.
    */
   position?: "fixed" | "sticky";
+  /** Sit on the app shell's ground, under the floating panels, instead of
+   *  as a frosted strip over the page. The app-wide player uses it. */
+  ground?: boolean;
 }
 
 export function PlayerDock({
@@ -53,17 +56,21 @@ export function PlayerDock({
   player,
   trailing,
   position = "fixed",
+  ground = false,
 }: PlayerDockProps) {
   return (
     <div
       role="region"
       aria-label="Now playing"
       className={cn(
-        "border-border/60 bg-background/90 supports-[backdrop-filter]:bg-background/75 bottom-0 z-40 border-t backdrop-blur",
+        "bottom-0 z-40",
+        ground
+          ? "bg-sidebar h-(--dock-h,80px)"
+          : "border-border/60 bg-background/90 supports-[backdrop-filter]:bg-background/75 border-t backdrop-blur",
         position === "fixed" ? "fixed inset-x-0" : "sticky",
       )}
     >
-      <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-3">
+      <div className={cn("mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-3", ground && "h-full max-w-none px-5")}>
         {cover}
         {(title || subtitle) && (
           <div className="hidden w-44 min-w-0 shrink-0 sm:block">

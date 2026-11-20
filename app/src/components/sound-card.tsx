@@ -55,7 +55,8 @@ import { useVoice } from "@/components/voice-avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PeakGlyph } from "@/components/peak-glyph";
 import { WaveformPlayer } from "@/components/waveform-player";
-import { downloadSound, formatBytes, formatRelative } from "@/lib/format";
+import { downloadSound, formatBytes, formatDuration, formatRelative } from "@/lib/format";
+import { LicenseChip } from "@/components/license-badge";
 import {
   useStories,
   useDeleteSound,
@@ -87,6 +88,13 @@ interface SoundCardProps {
    * change to the default.
    */
   dense?: boolean;
+  /**
+   * One line of a tracklist: number, tile, subject and log line, licence,
+   * model, length, actions. No inline waveform; the row plays in the bottom
+   * player, and the playing row is marked with the beak's 2px line. The
+   * Library uses it; `dense` stays for the Generate turn.
+   */
+  track?: boolean;
   /** Offer "Extend" / "Cover" on this sound. The surface that has a
    *  composer to put the edit into (the Music studio) passes this; the menu
    *  only shows each entry when some generation model can run it. */
@@ -104,6 +112,7 @@ export function SoundCard({
   modelName,
   onReuse,
   dense,
+  track,
   onEdit,
   className,
   style,
@@ -147,6 +156,7 @@ export function SoundCard({
   };
   const playSound = usePlayerStore((s) => s.play);
   const setNowPlaying = usePlayerStore((s) => s.setSound);
+  const playing = usePlayerStore((s) => s.sound?.id === sound.id);
   const [opening, setOpening] = useState(false);
   const navigate = useNavigate();
   const [separating, setSeparating] = useState(false);
@@ -369,84 +379,10 @@ export function SoundCard({
       </Tooltip>
     ) : null;
 
-  /* ---------------------------------------------------------------- row */
-  /* One row: a generated cover tile, name/model/tags, the waveform, and a
-   *  compact action rail. Shared by the dense (Generate-turn) rendering and
-   *  the Library's own row below it — the only difference between the two
-   *  is the outer wrapper, a plain divider versus a `Card`. */
-  const row = (
+  /** Move-to-project and the kebab. Shared by every layout so the track
+   *  row cannot drift from the card on what a sound can do. */
+  const actions = (
     <>
-        {/* The square where album art goes. Three cases, best first: real
-            generated cover art if this track has any; the instrument's own
-            icon if this is a stem, which is a fact we know without generating
-            anything; and otherwise the gradient tile that reads as "no art"
-            rather than imitating one. In list view, clicking it plays the
-            sound in the fixed bottom player, same as the title next to it
-            (see the `dense` note on `nameControl` above). */}
-        {dense ? (
-          <div
-            aria-hidden="true"
-            className="order-1 flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted text-foreground/55 ring-1 ring-inset ring-border"
-          >
-            <SoundTileArt sound={sound} />
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={playInBar}
-            aria-label={`Play ${sound.name}`}
-            className="focus-visible:ring-ring/50 order-1 flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted text-foreground/55 ring-1 ring-inset ring-border outline-none focus-visible:ring-3"
-          >
-            <SoundTileArt sound={sound} />
-          </button>
-        )}
-
-        <div className="order-2 min-w-0 flex-1 basis-full sm:basis-48">
-          {nameControl}
-          {/* The recipe line: the model and the settings that made this, so a
-              row can be told from its neighbour that was the same prompt with
-              another seed. Tags follow, as before. */}
-          <p
-            className="text-muted-foreground mt-0.5 flex min-w-0 items-center gap-1 truncate text-xs"
-            title={recipeLine(sound, modelName)}
-          >
-            <UserRoundIcon className="size-3 shrink-0" aria-hidden="true" />
-            <span className="truncate">{recipeLine(sound, modelName)}</span>
-            {sound.tags.length > 0 && (
-              <>
-                <span aria-hidden="true">|</span>
-                <span className="truncate">{sound.tags.join(", ")}</span>
-              </>
-            )}
-          </p>
-          {sourceBadge && <div className="mt-1">{sourceBadge}</div>}
-        </div>
-
-        <WaveformPlayer
-          sound={sound}
-          compact
-          className="order-4 min-w-0 basis-full sm:order-3 sm:flex-[2] sm:basis-0"
-        />
-
-        <div className="order-3 ml-auto flex shrink-0 items-center gap-1 sm:order-4 sm:ml-0">
-          <span className="text-muted-foreground hidden text-xs lg:inline-flex">{stats}</span>
-
-          {onReuse && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Reuse this prompt in Generate"
-                  onClick={() => onReuse(sound)}
-                >
-                  <RotateCcwIcon />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Reuse prompt</TooltipContent>
-            </Tooltip>
-          )}
-
           <Popover open={projectMenuOpen} onOpenChange={setProjectMenuOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -662,9 +598,154 @@ export function SoundCard({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+    </>
+  );
+
+  /* ---------------------------------------------------------------- row */
+  /* One row: a generated cover tile, name/model/tags, the waveform, and a
+   *  compact action rail. Shared by the dense (Generate-turn) rendering and
+   *  the Library's own row below it — the only difference between the two
+   *  is the outer wrapper, a plain divider versus a `Card`. */
+  const row = (
+    <>
+        {/* The square where album art goes. Three cases, best first: real
+            generated cover art if this track has any; the instrument's own
+            icon if this is a stem, which is a fact we know without generating
+            anything; and otherwise the gradient tile that reads as "no art"
+            rather than imitating one. In list view, clicking it plays the
+            sound in the fixed bottom player, same as the title next to it
+            (see the `dense` note on `nameControl` above). */}
+        {dense ? (
+          <div
+            aria-hidden="true"
+            className="order-1 flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted text-foreground/55 ring-1 ring-inset ring-border"
+          >
+            <SoundTileArt sound={sound} />
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={playInBar}
+            aria-label={`Play ${sound.name}`}
+            className="focus-visible:ring-ring/50 order-1 flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted text-foreground/55 ring-1 ring-inset ring-border outline-none focus-visible:ring-3"
+          >
+            <SoundTileArt sound={sound} />
+          </button>
+        )}
+
+        <div className="order-2 min-w-0 flex-1 basis-full sm:basis-48">
+          {nameControl}
+          {/* The recipe line: the model and the settings that made this, so a
+              row can be told from its neighbour that was the same prompt with
+              another seed. Tags follow, as before. */}
+          <p
+            className="text-muted-foreground mt-0.5 flex min-w-0 items-center gap-1 truncate text-xs"
+            title={recipeLine(sound, modelName)}
+          >
+            <UserRoundIcon className="size-3 shrink-0" aria-hidden="true" />
+            <span className="truncate">{recipeLine(sound, modelName)}</span>
+            {sound.tags.length > 0 && (
+              <>
+                <span aria-hidden="true">|</span>
+                <span className="truncate">{sound.tags.join(", ")}</span>
+              </>
+            )}
+          </p>
+          {sourceBadge && <div className="mt-1">{sourceBadge}</div>}
+        </div>
+
+        <WaveformPlayer
+          sound={sound}
+          compact
+          className="order-4 min-w-0 basis-full sm:order-3 sm:flex-[2] sm:basis-0"
+        />
+
+        <div className="order-3 ml-auto flex shrink-0 items-center gap-1 sm:order-4 sm:ml-0">
+          <span className="text-muted-foreground hidden text-xs lg:inline-flex">{stats}</span>
+
+          {onReuse && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Reuse this prompt in Generate"
+                  onClick={() => onReuse(sound)}
+                >
+                  <RotateCcwIcon />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Reuse prompt</TooltipContent>
+            </Tooltip>
+          )}
+
+          {actions}
         </div>
     </>
   );
+
+
+  /* ---------------------------------------------------------------- track */
+  if (track) {
+    const license = models?.find((m) => m.id === sound.model)?.license;
+    const log = [
+      sound.source === "mcp" ? `by ${sound.client ?? "agent"}` : null,
+      formatRelative(sound.created_at),
+      formatBytes(sound.size_bytes),
+      ...sound.tags,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    return (
+      <div
+        className={cn(
+          "relative grid grid-cols-[3.25rem_2.5rem_minmax(0,1fr)_auto] items-center gap-x-3 rounded-md px-2 py-1.5 transition-colors duration-(--duration-fast) hover:bg-muted/60",
+          "md:grid-cols-[3.25rem_2.5rem_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto]",
+          playing &&
+            "bg-muted/60 before:bg-signal before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full",
+          fresh && "sb-arrive",
+          className,
+        )}
+        style={style}
+      >
+        <span className="readout text-muted-foreground truncate text-right tabular-nums" title="Seed">
+          {sound.seed ?? "–"}
+        </span>
+        <button
+          type="button"
+          onClick={playInBar}
+          aria-label={`Play ${sound.name}`}
+          className="focus-visible:ring-ring/50 bg-muted text-foreground/55 ring-border flex size-10 items-center justify-center overflow-hidden rounded-sm ring-1 ring-inset outline-none focus-visible:ring-3"
+        >
+          <SoundTileArt sound={sound} />
+        </button>
+        <div className="min-w-0">
+          <button
+            type="button"
+            onClick={playInBar}
+            aria-label={`Play ${sound.name}`}
+            className="focus-visible:ring-ring/50 block max-w-full truncate rounded text-left font-display text-base leading-tight font-bold tracking-[0.01em] uppercase outline-none focus-visible:ring-3"
+          >
+            {sound.name}
+          </button>
+          <p className="readout text-muted-foreground truncate" title={log}>
+            {log}
+          </p>
+        </div>
+        <span className="hidden min-w-0 md:block">{license && <LicenseChip license={license} />}</span>
+        <span className="readout text-muted-foreground hidden truncate md:block" title={recipeLine(sound, modelName)}>
+          {modelName ?? sound.model}
+        </span>
+        <span className="readout text-muted-foreground hidden text-right tabular-nums md:block">
+          {formatDuration(sound.duration_s)}
+        </span>
+        <div className="flex items-center">{actions}</div>
+        {renameDialog}
+        {confirmDialog}
+        {stemDialog}
+      </div>
+    );
+  }
 
   if (dense) {
     return (

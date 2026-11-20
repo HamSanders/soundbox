@@ -152,7 +152,7 @@ export function tagMetadata(t: AudiobookTags): Record<string, string> {
   if (t.year) out.date = t.year;
   if (t.publisher) out.publisher = t.publisher;
   if (t.language) out.language = t.language;
-  const comment = [t.comment, t.narrator ? `Narrated by ${t.narrator}` : null].filter(Boolean).join(". ");
+  const comment = t.comment ?? (t.narrator ? `Narrated by ${t.narrator}` : null);
   if (comment) out.comment = comment;
   return out;
 }

@@ -95,28 +95,66 @@ const PHASES: Float64Array[] = (() => {
   return phases;
 })();
 
+/** Largest sum of |taps| over the phases: no interpolated value can exceed
+ *  the window's largest |sample| times this. */
+const TAP_GAIN = Math.max(...PHASES.map((t) => t.reduce((s, v) => s + Math.abs(v), 0)));
+
+/** |sample| maxima over the interpolation window [i - 5, i + 6] of each frame. */
+function windowAbsMax(channel: Float32Array): Float32Array {
+  const n = channel.length;
+  const half = TAPS_PER_PHASE / 2;
+  const out = new Float32Array(n);
+  // Monotonic deque over the index window.
+  const dq = new Int32Array(n);
+  let head = 0;
+  let tail = 0;
+  let next = 0;
+  for (let i = 0; i < n; i++) {
+    const hi = Math.min(n - 1, i + half);
+    while (next <= hi) {
+      const v = Math.abs(channel[next]);
+      while (tail > head && Math.abs(channel[dq[tail - 1]]) <= v) tail--;
+      dq[tail++] = next++;
+    }
+    while (dq[head] < i - half + 1) head++;
+    out[i] = Math.abs(channel[dq[head]]);
+  }
+  return out;
+}
+
+function interpolatedMax(channel: Float32Array, i: number): number {
+  const n = channel.length;
+  const half = TAPS_PER_PHASE / 2;
+  let m = Math.abs(channel[i]);
+  for (let p = 1; p < OVERSAMPLE; p++) {
+    const taps = PHASES[p];
+    let acc = 0;
+    for (let k = 0; k < TAPS_PER_PHASE; k++) {
+      const j = i + k - half + 1;
+      if (j >= 0 && j < n) acc += channel[j] * taps[k];
+    }
+    const a = Math.abs(acc);
+    if (a > m) m = a;
+  }
+  return m;
+}
+
 /**
  * Per input frame, the largest absolute value of the signal anywhere between
- * that frame and the next, found by 4x interpolation. Used by the meter and
- * by the limiter, which needs to know where the inter-sample overs are.
+ * that frame and the next, found by 4x interpolation. Used by the limiter,
+ * which needs to know where the inter-sample overs are.
+ *
+ * Frames whose whole interpolation window is too quiet to reach `floor`
+ * (even at the filter's worst-case gain) are not interpolated and report
+ * their own |sample|: the limiter only cares about frames above its ceiling,
+ * and this skips the 48 multiplies on nearly all of them.
  */
-export function truePeakEnvelope(channel: Float32Array): Float32Array {
+export function truePeakEnvelope(channel: Float32Array, floor = 0): Float32Array {
   const n = channel.length;
   const out = new Float32Array(n);
-  const half = TAPS_PER_PHASE / 2;
+  const local = windowAbsMax(channel);
   for (let i = 0; i < n; i++) {
-    let m = Math.abs(channel[i]);
-    for (let p = 0; p < OVERSAMPLE; p++) {
-      const taps = PHASES[p];
-      let acc = 0;
-      for (let k = 0; k < TAPS_PER_PHASE; k++) {
-        const j = i + k - half + 1;
-        if (j >= 0 && j < n) acc += channel[j] * taps[k];
-      }
-      const a = Math.abs(acc);
-      if (a > m) m = a;
-    }
-    out[i] = m;
+    out[i] = local[i] * TAP_GAIN <= floor ? Math.abs(channel[i]) : interpolatedMax(channel, i);
   }
   return out;
 }
@@ -125,8 +163,13 @@ export function truePeakEnvelope(channel: Float32Array): Float32Array {
 export function truePeak(audio: Audio): number {
   let peak = 0;
   for (const ch of audio) {
-    const env = truePeakEnvelope(ch);
-    for (let i = 0; i < env.length; i++) if (env[i] > peak) peak = env[i];
+    const local = windowAbsMax(ch);
+    for (let i = 0; i < ch.length; i++) {
+      // Only frames that could beat the peak so far are interpolated.
+      if (local[i] * TAP_GAIN <= peak) continue;
+      const m = interpolatedMax(ch, i);
+      if (m > peak) peak = m;
+    }
   }
   return peak;
 }

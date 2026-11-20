@@ -131,6 +131,87 @@ export function roomTone(frames: number, levelDb: number, seed = 1): Float32Arra
   return out;
 }
 
+/* -------------------------------------------------------------- resample */
+
+const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+
+function besselI0(x: number): number {
+  let sum = 1;
+  let term = 1;
+  for (let k = 1; k < 60; k++) {
+    const t = x / (2 * k);
+    term *= t * t;
+    sum += term;
+    if (term < 1e-16 * sum) break;
+  }
+  return sum;
+}
+
+/**
+ * Polyphase resampler with the same kernel as `dsp.resampleAudio` (Kaiser
+ * windowed sinc, 16 zero crossings, beta 8.6, cutoff at the lower Nyquist,
+ * each phase normalised to unity gain), but with the taps computed once per
+ * phase instead of once per output sample. That one evaluates a Bessel
+ * function per tap, which took seconds per minute of audio; a chapter is
+ * often an hour. Falls back to dsp for rate pairs with no small ratio.
+ */
+export function resampleFast(audio: Audio, fromRate: number, toRate: number): Audio {
+  if (fromRate === toRate) return audio;
+  const g = gcd(fromRate, toRate);
+  const L = toRate / g; // up
+  const M = fromRate / g; // down
+  if (L > 4096) return resampleAudio(audio, fromRate, toRate);
+  const ratio = toRate / fromRate;
+  const cutoff = Math.min(1, ratio);
+  const halfWidth = 16 / cutoff;
+  const K = Math.ceil(halfWidth);
+  const width = 2 * K;
+  const beta = 8.6;
+  const i0beta = besselI0(beta);
+  // Phase p is fractional position p / L; tap o covers input base + o - K + 1.
+  const table = new Float64Array(L * width);
+  for (let p = 0; p < L; p++) {
+    const frac = p / L;
+    let norm = 0;
+    for (let o = 0; o < width; o++) {
+      const d = frac - (o - K + 1);
+      const r = d / halfWidth;
+      let h = 0;
+      if (r > -1 && r < 1) {
+        const w = besselI0(beta * Math.sqrt(1 - r * r)) / i0beta;
+        const x = cutoff * d;
+        h = cutoff * (x === 0 ? 1 : Math.sin(Math.PI * x) / (Math.PI * x)) * w;
+      }
+      table[p * width + o] = h;
+      norm += h;
+    }
+    if (norm !== 0) for (let o = 0; o < width; o++) table[p * width + o] /= norm;
+  }
+  return audio.map((x) => {
+    const n = x.length;
+    const nOut = Math.ceil(n * ratio);
+    const out = new Float32Array(nOut);
+    for (let i = 0; i < nOut; i++) {
+      const pos = i * M;
+      const base = Math.floor(pos / L);
+      const phase = pos - base * L;
+      const row = phase * width;
+      const start = base - K + 1;
+      let acc = 0;
+      if (start >= 0 && start + width <= n) {
+        for (let o = 0; o < width; o++) acc += table[row + o] * x[start + o];
+      } else {
+        for (let o = 0; o < width; o++) {
+          const j = start + o;
+          if (j >= 0 && j < n) acc += table[row + o] * x[j];
+        }
+      }
+      out[i] = acc;
+    }
+    return out;
+  });
+}
+
 /* --------------------------------------------------------------- expander */
 
 export interface ExpanderOptions {
@@ -264,7 +345,7 @@ export function limitTruePeak(
   const ceiling = fromDb(ceilingDbtp);
   const need = new Float32Array(frames).fill(1);
   for (const ch of audio) {
-    const env = truePeakEnvelope(ch);
+    const env = truePeakEnvelope(ch, ceiling);
     for (let i = 0; i < frames; i++) {
       if (env[i] > ceiling) need[i] = Math.min(need[i], ceiling / env[i]);
     }
@@ -390,7 +471,7 @@ export function master(
   let rate = inputRate;
   if (spec.channels === 1) audio = downmixMono(audio);
   if (spec.sampleRate && spec.sampleRate !== rate) {
-    audio = resampleAudio(audio, rate, spec.sampleRate);
+    audio = resampleFast(audio, rate, spec.sampleRate);
     rate = spec.sampleRate;
   }
   if (!spec.target || frameCount(audio) === 0) {

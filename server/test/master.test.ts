@@ -233,3 +233,20 @@ describe("master presets", () => {
     expect(frameCount(out.audio)).toBe(frameCount(a));
   });
 });
+
+describe("resampleFast", () => {
+  it("matches dsp.resampleAudio sample for sample", async () => {
+    const { resampleAudio } = await import("../src/audio/dsp.js");
+    const { resampleFast } = await import("../src/audio/master.js");
+    const src: Audio = [sine(0.5, 0.5, 440, 24_000)];
+    for (const [from, to] of [[24_000, 44_100], [48_000, 44_100], [22_050, 44_100]] as const) {
+      const input = from === 24_000 ? src : [sine(0.5, 0.5, 440, from)];
+      const a = resampleAudio(input, from, to)[0];
+      const b = resampleFast(input, from, to)[0];
+      expect(b.length).toBe(a.length);
+      let worst = 0;
+      for (let i = 0; i < a.length; i++) worst = Math.max(worst, Math.abs(a[i] - b[i]));
+      expect(worst).toBeLessThan(1e-4);
+    }
+  });
+});

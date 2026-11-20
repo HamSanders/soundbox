@@ -1332,7 +1332,7 @@ export class MirliService {
    * t * sampleRate of the result. Null when the story does not exist; throws
    * when nothing in it has audio. [audiobooks:export]
    */
-  mixStory(storyId: string, handle?: JobHandle) {
+  mixStory(storyId: string, handle?: JobHandle, options: { tracks?: (lane: number) => boolean } = {}) {
     const story = this.db.getStory(storyId);
     if (story === null) return null;
     // A track's mute/solo and its gain sit on top of each clip's own — the
@@ -1344,7 +1344,10 @@ export class MirliService {
       gains.has(lane) ? gains.get(lane)! : gains.get(Number.NaN)!;
     const segments = this.db
       .listSegments(storyId)
-      .filter((s) => !s.muted && s.sound_id && trackGain(s.track_index) !== null);
+      .filter(
+        (s) =>
+          !s.muted && s.sound_id && trackGain(s.track_index) !== null && (options.tracks?.(s.track_index) ?? true),
+      );
     if (segments.length === 0) {
       throw new ModelError("Nothing to export: no line in this story has audio yet.");
     }

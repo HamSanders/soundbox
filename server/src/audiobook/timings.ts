@@ -17,8 +17,8 @@ export interface TimedParagraph {
   kind?: string | null;
   text: string;
   start_s: number;
-  duration_s: number | null;
-  sound_id: string | null;
+  duration_s?: number | null;
+  sound_id?: string | null;
   muted?: boolean | number | null;
   character_id: string | null;
 }

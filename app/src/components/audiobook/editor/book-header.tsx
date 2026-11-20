@@ -4,7 +4,7 @@
  * full metadata form. Export and the render bar come from their areas.
  */
 
-import { useRef, useState } from "react";
+import { memo, useRef, useState } from "react";
 import {
   DownloadIcon,
   HistoryIcon,
@@ -145,7 +145,7 @@ function DetailsDialog({
   );
 }
 
-export function BookHeader({
+function BookHeaderView({
   book,
   findOpen,
   onToggleFind,
@@ -319,3 +319,6 @@ export function BookHeader({
     </div>
   );
 }
+
+/** Memoised: the editor re-renders on every paragraph selection. */
+export const BookHeader = memo(BookHeaderView);

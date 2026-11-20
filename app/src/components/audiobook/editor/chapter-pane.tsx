@@ -43,6 +43,7 @@ import { CharacterMenuItems } from "./character-chip";
 import { FindReplaceBar } from "./find-replace-bar";
 import { NotesButton } from "./notes";
 import { ParagraphRow, type RowActions } from "./paragraph-row";
+import { useWindowedList } from "./use-windowed-list";
 import type { BookOps } from "./use-book-ops";
 import { useParagraphPlayer } from "./use-paragraph-player";
 import { resolveModel, useTts } from "./use-tts";
@@ -120,7 +121,31 @@ export function ChapterPane({
     [all, notesBySegment, openNotesOnly],
   );
   const lines = useMemo(() => list.filter((p) => p.kind === "line"), [list]);
+
+  // Only rows near the viewport are mounted (a long chapter is thousands of
+  // DOM nodes otherwise). The row being edited always stays mounted.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const keys = useMemo(() => list.map((p) => p.id), [list]);
+  const indexOf = useMemo(() => new Map(all.map((p, i) => [p.id, i])), [all]);
   const selected = list.find((p) => p.id === selectedId) ?? null;
+  const win = useWindowedList({
+    keys,
+    scrollRef,
+    keep: editingId ? keys.indexOf(editingId) : null,
+  });
+  // A selection off screen (j/k, play to end) scrolls into view; the row's
+  // own scrollIntoView handles the fine adjustment once it is mounted.
+  // Keyed on the selection only: re-running when rows are measured would
+  // pull the view back while someone scrolls away from it.
+  const scrollTo = useRef(win.scrollToIndex);
+  const keyList = useRef(keys);
+  useEffect(() => {
+    scrollTo.current = win.scrollToIndex;
+    keyList.current = keys;
+  });
+  useEffect(() => {
+    if (selectedId) scrollTo.current(keyList.current.indexOf(selectedId));
+  }, [selectedId]);
 
   const generate = useCallback(
     (targets: Paragraph[]) => {
@@ -464,6 +489,7 @@ export function ChapterPane({
       </div>
 
       <div
+        ref={scrollRef}
         className="min-h-0 flex-1 overflow-y-auto py-2"
         role="list"
         aria-label={`${chapter.title} paragraphs`}
@@ -493,12 +519,14 @@ export function ChapterPane({
             {filter ? "No paragraphs match the filter in this chapter." : "This chapter has no paragraphs yet."}
           </EmptyState>
         ) : (
-          list.map((p) => (
+          <>
+          <div aria-hidden="true" style={{ height: win.padTop }} />
+          {list.slice(win.start, win.end).map((p) => (
+            <div key={p.id} ref={win.measure(p.id)}>
             <ParagraphRow
-              key={p.id}
               bookId={book.id}
               paragraph={p}
-              index={all.indexOf(p)}
+              index={indexOf.get(p.id) ?? 0}
               isLast={all[all.length - 1]?.id === p.id}
               character={characterById(book.characters, p.character_id)}
               characters={book.characters}
@@ -512,7 +540,10 @@ export function ChapterPane({
               highlight={highlight}
               actions={rowActions}
             />
-          ))
+            </div>
+          ))}
+          <div aria-hidden="true" style={{ height: win.padBottom }} />
+          </>
         )}
         {all.length > 0 && !filter && (
           <div className="flex gap-1 px-4 pt-2 pb-6">

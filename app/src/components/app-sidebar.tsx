@@ -11,6 +11,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import {
   ActivityIcon,
+  AudioLinesIcon,
   BotIcon,
   ChevronDownIcon,
   CpuIcon,
@@ -18,9 +19,11 @@ import {
   FolderIcon,
   InfoIcon,
   LibraryIcon,
+  MessageSquareTextIcon,
   MessagesSquareIcon,
   MicIcon,
   MoonIcon,
+  MusicIcon,
   PanelLeftIcon,
   PlusIcon,
   SearchIcon,
@@ -126,9 +129,9 @@ const NAV_STUDIO: NavItem[] = [
  *  turns up a music track or a spoken read. Browsing, not doing — which is why
  *  it is a group of its own rather than more entries under Studio. */
 const NAV_SAMPLES: NavItem[] = [
-  // One entry: the kinds are a chip row on the page (LibraryTypeChips), so
-  // the sidebar stays short and a kind is one click away either way.
-  { to: "/library", label: "Library", icon: LibraryIcon, end: false, hue: "sfx" },
+  { to: "/library/speech", label: "Text to Speech", icon: MessageSquareTextIcon, end: false, hue: "voice" },
+  { to: "/library/sfx", label: "SFX", icon: AudioLinesIcon, end: false, hue: "sfx" },
+  { to: "/library/music", label: "Music", icon: MusicIcon, end: false, hue: "music" },
 ];
 
 /** App-level nav — not content you're working in, so it lives in the sticky

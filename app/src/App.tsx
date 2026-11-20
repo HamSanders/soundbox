@@ -100,8 +100,8 @@ function AppShell() {
       style={
         {
           "--dock-h": nowPlaying ? `${PLAYER_DOCK_HEIGHT_PX}px` : "0px",
-          "--top-h": "3.5rem",
-          "--panel-h": `calc(100svh - 3.5rem - 1rem - ${nowPlaying ? PLAYER_DOCK_HEIGHT_PX : 0}px)`,
+          "--top-h": "0px",
+          "--panel-h": `calc(100svh - 1rem - ${nowPlaying ? PLAYER_DOCK_HEIGHT_PX : 0}px)`,
         } as CSSProperties
       }
     >
@@ -109,7 +109,6 @@ function AppShell() {
           own controls into the bar above it — see `header-slot`. The bar is a
           slim strip across the window, above the panels, not inside one. */}
       <HeaderSlotProvider>
-      <AppHeader />
       <AppSidebar />
       {/* Between the sidebar and the page on the kind pages: see create-panel.tsx. */}
       <CreatePanel />
@@ -130,9 +129,10 @@ function AppShell() {
           fullBleed
             ? // The Studio's own panels are the shell's panels here: the page
               // panel has no fill, frame or padding of its own around them.
-              " max-md:h-[calc(100svh-3.5rem-var(--dock-h,0px))] overflow-hidden md:bg-transparent! md:ring-0!" : " md:overflow-y-auto"
+              " max-md:h-[calc(100svh-var(--dock-h,0px))] overflow-hidden md:bg-transparent! md:ring-0!" : " md:overflow-y-auto"
         }`}
       >
+        <AppHeader />
         {/* The full-bleed column is a flex column with `min-h-0`, which is
             what lets a studio page fill the window: `h-full` cannot do it,
             because this element's own height comes from `flex-1` rather than

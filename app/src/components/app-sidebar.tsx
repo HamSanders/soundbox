@@ -680,7 +680,7 @@ export function AppSidebar() {
           window edges. */}
       <Sidebar collapsible="icon" variant="inset" className="pr-2.5">
         {/* The logo, top left, on the same line as the header bar beside it. */}
-        <SidebarHeader className="h-12 justify-center">
+        <SidebarHeader className="h-14 justify-center">
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" asChild tooltip="Mirli home">
@@ -711,10 +711,6 @@ export function AppSidebar() {
 
         <SidebarFooter>
           <SidebarMenu>
-            {/* Which library you are working in, where it is easy to see. */}
-            <SidebarMenuItem className="overflow-hidden">
-              <ProfileSwitcher />
-            </SidebarMenuItem>
             {/* The landing page is part of the public site now, not the app,
                 so this leaves the app rather than routing inside it — the
                 app has no /welcome route any more. */}
@@ -732,6 +728,10 @@ export function AppSidebar() {
             </SidebarMenuItem>
             <SidebarMenuItem>
               <DeviceStatus />
+            </SidebarMenuItem>
+            {/* The profile, last, like an account: whose library this is. */}
+            <SidebarMenuItem>
+              <ProfileSwitcher />
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>

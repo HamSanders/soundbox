@@ -1,6 +1,6 @@
 /** One saved sound: rename, play, tag, favourite, download, reuse, delete. */
 
-import { useState, type CSSProperties } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   AudioLinesIcon,
@@ -583,7 +583,7 @@ export function SoundCard({
                     <SlidersHorizontalIcon />
                     {splittable ? "Split into tracks and open in studio…" : "Open in the studio"}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate(`/voice/lab?from=${sound.id}`)}>
+                  <DropdownMenuItem onClick={() => navigate(`/voice/new/clone?from=${sound.id}`)}>
                     <MicIcon />
                     Make a voice from this
                   </DropdownMenuItem>
@@ -704,12 +704,13 @@ export function SoundCard({
         data-sound-row
         onClick={(e) => {
           // Buttons and menus inside the row do their own thing.
-          if ((e.target as Element).closest("button, a, [role=menu], [role=dialog]")) return;
+          if ((e.target as Element).closest("button, a, [role=menu], [role=dialog], [data-track-wave]")) return;
           openDetails(sound);
         }}
         className={cn(
           "relative grid cursor-pointer grid-cols-[3.25rem_2.5rem_minmax(0,1fr)_auto] items-center gap-x-3 rounded-md px-2 py-1.5 transition-colors duration-(--duration-fast) hover:bg-muted/60",
           "@2xl:grid-cols-[3.25rem_2.5rem_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto]",
+          "@4xl:grid-cols-[3.25rem_2.5rem_minmax(0,16rem)_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto]",
           playing &&
             "bg-muted/60 before:bg-signal before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full",
           fresh && "sb-arrive",
@@ -749,6 +750,7 @@ export function SoundCard({
             {log}
           </p>
         </div>
+        <TrackWave sound={sound} className="hidden @4xl:flex" />
         <span className="hidden min-w-0 @2xl:block">{license && <LicenseChip license={license} />}</span>
         <span className="readout text-muted-foreground hidden truncate @2xl:block" title={recipeLine(sound, modelName)}>
           {modelName ?? sound.model}
@@ -812,6 +814,86 @@ export function SoundCard({
  * "Kick (trim)", and giving those a random instrument icon would be worse than
  * giving them none.
  */
+/**
+ * A track row's waveform, drawn from the sound's stored peaks.
+ *
+ * It is a control for the bottom player, not a player of its own: a click
+ * or a drag opens the sound there, playing from that point, and while it
+ * plays the row's waveform fills to the bottom player's position. One
+ * player, wherever you start it from.
+ */
+function TrackWave({ sound, className }: { sound: Sound; className?: string }) {
+  const playAt = usePlayerStore((s) => s.playAt);
+  const progress = usePlayerStore((s) =>
+    s.sound?.id === sound.id && sound.duration_s ? Math.min(1, s.position / sound.duration_s) : null,
+  );
+  const dragging = useRef(false);
+  const BARS = 72;
+  const peaks = sound.peaks ?? [];
+  const bars = Array.from({ length: BARS }, (_, i) => {
+    if (!peaks.length) return 0.15;
+    const a = Math.floor((i / BARS) * peaks.length);
+    const b = Math.max(a + 1, Math.floor(((i + 1) / BARS) * peaks.length));
+    let m = 0;
+    for (let j = a; j < b; j++) m = Math.max(m, Math.abs(peaks[j] ?? 0));
+    return Math.max(0.08, m);
+  });
+  const seek = (el: HTMLElement, x: number) => {
+    const r = el.getBoundingClientRect();
+    const f = Math.min(1, Math.max(0, (x - r.left) / r.width));
+    playAt(sound, f * (sound.duration_s || 0));
+  };
+  return (
+    <div
+      role="slider"
+      tabIndex={-1}
+      aria-label={`Play ${sound.name} from a point`}
+      aria-valuemin={0}
+      aria-valuemax={Math.round(sound.duration_s || 0)}
+      aria-valuenow={progress === null ? 0 : Math.round(progress * (sound.duration_s || 0))}
+      data-track-wave
+      className={cn("group/wave h-8 min-w-0 cursor-pointer touch-none items-center", className)}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        dragging.current = true;
+        seek(e.currentTarget, e.clientX);
+      }}
+      onPointerMove={(e) => {
+        if (dragging.current) seek(e.currentTarget, e.clientX);
+      }}
+      onPointerUp={(e) => {
+        dragging.current = false;
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }}
+    >
+      <svg viewBox={`0 0 ${BARS * 3} 32`} preserveAspectRatio="none" className="h-full w-full" aria-hidden="true">
+        {bars.map((h, i) => {
+          const played = progress !== null && i / BARS < progress;
+          return (
+            <rect
+              key={i}
+              x={i * 3}
+              y={16 - h * 15}
+              width={2}
+              height={Math.max(1, h * 30)}
+              rx={1}
+              className={cn(
+                played ? "fill-foreground" : "fill-wave",
+                progress === null && "opacity-60 group-hover/wave:opacity-100",
+              )}
+            />
+          );
+        })}
+        {progress !== null && (
+          <rect x={progress * BARS * 3 - 1} y={0} width={2} height={32} className="fill-signal" />
+        )}
+      </svg>
+    </div>
+  );
+}
+
 export function SoundTileArt({ sound }: { sound: Sound }) {
   const [failed, setFailed] = useState(false);
   const stem = instrumentIcon(stemSuffix(sound.name) ?? "");

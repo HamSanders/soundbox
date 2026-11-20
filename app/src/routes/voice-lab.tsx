@@ -783,9 +783,11 @@ export function VoiceLabPage() {
             <UploadIcon />
             {importer.isPending ? "Importing…" : "Import"}
           </Button>
-          <Button onClick={() => setAddOpen(true)}>
-            <PlusIcon />
-            Add voice
+          <Button asChild>
+            <Link to="/voice/new">
+              <PlusIcon />
+              Add voice
+            </Link>
           </Button>
         </div>
       </div>
@@ -828,9 +830,11 @@ export function VoiceLabPage() {
           icon={UsersRoundIcon}
           title="No voices yet"
           action={
-            <Button onClick={() => setAddOpen(true)}>
-              <PlusIcon />
-              Add your first voice
+            <Button asChild>
+              <Link to="/voice/new">
+                <PlusIcon />
+                Add your first voice
+              </Link>
             </Button>
           }
         >

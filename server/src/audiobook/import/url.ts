@@ -4,8 +4,11 @@
  * the network.
  */
 
+import { assertHostAllowed, BlockedAddressError, guardedFetch, guardedLookup } from "./net-guard.js";
+
 export const URL_TIMEOUT_MS = 20_000;
 export const URL_MAX_BYTES = 20 * 1024 * 1024;
+export const MAX_REDIRECTS = 5;
 
 export interface FetchedDocument {
   bytes: Uint8Array;
@@ -53,30 +56,54 @@ function filenameFor(url: URL, contentType: string): string {
 
 export async function fetchDocument(
   raw: string,
-  opts: { fetch?: typeof fetch; timeoutMs?: number; maxBytes?: number } = {},
+  opts: { fetch?: typeof fetch; timeoutMs?: number; maxBytes?: number; env?: NodeJS.ProcessEnv } = {},
 ): Promise<FetchedDocument> {
-  const url = checkUrl(raw);
-  const doFetch = opts.fetch ?? fetch;
+  let url = checkUrl(raw);
+  const env = opts.env ?? process.env;
+  const doFetch = opts.fetch ?? guardedFetch(guardedLookup(undefined, env));
   const maxBytes = opts.maxBytes ?? URL_MAX_BYTES;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? URL_TIMEOUT_MS);
   try {
     let res: Response;
-    try {
-      res = await doFetch(url, {
-        signal: controller.signal,
-        redirect: "follow",
-        headers: {
-          Accept: "text/html,application/xhtml+xml,application/epub+zip,application/pdf,text/plain;q=0.9,*/*;q=0.5",
-          "User-Agent": "Mirli-Importer/1.0",
-        },
-      });
-    } catch (err) {
-      if (controller.signal.aborted) throw new UrlImportError(504, "The page took too long to load.");
-      throw new UrlImportError(502, `Could not load the page: ${err instanceof Error ? err.message : String(err)}`);
+    // Redirects are followed here, one hop at a time, so every hop gets the
+    // scheme and address checks (and the socket-level DNS check inside
+    // guardedFetch).
+    for (let hop = 0; ; hop++) {
+      try {
+        assertHostAllowed(url.hostname, env);
+      } catch (err) {
+        throw new UrlImportError(403, (err as Error).message);
+      }
+      try {
+        res = await doFetch(url, {
+          signal: controller.signal,
+          redirect: "manual",
+          headers: {
+            Accept: "text/html,application/xhtml+xml,application/epub+zip,application/pdf,text/plain;q=0.9,*/*;q=0.5",
+            "User-Agent": "Mirli-Importer/1.0",
+          },
+        });
+      } catch (err) {
+        if (controller.signal.aborted) throw new UrlImportError(504, "The page took too long to load.");
+        const cause = (err as { cause?: unknown }).cause ?? err;
+        if (cause instanceof BlockedAddressError || err instanceof BlockedAddressError) {
+          throw new UrlImportError(403, (cause as Error).message);
+        }
+        throw new UrlImportError(502, `Could not load the page: ${err instanceof Error ? err.message : String(err)}`);
+      }
+      const location = res.status >= 300 && res.status < 400 ? res.headers.get("location") : null;
+      if (!location) break;
+      await res.body?.cancel().catch(() => {});
+      if (hop >= MAX_REDIRECTS) throw new UrlImportError(502, "The page redirected too many times.");
+      try {
+        url = checkUrl(new URL(location, url).href);
+      } catch (err) {
+        throw err instanceof UrlImportError ? err : new UrlImportError(502, "The page redirected to an invalid address.");
+      }
     }
     if (!res.ok) throw new UrlImportError(502, `The page answered with HTTP ${res.status}.`);
-    const finalUrl = checkUrl(res.url || url.href);
+    const finalUrl = url;
     const declared = Number(res.headers.get("content-length") ?? "0");
     if (declared > maxBytes) throw new UrlImportError(413, "That page is too large to import.");
     const contentType = (res.headers.get("content-type") ?? "").toLowerCase();

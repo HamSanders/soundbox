@@ -8,7 +8,7 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 - **Audiobooks.** Build a book from chapters and paragraphs at **Audiobooks**: each chapter is a script you can also open in the studio timeline, each paragraph shows whether it is voiced, unvoiced, stale or locked, and characters give paragraphs their own voices. Find and replace works across the whole book and leaves locked paragraphs alone. The API is under `/api/audiobooks`.
-- **Import a manuscript as an audiobook.** Drop in an EPUB, PDF, Word document, text or Markdown file, an HTML page or a web address, or paste text. Chapters, title, author, cover and other details are read from the file; copyright pages, tables of contents and similar front and back matter are detected and can be left out. Review the sections (rename, change kind, merge, split, reorder), check the details and cover, pick a narrator and model, and the book opens ready to voice.
+- **Import a manuscript as an audiobook.** Drop in an EPUB, PDF, Word document, text or Markdown file, an HTML page or a web address, or paste text. Chapters, title, author, cover and other details are read from the file; copyright pages, tables of contents and similar front and back matter are detected and can be left out. Review the sections (rename, change kind, merge, split, reorder), check the details and cover, pick a narrator and model, and the book opens ready to voice. Web imports only reach public addresses unless `MIRLI_IMPORT_PRIVATE_HOSTS` allows a private one.
 
 ## [0.6.0] - 2026-11-20
 

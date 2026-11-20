@@ -63,7 +63,7 @@ Start-up takes 10 to 25 s and loads three engines as child processes: two
 | `LLM_PROVIDER` | `local` | `local` starts llama-server on `LLM_GGUF`. `openai` uses any OpenAI-compatible endpoint. |
 | `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` | unset | For `LLM_PROVIDER=openai`. The key is only ever read from the environment. |
 | `LLM_GGUF`, `LLAMA_SERVER_BIN` | Mirli's Qwen3 1.7B and llama-server | Local model and binary. |
-| `SPIKE_VOICE_REF` | unset | Path to a WAV to clone. Unset uses VoxCPM2's seeded default voice. |
+| `SPIKE_VOICE_REF` | unset | Path to a WAV to clone by default. Unset uses VoxCPM2's seeded default voice. The page's **Voice** menu overrides it. |
 | `VAD_ENDPOINT_MS` | `400` | Trailing silence that ends your turn. |
 | `VAD_SPECULATE_MS` | `160` | Silence after which the reply is started speculatively. `0` turns that off. |
 | `VAD_BARGE_FRAMES` | `6` | 32 ms speech frames needed to interrupt (192 ms). |
@@ -72,6 +72,20 @@ Start-up takes 10 to 25 s and loads three engines as child processes: two
 
 Only the local LLM path was run. `LLM_PROVIDER=openai` is written but
 untested.
+
+### Picking a voice
+
+The **Voice** menu on the page lists your saved Mirli clone voices, read
+read-only from Mirli's database (`voices` table, clip at
+`<data dir>/sounds/<filename>`). VoxCPM2 clones each from its reference clip.
+You can switch mid-conversation; the next reply uses the new voice. The server
+only accepts ids from that list, never a file path.
+
+Measured with the "Brit" voice (a 4.2 s clip): first audio 426 ms on the first
+read with that clip, then 157 to 176 ms. Earlier Mirli measurements reported 4
+to 5 s for the first reads with a new clip; on this build it is under half a
+second. A voice made on another model (Chatterbox, VibeVoice) still clones from
+its clip here, but will sound like VoxCPM2's take on it.
 
 ## How it works
 
@@ -276,13 +290,17 @@ catalogue entry for VoxCPM2 still says its licence needs confirming.
   in all runs (3 of 18 transcripts). The other 15 are exact. Real speech may
   do the same on a soft first word; untested.
 - **System RAM, not VRAM, ran out first.** See the crash above.
+- **The GPU is shared with other things.** While the face spike's benchmark
+  and an unrelated Voicebox app were running, they held 7.6 GB and the spike's
+  engines failed to load (`cudaMalloc failed: out of memory`). Start-up worked
+  again once that run ended. Running voice and face together will need a
+  memory budget, not just "it fits on its own".
 - A WebSocket payload can arrive at an odd byte offset, which crashed the
   server on an `Int16Array` view after about 14 turns. Fixed by copying.
 - VoxCPM2's default voice: I fixed the seed so each sentence uses the same
   settings, but have not listened to check that the voice stays the same from
   one sentence to the next. With `SPIKE_VOICE_REF` it clones a clip, and
-  `docs/STREAMING.md` reports the first reads with a new clip take 4 to 5 s.
-  Neither was run here.
+  Cloning was measured later; see "Picking a voice".
 
 ## Limits of this spike
 

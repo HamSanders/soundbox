@@ -38,6 +38,7 @@ export class Conversation {
   #clientPlaying = false;
   #history = [];
   #turnSeq = 0;
+  #voiceRef = config.tts.voiceRef; // a clip path, or "" for the default voice
 
   /**
    * @param deps {{ tts, stt, llm, gpu, tap, log: (turn: object) => void }}
@@ -72,7 +73,16 @@ export class Conversation {
 
   onControl(msg) {
     if (msg.type === "playback") this.#clientPlaying = !!msg.playing;
+    else if (msg.type === "voice") this.#setVoice(msg.id);
     else if (msg.type === "reset") this.#history = [];
+  }
+
+  /** Only ids from Mirli's own voice list are accepted, never a path. */
+  async #setVoice(id) {
+    const v = id ? (await this.#deps.voices()).find((x) => x.id === id) : null;
+    if (id && !v) return this.#send({ type: "error", message: "That voice is no longer in Mirli." });
+    this.#voiceRef = v ? v.path : "";
+    this.#send({ type: "voice", id: v?.id ?? "", name: v?.name ?? "VoxCPM2 default" });
   }
 
   close() {
@@ -220,6 +230,7 @@ export class Conversation {
     // Timings belong to this attempt; they are copied to the turn if it wins.
     const t = { replyStart: startedAt };
     const { tts, stt, llm, tap } = this.#deps;
+    const voiceRef = this.#voiceRef; // fixed for the whole reply
     let text = "";
     let userText = "";
 
@@ -247,7 +258,7 @@ export class Conversation {
           const n = utterance++;
           t.ttsRequest ??= now();
           let first = true;
-          for await (const ev of speak(tts, piece, ac.signal)) {
+          for await (const ev of speak(tts, piece, ac.signal, voiceRef)) {
             if (!ev.pcm) continue;
             t.firstAudioReady ??= now();
             const isFirst = first;

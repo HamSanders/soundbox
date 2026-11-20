@@ -29,7 +29,7 @@ export async function* sseJson(body) {
  * Speak one piece of text. Yields `{ pcm: Buffer }` (s16le mono at the model's
  * rate) as each chunk is made, then `{ done: true, modelTtftMs }`.
  */
-export async function* speak(engine, text, signal) {
+export async function* speak(engine, text, signal, voiceRef = config.tts.voiceRef) {
   const body = {
     model: engine.model,
     input: text,
@@ -39,7 +39,7 @@ export async function* speak(engine, text, signal) {
     // VoxCPM2 refuses to stream with its offline-only bad-case retry on.
     options: { retry_badcase: "false" },
   };
-  if (config.tts.voiceRef) body.voice_ref = config.tts.voiceRef;
+  if (voiceRef) body.voice_ref = voiceRef;
   const resp = await fetch(`${engine.baseUrl}/v1/audio/speech`, {
     method: "POST",
     headers: { "content-type": "application/json", accept: "text/event-stream" },

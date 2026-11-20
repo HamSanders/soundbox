@@ -28,6 +28,9 @@
 <body>
 <h1>Mirli voice spike</h1>
 <p class="sub">Talk; it answers in a Mirli voice. Talk over it and it stops. Use headphones, or its own voice may interrupt it.</p>
+<label for="voice" style="margin-right:8px">Voice
+  <select id="voice" style="font:inherit;padding:6px 8px;border-radius:8px;margin-left:4px"><option value="">VoxCPM2 default</option></select>
+</label>
 <button id="go">Start</button><span id="state" data-s="off">off</span>
 <meter id="level" min="0" max="1" value="0" title="mic level" style="margin-left:12px;width:120px"></meter>
 <small id="info"></small>
@@ -51,6 +54,19 @@ function bubble(cls, text) {
   $("log").append(d); d.scrollIntoView({ block: "nearest" });
   return d;
 }
+
+// Your saved Mirli voices. The choice is remembered in this browser.
+const sendVoice = () => ws?.readyState === 1 && ws.send(JSON.stringify({ type: "voice", id: $("voice").value }));
+fetch("voices").then((r) => r.json()).then((list) => {
+  for (const v of list) $("voice").append(new Option(v.name, v.id));
+  let saved = "";
+  try { saved = localStorage.getItem("spike-voice") ?? ""; } catch {}
+  if (list.some((v) => v.id === saved)) $("voice").value = saved;
+}).catch(() => {});
+$("voice").onchange = () => {
+  try { localStorage.setItem("spike-voice", $("voice").value); } catch {}
+  sendVoice();
+};
 
 function fail(err) {
   setState("error");
@@ -80,7 +96,12 @@ $("go").onclick = () => {
 };
 
 async function onJson(m) {
+  if (m.type === "voice") {
+    bubble("bot", `Voice: ${m.name}. The first reply in a new voice can take a few seconds.`);
+    return;
+  }
   if (m.type === "hello") {
+    sendVoice();
     if (ctx.sampleRate !== m.tts.sample_rate) bubble("bot", `warning: TTS is ${m.tts.sample_rate} Hz, page plays at ${ctx.sampleRate} Hz`);
     await ctx.audioWorklet.addModule("capture-worklet.js");
     await ctx.audioWorklet.addModule("playback-worklet.js");

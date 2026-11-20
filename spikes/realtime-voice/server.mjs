@@ -16,6 +16,7 @@ import { transcribe } from "./lib/stt.mjs";
 import { PcmTap } from "./lib/tap.mjs";
 import { probeSampleRate, speak } from "./lib/tts.mjs";
 import { Vad } from "./lib/vad.mjs";
+import { listVoices } from "./lib/voices.mjs";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const gpu = new GpuMeter();
@@ -72,6 +73,12 @@ const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; cha
 const server = http.createServer((req, res) => {
   const path = new URL(req.url, "http://x").pathname;
   if (path === "/tts.pcm") return tap.addHttp(res);
+  if (path === "/voices") {
+    return listVoices().then(
+      (v) => res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(v.map(({ id, name, model }) => ({ id, name, model })))),
+      (e) => res.writeHead(500).end(String(e.message)),
+    );
+  }
   if (path === "/metrics") {
     res.writeHead(200, { "Content-Type": "application/json" });
     return res.end(JSON.stringify({ vram, format: tap.format, vad: config.vad, partial_ms: config.partialMs, turns: recent }));
@@ -96,7 +103,7 @@ server.on("upgrade", (req, socket, head) => {
 async function converse(ws) {
   const send = (msg) => ws.readyState === 1 && ws.send(JSON.stringify(msg));
   const sendPcm = (buf) => ws.readyState === 1 && ws.send(buf, { binary: true });
-  const convo = new Conversation({ tts, stt, llm, gpu, tap, log: logTurn }, send, sendPcm);
+  const convo = new Conversation({ tts, stt, llm, gpu, tap, log: logTurn, voices: listVoices }, send, sendPcm);
   await convo.init();
   ws.on("message", (data, isBinary) => {
     if (isBinary) return convo.onMic(data);

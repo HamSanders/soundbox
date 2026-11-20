@@ -7,6 +7,7 @@ to follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **A sound plays once and stops.** The bottom player no longer runs on to the next sound in the list when one ends. Two toggles beside the transport turn on **Autoplay** (play the next sound) and **Repeat** (loop this one); both are off by default and remembered in this browser.
 - **New screenshots.** The README and the mirli.app home page show the 0.6.0 redesign: the dashboard, the library with the player, the Create panel, the docked details panel, Voice Lab and the voice clone page.
 
 ## [0.6.0] - 2026-11-20

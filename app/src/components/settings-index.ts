@@ -41,6 +41,11 @@ export const SETTINGS_GROUPS: SettingsGroupMeta[] = [
     description: "Where models come from: audio.cpp, your own servers, Hugging Face.",
   },
   {
+    id: "cloud",
+    title: "Mirli Cloud",
+    description: "Render on Mirli's servers instead of your GPU, paid in credits. Optional.",
+  },
+  {
     id: "helpers",
     title: "Prompt assistant & artwork",
     description: "Optional helper models. Both are off by default.",
@@ -69,6 +74,28 @@ export const SETTINGS_GROUPS: SettingsGroupMeta[] = [
 ];
 
 export const SETTINGS: SettingMeta[] = [
+  // Mirli Cloud (only shown when the server has it on)
+  {
+    id: "cloud-account",
+    group: "cloud",
+    label: "Account",
+    description: "Sign in, see your balance and buy credits.",
+    keywords: ["cloud", "credits", "balance", "buy", "sign in", "login", "account", "gpu", "hosted"],
+  },
+  {
+    id: "cloud-cap-call",
+    group: "cloud",
+    label: "Limit per render",
+    description: "The most credits one render may cost. Applies to agents too.",
+    keywords: ["cloud", "cap", "credits", "spend", "budget", "mcp", "agent"],
+  },
+  {
+    id: "cloud-cap-day",
+    group: "cloud",
+    label: "Limit per day",
+    description: "The most credits all renders may cost in a day, across your devices.",
+    keywords: ["cloud", "cap", "credits", "spend", "budget", "daily"],
+  },
   // Sound & files
   {
     id: "output-device",

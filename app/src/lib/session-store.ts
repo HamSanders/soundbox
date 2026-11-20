@@ -109,10 +109,14 @@ export interface Turn {
  * Loaded beats installed beats "the first one".
  */
 export function preferredModel<T extends Model>(models: readonly T[]): T | undefined {
+  // Never default to a model that costs money: Mirli Cloud models are only
+  // picked by hand, unless they are the only kind there is.
+  const free = models.filter((m) => m.provider !== "cloud");
+  const pool = free.length ? free : models;
   return (
-    models.find((m) => m.status === "loaded") ??
-    models.find((m) => m.status === "installed") ??
-    models[0]
+    pool.find((m) => m.status === "loaded") ??
+    pool.find((m) => m.status === "installed") ??
+    pool[0]
   );
 }
 

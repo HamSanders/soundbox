@@ -60,7 +60,9 @@ export class CloudModel implements GenerationModel {
     const speech = m.task === "speak";
     return {
       id: m.id,
-      name: m.name,
+      // The same open model may also be installed locally; the picker must
+      // never leave anyone guessing which one costs credits.
+      name: `${m.name} · Cloud`,
       vendor: "Mirli Cloud",
       description: `${m.description} Runs on Mirli Cloud: the prompt is sent to Mirli's servers and the render costs credits.`,
       license: { name: m.license_note, commercial: "yes", url: "" },

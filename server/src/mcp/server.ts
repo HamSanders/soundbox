@@ -962,7 +962,8 @@ async function ttsResolver(
     }
     return () => ({ model: chosen.id });
   }
-  const ready = tts.filter((m) => m.status === "loaded" || m.status === "installed");
+  // Mirli Cloud costs money, so it is never the default: an agent gets it only by naming it.
+  const ready = tts.filter((m) => m.provider !== "cloud" && (m.status === "loaded" || m.status === "installed"));
   const fallback = (): string => {
     if (!ready.length) {
       throw new Error(
@@ -1060,8 +1061,9 @@ export function buildMcp(
           let modelId = model ?? svc.models.resident;
           if (modelId === null || modelId === undefined) {
             const models = await svc.listModels();
+            // Never a Mirli Cloud model by default: those cost credits.
             const ready = models.filter(
-              (e) => e.status === "installed" || e.status === "loaded",
+              (e) => e.provider !== "cloud" && (e.status === "installed" || e.status === "loaded"),
             );
             if (!ready.length) {
               throw new Error(

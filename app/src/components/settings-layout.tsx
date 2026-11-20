@@ -112,7 +112,7 @@ export function useMarkSaved() {
 
 // ------------------------------------------------------------------- layout
 
-export function SettingsLayout({ children }: { children: ReactNode }) {
+export function SettingsLayout({ children, hiddenGroups = [] }: { children: ReactNode; hiddenGroups?: string[] }) {
   const [query, setQuery] = useState("");
   const [saved, setSaved] = useState<ReadonlySet<string>>(new Set());
   const [flash, setFlash] = useState<string | null>(null);
@@ -177,8 +177,10 @@ export function SettingsLayout({ children }: { children: ReactNode }) {
     return () => cancelAnimationFrame(raf);
   }, [deepLink]);
 
+  const hidden = hiddenGroups.join(",");
+  const groups = useMemo(() => SETTINGS_GROUPS.filter((g) => !hidden.split(",").includes(g.id)), [hidden]);
   const matches = useMemo(() => SETTINGS.filter((s) => matchesQuery(s, query)), [query]);
-  const visibleGroups = SETTINGS_GROUPS.filter((g) => matches.some((m) => m.group === g.id));
+  const visibleGroups = groups.filter((g) => matches.some((m) => m.group === g.id));
   const searching = query.trim() !== "";
 
   // Highlight the group the reader is in (top band of the viewport).
@@ -216,7 +218,7 @@ export function SettingsLayout({ children }: { children: ReactNode }) {
       <div className="mx-auto flex w-full max-w-5xl justify-center gap-8">
         <nav aria-label="Settings groups" className="hidden w-44 shrink-0 lg:block">
           <div className="sticky top-20 space-y-0.5">
-            {SETTINGS_GROUPS.map((g) => {
+            {groups.map((g) => {
               const shown = visibleGroups.includes(g);
               return (
                 <a

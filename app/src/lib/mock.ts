@@ -3770,6 +3770,29 @@ export const mockApi: MirliApi = {
     return imageStatusSnapshot();
   },
 
+  // Mirli Cloud is off in the mock, as it is in any build without MIRLI_CLOUD=1.
+  async cloudStatus() {
+    await wait(30);
+    return {
+      enabled: false,
+      base_url: "https://mirli.app",
+      signed_in: false,
+      sign_in: { state: "idle" as const },
+      account: null,
+      account_error: null,
+      caps: { per_call: 50, per_day: 300 },
+      models: 0,
+    };
+  },
+  async cloudSignIn(): Promise<never> {
+    throw new ApiError("Mirli Cloud is not turned on in this build.", 400);
+  },
+  async cloudCancelSignIn() {},
+  async cloudSignOut() {},
+  async cloudCheckout(): Promise<never> {
+    throw new ApiError("Mirli Cloud is not turned on in this build.", 400);
+  },
+
   async listEndpoints() {
     await wait(60);
     return {

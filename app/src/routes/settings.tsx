@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 
 import { ArtworkSettingsCard } from "@/components/artwork-settings";
+import { CloudAccountPanel } from "@/components/cloud-settings";
 import { EndpointSettingsCard } from "@/components/endpoint-settings";
 import { FolderPickerDialog } from "@/components/folder-picker";
 import {
@@ -41,13 +42,14 @@ import { useOutputStore } from "@/lib/audio-output";
 import { useUiPrefs } from "@/lib/ui-prefs";
 import {
   useAudioCppRuntime,
+  useCloud,
   useHealth,
   useLlmStatus,
   useMcpStatus,
   useSettings,
   useUpdateStatus,
 } from "@/lib/queries";
-import type { Settings } from "@/lib/api";
+import type { CloudStatus, Settings } from "@/lib/api";
 
 /** The server's defaults (server/src/config.ts `DEFAULT_SETTINGS`). */
 const DEFAULTS = {
@@ -64,6 +66,7 @@ const DEFAULTS = {
 
 export function SettingsPage() {
   const { data: settings, isLoading, isError, error } = useSettings();
+  const { data: cloud } = useCloud();
 
   if (isLoading) {
     return (
@@ -88,11 +91,12 @@ export function SettingsPage() {
   }
 
   return (
-    <SettingsLayout>
+    <SettingsLayout hiddenGroups={cloud?.enabled ? [] : ["cloud"]}>
       <div className="space-y-8">
         <SoundGroup settings={settings} />
         <PerformanceGroup settings={settings} />
         <ModelsGroup settings={settings} />
+        {cloud?.enabled && <CloudGroup settings={settings} status={cloud} />}
         <HelpersGroup settings={settings} />
         <StorageGroup settings={settings} />
         <InterfaceGroup />
@@ -280,6 +284,78 @@ function PerformanceGroup({ settings }: { settings: Settings }) {
             />
             <span className="readout text-muted-foreground">min</span>
           </div>
+        }
+      />
+    </SettingsGroup>
+  );
+}
+
+// -------------------------------------------------------------- cloud
+
+function CapInput({
+  id,
+  value,
+  fallback,
+  onSave,
+}: {
+  id: string;
+  value: number | undefined;
+  fallback: number;
+  onSave: (n: number) => void;
+}) {
+  const [draft, setDraft] = useDraft(String(value ?? fallback));
+  return (
+    <div className="flex items-center gap-1.5">
+      <Input
+        id={id}
+        value={draft}
+        inputMode="numeric"
+        className="w-20 font-mono"
+        onChange={(e) => setDraft(e.target.value.replace(/\D/g, ""))}
+        onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+        onBlur={() => {
+          const n = Number(draft);
+          if (draft !== "" && Number.isFinite(n) && n >= 1 && n !== value) onSave(n);
+        }}
+      />
+      <span className="readout text-muted-foreground">credits</span>
+    </div>
+  );
+}
+
+function CloudGroup({ settings, status }: { settings: Settings; status: CloudStatus }) {
+  const { save } = useSettingSave();
+  return (
+    <SettingsGroup id="cloud">
+      <SettingRow id="cloud-account" stack>
+        <CloudAccountPanel status={status} />
+      </SettingRow>
+      <SettingRow
+        id="cloud-cap-call"
+        htmlFor="cloud-cap-call"
+        modified={(settings.cloud_max_credits_per_call ?? 50) !== 50}
+        onReset={() => save("cloud-cap-call", { cloud_max_credits_per_call: 50 })}
+        control={
+          <CapInput
+            id="cloud-cap-call"
+            value={settings.cloud_max_credits_per_call}
+            fallback={50}
+            onSave={(n) => save("cloud-cap-call", { cloud_max_credits_per_call: n })}
+          />
+        }
+      />
+      <SettingRow
+        id="cloud-cap-day"
+        htmlFor="cloud-cap-day"
+        modified={(settings.cloud_max_credits_per_day ?? 300) !== 300}
+        onReset={() => save("cloud-cap-day", { cloud_max_credits_per_day: 300 })}
+        control={
+          <CapInput
+            id="cloud-cap-day"
+            value={settings.cloud_max_credits_per_day}
+            fallback={300}
+            onSave={(n) => save("cloud-cap-day", { cloud_max_credits_per_day: n })}
+          />
         }
       />
     </SettingsGroup>

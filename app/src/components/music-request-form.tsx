@@ -51,6 +51,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { LicenseChip } from "@/components/license-badge";
+import { cloudPriceLabel } from "@/lib/cloud";
 import { LoadingVerb } from "@/components/loading-verb";
 import { StemChoice } from "@/components/stem-picker";
 import { COMMON_STEM_NAMES } from "@/lib/api";
@@ -308,7 +309,16 @@ export function MusicRequestForm({
       {/* Licence stays on the form rather than a click away: "can I ship
           this?" is the most consequential fact about a music model, and
           different models answer it differently. */}
-      {model && <LicenseChip license={model.license} className="self-start" />}
+      {model && (
+        <div className="flex flex-wrap items-center gap-2 self-start">
+          <LicenseChip license={model.license} />
+          {model.provider === "cloud" && model.price && (
+            <span className="readout text-muted-foreground tabular-nums" title="Mirli Cloud credits">
+              Mirli Cloud · {cloudPriceLabel(model.price, settings.duration)}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* ------------------------------------------------------------ edit */}
       {edit && source && (

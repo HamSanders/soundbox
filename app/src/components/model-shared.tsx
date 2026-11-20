@@ -129,7 +129,8 @@ export function useRequestDownload(model: Model) {
 /** Which actions apply. A custom endpoint runs on somebody else's server:
  *  nothing to fetch, load or delete here. */
 export function modelCan(model: Model) {
-  const isEndpoint = model.provider === "endpoint";
+  // Mirli Cloud models run elsewhere too: the same "nothing to manage here".
+  const isEndpoint = model.provider === "endpoint" || model.provider === "cloud";
   return {
     isEndpoint,
     download: !isEndpoint && model.status === "not_installed",

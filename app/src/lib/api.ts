@@ -24,7 +24,14 @@ export type ModelStatus =
 
 /** Where a model runs: weights on this machine ("local"), or a custom
  *  endpoint someone else's server answers ("endpoint"). */
-export type ModelProvider = "local" | "endpoint";
+export type ModelProvider = "local" | "endpoint" | "cloud";
+
+/** What a Mirli Cloud render costs. 1 credit = $0.01. */
+export interface ModelPrice {
+  unit: "render" | "minute" | "1k_chars" | "10s";
+  credits_per_unit: number;
+  min_credits: number;
+}
 
 /** `commercial` drives the licence badge colour on the Models screen. */
 export interface LicenseInfo {
@@ -138,6 +145,8 @@ export interface Model {
   /** Where this model runs. Absent from an older server, which only had local
    *  ones — treat a missing value as "local". */
   provider?: ModelProvider;
+  /** Mirli Cloud models only: what a render costs. */
+  price?: ModelPrice | null;
   /** Whether the engine that runs this model is installed. False with
    *  weights present is exactly the "needs_runtime" case. */
   installed_deps: boolean;
@@ -1271,7 +1280,30 @@ export interface Settings {
   onboarded_at: string | null;
   /** Ask once a day whether a newer version exists. See Settings → Updates. */
   update_check: boolean;
+  /** Mirli Cloud. Absent from servers without it. */
+  cloud_signed_in?: boolean;
+  cloud_max_credits_per_call?: number;
+  cloud_max_credits_per_day?: number;
 }
+
+/** GET /api/cloud. See Settings → Mirli Cloud. */
+export type CloudSignIn =
+  | { state: "idle" }
+  | { state: "pending"; user_code: string; verification_uri: string; verification_uri_complete: string; expires_at: string }
+  | { state: "denied" | "expired" | "error"; message: string };
+
+export interface CloudStatus {
+  enabled: boolean;
+  base_url: string;
+  signed_in: boolean;
+  sign_in: CloudSignIn;
+  account: { email: string; balance: number; held: number; spent_today: number } | null;
+  account_error: string | null;
+  caps: { per_call: number; per_day: number };
+  models: number;
+}
+
+export type CloudPack = "p10" | "p25" | "p50";
 
 /** What the daily update check knows. See Settings → Updates. */
 export interface UpdateStatus {
@@ -1327,6 +1359,8 @@ export interface SettingsPatch {
    *  wizard opens again. */
   onboarded_at?: string;
   update_check?: boolean;
+  cloud_max_credits_per_call?: number;
+  cloud_max_credits_per_day?: number;
 }
 
 /**
@@ -1792,6 +1826,11 @@ export interface MirliApi {
   getImageStatus(): Promise<ImageStatus>;
   installImageEngine(): Promise<JobRef>;
   listEndpoints(): Promise<EndpointList>;
+  cloudStatus(): Promise<CloudStatus>;
+  cloudSignIn(): Promise<CloudSignIn>;
+  cloudCancelSignIn(): Promise<void>;
+  cloudSignOut(): Promise<void>;
+  cloudCheckout(pack: CloudPack): Promise<{ url: string }>;
   saveEndpoint(id: string, input: AudioEndpointInput): Promise<AudioEndpoint>;
   deleteEndpoint(id: string): Promise<void>;
   /** Render one short clip through a configuration; nothing is saved. `id`
@@ -2378,6 +2417,12 @@ export const httpApi: MirliApi = {
   installImageEngine: () =>
     request<JobRef>("/api/image/engine/install", { method: "POST" }),
   listEndpoints: () => request<EndpointList>("/api/endpoints"),
+  cloudStatus: () => request<CloudStatus>("/api/cloud"),
+  cloudSignIn: () => request<CloudSignIn>("/api/cloud/sign-in", { method: "POST" }),
+  cloudCancelSignIn: () => request<void>("/api/cloud/sign-in", { method: "DELETE" }),
+  cloudSignOut: () => request<void>("/api/cloud/sign-out", { method: "POST" }),
+  cloudCheckout: (pack) =>
+    request<{ url: string }>("/api/cloud/checkout", { method: "POST", body: JSON.stringify({ pack }) }),
   saveEndpoint: (id, input) =>
     request<AudioEndpoint>(`/api/endpoints/${encodeURIComponent(id)}`, {
       method: "PUT",

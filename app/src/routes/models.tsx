@@ -14,6 +14,7 @@
  * out loud before it starts.
  */
 
+import { cloudPriceLabel } from "@/lib/cloud";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { BriefcaseIcon, CpuIcon, DownloadIcon, HardDriveIcon, SearchIcon, Trash2Icon } from "lucide-react";
@@ -215,7 +216,12 @@ function RowShell({
 
 function ModelRowBody({ model, entry }: { model: Model; entry?: AudioCppCatalogEntry }) {
   const { job, downloading, progressPct, busyLabel } = useModelJob(model);
-  const vram = model.provider === "endpoint" ? "Remote" : formatMb(model.vram_estimate_mb);
+  const vram =
+    model.provider === "cloud" && model.price
+      ? cloudPriceLabel(model.price)
+      : model.provider === "endpoint"
+        ? "Remote"
+        : formatMb(model.vram_estimate_mb);
   return (
     <RowShell
       vendor={model.vendor}
@@ -331,7 +337,9 @@ export function ModelsPage() {
     if (installedOnly && !(r.type === "model" && ON_DISK.has(r.model.status))) return false;
     if (fitsOnly && vramTotal != null) {
       if (r.type !== "model") return false;
-      if (r.model.provider !== "endpoint" && r.model.vram_estimate_mb > vramTotal) return false;
+      if (r.model.provider === "local" || !r.model.provider) {
+        if (r.model.vram_estimate_mb > vramTotal) return false;
+      }
     }
     return true;
   });

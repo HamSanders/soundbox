@@ -109,7 +109,7 @@ export interface Model {
    *    "vc"  — existing audio re-voiced; the Voice studio's convert action.
    *
    *  Only "gen" appears in the Generate composer's model picker. */
-  task: "gen" | "sep" | "tts" | "vc";
+  task: "gen" | "sep" | "tts" | "vc" | "asr";
   /** Built-in voice names this model ships (for a "tts" model that has them),
    *  or empty when a reference clip is the only way to pick a voice. */
   voice_ids: string[];
@@ -1111,7 +1111,17 @@ export type JobKind =
   | "segment"
   | "export"
   /** A model self-test: one short render, timed, nothing saved. */
-  | "selftest";
+  | "selftest"
+  /** Speech to text for a voice clip's transcript. */
+  | "transcribe";
+/** What `POST /api/transcribe` answers. */
+export interface Transcription {
+  text: string;
+  /** As the model names it ("English"), or null when it did not say. */
+  language: string | null;
+  model: string;
+}
+
 export type JobStatus = "queued" | "running" | "done" | "error" | "cancelled";
 export type JobPhase =
   | "queued"
@@ -1721,6 +1731,13 @@ export interface MirliApi {
     tidy?: boolean,
     referenceText?: string | null,
   ): Promise<Voice>;
+  /** The words in a clip, from a ready speech-recognition ("asr") model: a
+   *  WAV from disk or the mic, or a library sound by id. Throws an ApiError
+   *  with status 409 when no transcription model is installed. */
+  transcribe(
+    source: { file: Blob } | { soundId: string },
+    language?: string | null,
+  ): Promise<Transcription>;
   /** Remove one clip. The server refuses to remove a voice's last one. */
   deleteVoiceSample(voiceId: string, sampleId: string): Promise<Voice>;
   /** The voice as a portable file, for the app to save to disk. */
@@ -2229,6 +2246,18 @@ export const httpApi: MirliApi = {
         headers: { "Content-Type": "audio/wav" },
       },
     ),
+
+  transcribe: (source, language) =>
+    "file" in source
+      ? request<Transcription>(`/api/transcribe${qs({ language: language ?? undefined })}`, {
+          method: "POST",
+          body: source.file,
+          headers: { "Content-Type": "audio/wav" },
+        })
+      : request<Transcription>(
+          `/api/transcribe${qs({ sound_id: source.soundId, language: language ?? undefined })}`,
+          { method: "POST" },
+        ),
 
   // Same shape as uploadVoice: the WAV is the whole body, so the name rides as
   // a query param and the Content-Type override stops `request` from

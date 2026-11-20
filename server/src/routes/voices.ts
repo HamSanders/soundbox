@@ -25,7 +25,8 @@ import {
   voiceSampleCreateSchema,
 } from "../schemas.js";
 import type { MirliService } from "../service.js";
-import { HttpError, MAX_UPLOAD_BYTES, boolQuery, strQuery } from "./helpers.js";
+import { HttpError, MAX_UPLOAD_BYTES, boolQuery, strQuery, type RawQuery } from "./helpers.js";
+import { waitFor } from "./render.js";
 
 type IdParams = { Params: { voice_id: string } };
 type SampleParams = { Params: { voice_id: string; sample_id: string } };
@@ -64,6 +65,48 @@ export function registerVoices(app: FastifyInstance, svc: MirliService): void {
   }
 
   app.get("/api/voices", async () => svc.listVoices());
+
+  /**
+   * Transcribe a clip: the words in it and, when the model says, its language.
+   *
+   * The body is the WAV itself (an upload or a recording), or empty with
+   * `?sound_id=` for a library sound. `?model=` picks the recogniser, else a
+   * ready one; `?language=` is a hint. Waits for the queued job and answers
+   * `{ text, language, model }`. With no transcription model installed it is
+   * a 409 with `code: "no_transcription_model"`, so the UI can say so.
+   */
+  app.post("/api/transcribe", async (request, reply) => {
+    const q = request.query as Record<string, RawQuery>;
+    const soundId = strQuery(q["sound_id"]);
+    let clip: { audio: dsp.Audio; sampleRate: number };
+    if (soundId) {
+      const path = svc.absolutePath(soundId);
+      if (path === null) throw new HttpError(404, "Sound not found");
+      clip = dsp.readWav(path);
+    } else {
+      clip = await decodeUpload(request.body);
+    }
+    let modelId = strQuery(q["model"]);
+    if (!modelId) {
+      try {
+        modelId = await svc.pickTranscriber();
+      } catch (exc) {
+        return reply.code(409).send({
+          detail: exc instanceof Error ? exc.message : String(exc),
+          code: "no_transcription_model",
+        });
+      }
+    }
+    const job = svc.submitTranscribe(clip, modelId, strQuery(q["language"]) ?? null);
+    const finished = await waitFor(svc, job.id, reply);
+    if (finished === null) return reply.code(499).send({ detail: "The caller disconnected." });
+    if (finished.status === "cancelled") throw new HttpError(409, "The transcription was cancelled.");
+    if (finished.status === "error") {
+      return reply.code(500).send({ detail: finished.error ?? "The transcription failed.", job_id: finished.id });
+    }
+    const r = finished.result ?? {};
+    return { text: String(r["text"] ?? ""), language: (r["language"] as string | null) ?? null, model: modelId };
+  });
 
   app.get<IdParams>("/api/voices/:voice_id", async (request) => {
     const voice = svc.getVoice(request.params.voice_id);

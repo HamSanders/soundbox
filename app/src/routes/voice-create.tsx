@@ -25,9 +25,11 @@ import {
   AudioLinesIcon,
   FileJsonIcon,
   LibraryIcon,
+  Loader2Icon,
   MicIcon,
   SquareIcon,
   UploadIcon,
+  WandSparklesIcon,
   XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -47,6 +49,7 @@ import { TidySwitch } from "@/components/voice-clips";
 import { formatClock, isReady } from "@/components/voice-shared";
 import { useRecorder } from "@/hooks/use-recorder";
 import { AUDIO_ACCEPT, stemOf, toWav } from "@/lib/audio-file";
+import { ApiError, api } from "@/lib/api";
 import type { Model } from "@/lib/api";
 import {
   useAddVoiceSample,
@@ -304,6 +307,11 @@ interface Clip {
   name: string;
   seconds: number;
   transcript: string;
+  /** A transcription request is in flight for this clip. */
+  transcribing: boolean;
+  /** Auto-transcribe has already had its one go at this clip, so clearing
+   *  the field does not bring the words back. */
+  autoTried: boolean;
   /** A WAV gathered here, or a library sound by id. */
   source: { wav: Blob; url: string } | { soundId: string; url: string };
 }
@@ -339,6 +347,10 @@ export function VoiceCloneCreatePage() {
   const fromId = searchParams.get("from");
   const fromSound = useSound(fromId);
   const ttsModels = useTtsModels();
+  const allModels = useModels();
+  const asrReady = (allModels.data ?? []).some(
+    (m) => m.task === "asr" && isReady(m),
+  );
   const cloneModels = ttsModels.filter(
     (m) => isReady(m) && m.supports.voice_reference,
   );
@@ -370,6 +382,8 @@ export function VoiceCloneCreatePage() {
         name: s.name,
         seconds: s.duration_s,
         transcript: "",
+        transcribing: false,
+        autoTried: false,
         source: { soundId: s.id, url: s.file },
       },
       ...c,
@@ -387,6 +401,58 @@ export function VoiceCloneCreatePage() {
     },
     [],
   );
+
+  const patchClip = (key: string, patch: Partial<Clip>) =>
+    setClips((all) => all.map((x) => (x.key === key ? { ...x, ...patch } : x)));
+
+  /**
+   * Fill a clip's transcript from the recogniser. Automatic runs never
+   * overwrite words the user has typed meanwhile and stay quiet on failure;
+   * the Transcribe button replaces the field and says what went wrong.
+   */
+  const transcribeClip = async (clip: Clip, auto: boolean) => {
+    patchClip(clip.key, { transcribing: true, autoTried: true });
+    try {
+      const out = await api.transcribe(
+        "wav" in clip.source
+          ? { file: clip.source.wav }
+          : { soundId: clip.source.soundId },
+      );
+      setClips((all) =>
+        all.map((x) =>
+          x.key !== clip.key
+            ? x
+            : {
+                ...x,
+                transcribing: false,
+                transcript: auto && x.transcript.trim() ? x.transcript : out.text,
+              },
+        ),
+      );
+      if (!auto && !out.text.trim()) toast.message("No speech found in that clip.");
+    } catch (exc) {
+      patchClip(clip.key, { transcribing: false });
+      if (!auto) {
+        const msg = exc instanceof Error ? exc.message : "Transcription failed.";
+        toast.error(
+          exc instanceof ApiError && exc.status === 409
+            ? "No transcription model is installed. Download Qwen3-ASR from the Models page."
+            : msg,
+        );
+      }
+    }
+  };
+
+  // Auto-transcribe each clip once, as it arrives, when a model is ready.
+  useEffect(() => {
+    if (!asrReady) return;
+    for (const c of clips) {
+      if (!c.autoTried && !c.transcribing && !c.transcript.trim()) {
+        void transcribeClip(c, true);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clips, asrReady]);
 
   const total = clips.reduce((t, c) => t + c.seconds, 0);
   const full = clips.length >= MAX_CLIPS;
@@ -407,6 +473,8 @@ export function VoiceCloneCreatePage() {
           name: label,
           seconds,
           transcript: "",
+          transcribing: false,
+          autoTried: false,
           source: { wav, url: URL.createObjectURL(wav) },
         },
       ]);
@@ -457,7 +525,8 @@ export function VoiceCloneCreatePage() {
     modelId &&
     problems.length === 0 &&
     !saving &&
-    !adding;
+    !adding &&
+    !clips.some((c) => c.transcribing);
 
   const save = async () => {
     const [first, ...rest] = clips;
@@ -684,6 +753,21 @@ export function VoiceCloneCreatePage() {
                     </span>
                     <Button
                       variant="ghost"
+                      size="sm"
+                      className="h-7 gap-1 px-2 text-xs"
+                      aria-label={`Transcribe clip ${i + 1}`}
+                      disabled={c.transcribing}
+                      onClick={() => void transcribeClip(c, false)}
+                    >
+                      {c.transcribing ? (
+                        <Loader2Icon className="size-3.5 animate-spin" />
+                      ) : (
+                        <WandSparklesIcon className="size-3.5" />
+                      )}
+                      Transcribe
+                    </Button>
+                    <Button
+                      variant="ghost"
                       size="icon"
                       className="size-7"
                       aria-label={`Remove clip ${i + 1}`}
@@ -703,7 +787,13 @@ export function VoiceCloneCreatePage() {
                     maxLength={20000}
                     rows={2}
                     aria-label={`Transcript for clip ${i + 1}`}
-                    placeholder="Transcript — the exact words spoken (optional; Fish Audio needs it)"
+                    aria-busy={c.transcribing}
+                    disabled={c.transcribing}
+                    placeholder={
+                      c.transcribing
+                        ? "Transcribing…"
+                        : "Transcript — the exact words spoken (optional; Fish Audio needs it)"
+                    }
                     onChange={(e) =>
                       setClips((all) =>
                         all.map((x) =>

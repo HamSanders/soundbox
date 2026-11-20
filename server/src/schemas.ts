@@ -178,9 +178,10 @@ export interface ModelInfo {
    *    "sep" — existing audio → stems; a sound's "Split into stems" action.
    *    "tts" — script → speech; the Voice studio.
    *    "vc"  — existing audio re-voiced; the Voice studio's convert action.
+   *    "asr" — speech → text; fills in a voice clip's transcript.
    *
    *  Only "gen" appears in the Generate composer's model picker. */
-  task: "gen" | "sep" | "tts" | "vc";
+  task: "gen" | "sep" | "tts" | "vc" | "asr";
   /** Built-in voice names this model ships (audio.cpp's `--voice-id`), or
    *  empty when the only way to pick a voice is a reference clip. */
   voice_ids: string[];
@@ -364,7 +365,7 @@ export interface Failure {
 
 export interface Job {
   id: string;
-  kind: "generate" | "download" | "separate" | "speak" | "convert" | "segment" | "export" | "selftest";
+  kind: "generate" | "download" | "separate" | "speak" | "convert" | "segment" | "export" | "selftest" | "transcribe";
   status: JobStatus;
   phase: JobPhase;
   progress: number;

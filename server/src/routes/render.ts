@@ -157,7 +157,7 @@ function soundOf(job: Job): string | null {
  * Returns null if the caller disconnects first, after cancelling the job:
  * a GPU on a rented box should not keep rendering for nobody.
  */
-async function waitFor(svc: MirliService, jobId: string, reply: FastifyReply): Promise<Job | null> {
+export async function waitFor(svc: MirliService, jobId: string, reply: FastifyReply): Promise<Job | null> {
   const queue = svc.jobs.subscribe(jobId);
   let gone = false;
   const onClose = () => {

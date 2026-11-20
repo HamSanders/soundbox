@@ -104,14 +104,14 @@ function AppShell() {
         } as CSSProperties
       }
     >
-      {/* A slim bar across the window, above the panels, not inside one. */}
+      {/* The header and the page share a provider so a page can render its
+          own controls into the bar above it — see `header-slot`. The bar is a
+          slim strip across the window, above the panels, not inside one. */}
+      <HeaderSlotProvider>
       <AppHeader />
       <AppSidebar />
       {/* Between the sidebar and the page on the kind pages: see create-panel.tsx. */}
       <CreatePanel />
-      {/* The header and the page it belongs to share a provider so a page can
-          render controls into the bar above it — see `header-slot`. */}
-      <HeaderSlotProvider>
       {/* Capped at the viewport for full-bleed pages, and only for them.
           The wrapper above is `min-h-svh` — a floor, not a ceiling — so
           without this nothing stops a studio frame from growing with its
@@ -129,7 +129,7 @@ function AppShell() {
           fullBleed
             ? // The Studio's own panels are the shell's panels here: the page
               // panel has no fill, frame or padding of its own around them.
-              " max-md:h-[calc(100svh-3.5rem-var(--dock-h,0px))] overflow-hidden md:!bg-transparent md:!ring-0" : " md:overflow-y-auto"
+              " max-md:h-[calc(100svh-3.5rem-var(--dock-h,0px))] overflow-hidden md:bg-transparent! md:ring-0!" : " md:overflow-y-auto"
         }`}
       >
         {/* The full-bleed column is a flex column with `min-h-0`, which is

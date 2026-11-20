@@ -164,7 +164,7 @@ export function DashboardPage() {
             ))}
           </div>
         ) : recent?.items.length ? (
-          <div role="list" aria-label="Recent sounds" className="@container -mx-2 grid">
+          <ul aria-label="Recent sounds" className="@container -mx-2 grid gap-px">
             {recent.items.map((sound, i) => (
               <SoundCard
                 key={sound.id}
@@ -179,7 +179,7 @@ export function DashboardPage() {
                 }}
               />
             ))}
-          </div>
+          </ul>
         ) : (
           <EmptyState size="sm">
             Nothing generated yet —{" "}

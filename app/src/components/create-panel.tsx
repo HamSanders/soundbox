@@ -171,7 +171,7 @@ function CreatePanelBody({ kind }: { kind: Kind }) {
       className="bg-background ring-border relative my-2 mr-2 hidden h-(--panel-h) w-(--panel-w) shrink-0 flex-col rounded-xl ring-1 md:flex"
     >
       {panel.handle}
-      <nav aria-label="Kind" className="border-border flex shrink-0 gap-4 border-b px-4">
+      <nav aria-label="Kind" className="flex shrink-0 gap-4 px-4">
         {KINDS.map((k) => (
           <NavLink
             key={k.to}

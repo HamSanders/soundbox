@@ -711,7 +711,7 @@ export function SoundCard({
       .filter(Boolean)
       .join(" · ");
     return (
-      <div
+      <li
         data-sound-row
         onClick={(e) => {
           // Buttons and menus inside the row do their own thing.
@@ -773,7 +773,7 @@ export function SoundCard({
         {renameDialog}
         {confirmDialog}
         {stemDialog}
-      </div>
+      </li>
     );
   }
 

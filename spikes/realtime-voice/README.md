@@ -290,6 +290,14 @@ catalogue entry for VoxCPM2 still says its licence needs confirming.
   in all runs (3 of 18 transcripts). The other 15 are exact. Real speech may
   do the same on a soft first word; untested.
 - **System RAM, not VRAM, ran out first.** See the crash above.
+- **The engines reserve far more system memory than they use.** Measured by
+  the PersonaPlex spike session (Windows private bytes, running server): the
+  TTS `audiocpp_server` (VoxCPM2, 3 GB weights) 17.6 GB committed with only
+  2.2 GB resident; the STT one (0.9 GB weights) 6.5 GB; llama-server 2.9 GB.
+  About 27 GB committed in all, leaving 0.5 GB of the machine's 31 GB, so
+  another model then fails on the host side (`std::bad_alloc`) before it
+  reaches the GPU. This is probably CUDA host staging buffers; not
+  investigated. It is the likely cause of the `stt-live.mjs` crash too.
 - **The GPU is shared with other things.** While the face spike's benchmark
   and an unrelated Voicebox app were running, they held 7.6 GB and the spike's
   engines failed to load (`cudaMalloc failed: out of memory`). Start-up worked

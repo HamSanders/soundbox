@@ -8,6 +8,7 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 - **Audiobooks.** Build a book from chapters and paragraphs at **Audiobooks**: each chapter is a script you can also open in the studio timeline, each paragraph shows whether it is voiced, unvoiced, stale or locked, and characters give paragraphs their own voices. Find and replace works across the whole book and leaves locked paragraphs alone. The API is under `/api/audiobooks`.
+- **Listen.** Play your audiobooks at **Listen**: shelves for continue listening, recently finished, each genre and each series, with search and filters for genre, tag, language and length. A book page shows the cover, credits, details, table of contents, a Preview of the retail sample and more in the series. The player has a full-screen view with read-along text that highlights the paragraph and word being read (tap a paragraph to play from it), a mini player that stays up while you browse, chapter skip, 15 and 30 second skips, speed from 0.25x to 4x with pitch kept, a sleep timer (5 to 60 minutes or end of chapter), bookmarks with notes, resume, and media keys. **Publish and share** checks a book against what Spotify for Authors, Apple Books, read-along apps and podcast directories ask for, and exports a self-contained web player (opens offline from disk, with schema.org `Audiobook` data) or a podcast RSS feed with one episode per chapter.
 
 ## [0.6.0] - 2026-11-20
 

@@ -37,6 +37,7 @@ export interface BookEvents {
 export interface BookAccess {
   readonly hub: BookEvents;
   getBook(id: string): (Book & { chapters: Chapter[]; characters: Character[] }) | null;
+  updateBook(id: string, fields: { settings?: { narrator_voice_id?: string | null } }): unknown;
   getChapter(chapterId: string): Chapter | null;
   chapterForSegment(segmentId: string): Chapter | null;
   getParagraphs(chapterId: string): BookParagraph[] | null;

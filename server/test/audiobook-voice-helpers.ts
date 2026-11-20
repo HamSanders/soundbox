@@ -87,6 +87,10 @@ export class FakeBook implements BookAccess {
   getBook(id: string) {
     return id === this.book.id ? { ...this.book, chapters: this.chapters, characters: this.characters } : null;
   }
+  updateBook(_id: string, fields: { settings?: { narrator_voice_id?: string | null } }) {
+    Object.assign(this.book.settings, fields.settings ?? {});
+    return this.book;
+  }
   getChapter(id: string) {
     return this.chapters.find((c) => c.id === id) ?? null;
   }

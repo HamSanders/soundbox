@@ -275,6 +275,15 @@ export class LlmService {
     return { ...plan, classified: intent };
   }
 
+  /** [audiobooks:voice] One chat call on the configured assistant model, for
+   *  callers outside this file (character detection). Throws when it is off. */
+  async chat(messages: ChatMessage[], opts: { temperature?: number; maxTokens?: number } = {}): Promise<string> {
+    const endpoint = await this.resolveEndpoint();
+    const out = await this.complete(endpoint, messages, { temperature: opts.temperature ?? 0, maxTokens: opts.maxTokens ?? 1500 });
+    this.runtime.touch();
+    return out;
+  }
+
   /** One chat call with this service's standing options. Thinking is off on
    *  every one of them: the assistant's job here is to answer, and a model
    *  that reasons first spends the token budget before writing anything. */

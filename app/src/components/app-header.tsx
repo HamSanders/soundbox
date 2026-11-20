@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { HeaderSlot } from "@/components/header-slot";
 import { ProfileSwitcher } from "@/components/profile-switcher";
 import { QueueIndicator } from "@/components/queue-indicator";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { useSound } from "@/lib/queries";
 
 const TITLES: Record<string, string> = {
@@ -63,11 +64,25 @@ export function AppHeader() {
   // you are in is worth saying — it is the difference between the two tools —
   // and the crumb links to that half of the shelf.
   const builder = /^\/studio\/(script|music)\//.exec(pathname)?.[1] ?? null;
+  const { state: sidebarState } = useSidebar();
 
   return (
     <header className="bg-sidebar fixed inset-x-0 top-0 z-40 flex h-(--top-h,2.5rem) items-center gap-2 px-3">
-      <SidebarTrigger className="-ml-1" />
-      <HistoryButtons />
+      {/* Toggle, back and forward as one group, starting where the first
+          panel starts: the header's left inset is the sidebar's width. */}
+      <div
+        aria-hidden="true"
+        className={cn(
+          "hidden shrink-0 md:block",
+          sidebarState === "collapsed"
+            ? "w-[calc(var(--sidebar-width-icon)+1rem-0.75rem)]"
+            : "w-[calc(var(--sidebar-width)-0.75rem)]",
+        )}
+      />
+      <div className="flex items-center md:-ml-2">
+        <SidebarTrigger />
+        <HistoryButtons />
+      </div>
       <nav aria-label="Breadcrumb" className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-sm">
         <span>Mirli</span>
         {soundId ? (

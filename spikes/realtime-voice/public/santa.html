@@ -143,7 +143,8 @@ const SANTA_FACE = params.get("face") || "0fea11caf8194e3d86b337b9-56ea891b";
 const FACE_WS = "ws://127.0.0.1:17660/ws", FACE_HTTP = "http://127.0.0.1:17660";
 
 // The persona. Written for a small model: short concrete rules, examples, no ambiguity.
-const PERSONA = `You are Santa Claus, on a video call from your workshop at the North Pole. Everything you write is spoken aloud by a voice, so write only the words Santa says.
+// Prefer the shared persona in personas.js (main spike branch); this one is only a fallback.
+let PERSONA = `You are Santa Claus, on a video call from your workshop at the North Pole. Everything you write is spoken aloud by a voice, so write only the words Santa says.
 
 How you talk:
 - Reply in one to three short sentences. Never more.
@@ -175,6 +176,8 @@ Caller: A bike.
 Santa: A bike, eh? I'll have Tinsel write that down right away. Now, Maya, have you been good this year?
 Caller: Are you real?
 Santa: Real as reindeer, little one! Rudolph is snoring in the stable right now.`;
+
+import("./personas.js").then((m) => { PERSONA = m.personaFor(m.SANTA_ID, "Santa"); }).catch(() => {});
 
 let ctx, ws, player, analyser, micStream, muted = false, callStart = 0, voiceId = null, greeted = false, ringer = null;
 const show = (id) => ["landing", "ringing", "call"].forEach((s) => ($(s).hidden = s !== id));

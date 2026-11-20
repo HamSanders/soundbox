@@ -67,6 +67,7 @@ import {
   useModels,
   useSessions,
   useUpdateStatus,
+  useCan,
 } from "@/lib/queries";
 import { useUiPrefs, wantsRail } from "@/lib/ui-prefs";
 import { formatMb, formatRelative } from "@/lib/format";
@@ -672,6 +673,7 @@ function ThemeToggle() {
 
 export function AppSidebar() {
   const { setOpenMobile } = useSidebar();
+  const can = useCan();
   useRailOnImmersivePages();
 
   return (
@@ -722,13 +724,15 @@ export function AppSidebar() {
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <UpdateNotice />
+            {can.updates && <UpdateNotice />}
             <SidebarMenuItem>
               <ThemeToggle />
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <DeviceStatus />
-            </SidebarMenuItem>
+            {can.gpu_status && (
+              <SidebarMenuItem>
+                <DeviceStatus />
+              </SidebarMenuItem>
+            )}
             {/* The profile, last, like an account: whose library this is. */}
             <SidebarMenuItem>
               <ProfileSwitcher />

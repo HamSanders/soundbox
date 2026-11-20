@@ -69,6 +69,7 @@ import {
   useStoryFromSound,
   useSettings,
   useUpdateSound,
+  useCan,
 } from "@/lib/queries";
 import { api } from "@/lib/api";
 import { usePlayerStore } from "@/lib/player-store";
@@ -131,6 +132,7 @@ export function SoundCard({
   const update = useUpdateSound();
   const remove = useDeleteSound();
   const reveal = useRevealSound();
+  const can = useCan();
   const { data: settings } = useSettings();
   const [downloading, setDownloading] = useState(false);
   const { data: projects } = useProjects();
@@ -531,10 +533,12 @@ export function SoundCard({
                 <DownloadIcon />
                 Download
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => reveal.mutate(sound.id)}>
-                <FolderOpenIcon />
-                Open in Finder
-              </DropdownMenuItem>
+              {can.reveal && (
+                <DropdownMenuItem onClick={() => reveal.mutate(sound.id)}>
+                  <FolderOpenIcon />
+                  Open in Finder
+                </DropdownMenuItem>
+              )}
               {/* Where a sound goes next. Three destinations, one verb, so the
                   menu does not grow a row per place a sound could land. */}
               <DropdownMenuSub>

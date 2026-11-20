@@ -14,7 +14,9 @@ import { forgetStoryDevices } from "@/hooks/use-track-devices";
 import { followPlacement } from "@/lib/reading-order";
 import {
   api,
+  NO_CAPABILITIES,
   errorMessage,
+  type Capabilities,
   type AssistantChatRequest,
   type AssistantChatResponse,
   type AssistantOpenersRequest,
@@ -92,6 +94,7 @@ export const qk = {
   tracks: (storyId: string) => ["story", storyId, "tracks"] as const,
   voices: ["voices"] as const,
   settings: ["settings"] as const,
+  capabilities: ["capabilities"] as const,
   fsDirs: (path: string | null) => ["fs-dirs", path] as const,
   profiles: ["profiles"] as const,
   llmStatus: ["llm-status"] as const,
@@ -515,6 +518,31 @@ export function useSound(id: string | null): UseQueryResult<Sound> {
 
 export function useTags(): UseQueryResult<TagCount[]> {
   return useQuery({ queryKey: qk.tags, queryFn: () => api.listTags() });
+}
+
+/** What this server allows. Fixed for the server's lifetime, so fetched once.
+ *  The shell waits for it (see App.tsx), so `useCan()` below never guesses. */
+export function useCapabilities(): UseQueryResult<Capabilities> {
+  return useQuery({
+    queryKey: qk.capabilities,
+    queryFn: () => api.getCapabilities(),
+    staleTime: Infinity,
+    // The shell waits on this, so give up fast and say so (App.tsx) rather
+    // than hold a blank window through the default three slow retries.
+    retry: 1,
+    retryDelay: 500,
+  });
+}
+
+/**
+ * The capabilities, for gating UI: `const can = useCan(); can.reveal && …`.
+ *
+ * Fails closed: until the server has answered, and if it never does, nothing
+ * that touches the host is offered. (An older server without the route
+ * answers 404, which `getCapabilities` turns into the desktop defaults.)
+ */
+export function useCan(): Capabilities {
+  return useCapabilities().data ?? NO_CAPABILITIES;
 }
 
 export function useSettings(): UseQueryResult<Settings> {

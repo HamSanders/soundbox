@@ -53,6 +53,7 @@ import {
   useModels,
   useSettings,
   useUpdateSettings,
+  useCan,
 } from "@/lib/queries";
 import {
   INTENTS,
@@ -93,6 +94,7 @@ export function OnboardingDialog() {
   const { data: settings } = useSettings();
   const { data: models } = useModels();
   const { data: health } = useHealth();
+  const can = useCan();
   const { data: catalog } = useAudioCppCatalog();
   const { data: llm } = useLlmStatus();
   const { data: image } = useImageStatus();
@@ -117,8 +119,9 @@ export function OnboardingDialog() {
   // refetch that flips `shouldOnboard` (the first download landing, say) must
   // not yank the dialog out from under whoever is halfway through it.
   useEffect(() => {
-    if (shouldOnboard(settings, models)) setOpen(true);
-  }, [settings, models]);
+    // A server with nothing to set up (no downloads, see capabilities) never asks.
+    if (can.setup_wizard && shouldOnboard(settings, models)) setOpen(true);
+  }, [settings, models, can.setup_wizard]);
 
   const recommendations = useMemo(
     () =>

@@ -583,7 +583,7 @@ export function SoundCard({
                     <SlidersHorizontalIcon />
                     {splittable ? "Split into tracks and open in studio…" : "Open in the studio"}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate(`/voice/lab?from=${sound.id}`)}>
+                  <DropdownMenuItem onClick={() => navigate(`/voice/new/clone?from=${sound.id}`)}>
                     <MicIcon />
                     Make a voice from this
                   </DropdownMenuItem>

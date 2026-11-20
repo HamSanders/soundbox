@@ -28,7 +28,7 @@ CHUNK_SAMPLES = CHUNK_FRAMES * SAMPLE_RATE // FPS  # 15360 samples = 0.96 s
 MOTION_FRAMES_BY_MODEL = {"lite": 9, "pro": 5}
 SIZE = 512
 AUDIO_CONTEXT_S = 8      # seconds of audio history wav2vec2 sees
-SAMPLE_STEPS = 4
+SAMPLE_STEPS = int(os.environ.get("FACE_STEPS", 6))   # denoising steps: more = cleaner mouth, slower
 SAMPLE_SHIFT = 5
 COLOR_CORRECTION = 1.0
 
@@ -73,7 +73,7 @@ class FaceEngine:
             seed=seed,
             shift=SAMPLE_SHIFT,
             color_correction_strength=COLOR_CORRECTION,
-            use_face_crop=False,
+            use_face_crop=os.environ.get("FACE_CROP") == "1",  # zoom in on the face: more pixels for the mouth
         )
         self.reset()
 

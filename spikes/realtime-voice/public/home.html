@@ -119,8 +119,8 @@ footer { margin-top: 64px; padding-block: 22px 40px; border-top: 1px solid var(-
 <body>
 <header>
   <div class="wrap">
-    <a class="brand" href="home.html"><svg id="mark" viewBox="-8 -8 236 144" aria-hidden="true"></svg><b>MIRLI</b><span>live</span></a>
-    <nav><a class="hide-sm" href="#how">How it works</a><a class="hide-sm" href="#stack">Stack</a><a href="./">Open app</a></nav>
+    <a class="brand" href="./"><svg id="mark" viewBox="-8 -8 236 144" aria-hidden="true"></svg><b>MIRLI</b><span>live</span></a>
+    <nav><a class="hide-sm" href="#how">How it works</a><a class="hide-sm" href="#stack">Stack</a><a href="index.html">Open app</a></nav>
   </div>
 </header>
 
@@ -131,7 +131,7 @@ footer { margin-top: 64px; padding-block: 22px 40px; border-top: 1px solid var(-
       <h1>Real-time voice and video calls with AI characters, running on your own GPU.</h1>
       <p class="lede">Speech in, a cloned voice and a talking face out, in about half a second. Interrupt any time. Nothing leaves your machine.</p>
       <div class="actions">
-        <a class="btn primary" href="./"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1.5" y="3.5" width="9" height="9" rx="2"/><path d="M10.5 7l4-2.5v7l-4-2.5"/></svg>Start a video call</a>
+        <a class="btn primary" href="index.html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1.5" y="3.5" width="9" height="9" rx="2"/><path d="M10.5 7l4-2.5v7l-4-2.5"/></svg>Start a video call</a>
         <a class="btn" href="voice.html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="5.5" y="1.5" width="5" height="8.5" rx="2.5"/><path d="M3 8a5 5 0 0 0 10 0M8 13v2"/></svg>Voice only</a>
       </div>
     </div>
@@ -157,7 +157,7 @@ footer { margin-top: 64px; padding-block: 22px 40px; border-top: 1px solid var(-
     <h2>Two ways to call</h2>
     <p class="sub">Same voices, same brain. Pick whether you want a face.</p>
     <div class="modes">
-      <a class="mode" href="./">
+      <a class="mode" href="index.html">
         <span class="k">video</span>
         <b>Face to face</b>
         <p>Pick a face or upload any photo. It talks, blinks and lip-syncs to the voice. Switch faces or the face model mid-call.</p>
@@ -211,7 +211,7 @@ footer { margin-top: 64px; padding-block: 22px 40px; border-top: 1px solid var(-
   <footer>
     <span>Mirli · a research spike, not a product yet</span>
     <span>runs on 127.0.0.1</span>
-    <a href="./">video</a><a href="voice.html">voice</a>
+    <a href="index.html">video</a><a href="voice.html">voice</a>
   </footer>
 </main>
 
@@ -232,7 +232,7 @@ const LINES = ["Hey, good to see you. What are you working on?", "Ho ho ho! Who 
 fetch(FACE + "/faces").then((r) => r.json()).then((d) => {
   const list = d.faces.map((f) => ({ ...f, label: nice(f) })).filter((f) => f.label);
   if (!list.length) return;
-  $("faces").innerHTML = list.map((f) => `<a href="./" title="Call ${f.label}"><img alt="" loading="lazy" src="${FACE}/faces/${encodeURIComponent(f.id)}"><span>${f.label}</span></a>`).join("");
+  $("faces").innerHTML = list.map((f) => `<a href="index.html" title="Call ${f.label}"><img alt="" loading="lazy" src="${FACE}/faces/${encodeURIComponent(f.id)}"><span>${f.label}</span></a>`).join("");
   let i = 0, front = "demoA";
   const show = () => {
     const f = list[i % list.length], back = front === "demoA" ? "demoB" : "demoA";

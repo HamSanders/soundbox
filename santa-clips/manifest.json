@@ -2,7 +2,7 @@
  "version": 1,
  "talkPose": "talk",
  "restPose": "rest",
- "startPose": "empty",
+ "startPose": "talk",
  "width": 896,
  "height": 1120,
  "fps": 16,
@@ -33,17 +33,6 @@
   "cocoa": {
    "label": "Sipping cocoa",
    "still": "stills/cocoa.png"
-  },
-  "empty": {
-   "label": "Empty chair (Santa off-screen)",
-   "still": "stills/empty.png",
-   "pending": "still not generated yet (image quota resets 2026-11-21 02:03 UTC)"
-  },
-  "talk_close": {
-   "label": "Second angle: closer on the face, hard cut only",
-   "still": "stills/talk_close.png",
-   "pending": "still not generated yet",
-   "cutOnly": true
   }
  },
  "clips": [
@@ -68,30 +57,6 @@
    "weight": 1,
    "prompt": "small nod, glances at the fire and back",
    "role": "fallback"
-  },
-  {
-   "id": "enter_and_sit",
-   "from": "empty",
-   "to": "talk",
-   "kind": "transition",
-   "src": "clips/enter_and_sit.mp4",
-   "durationS": 5,
-   "prompt": "Santa walks in from the right, settles into the armchair and smiles at the camera",
-   "tags": [
-    "hello"
-   ]
-  },
-  {
-   "id": "stand_and_leave",
-   "from": "talk",
-   "to": "empty",
-   "kind": "transition",
-   "src": "clips/stand_and_leave.mp4",
-   "durationS": 5,
-   "prompt": "Santa waves goodbye, rises from the armchair and walks out to the right",
-   "tags": [
-    "goodbye"
-   ]
   },
   {
    "id": "talk_to_list",
@@ -235,5 +200,44 @@
    "weight": 0.2,
    "review": "Reindeer renders inside the room (top right), not at the window; redo with a plain nose and the window named explicitly"
   }
- ]
+ ],
+ "planned": [
+  {
+   "id": "enter_and_sit",
+   "from": "empty",
+   "to": "talk",
+   "kind": "transition",
+   "src": "clips/enter_and_sit.mp4",
+   "durationS": 5,
+   "prompt": "Santa walks in from the right, settles into the armchair and smiles at the camera",
+   "tags": [
+    "hello"
+   ]
+  },
+  {
+   "id": "stand_and_leave",
+   "from": "talk",
+   "to": "empty",
+   "kind": "transition",
+   "src": "clips/stand_and_leave.mp4",
+   "durationS": 5,
+   "prompt": "Santa waves goodbye, rises from the armchair and walks out to the right",
+   "tags": [
+    "goodbye"
+   ]
+  }
+ ],
+ "plannedPoses": {
+  "empty": {
+   "label": "Empty chair (Santa off-screen)",
+   "still": "stills/empty.png",
+   "pending": "still not generated yet (image quota resets 2026-11-21 02:03 UTC)"
+  },
+  "talk_close": {
+   "label": "Second angle: closer on the face, hard cut only",
+   "still": "stills/talk_close.png",
+   "pending": "still not generated yet",
+   "cutOnly": true
+  }
+ }
 }

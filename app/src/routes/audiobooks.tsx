@@ -5,7 +5,7 @@
 
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { BookOpenIcon, FileUpIcon, PlusIcon, SearchIcon } from "lucide-react";
+import { BookOpenIcon, FileUpIcon, FolderIcon, PlusIcon, SearchIcon, XIcon } from "lucide-react";
 
 import { ImportWizard } from "@/components/audiobook/import";
 import { BookCard } from "@/components/audiobook/shelf/book-card";
@@ -23,7 +23,15 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { bookProgress, type BookSummary } from "@/lib/audiobook-api";
-import { useBooks, useCreateBook, useDeleteBook, useDuplicateBook } from "@/lib/audiobook-queries";
+import { audiobookApi } from "@/lib/audiobook-api";
+import {
+  useBooks,
+  useCreateBook,
+  useDeleteBook,
+  useDuplicateBook,
+  useMoveBookToProject,
+} from "@/lib/audiobook-queries";
+import { useProjects } from "@/lib/queries";
 import { formatDuration } from "@/lib/format";
 
 type Filter = "all" | "progress" | "done";
@@ -32,16 +40,28 @@ const SEARCH_THRESHOLD = 6;
 
 export function AudiobooksPage() {
   const navigate = useNavigate();
-  const books = useBooks();
+  // `?project=<id>` scopes the shelf to one project, the way the library
+  // does (Projects links there). New and imported books land in it.
+  const [params, setParams] = useSearchParams();
+  const projectId = params.get("project");
+  const projects = useProjects();
+  const project = projectId ? projects.data?.find((p) => p.id === projectId) : undefined;
+  const books = useBooks(true, projectId ?? undefined);
+  const move = useMoveBookToProject();
   const create = useCreateBook();
   const remove = useDeleteBook();
   const duplicate = useDuplicateBook();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   // `?import=1` opens the wizard (the command palette links here).
-  const [params, setParams] = useSearchParams();
   const importing = params.get("import") === "1";
-  const setImporting = (open: boolean) => setParams(open ? { import: "1" } : {}, { replace: true });
+  const setParam = (key: string, value: string | null) => {
+    const next = new URLSearchParams(params);
+    if (value === null) next.delete(key);
+    else next.set(key, value);
+    setParams(next, { replace: true });
+  };
+  const setImporting = (open: boolean) => setParam("import", open ? "1" : null);
   const [doomed, setDoomed] = useState<BookSummary | null>(null);
 
   const all = useMemo(() => books.data ?? [], [books.data]);
@@ -66,19 +86,42 @@ export function AudiobooksPage() {
   const totalVoiced = all.reduce((n, b) => n + b.stats.duration_s, 0);
 
   const newBook = () =>
-    create.mutate({}, { onSuccess: (book) => navigate(`/audiobooks/${book.id}`) });
+    create.mutate(
+      { project_id: projectId ?? null },
+      { onSuccess: (book) => navigate(`/audiobooks/${book.id}`) },
+    );
 
   return (
     <div className="space-y-5">
       <ImportWizard
         open={importing}
         onOpenChange={setImporting}
-        onImported={(id) => navigate(`/audiobooks/${id}`)}
+        onImported={(id) => {
+          // The wizard commits with no project; file the book here.
+          if (projectId) void audiobookApi.updateBook(id, { project_id: projectId });
+          navigate(`/audiobooks/${id}`);
+        }}
       />
 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">Audiobooks</h1>
+          <h1 className="font-heading text-2xl font-semibold tracking-tight">
+            {project ? project.name : "Audiobooks"}
+          </h1>
+          {projectId && (
+            <span className="bg-muted text-foreground mt-2 inline-flex h-7 items-center gap-1 rounded-full pr-1 pl-2.5 text-xs">
+              <FolderIcon className="size-3" />
+              Project: {project?.name ?? "…"}
+              <button
+                type="button"
+                onClick={() => setParam("project", null)}
+                aria-label="Show books from every project"
+                className="text-muted-foreground hover:text-foreground hover:bg-background/60 rounded-full p-0.5"
+              >
+                <XIcon className="size-3" />
+              </button>
+            </span>
+          )}
           <p className="text-muted-foreground mt-1 text-sm">
             Turn a manuscript into a narrated book, chapter by chapter, with a voice for every
             character.
@@ -164,6 +207,8 @@ export function AudiobooksPage() {
               index={i}
               onDelete={setDoomed}
               onDuplicate={(b) => duplicate.mutate({ id: b.id })}
+              onMove={(b, p) => move.mutate({ id: b.id, project: p })}
+              projects={projects.data}
             />
           ))}
         </div>

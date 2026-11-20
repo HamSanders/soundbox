@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS books (
     updated_at       TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_books_updated ON books(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_books_project ON books(project_id);
 
 -- One chapter is one story. Deleting the story (from the studio) deletes the
 -- chapter too, so a book never points at a timeline that is gone.
@@ -438,9 +439,16 @@ export class AudiobookStore {
 
   /* ------------------------------------------------------------------ books */
 
-  listBooks(): Book[] {
-    const rows = this.prep("SELECT * FROM books ORDER BY updated_at DESC")
-      .all() as BookRow[];
+  /** `project`: undefined = every book, null = books in no project, else
+   *  that project's books. */
+  listBooks(project?: string | null): Book[] {
+    const rows = (
+      project === undefined
+        ? this.prep("SELECT * FROM books ORDER BY updated_at DESC").all()
+        : project === null
+          ? this.prep("SELECT * FROM books WHERE project_id IS NULL ORDER BY updated_at DESC").all()
+          : this.prep("SELECT * FROM books WHERE project_id = ? ORDER BY updated_at DESC").all(project)
+    ) as BookRow[];
     return rows.map(toBook);
   }
 

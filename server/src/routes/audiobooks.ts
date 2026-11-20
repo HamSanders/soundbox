@@ -169,7 +169,12 @@ function routes(app: FastifyInstance, svc: MirliService): void {
 
   /* ------------------------------------------------------------------ books */
 
-  app.get("/api/audiobooks", async () => books().listBooks());
+  /** `?project_id=<id>` for one project's books, `?project_id=none` for books
+   *  in no project; omitted for every book. */
+  app.get("/api/audiobooks", async (request) => {
+    const raw = (request.query as Record<string, string | undefined>).project_id;
+    return books().listBooks(raw === undefined || raw === "" ? undefined : raw === "none" ? null : raw);
+  });
 
   app.post("/api/audiobooks", async (request, reply) => {
     const body = bookSchema.parse(request.body ?? {});

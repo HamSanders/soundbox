@@ -468,10 +468,11 @@ async function seed(): Promise<void> {
 /* ------------------------------------------------------------------- api */
 
 export const mockAudiobookApi: AudiobookApi = {
-  async listBooks(): Promise<BookSummary[]> {
+  async listBooks(project): Promise<BookSummary[]> {
     await ready();
     const out: BookSummary[] = [];
-    for (const book of [...books].sort((a, b) => b.updated_at.localeCompare(a.updated_at))) {
+    const scoped = books.filter((b) => project === undefined || b.project_id === project);
+    for (const book of [...scoped].sort((a, b) => b.updated_at.localeCompare(a.updated_at))) {
       const d = await detail(book.id);
       out.push({ ...structuredClone(book), stats: d.stats });
     }
@@ -495,6 +496,9 @@ export const mockAudiobookApi: AudiobookApi = {
     const book = requireBook(bookId);
     const { settings, ...rest } = patch;
     Object.assign(book, rest);
+    if ("project_id" in patch) {
+      for (const c of bookChapters(bookId)) await mockApi.setStoryProject(c.story_id, book.project_id);
+    }
     if (settings) {
       book.settings = {
         ...book.settings,

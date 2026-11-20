@@ -249,7 +249,7 @@ export function MusicStudioPage() {
         className="flex flex-col gap-4 @3xl:min-h-0 @3xl:flex-1 @3xl:flex-row @3xl:gap-3"
       >
         {/* -------------------------------------------------------- controls */}
-        <aside className="flex min-w-0 flex-col gap-3 @3xl:min-h-0 @3xl:flex-none @3xl:basis-[var(--split)] @3xl:overflow-y-auto @3xl:pr-1">
+        <aside className="flex min-w-0 flex-col gap-3 md:hidden @3xl:min-h-0 @3xl:flex-none @3xl:basis-[var(--split)] @3xl:overflow-y-auto @3xl:pr-1">
           <MusicRequestForm
             settings={settings}
             patch={patch}
@@ -284,7 +284,7 @@ export function MusicStudioPage() {
           aria-orientation="vertical"
           aria-label="Resize the controls and takes panes"
           tabIndex={0}
-          className="hover:bg-primary/40 active:bg-primary/60 focus-visible:bg-primary/60 -mx-1 hidden w-2 shrink-0 cursor-col-resize touch-none rounded-full transition-colors @3xl:block"
+          className="hover:bg-primary/40 active:bg-primary/60 focus-visible:bg-primary/60 -mx-1 hidden w-2 shrink-0 cursor-col-resize touch-none rounded-full transition-colors"
           onPointerDown={onResizeDown}
           onPointerMove={onResizeMove}
           onPointerUp={onResizeUp}

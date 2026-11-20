@@ -30,7 +30,12 @@ import { FailureCard } from "@/components/failure-card";
 import { PendingSoundRow } from "@/components/pending-sound-row";
 import { PLAYER_DOCK_HEIGHT_PX } from "@/components/player-dock";
 import { SoundCard } from "@/components/sound-card";
-import { CollectionHeader, LibraryShelves, LibraryTypeChips } from "@/components/library-shelves";
+import {
+  CollectionHeader,
+  LibraryKindChips,
+  LibraryTabs,
+  type KindFilter,
+} from "@/components/library-shelves";
 import { useGenerateSession } from "@/hooks/use-generate-session";
 import { prefillFromSound, usePrefillStore } from "@/lib/generate-store";
 import { usePlayerStore } from "@/lib/player-store";
@@ -68,6 +73,13 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
   const isDesktop = !useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
   const projectId = searchParams.get("project");
+  // The combined Library filters by kind in place; a kind page is one kind.
+  const [kindFilter, setKindFilter] = useState<KindFilter>(() => {
+    const k = searchParams.get("kind");
+    return k === "music" || k === "sfx" || k === "voice" ? k : "all";
+  });
+  const listCategory: LibraryCategory | undefined =
+    category ?? (kindFilter === "all" ? undefined : kindFilter);
 
   const [q, setQ] = useState("");
   const [tag, setTag] = useState<string>(() => searchParams.get("tag") ?? ALL);
@@ -88,8 +100,8 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
   // sense letting an SFX page filter down to a music model, since it would
   // always come back empty.
   const categoryModels = useMemo(
-    () => (category ? (models ?? []).filter((m) => m.category === category) : models ?? []),
-    [models, category],
+    () => (listCategory ? (models ?? []).filter((m) => m.category === listCategory) : models ?? []),
+    [models, listCategory],
   );
   const categoryModelIds = useMemo(
     () => categoryModels.map((m) => m.id),
@@ -113,19 +125,19 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
       // client-side silently dropped a category's sounds once they fell past
       // the first page of the *unfiltered* list.
       model: modelId === ALL ? undefined : modelId,
-      models: modelId === ALL && category ? categoryModelIds : undefined,
+      models: modelId === ALL && listCategory ? categoryModelIds : undefined,
       favorite: favoritesOnly || undefined,
       project_id: projectId ?? undefined,
       source: agentsOnly ? "mcp" : undefined,
     }),
-    [q, tag, modelId, favoritesOnly, agentsOnly, projectId, category, categoryModelIds],
+    [q, tag, modelId, favoritesOnly, agentsOnly, projectId, listCategory, categoryModelIds],
   );
 
   // While `models` (the catalogue) hasn't loaded yet, `categoryModelIds` is
   // empty — querying with an empty `models` list would ask the server for
   // nothing instead of everything, flashing an empty state before the real
   // one loads. Wait for the catalogue on a category page.
-  const modelsReady = !category || Boolean(models);
+  const modelsReady = !listCategory || Boolean(models);
   const { data, isLoading, isError, error } = useSounds(query, modelsReady);
 
   const items = data?.items ?? [];
@@ -282,15 +294,18 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
               {data ? `${items.length} sound${items.length === 1 ? "" : "s"}` : " "}
             </p>
           </div>
-          <LibraryTypeChips />
+          {!category && (
+            <LibraryKindChips
+              value={kindFilter}
+              onChange={(k) => {
+                setKindFilter(k);
+                setModelId(ALL);
+              }}
+            />
+          )}
         </div>
       )}
-
-      {/* Shelves only on the plain Library: once a kind, a project, a search
-          or a tag is chosen, the list is the answer and shelves are noise. */}
-      {!category && !project && !q.trim() && tag === ALL && (
-        <LibraryShelves projects={projects ?? []} tags={tags ?? []} onTag={setTag} />
-      )}
+      {!category && !project && <LibraryTabs />}
 
       {/* ------------------------------------------------------------ filters */}
       {/* Search stays out in the open: it is the filter people reach for. The
@@ -517,7 +532,7 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
           // beside it: `main` has 24px of bottom padding, and without pulling
           // through it the composer would rest 24px above the window edge on a
           // short page while sitting flush against it on a long one.
-          className="from-background via-background sticky z-20 mt-auto -mx-3 -mb-6 overflow-x-clip [overflow-clip-margin:12px] bg-gradient-to-t via-75% to-transparent px-3 pt-6 pb-6 transition-[bottom]"
+          className="from-background via-background sticky z-20 mt-auto md:hidden -mx-3 -mb-6 overflow-x-clip [overflow-clip-margin:12px] bg-gradient-to-t via-75% to-transparent px-3 pt-6 pb-6 transition-[bottom]"
           // Desktop scrolls inside the panel, which already ends above the
           // player; only the narrow, window-scrolled layout needs the offset.
           style={{ bottom: nowPlaying && !isDesktop ? PLAYER_DOCK_HEIGHT_PX : 0 }}

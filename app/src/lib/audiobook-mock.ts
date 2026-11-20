@@ -516,6 +516,71 @@ export const mockAudiobookApi: AudiobookApi = {
 
   coverUrl: (book) => (book.cover_path ? (covers.get(book.id) ?? null) : null),
 
+  async duplicateBook(bookId, title) {
+    await ready();
+    const src = requireBook(bookId);
+    const { id: _id, created_at: _c, updated_at: _u, cover_path: _cp, ...fields } = structuredClone(src);
+    const copy = newBook({ ...fields, title: title?.trim() || `${src.title} (copy)` });
+    const map = new Map<string, string>();
+    for (const c of characters.filter((x) => x.book_id === bookId)) {
+      const made = { ...structuredClone(c), id: id("char"), book_id: copy.id };
+      map.set(c.id, made.id);
+      characters.push(made);
+    }
+    for (const c of bookChapters(bookId)) {
+      const paras = await paragraphsOf(c);
+      const chapter = await addChapter(copy, { title: c.title, kind: c.kind, included: c.included });
+      for (const p of paras) {
+        const made = await mockApi.createSegment(chapter.story_id, {
+          text: p.text,
+          kind: p.kind,
+          duration_s: p.kind === "pause" ? p.duration_s : null,
+          sound_id: p.sound_id ?? null,
+          voice_id: p.voice_id ?? null,
+          speaker: p.speaker ?? null,
+        });
+        segmentChapter.set(made.id, chapter.id);
+        Object.assign(metaOf(made.id), {
+          character_id: p.character_id ? (map.get(p.character_id) ?? null) : null,
+          locked: p.locked,
+          is_heading: p.is_heading,
+          model_id: p.model_id,
+        });
+      }
+    }
+    return detail(copy.id);
+  },
+
+  async addChapterFromText(bookId, req) {
+    await ready();
+    // A simple version of the server's cleanup: blank lines split
+    // paragraphs, wrapped lines join, end-of-line hyphens mend.
+    const blocks = req.text
+      .replace(/\r\n?/g, "\n")
+      .split(/\n\s*\n/)
+      .map((b) =>
+        b
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean)
+          .reduce((out, line) => (!out ? line : /[a-z]-$/.test(out) ? out.slice(0, -1) + line : `${out} ${line}`), ""),
+      )
+      .filter(Boolean);
+    if (!blocks.length) throw new Error("There is no text to make a chapter from.");
+    const first = blocks[0]!;
+    const looksLikeHeading = first.length < 60 && !/[.!?"”]$/.test(first);
+    const title = req.title?.trim() || (looksLikeHeading ? first : `${first.split(/\s+/).slice(0, 6).join(" ")}…`);
+    const chapter = await addChapter(requireBook(bookId), {
+      title,
+      kind: req.kind,
+      position: req.position,
+      paragraphs: blocks.map((text, i) => (i === 0 && looksLikeHeading ? { text, heading: true } : text)),
+    });
+    emit(bookId, { type: "chapters" });
+    const { stale: _s, ...out } = await chapterWithStats(chapter);
+    return out;
+  },
+
   async addChapter(bookId, req = {}) {
     await ready();
     const chapter = await addChapter(requireBook(bookId), {

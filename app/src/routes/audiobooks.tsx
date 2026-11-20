@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { bookProgress, type BookSummary } from "@/lib/audiobook-api";
-import { useBooks, useCreateBook, useDeleteBook } from "@/lib/audiobook-queries";
+import { useBooks, useCreateBook, useDeleteBook, useDuplicateBook } from "@/lib/audiobook-queries";
 import { formatDuration } from "@/lib/format";
 
 type Filter = "all" | "progress" | "done";
@@ -35,6 +35,7 @@ export function AudiobooksPage() {
   const books = useBooks();
   const create = useCreateBook();
   const remove = useDeleteBook();
+  const duplicate = useDuplicateBook();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   // `?import=1` opens the wizard (the command palette links here).
@@ -157,7 +158,13 @@ export function AudiobooksPage() {
       ) : (
         <div className="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {items.map((book, i) => (
-            <BookCard key={book.id} book={book} index={i} onDelete={setDoomed} />
+            <BookCard
+              key={book.id}
+              book={book}
+              index={i}
+              onDelete={setDoomed}
+              onDuplicate={(b) => duplicate.mutate({ id: b.id })}
+            />
           ))}
         </div>
       )}

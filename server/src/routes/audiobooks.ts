@@ -237,6 +237,28 @@ function routes(app: FastifyInstance, svc: MirliService): void {
     return reply.code(201).send(books().addChapter(request.params.id, body));
   });
 
+  app.post<BookParams>("/api/audiobooks/:id/duplicate", async (request, reply) => {
+    requireBook(request.params.id);
+    const body = z.object({ title: z.string().max(300).nullish() }).parse(request.body ?? {});
+    return reply.code(201).send(await books().duplicateBook(request.params.id, body.title));
+  });
+
+  /** Paste text; it is split into paragraphs with the importer's cleanup. */
+  app.post<BookParams>("/api/audiobooks/:id/chapters/from-text", async (request, reply) => {
+    requireBook(request.params.id);
+    const body = z
+      .object({
+        text: z.string().min(1).max(2_000_000),
+        title: z.string().max(300).nullish(),
+        kind: kindSchema.optional(),
+        position: z.number().int().min(0).nullish(),
+        markdown: z.boolean().optional(),
+        max_chars: z.number().int().min(80).max(20000).optional(),
+      })
+      .parse(request.body);
+    return reply.code(201).send(books().addChapterFromText(request.params.id, body));
+  });
+
   /** Registered before `:cid` so "reorder" is not read as a chapter id. */
   app.post<BookParams>("/api/audiobooks/:id/chapters/reorder", async (request) => {
     requireBook(request.params.id);

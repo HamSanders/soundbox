@@ -6,6 +6,7 @@
 
 import { useState, type DragEvent } from "react";
 import {
+  ClipboardPasteIcon,
   EyeIcon,
   EyeOffIcon,
   GripVerticalIcon,
@@ -35,6 +36,8 @@ import {
 } from "@/lib/audiobook-queries";
 import type { ChapterKind, ChapterStatus } from "@/lib/audiobook-types";
 import { formatDuration } from "@/lib/format";
+
+import { ChapterFromTextDialog } from "./chapter-from-text";
 import { cn } from "@/lib/utils";
 
 const STATUS_DOT: Record<ChapterStatus, { className: string; label: string }> = {
@@ -67,6 +70,7 @@ export function ChapterList({
   const [draft, setDraft] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const [fromText, setFromText] = useState(false);
 
   const chapters = book.chapters;
 
@@ -273,12 +277,22 @@ export function ChapterList({
           );
         })}
       </ol>
-      <div className="border-border/60 border-t p-2">
+      <div className="border-border/60 space-y-0.5 border-t p-2">
         <Button variant="ghost" size="sm" className="w-full justify-start" onClick={addChapter}>
           <PlusIcon />
           Add chapter
         </Button>
+        <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => setFromText(true)}>
+          <ClipboardPasteIcon />
+          Chapter from text…
+        </Button>
       </div>
+      <ChapterFromTextDialog
+        bookId={book.id}
+        open={fromText}
+        onOpenChange={setFromText}
+        onCreated={onSelect}
+      />
     </div>
   );
 }

@@ -13,6 +13,7 @@ import {
   type BookPatch,
   type BookSummary,
   type ChapterCreate,
+  type ChapterFromText,
   type ChapterPatch,
   type Paragraph,
   type ParagraphCreate,
@@ -113,6 +114,20 @@ export function useCreateBook() {
   });
 }
 
+export function useDuplicateBook() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, title }: { id: string; title?: string | null }) =>
+      audiobookApi.duplicateBook(id, title),
+    onSuccess: (book) => {
+      qc.setQueryData(abk.book(book.id), book);
+      void qc.invalidateQueries({ queryKey: abk.books });
+      toast.success(`Made “${book.title}”`);
+    },
+    onError: fail("Could not duplicate the book"),
+  });
+}
+
 export function useUpdateBook(bookId: string) {
   const qc = useQueryClient();
   const refresh = useRefreshBook(bookId);
@@ -157,6 +172,15 @@ export function useAddChapter(bookId: string) {
     mutationFn: (req: ChapterCreate) => audiobookApi.addChapter(bookId, req),
     onSuccess: refresh,
     onError: fail("Could not add the chapter"),
+  });
+}
+
+export function useChapterFromText(bookId: string) {
+  const refresh = useRefreshBook(bookId);
+  return useMutation({
+    mutationFn: (req: ChapterFromText) => audiobookApi.addChapterFromText(bookId, req),
+    onSuccess: refresh,
+    onError: fail("Could not make the chapter"),
   });
 }
 

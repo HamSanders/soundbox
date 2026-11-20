@@ -90,6 +90,16 @@ export interface ChapterCreate {
   paragraphs?: string[];
 }
 
+export interface ChapterFromText {
+  text: string;
+  /** Default: the first heading line in the text, else its first words. */
+  title?: string | null;
+  kind?: ChapterKind;
+  position?: number | null;
+  /** Strip Markdown syntax. */
+  markdown?: boolean;
+}
+
 export interface ChapterPatch {
   title?: string;
   kind?: ChapterKind;
@@ -194,7 +204,9 @@ export interface AudiobookApi {
   /** Where the cover image is served, or null when the book has none. */
   coverUrl(book: Pick<Book, "id" | "cover_path">): string | null;
 
+  duplicateBook(id: string, title?: string | null): Promise<BookDetail>;
   addChapter(bookId: string, req?: ChapterCreate): Promise<ChapterWithStats>;
+  addChapterFromText(bookId: string, req: ChapterFromText): Promise<ChapterWithStats>;
   updateChapter(bookId: string, chapterId: string, patch: ChapterPatch): Promise<ChapterWithStats>;
   reorderChapters(bookId: string, ids: string[]): Promise<ChapterWithStats[]>;
   deleteChapter(bookId: string, chapterId: string): Promise<void>;
@@ -253,6 +265,10 @@ const httpAudiobookApi: AudiobookApi = {
   coverUrl: (book) =>
     book.cover_path ? `${base(book.id)}/cover?v=${encodeURIComponent(book.cover_path)}` : null,
 
+  duplicateBook: (id, title) =>
+    request<BookDetail>(`${base(id)}/duplicate`, { method: "POST", ...json({ title: title ?? null }) }),
+  addChapterFromText: (bookId, req) =>
+    request<ChapterWithStats>(`${base(bookId)}/chapters/from-text`, { method: "POST", ...json(req) }),
   addChapter: (bookId, req = {}) =>
     request<ChapterWithStats>(`${base(bookId)}/chapters`, { method: "POST", ...json(req) }),
   updateChapter: (bookId, chapterId, patch) =>

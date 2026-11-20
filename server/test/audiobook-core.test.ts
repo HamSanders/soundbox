@@ -574,6 +574,81 @@ describe("snapshots", () => {
   });
 });
 
+describe("duplicate and chapter from text", () => {
+  it("makes a chapter from pasted text with the importer's cleanup", async () => {
+    const book = await json("POST", "/api/audiobooks", { title: "Pasted" });
+    const base = `/api/audiobooks/${book.id}`;
+    const text = [
+      "CHAPTER TWO",
+      "",
+      "The tide came in at",
+      "dusk, and the harbour went quiet as a held breath.",
+      "",
+      "Nobody spoke. The bell rang once, a thin and tremu-",
+      "lous note over the water.",
+      "",
+      "",
+      "Part the Second",
+      "",
+      "Morning.",
+    ].join("\n");
+    const chapter = await json("POST", `${base}/chapters/from-text`, { text });
+    expect(chapter.title).toBe("Chapter Two");
+    const paras = await json<any[]>("GET", `${base}/chapters/${chapter.id}/paragraphs`);
+    expect(paras.map((p) => p.text)).toEqual([
+      "Chapter Two",
+      "The tide came in at dusk, and the harbour went quiet as a held breath.",
+      "Nobody spoke. The bell rang once, a thin and tremulous note over the water.",
+      "Part the Second",
+      "Morning.",
+    ]);
+    expect(paras.map((p) => p.is_heading)).toEqual([true, false, false, true, false]);
+
+    const titled = await json("POST", `${base}/chapters/from-text`, {
+      text: "Just one line of text that goes on for a little while.",
+      title: "Interlude",
+      position: 0,
+    });
+    expect(titled.title).toBe("Interlude");
+    expect((await json("GET", base)).chapters[0].id).toBe(titled.id);
+
+    const empty = await call({ method: "POST", url: `${base}/chapters/from-text`, payload: { text: "  \n\n " } });
+    expect(empty.statusCode).toBe(400);
+  });
+
+  it("duplicates a book with its cast, casting and takes", async () => {
+    const book = await audiobooks(app.soundbox).createBookFromManuscript(manuscript, { cast_mode: "multi" });
+    const svc = audiobooks(app.soundbox);
+    const mara = svc.createCharacter(book.id, { name: "Mara" });
+    const paras = svc.getParagraphs(book.chapters[1].id)!;
+    svc.setParagraphCharacter([paras[2]!.id], mara.id);
+    const take = fakeSound();
+    app.soundbox.updateSegment(paras[1]!.id, { sound_id: take });
+    svc.updateParagraph(paras[3]!.id, { locked: true });
+
+    const copy = await json("POST", `/api/audiobooks/${book.id}/duplicate`, {});
+    expect(copy.title).toBe("The Lighthouse Keeper (copy)");
+    expect(copy.id).not.toBe(book.id);
+    expect(copy.chapters.map((c: any) => [c.title, c.kind, c.included])).toEqual(
+      book.chapters.map((c) => [c.title, c.kind, c.included]),
+    );
+    expect(copy.characters.map((c: any) => c.name)).toEqual(["Mara"]);
+    expect(copy.characters[0].id).not.toBe(mara.id);
+    const copied = svc.getParagraphs(copy.chapters[1].id)!;
+    expect(copied.map((p) => p.text)).toEqual(paras.map((p) => p.text));
+    expect(copied[2]!.character_id).toBe(copy.characters[0].id);
+    expect(copied[1]!.sound_id).toBe(take);
+    expect(copied[1]!.status).toBe("voiced");
+    expect(copied[3]!.locked).toBe(true);
+    expect(copied[0]!.is_heading).toBe(true);
+
+    // Deleting the copy keeps the original's shared take.
+    await call({ method: "DELETE", url: `/api/audiobooks/${copy.id}` });
+    expect(app.soundbox.db.getSound(take)).not.toBeNull();
+    expect(svc.getParagraph(paras[1]!.id)!.sound_id).toBe(take);
+  });
+});
+
 describe("find and replace", () => {
   it("replaces across chapters, skips locked paragraphs and reports counts", async () => {
     const book = await audiobooks(app.soundbox).createBookFromManuscript(manuscript);

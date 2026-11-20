@@ -25,6 +25,9 @@
  *
  * Chapters
  *   addChapter(bookId, { title, kind?, included?, position?, paragraphs?, headings? }): ChapterWithStats
+ *   addChapterFromText(bookId, { text, title?, kind?, position?, markdown?, max_chars? }): ChapterWithStats
+ *                                             cleaned with the importer's rules (import/plain, import/text)
+ *   duplicateBook(bookId, title?): Promise<BookDetail>
  *   updateChapter(chapterId, { title?, kind?, included? }): Chapter | null
  *   reorderChapters(bookId, ids): boolean
  *   deleteChapter(chapterId, deleteSounds = true): Promise<boolean>
@@ -76,6 +79,8 @@ import { ModelError } from "../errors.js";
 import type { StorySegment } from "../schemas.js";
 import type { MirliService } from "../service.js";
 import { AudiobookHub } from "./hub.js";
+import { textToBlocks } from "./import/plain.js";
+import { cleanParagraphs, tidyTitle } from "./import/text.js";
 import {
   AudiobookStore,
   chapterStatus,
@@ -441,6 +446,8 @@ export class AudiobookService {
       position?: number | null;
       paragraphs?: string[];
       headings?: boolean;
+      /** Indexes into `paragraphs` to mark as headings. */
+      headingIndexes?: number[];
     },
   ): Chapter {
     const book = this.store.getBook(bookId);
@@ -459,6 +466,8 @@ export class AudiobookService {
         (fields.kind ?? "chapter") === "chapter" &&
         paragraphs[0]?.toLowerCase() !== title.toLowerCase();
       const lines = heading ? [title, ...paragraphs] : paragraphs;
+      const offset = heading ? 1 : 0;
+      const marked = new Set((fields.headingIndexes ?? []).map((i) => i + offset));
       lines.forEach((text, i) => {
         const segment = this.svc.db.createSegment(randomUUID(), story.id, now, {
           text,
@@ -466,12 +475,142 @@ export class AudiobookService {
           speaker: NARRATOR_SPEAKER,
           language: book.language,
         });
-        if (i === 0 && (heading || paragraphs[0]?.toLowerCase() === title.toLowerCase())) {
+        if (
+          marked.has(i) ||
+          (i === 0 && (heading || paragraphs[0]?.toLowerCase() === title.toLowerCase()))
+        ) {
           this.store.setMeta(segment.id, { is_heading: true });
         }
       });
       return chapter;
     });
+  }
+
+  /**
+   * A chapter from pasted text, cleaned up with the importer's rules: blank
+   * lines separate paragraphs, hard-wrapped lines are joined and hyphens
+   * mended, Markdown is stripped, footnote markers dropped and very long
+   * paragraphs split at sentences. A heading line in the text becomes a
+   * heading paragraph; the first one is the title when none is given.
+   */
+  addChapterFromText(
+    bookId: string,
+    fields: {
+      text: string;
+      title?: string | null;
+      kind?: ChapterKind;
+      position?: number | null;
+      markdown?: boolean;
+      max_chars?: number;
+    },
+  ): ChapterWithStats {
+    const blocks = textToBlocks(fields.text, fields.markdown ?? false);
+    const paragraphs: string[] = [];
+    const headingIndexes: number[] = [];
+    let title = fields.title?.trim() || null;
+    for (const block of blocks) {
+      if (block.type === "heading") {
+        const text = tidyTitle(block.text);
+        if (!text) continue;
+        if (!title) {
+          title = text;
+          continue;
+        }
+        headingIndexes.push(paragraphs.length);
+        paragraphs.push(text);
+      } else {
+        paragraphs.push(...cleanParagraphs([block.text], { maxChars: fields.max_chars }));
+      }
+    }
+    if (paragraphs.length === 0) throw new ModelError("There is no text to make a chapter from.");
+    if (!title) {
+      const words = paragraphs[0]!.split(/\s+/).slice(0, 6).join(" ");
+      title = words.length < paragraphs[0]!.length ? `${words}…` : words;
+    }
+    const chapter = this.addChapterQuiet(bookId, {
+      title,
+      kind: fields.kind,
+      position: fields.position,
+      paragraphs,
+      headings: true,
+      headingIndexes,
+    });
+    this.hub.publish(bookId, { type: "chapters" });
+    return this.getBook(bookId)!.chapters.find((c) => c.id === chapter.id)!;
+  }
+
+  /**
+   * Copy a book: metadata, settings, cover, cast, chapters and paragraphs
+   * with their casting, lock, heading, model, delivery and takes. The copy
+   * shares the take audio with the original (deleting either keeps audio
+   * the other still uses). Notes and versions are not copied.
+   */
+  async duplicateBook(bookId: string, title?: string | null): Promise<BookDetail> {
+    const src = this.store.getBook(bookId);
+    if (!src) throw new ModelError(`Book '${bookId}' not found.`);
+    const { id: _id, created_at: _c, updated_at: _u, cover_path, settings, ...fields } = src;
+    const copy = this.store.createBook({
+      ...fields,
+      title: title?.trim() || `${src.title} (copy)`,
+      settings,
+    });
+    const characters = new Map<string, string>();
+    for (const c of this.store.listCharacters(bookId)) {
+      const { id, book_id: _b, ...rest } = c;
+      characters.set(id, this.store.createCharacter(copy.id, rest).id);
+    }
+    const now = new Date().toISOString();
+    for (const chapter of this.store.listChapters(bookId)) {
+      const paragraphs = this.paragraphsOf(chapter);
+      const srcStory = this.svc.db.getStory(chapter.story_id);
+      this.store.transaction(() => {
+        const story = this.svc.db.createStory(randomUUID(), chapter.title, now, src.project_id, "script");
+        if (srcStory && Object.keys(srcStory.request_options).length > 0) {
+          this.svc.db.setStoryOptions(story.id, srcStory.request_options);
+        }
+        this.store.createChapter(copy.id, story.id, {
+          title: chapter.title,
+          kind: chapter.kind,
+          included: chapter.included,
+        });
+        const stale: string[] = [];
+        for (const p of paragraphs) {
+          const segment = this.svc.db.createSegment(randomUUID(), story.id, now, {
+            text: p.text,
+            kind: p.kind,
+            speaker: p.speaker ?? null,
+            voice_id: p.voice_id ?? null,
+            language: p.language ?? null,
+            sound_id: p.sound_id ?? null,
+            durationS: p.duration_s ?? null,
+            track_index: p.track_index,
+            start_s: p.start_s,
+            trim_start_s: p.trim_start_s,
+            fade_in_s: p.fade_in_s,
+            fade_out_s: p.fade_out_s,
+            gain_db: p.gain_db,
+            muted: p.muted,
+            request_options: p.request_options,
+          });
+          this.store.setMeta(segment.id, {
+            character_id: p.character_id ? (characters.get(p.character_id) ?? null) : null,
+            locked: p.locked,
+            is_heading: p.is_heading,
+            model_id: p.model_id,
+          });
+          if (p.sound_id) {
+            this.store.markVoiced(segment.id, p.text);
+            if (p.status === "stale") stale.push(segment.id);
+          }
+        }
+        if (stale.length) this.store.markStale(stale);
+      });
+    }
+    if (cover_path) {
+      const bytes = await this.coverBytes(bookId);
+      if (bytes) await this.setCover(copy.id, bytes.bytes, bytes.mime);
+    }
+    return this.getBook(copy.id)!;
   }
 
   updateChapter(

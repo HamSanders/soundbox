@@ -19,7 +19,6 @@ import { join } from "node:path";
 
 import * as dsp from "../../audio/dsp.js";
 import type { MirliService } from "../../service.js";
-import { audiobooks } from "../service.js";
 import type { Chapter } from "../types.js";
 import { audible, clipLength } from "./manifest.js";
 
@@ -30,7 +29,8 @@ export function listenCacheDir(svc: MirliService): string {
 /** The cached chapter mix, rendering it first if it is missing or stale.
  *  Null when the chapter has no audible clips. */
 export function chapterMix(svc: MirliService, chapter: Chapter): string | null {
-  const segments = (audiobooks(svc).getParagraphs(chapter.id) ?? []).filter(audible);
+  // Every track, so beds under the narration are heard too.
+  const segments = svc.listSegments(chapter.story_id).filter(audible);
   if (segments.length === 0) return null;
 
   const key = createHash("sha1")

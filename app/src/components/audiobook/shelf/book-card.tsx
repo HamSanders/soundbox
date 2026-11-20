@@ -1,7 +1,7 @@
 /** One book on the shelf: cover, title, author and how much of it is voiced. */
 
 import { Link } from "react-router-dom";
-import { MoreHorizontalIcon, Trash2Icon } from "lucide-react";
+import { CopyIcon, MoreHorizontalIcon, Trash2Icon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,10 +18,12 @@ import { BookCover } from "./book-cover";
 export function BookCard({
   book,
   onDelete,
+  onDuplicate,
   index = 0,
 }: {
   book: BookSummary;
   onDelete: (book: BookSummary) => void;
+  onDuplicate: (book: BookSummary) => void;
   index?: number;
 }) {
   const pct = bookProgress(book);
@@ -59,6 +61,10 @@ export function BookCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => onDuplicate(book)}>
+              <CopyIcon />
+              Duplicate
+            </DropdownMenuItem>
             <DropdownMenuItem variant="destructive" onSelect={() => onDelete(book)}>
               <Trash2Icon />
               Delete book

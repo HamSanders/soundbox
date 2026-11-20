@@ -12,6 +12,7 @@ import { HeaderSlot } from "@/components/header-slot";
 import { QueueIndicator } from "@/components/queue-indicator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useSound } from "@/lib/queries";
+import { BookCrumb } from "@/components/audiobook/shelf/book-crumb"; // [audiobooks:core]
 
 const TITLES: Record<string, string> = {
   "/dashboard": "Home",
@@ -28,6 +29,7 @@ const TITLES: Record<string, string> = {
   "/voice/new/clone": "Clone a Voice",
   "/voice/new/builtin": "Built-in Voice",
   "/projects": "Projects",
+  "/audiobooks": "Audiobooks", // [audiobooks:core]
   "/models": "Models",
   "/activity": "Activity",
   "/settings": "Settings",
@@ -62,6 +64,7 @@ export function AppHeader() {
   // you are in is worth saying — it is the difference between the two tools —
   // and the crumb links to that half of the shelf.
   const builder = /^\/studio\/(script|music)\//.exec(pathname)?.[1] ?? null;
+  const bookId = /^\/audiobooks\/([^/]+)$/.exec(pathname)?.[1] ?? null; // [audiobooks:core]
 
   return (
     // The first row of the page panel, not a bar across the window: the
@@ -75,6 +78,8 @@ export function AppHeader() {
         <span>Mirli</span>
         {soundId ? (
           <SoundCrumb id={soundId} />
+        ) : bookId ? ( // [audiobooks:core]
+          <BookCrumb id={bookId} />
         ) : builder !== null ? (
           <>
             <span aria-hidden="true">/</span>

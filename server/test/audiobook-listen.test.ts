@@ -19,6 +19,7 @@ import { writeWav } from "../src/audio/dsp.js";
 import { imageInfo } from "../src/audiobook/publish/checklist.js";
 import { isoDuration, slug } from "../src/audiobook/publish/common.js";
 import type { ListenManifest } from "../src/audiobook/publish/manifest.js";
+import { listenStore } from "../src/audiobook/publish/store.js";
 import { buildZip } from "../src/audiobook/publish/zip.js";
 import { audiobooks, type BookDetail } from "../src/audiobook/service.js";
 import type { Manuscript } from "../src/audiobook/types.js";
@@ -174,6 +175,26 @@ describe("chapter audio", () => {
     expect(bad.statusCode).toBe(416);
   });
 
+  it("mixes beds on other tracks but keeps them out of the read-along", async () => {
+    const book = await newBook("Bedded");
+    const one = book.chapters.find((c) => c.kind === "chapter")!;
+    voiceChapter(one.id);
+    // A 6 s music bed under the narration, on track 1.
+    app.soundbox.createSegment(one.story_id, {
+      text: "Rain on the roof",
+      track_index: 1,
+      start_s: 0,
+      sound_id: sineSound(6, 220),
+      kind: "line",
+    } as Parameters<typeof app.soundbox.createSegment>[1]);
+    const m = (await app.inject({ method: "GET", url: `/api/audiobooks/${book.id}/listen` })).json() as ListenManifest;
+    expect(m.chapters[0].paragraphs.map((p) => p.text)).not.toContain("Rain on the roof");
+    expect(m.chapters[0].duration_s).toBe(4);
+    const audio = await app.inject({ method: "GET", url: `/api/audiobooks/${book.id}/listen/chapters/${one.id}/audio` });
+    // The mix runs to the end of the bed.
+    expect(audio.rawPayload.length).toBe(44 + 6 * RATE * 3);
+  });
+
   it("404s when nothing in the chapter is voiced", async () => {
     const book = await newBook("Silent");
     const one = book.chapters.find((c) => c.kind === "chapter")!;
@@ -252,11 +273,11 @@ describe("progress, bookmarks and tags", () => {
   it("drops listening state with the book", async () => {
     const book = await newBook("Gone");
     const one = book.chapters.find((c) => c.kind === "chapter")!;
-    app.soundbox.db.listen.setProgress(book.id, { chapter_id: one.id, position_s: 1 });
-    app.soundbox.db.listen.addBookmark(book.id, { chapter_id: one.id, position_s: 1 });
+    listenStore(app.soundbox).setProgress(book.id, { chapter_id: one.id, position_s: 1 });
+    listenStore(app.soundbox).addBookmark(book.id, { chapter_id: one.id, position_s: 1 });
     await audiobooks(app.soundbox).deleteBook(book.id);
-    expect(app.soundbox.db.listen.getProgress(book.id)).toBeNull();
-    expect(app.soundbox.db.listen.listBookmarks(book.id)).toEqual([]);
+    expect(listenStore(app.soundbox).getProgress(book.id)).toBeNull();
+    expect(listenStore(app.soundbox).listBookmarks(book.id)).toEqual([]);
   });
 });
 

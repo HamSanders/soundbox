@@ -23,11 +23,17 @@ export interface ParagraphPlayer {
   playFrom: (paragraphs: Paragraph[], startId: string) => void;
   stop: () => void;
   toggle: (paragraph: Paragraph) => void;
+  /** Play one paragraph from `t` seconds into it. */
+  playAt: (paragraph: Paragraph, t: number) => void;
+  /** Seconds into the paragraph that is playing, or null. */
+  position: () => number | null;
 }
 
 export function useParagraphPlayer(onAdvance?: (id: string) => void): ParagraphPlayer {
   const audio = useRef<HTMLAudioElement | null>(null);
   const queue = useRef<Paragraph[]>([]);
+  /** The clip's trim, so positions are relative to what the paragraph plays. */
+  const startAt = useRef(0);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [continuous, setContinuous] = useState(false);
   const claim = usePlayerStore((s) => s.play);
@@ -50,7 +56,7 @@ export function useParagraphPlayer(onAdvance?: (id: string) => void): ParagraphP
   }, [release]);
 
   const start = useCallback(
-    function startParagraph(paragraph: Paragraph): boolean {
+    function startParagraph(paragraph: Paragraph, offset = 0): boolean {
       const file = paragraph.sound?.file;
       if (!file) return false;
       if (!audio.current) audio.current = new Audio();
@@ -63,7 +69,8 @@ export function useParagraphPlayer(onAdvance?: (id: string) => void): ParagraphP
         release(OWNER);
       };
       el.src = file;
-      el.currentTime = paragraph.trim_start_s ?? 0;
+      startAt.current = paragraph.trim_start_s ?? 0;
+      el.currentTime = startAt.current + offset;
       void el.play().catch(() => stop());
       claim(OWNER);
       setPlayingId(paragraph.id);
@@ -110,6 +117,20 @@ export function useParagraphPlayer(onAdvance?: (id: string) => void): ParagraphP
     }
   }, [ours]);
 
+  const playAt = useCallback(
+    (paragraph: Paragraph, t: number) => {
+      queue.current = [];
+      setContinuous(false);
+      start(paragraph, t);
+    },
+    [start],
+  );
+
+  const position = useCallback(() => {
+    if (!ours || !playingId || !audio.current) return null;
+    return Math.max(0, audio.current.currentTime - startAt.current);
+  }, [ours, playingId]);
+
   useEffect(() => () => audio.current?.pause(), []);
 
   return {
@@ -119,5 +140,7 @@ export function useParagraphPlayer(onAdvance?: (id: string) => void): ParagraphP
     playFrom,
     stop,
     toggle,
+    playAt,
+    position,
   };
 }

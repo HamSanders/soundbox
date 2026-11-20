@@ -24,6 +24,7 @@ import { mimeFor, publishRoot } from "../audiobook/publish/common.js";
 import { buildManifest, coverUrl, exportedAudio, listenableChapters, liveTimings } from "../audiobook/publish/manifest.js";
 import { chapterMix } from "../audiobook/publish/mix.js";
 import { publishRss } from "../audiobook/publish/rss.js";
+import { listenStore } from "../audiobook/publish/store.js";
 import { publishWebPlayer } from "../audiobook/publish/webplayer.js";
 import { audiobooks } from "../audiobook/service.js";
 import type { MirliService } from "../service.js";
@@ -121,7 +122,7 @@ export function sendRange(
 
 export function registerAudiobookListen(app: FastifyInstance, svc: MirliService): void {
   const books = () => audiobooks(svc);
-  const store = () => svc.db.listen;
+  const store = () => listenStore(svc);
 
   const requireBook = (id: string) => {
     const book = books().getBook(id);

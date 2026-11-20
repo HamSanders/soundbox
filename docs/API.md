@@ -714,6 +714,7 @@ is applied when the book is mixed for export.
 | GET | `/api/audiobooks/{id}/beds/export-info[?chapter_ids=a,b]` | `{ has_beds, include_beds_default, warnings }` for the export dialog |
 | POST | `/api/audiobooks/{id}/chapters/{cid}/beds` | Add a bed → `201` bed |
 | POST | `/api/audiobooks/{id}/chapters/{cid}/beds/layout` | Fit every bed in the chapter to the narration |
+| POST | `/api/audiobooks/{id}/chapters/{cid}/beds/suggest` | Propose beds from the chapter's text → `{ source, suggestions, note }`; creates nothing |
 | PATCH | `/api/audiobooks/{id}/beds/{bid}` | Change a bed; re-lays its clips unless only `duck` or `label` changed |
 | POST | `/api/audiobooks/{id}/beds/{bid}/layout` | Fit one bed |
 | DELETE | `/api/audiobooks/{id}/beds/{bid}` | Remove the bed, its clips, and its track if nothing else is on it → `204` |
@@ -742,8 +743,9 @@ The add body:
 Give `sound_id` or `prompt`. Everything else is optional; the values shown are
 the music defaults (ambience: −24 dB, 4 s fades, 6 dB of ducking; SFX: −6 dB,
 no fades, no loop, no ducking). `kind` is `music`, `ambience` or `sfx`. `mode`
-is `full`, `intro`, `outro` or `intro_outro`. `anchor_segment_id` (SFX) is the
-paragraph it plays at. `duck: false` turns ducking off, and a partial `duck`
+is `full`, `intro`, `outro`, `intro_outro` or `scene`. `anchor_segment_id` is
+the paragraph an SFX plays at, or where a `scene` bed starts; `end_segment_id`
+is the last paragraph a `scene` bed plays under (omit for the chapter's end). `duck: false` turns ducking off, and a partial `duck`
 object changes only the fields it names. A prompt starts a generation job on
 the named model, or on an installed music model (ambience and SFX: a sound
 effect model); the bed comes back with `status: "generating"` and becomes
@@ -759,6 +761,15 @@ The bed:
 | `status` | `generating`, `ready` or `failed` |
 | `laid_out_s` | The narration length it was laid out against |
 | `stale` | The narration is now a different length; lay it out again |
+
+A suggestion from `/beds/suggest` has `kind`, `label`, `prompt`, `mood`,
+`setting`, `start_paragraph_id`, `end_paragraph_id` (the same paragraph for an
+SFX), `reason`, and quiet defaults in `gain_db`, `duck_db` and `duration_s`.
+`source` is `llm` when the prompt assistant read the chapter and `heuristic`
+when a keyword lexicon did (the assistant is off, or its reply was unusable);
+`note` says which and why. To accept one, add a bed with its `prompt`, `kind`,
+`gain_db`, `duck: { depth_db: duck_db }` and, for music and ambience,
+`mode: "scene"` with `anchor_segment_id` and `end_segment_id`.
 
 ## MCP
 

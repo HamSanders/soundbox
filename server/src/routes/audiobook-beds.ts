@@ -6,6 +6,7 @@
  *                                                        warnings + include-beds default
  *   POST   /api/audiobooks/:id/chapters/:cid/beds          add {sound_id|prompt, ...}
  *   POST   /api/audiobooks/:id/chapters/:cid/beds/layout   fit every bed to the narration
+ *   POST   /api/audiobooks/:id/chapters/:cid/beds/suggest  propose beds from the text (nothing is created)
  *   PATCH  /api/audiobooks/:id/beds/:bid                   gain, fades, mode, duck...
  *   POST   /api/audiobooks/:id/beds/:bid/layout            fit one bed
  *   DELETE /api/audiobooks/:id/beds/:bid
@@ -45,6 +46,7 @@ const bedFields = {
   mode: z.enum(BED_MODES as [BedMode, ...BedMode[]]).optional(),
   intro_s: z.number().min(0.5).max(600).nullish(),
   anchor_segment_id: z.string().max(200).nullish(),
+  end_segment_id: z.string().max(200).nullish(),
   offset_s: z.number().min(-600).max(600).optional(),
   /** false or null turns ducking off. */
   duck: z.union([duckSchema, z.literal(false), z.null()]).optional(),
@@ -93,6 +95,11 @@ export function registerAudiobookBeds(app: FastifyInstance, svc: MirliService): 
   app.post<ChapterParams>("/api/audiobooks/:id/chapters/:cid/beds/layout", async (request) => {
     requireBook(request.params.id);
     return service().layoutChapter(request.params.id, request.params.cid);
+  });
+
+  app.post<ChapterParams>("/api/audiobooks/:id/chapters/:cid/beds/suggest", async (request) => {
+    requireBook(request.params.id);
+    return service().suggest(request.params.id, request.params.cid);
   });
 
   app.patch<BedParams>("/api/audiobooks/:id/beds/:bid", async (request) => {

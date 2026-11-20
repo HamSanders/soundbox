@@ -366,6 +366,7 @@ td.over { color: var(--rust); font-weight: 700; }
   </aside>
 </main>
 
+<script type="module">import { personaFor, SANTA_ID } from "./personas.js"; window.personaFor = personaFor; window.SANTA_ID = SANTA_ID; window.dispatchEvent(new Event("personas"));</script>
 <script>
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -432,6 +433,10 @@ function setTxt(el, text) {
 }
 
 // ---- Voices ---------------------------------------------------------------
+const sendPersona = () => {
+  if (ws?.readyState !== 1 || !window.personaFor || !currentFace) return;
+  ws.send(JSON.stringify({ type: "persona", text: window.personaFor(currentFace, $("who").textContent) }));
+};
 const sendVoice = () => ws?.readyState === 1 && ws.send(JSON.stringify({ type: "voice", id: $("voice").value }));
 fetch("voices").then((r) => r.json()).then((list) => {
   if (!callStart) setState("off");
@@ -450,8 +455,8 @@ const faceParam = new URLSearchParams(location.search).get("face");
 const FACE_URL = faceParam === "off" ? null : (faceParam || "ws://127.0.0.1:17660/ws");
 const faceHttp = () => FACE_URL && FACE_URL.replace(/^ws/, "http").replace(/\/ws$/, "");
 const faceSrc = (id) => `${faceHttp()}/faces/${encodeURIComponent(id)}`;
-const isUpload = (f) => /^image\d+|^[0-9a-f]{6,}$|^photo$/i.test(f.name);
-const faceName = (f) => f.id === "girl" ? "Sample" : isUpload(f) ? "Your photo" : f.name.charAt(0).toUpperCase() + f.name.slice(1);
+const isUpload = (f) => f.id !== "0fea11caf8194e3d86b337b9-56ea891b" &&  /^image\d+|^[0-9a-f]{6,}$|^photo$/i.test(f.name);
+const faceName = (f) => f.id === (window.SANTA_ID || "0fea11caf8194e3d86b337b9-56ea891b") ? "Santa" : f.id === "girl" ? "Sample" : isUpload(f) ? "Your photo" : f.name.charAt(0).toUpperCase() + f.name.slice(1);
 let currentFace = null, faceList = [];
 async function loadFaces() {
   if (!FACE_URL) return hideFaces();
@@ -506,7 +511,7 @@ async function pickFace(id, btn) {
     for (const b of $("faces").querySelectorAll(".face-card[data-id]")) b.setAttribute("aria-pressed", String(b.dataset.id === id));
     $("faceHint").textContent = "";
     showCurrent();
-    if (callStart) sys(`Now talking to ${$("who").textContent}.`);
+    if (callStart) { sendPersona(); sys(`Now talking to ${$("who").textContent}. New conversation.`); }
   } catch (e) { $("faceHint").textContent = "Could not switch: " + e.message; }
   btn?.classList.remove("busy");
 }
@@ -682,6 +687,7 @@ async function onJson(m) {
     if (callStart) sys(`Voice: ${m.name}. The first reply in a new voice can take a few seconds.`);
   } else if (m.type === "hello") {
     sendVoice();
+    sendPersona();
     await ctx.audioWorklet.addModule("capture-worklet.js");
     await ctx.audioWorklet.addModule("playback-worklet.js");
     micStream = await navigator.mediaDevices.getUserMedia({

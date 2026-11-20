@@ -125,6 +125,7 @@ import { McpTelemetry } from "./telemetry.js";
 import { UpdateChecker } from "./updateCheck.js";
 import { envVar } from "./env.js";
 import { InstrumentLibrary, instrumentManifest } from "./instruments/index.js";
+import { beds } from "./audiobook/beds.js"; // [audiobooks:soundscape]
 
 const log = getLogger("mirli.service");
 
@@ -1451,8 +1452,7 @@ export class MirliService {
     // summed and clipped, which is exactly what `mixTimeline` does in one go.
     // Lanes exist so audiobook beds can be ducked under narration here.
     let lanes = layLanes(placed, sampleRate);
-    // TODO [audiobooks:soundscape] once beds.ts is merged:
-    // lanes = beds(this).duckChapterLanes(story.id, lanes, sampleRate, options.includeBeds ?? true);
+    lanes = beds(this).duckChapterLanes(story.id, lanes, sampleRate, options.includeBeds ?? true); // [audiobooks:soundscape]
     return { story, segments, audio: sumLanes(lanes), sampleRate };
   }
 

@@ -32,7 +32,6 @@ import { SoundCard } from "@/components/sound-card";
 import {
   CollectionHeader,
   LibraryKindChips,
-  LibraryTabs,
   type KindFilter,
 } from "@/components/library-shelves";
 import { useGenerateSession } from "@/hooks/use-generate-session";
@@ -289,18 +288,8 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
               {data ? `${items.length} sound${items.length === 1 ? "" : "s"}` : " "}
             </p>
           </div>
-          {!category && (
-            <LibraryKindChips
-              value={kindFilter}
-              onChange={(k) => {
-                setKindFilter(k);
-                setModelId(ALL);
-              }}
-            />
-          )}
         </div>
       )}
-      {!category && !project && <LibraryTabs />}
 
       {/* ------------------------------------------------------------ filters */}
       {/* One row: search, then each filter as a small pill. A dropdown pill
@@ -323,6 +312,17 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
             className="h-9 pl-8"
           />
         </div>
+        {/* Kind sits in the same row as the other filters on the combined
+            Library: one place to narrow the list, not a second tab bar. */}
+        {!category && (
+          <LibraryKindChips
+            value={kindFilter}
+            onChange={(k) => {
+              setKindFilter(k);
+              setModelId(ALL);
+            }}
+          />
+        )}
         <FilterMenu
           label="Tag"
           value={tag === ALL ? null : tag}

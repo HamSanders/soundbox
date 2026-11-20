@@ -38,7 +38,11 @@ export function LibraryKindChips({
   className?: string;
 }) {
   return (
-    <div role="radiogroup" aria-label="Kind" className={cn("flex flex-wrap gap-1.5", className)}>
+    <div
+      role="radiogroup"
+      aria-label="Kind"
+      className={cn("border-border bg-field inline-flex h-9 items-center gap-0.5 rounded-full border p-0.5", className)}
+    >
       {KIND_CHIPS.map((c) => (
         <button
           key={c.value}
@@ -47,10 +51,10 @@ export function LibraryKindChips({
           aria-checked={value === c.value}
           onClick={() => onChange(c.value)}
           className={cn(
-            "focus-visible:ring-ring/50 inline-flex h-8 items-center rounded-full border px-3 text-xs font-medium outline-none transition-colors focus-visible:ring-3",
+            "focus-visible:ring-ring/50 inline-flex h-7 items-center rounded-full px-3 text-xs font-medium outline-none transition-colors focus-visible:ring-3",
             value === c.value
-              ? "bg-primary text-primary-foreground border-primary"
-              : "border-border text-muted-foreground hover:text-foreground hover:bg-muted",
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
           {c.label}

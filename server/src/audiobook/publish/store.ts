@@ -8,7 +8,11 @@
  * stays valid whichever source (an export or the live mix) is playing.
  */
 
+import { randomUUID } from "node:crypto";
+
 import type { Database } from "better-sqlite3";
+
+import type { MirliService } from "../../service.js";
 
 export const LISTEN_SCHEMA = `
 CREATE TABLE IF NOT EXISTS book_progress (
@@ -216,4 +220,17 @@ export class ListenStore {
   deleteBookmark(id: string): boolean {
     return this.conn.prepare("DELETE FROM book_bookmarks WHERE id=?").run(id).changes > 0;
   }
+}
+
+const stores = new WeakMap<MirliService, ListenStore>();
+
+/** The listening store for this server, built on first use from the shared
+ *  connection (`db.sqlite`), after core's tables exist. */
+export function listenStore(svc: MirliService): ListenStore {
+  let store = stores.get(svc);
+  if (!store) {
+    store = new ListenStore(svc.db.sqlite, () => randomUUID(), () => new Date().toISOString());
+    stores.set(svc, store);
+  }
+  return store;
 }

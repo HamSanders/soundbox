@@ -19,7 +19,7 @@ import type { MirliService } from "../../service.js";
 import type { StorySegment } from "../../schemas.js";
 import { audiobooks, type Paragraph } from "../service.js";
 import type { Book, Chapter, ChapterKind, Character, ParagraphTiming } from "../types.js";
-import type { Bookmark, ListenProgress } from "./store.js";
+import { listenStore, type Bookmark, type ListenProgress } from "./store.js";
 
 /** ACX's retail sample limit, and what Spotify uses from a preview chapter. */
 export const SAMPLE_MAX_S = 5 * 60;
@@ -128,10 +128,13 @@ export function audible(segment: StorySegment): boolean {
   return segment.kind === "line" && Boolean(segment.sound_id) && !segment.muted && clipLength(segment) > 0;
 }
 
-/** Read-along timings for a chapter from its story's timeline. */
+/** Narration sits on track 0; music and effect beds sit on tracks 1+. */
+export const NARRATION_TRACK = 0;
+
+/** Read-along timings for a chapter from its story's timeline (narration only). */
 export function liveTimings(paragraphs: Paragraph[]): ParagraphTiming[] {
   return paragraphs
-    .filter((p) => audible(p))
+    .filter((p) => p.track_index === NARRATION_TRACK && audible(p))
     .map((p) => ({
       segment_id: p.id,
       start_s: round(p.start_s),
@@ -164,7 +167,7 @@ export function buildChapter(
   exported: ExportedChapterAudio | null,
 ): BuiltChapter {
   const paragraphs = (audiobooks(svc).getParagraphs(chapter.id) ?? []).filter(
-    (p) => p.kind === "line" && p.text.trim() !== "",
+    (p) => p.kind === "line" && p.track_index === NARRATION_TRACK && p.text.trim() !== "",
   );
   const live = liveTimings(paragraphs);
   const timings = exported?.timings ?? live;
@@ -262,14 +265,14 @@ export function buildManifest(svc: MirliService, bookId: string): ListenManifest
   const exports = exportedAudio(svc, bookId);
   const built = listenableChapters(allChapters).map((c) => buildChapter(svc, bookId, c, exports.get(c.id) ?? null));
   return {
-    book: { ...book, cover_url: coverUrl(book), tags: svc.db.listen.getTags(bookId) },
+    book: { ...book, cover_url: coverUrl(book), tags: listenStore(svc).getTags(bookId) },
     cast: castOf(svc, book, characters),
     characters: characters.map((c) => ({ id: c.id, name: c.name, color: c.color })),
     chapters: built.map((b) => b.chapter),
     duration_s: round(built.reduce((sum, b) => sum + b.chapter.duration_s, 0)),
     sample: sampleOf(svc, bookId, allChapters, built),
-    progress: svc.db.listen.getProgress(bookId),
-    bookmarks: svc.db.listen.listBookmarks(bookId),
+    progress: listenStore(svc).getProgress(bookId),
+    bookmarks: listenStore(svc).listBookmarks(bookId),
     word_timings: false,
   };
 }

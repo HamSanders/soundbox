@@ -71,9 +71,9 @@ export const MUSIC_MODEL_NAMES: Record<MusicModelId, string> = {
   "audiocpp-ace-step": "ACE-Step 1.5 Turbo",
 };
 
-/** Licence surfaced next to each track, matching the licence findings in
- *  `content/models/models.ts` (which read the licence files; the server
- *  catalogue's ACE-Step entry still says "Apache-2.0 (unverified)"). Kept here so the page
+/** Licence surfaced next to each track, matching the model catalogue entry
+ *  in `server/src/models/audiocpp_models_catalog.json` and the licence
+ *  findings in `content/models/models.ts`. Kept here so the page
  *  can state the terms without a backend call — this build has no backend. */
 export const MUSIC_MODEL_LICENSES: Record<MusicModelId, { name: string; note: string }> = {
   "audiocpp-stable-audio-3-small-music": {

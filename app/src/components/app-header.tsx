@@ -68,7 +68,7 @@ export function AppHeader() {
   const { state: sidebarState } = useSidebar();
 
   return (
-    <header className="bg-sidebar fixed inset-x-0 top-0 z-40 flex h-(--top-h,3.5rem) items-end gap-2 px-3 pb-2 md:pl-0">
+    <header className="bg-sidebar fixed inset-x-0 top-0 z-40 flex h-(--top-h,3.5rem) items-center gap-2 px-3 pt-2 md:pl-0">
       {/* The logo sits in a cell as wide as the sidebar, centred over the
           icon rail when it is folded; the toggle, back and forward then
           start where the first panel starts. */}

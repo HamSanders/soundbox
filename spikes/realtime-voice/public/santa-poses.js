@@ -49,7 +49,7 @@
     return { ...manifest, clips };
   }
 
-  function create({ manifest, base, a, b, bg, onLive, log }) {
+  function create({ manifest, base, a, b, bg, onLive, liveReady, wanderS = 25, thinkDelayS = 1.2, log }) {
     const M = resolve(manifest, base);
     const talk = M.talkPose || "talk", rest = M.restPose || null;
     const moves = M.clips.filter((c) => c.from !== c.to && M.poses[c.from] && M.poses[c.to]);
@@ -75,33 +75,43 @@
     const pick = (list) => { let t = list.reduce((s, c) => s + c.weight, 0) * Math.random(); for (const c of list) if ((t -= c.weight) <= 0) return c; return list[list.length - 1]; };
     const reactionsFor = (tag) => M.clips.filter((c) => c.kind === "reaction" && (c.tags.includes(tag) || c.id === tag));
 
-    const st = { pose: M.startPose || rest || talk, mode: "idle", live: false, queue: [], thought: false, idles: 0, front: a, back: b, clip: null, token: 0, stopped: false };
+    // Home is the talk pose. When the live face is up (canLive()), Santa "parks" there: no clip plays, the
+    // face model's own silent motion is the idle, and lip-sync appears exactly when the audio does.
+    // Clips run only to act (thinking, reactions, the odd wander). Without a live face, idle clips loop.
+    const canLive = liveReady || (() => false);
+    const st = { pose: M.startPose || talk, mode: "idle", live: false, queue: [], thought: false, idles: 0, front: a, back: b, clip: null,
+      token: 0, stopped: true, parkedAt: 0, modeAt: 0, wander: false };
     a.muted = b.muted = true; a.playsInline = b.playsInline = true; a.preload = b.preload = "auto";
     a.classList.add("front"); b.classList.remove("front");
 
     function setLive(on) { if (st.live === on) return; st.live = on; say("live", on); onLive?.(on); }
+    const parked = () => !st.clip && !st.stopped;
 
-    // Pick the next clip to play from st.pose, given what the call wants right now.
+    // The next clip to play from st.pose, or null to park on the live face.
     function choose() {
-      const now = performance.now();
-      st.queue = st.queue.filter((r) => now - r.at < 6000);
-      // A reaction waiting, and we're not mid-speech: get to its pose, then play it.
-      if (st.queue.length && !st.live) {
+      const now = performance.now(), live = canLive();
+      st.queue = st.queue.filter((r) => now - r.at < 8000);
+      // Never cover lip-sync with a reaction: those wait until Santa stops talking.
+      const holdForSpeech = st.mode === "talk" && st.pose === talk && live;
+      if (st.queue.length && !holdForSpeech) {
         const step = nearest(st.queue[0].clips);
         if (!step) st.queue.shift();
-        else if (step.here) { st.queue.shift(); return step.clip; }
-        else return step.clip;
+        else { if (step.here) st.queue.shift(); return step.clip; }
       }
-      if (st.mode === "talk") {
-        if (st.pose === talk) { setLive(true); return idleAt(talk); }
-        return route(st.pose, talk).first || idleAt(st.pose);
-      }
-      if (st.mode === "think" && !st.thought) {
+      // A short think (most turns) shouldn't start a 5 s acting clip that then delays the answer.
+      if (st.mode === "think" && !st.thought && now - st.modeAt > thinkDelayS * 1000) {
         const step = nearest(reactionsFor("thinking"));
         if (step) { if (step.here) st.thought = true; return step.clip; }
       }
-      // Idle: drift back to the rest pose after a loop or two; while listening, stay attentive.
-      if (st.mode === "idle" && rest && st.pose !== rest && st.idles >= 1) { const f = route(st.pose, rest).first; if (f) return f; }
+      if (st.wander && st.pose === talk) {
+        st.wander = false;
+        const out = moves.filter((m) => m.from === talk && m.kind === "transition" && route(m.to, talk).dist < Infinity);
+        if (out.length) return pick(out);
+      }
+      if (st.pose !== talk && (live || st.mode === "talk" || st.mode === "think")) return route(st.pose, talk).first || idleAt(st.pose);
+      if (st.pose === talk && live) return null;
+      // No live face: the old behaviour, idle loops and a drift to the rest pose.
+      if (st.mode === "idle" && rest && st.pose !== rest && st.idles >= 2) { const f = route(st.pose, rest).first; if (f) return f; }
       return idleAt(st.pose);
     }
     // Of these clips, the closest one by the graph: play it if we're on its pose, else the next step toward it.
@@ -117,8 +127,13 @@
       return moves.find((m) => m.from === p) || null;  // no loop for this pose: leave it
     }
 
+    function next() {
+      const clip = choose();
+      if (clip) return play(clip);
+      st.clip = null; st.parkedAt = performance.now(); setLive(true);
+    }
     function play(clip) {
-      if (!clip || st.stopped) return;
+      if (st.stopped) return;
       const tok = ++st.token, v = st.back;
       st.clip = clip; st.idles = clip.kind === "idle" ? st.idles + 1 : 0;
       say("play", clip.id, clip.from + "->" + clip.to);
@@ -127,6 +142,7 @@
         if (tok !== st.token) return;
         const old = st.front; st.front = v; st.back = old;
         v.classList.add("front"); old.classList.remove("front"); old.pause();
+        setLive(false);  // only once the clip's first frame (= the talk still) is on screen
       };
       // Swap on the first painted frame; the timeout covers hidden/background tabs, where frame callbacks never fire.
       let done = false; const once = () => { if (!done) { done = true; swap(); } };
@@ -136,32 +152,55 @@
     function advance(tok) {
       if (tok !== st.token || st.stopped) return;
       st.pose = st.clip.to;
-      play(choose());
+      next();
     }
+    const kick = () => { if (parked()) next(); };
+    // Parked: wander off now and then when nobody's talking; fall back to clips if the live face goes away.
+    const timer = setInterval(() => {
+      if (!parked()) return;
+      if (!canLive() || st.mode === "think") return kick();
+      if (st.mode === "idle" && wanderS && performance.now() - st.parkedAt > wanderS * 1000) { st.wander = true; kick(); }
+    }, 250);
 
     // Blurred fill behind the frame: draw whatever the front video shows, small.
     if (bg) (function paint() {
-      if (st.stopped) return; requestAnimationFrame(paint);
-      if (!st.live && st.front.readyState >= 2) bg.getContext("2d").drawImage(st.front, 0, 0, bg.width, bg.height);
+      requestAnimationFrame(paint);
+      if (!st.live && !st.stopped && st.front.readyState >= 2) bg.getContext("2d").drawImage(st.front, 0, 0, bg.width, bg.height);
     })();
 
     return {
-      get pose() { return st.pose; }, get live() { return st.live; }, get clip() { return st.clip?.id; },
-      start() { st.stopped = false; play(idleAt(st.pose)); },
-      stop() { st.stopped = true; st.token++; a.pause(); b.pause(); setLive(false); },
+      manifest: M,
+      get pose() { return st.pose; }, get live() { return st.live; }, get clip() { return st.clip?.id ?? null; },
+      start() {
+        if (!st.stopped) return; st.stopped = false;
+        // Show the start pose's still frame at once (first frame of any clip from it), then decide.
+        const first = M.clips.find((c) => c.from === st.pose);
+        if (first) { a.src = first.src; a.currentTime = 0; }
+        next();
+      },
+      stop() { st.stopped = true; st.token++; st.clip = null; a.pause(); b.pause(); setLive(false); },
       // Voice server states: idle | listening | thinking | speaking.
       setState(s) {
         const mode = s === "speaking" ? "talk" : s === "thinking" ? "think" : "idle";
         if (mode !== "think") st.thought = false;
-        if (mode !== "talk") setLive(false);
+        if (mode !== st.mode) st.parkedAt = st.modeAt = performance.now();
         st.mode = mode;
+        // Speech starts mid-acting on the talk pose (a laugh, a think): cut straight to the live face rather
+        // than let lip-sync wait up to 5 s. Clips that change pose have to finish.
+        if (mode === "talk" && st.clip && st.clip.from === talk && st.clip.to === talk && canLive()) {
+          say("cut", st.clip.id); st.token++; st.pose = talk; st.clip = null; next(); return;
+        }
+        kick();
       },
       react(tag) {
         const clips = reactionsFor(tag);
         if (!clips.length) return false;
         if (st.queue.length < 2) st.queue.push({ tag, clips, at: performance.now() });
-        return true;
+        kick(); return true;
       },
+      // The live face just came up or went away.
+      kick,
+      dispose() { this.stop(); clearInterval(timer); },
     };
   }
 

@@ -65,7 +65,7 @@ body.video .call canvas#face, body.video .call canvas#bg { opacity: 1; }
 .call video.pose { opacity: 0; transition: none; pointer-events: none; }
 body.poses .call video.pose.front, body.poses .call canvas#bg { opacity: 1; }
 body.poses .call canvas#face { opacity: 0; transition: none; }
-body.poses.video.live .call canvas#face { opacity: 1; }
+body.poses.video.live .call canvas#face { opacity: 1; transition: opacity .2s; }
 body.poses .ph, body.chatmode video.pose { display: none; }
 /* The blur fill: the same picture, tiny and blurred, behind everything. */
 .call canvas#bg { position: absolute; inset: -60px; width: calc(100% + 120px); height: calc(100% + 120px); filter: blur(40px) brightness(.55) saturate(1.2); opacity: 0; transition: opacity .4s; }
@@ -214,7 +214,8 @@ const params = new URLSearchParams(location.search);
 // The voice server: this page's own host when it serves the page, else ?server= or 127.0.0.1:17650.
 const VOICE_HOST = params.get("server") || (location.port === "17650" ? location.host : "127.0.0.1:17650");
 const VOICE_HTTP = "http://" + VOICE_HOST, VOICE_WS = "ws://" + VOICE_HOST + "/ws";
-const SANTA_FACE = params.get("face") || "0fea11caf8194e3d86b337b9-56ea891b";
+// The face server's portrait. With pose clips it becomes the talk still's faceBox crop (see posesReady).
+let SANTA_FACE = params.get("face") || "0fea11caf8194e3d86b337b9-56ea891b";
 const FACE_WS = "ws://127.0.0.1:17660/ws", FACE_HTTP = "http://127.0.0.1:17660";
 
 // The persona. Written for a small model: short concrete rules, examples, no ambiguity.
@@ -301,7 +302,7 @@ const stopRinging = () => { clearInterval(ringer); ringer = null; };
 const face = { ws: null, on: false, gen: 0, next: 0, frames: [], sources: [], speechFrom: Infinity, speechUntil: 0, playing: false };
 function faceFlush() { face.gen++; for (const s of face.sources) try { s.stop(); } catch {} for (const f of face.frames) f.bm.close();
   face.sources = []; face.frames = []; face.next = 0; face.speechFrom = Infinity; face.speechUntil = 0; }
-function setVideo(on) { if (face.on === on) return; face.on = on; document.body.classList.toggle("video", on); player?.port.postMessage("flush"); faceFlush();
+function setVideo(on) { if (face.on === on) return; face.on = on; poses?.kick(); document.body.classList.toggle("video", on); player?.port.postMessage("flush"); faceFlush();
   if (!on && face.playing) { face.playing = false; reportPlaying(false); } if (on) answer(); if (callStart && greeted && !userPicked) setMode(!on); }
 function faceConnect() {
   if (!ctx || ctx.state === "closed") return;
@@ -336,7 +337,7 @@ function tick() {
   if (!face.on) return;
   const t = ctx.currentTime - (ctx.outputLatency || 0); let f = null;
   while (face.frames.length && face.frames[0].t <= t) { f?.bm.close(); f = face.frames.shift(); }
-  if (f) { $("face").getContext("2d").drawImage(f.bm, 0, 0, 512, 512); if (!poses || poses.live) $("bg").getContext("2d").drawImage(f.bm, 0, 0, 48, 48); f.bm.close(); }
+  if (f) { drawFace(f.bm); face.lastFrame = performance.now(); if (!poses || poses.live) $("bg").getContext("2d").drawImage($("face"), 0, 0, 48, 48); f.bm.close(); }
   const playing = ctx.currentTime >= face.speechFrom && ctx.currentTime < face.speechUntil;
   if (playing !== face.playing) { face.playing = playing; reportPlaying(playing); }
 }
@@ -393,14 +394,53 @@ music.volume = 0;
 // ?clips=<manifest.json url> loads real clips from any static server; ?clips=off turns them off.
 let poses = null, tags = SantaPoses.tagStream();
 const posesReady = (async () => {
-  const q = params.get("clips");
+  const q = params.get("clips") || "santa-clips/manifest.json";  // the real clips, next to the page
   if (q === "off") return null;
-  let manifest = window.SANTA_CLIPS, base = location.href;
-  if (q) try { base = new URL(q, location.href).href; manifest = await (await fetch(base)).json(); } catch (e) { console.warn("clips manifest", e); }
+  let manifest = null, base = location.href;
+  try { base = new URL(q, location.href).href; manifest = await (await fetch(base)).json(); }
+  catch { console.info("no clips at", q, "- using the placeholder clips"); manifest = window.SANTA_CLIPS; base = location.href; }
   if (!manifest?.clips?.length) return null;
-  return SantaPoses.create({ manifest, base, a: $("poseA"), b: $("poseB"), bg: $("bg"),
+  const p = SantaPoses.create({ manifest, base, a: $("poseA"), b: $("poseB"), bg: $("bg"),
+    liveReady: () => face.on && performance.now() - (face.lastFrame || 0) < 1500,
     onLive: (on) => document.body.classList.toggle("live", on), log: params.has("debug") ? (...a) => console.log("[poses]", ...a) : null });
+  setupTalkFace(p.manifest, base);  // not awaited: the clips must not wait on the face server
+  return p;
 })();
+
+// The live face goes back where it belongs: the face server animates only the talk still's faceBox
+// (a 512 square), and we paste its frames into the full 4:5 still with a feathered edge, so the
+// talking view has exactly the clips' framing.
+const comp = { still: null, box: null, mask: null, tmp: null };
+async function setupTalkFace(M, base) {
+  const pose = M.poses?.[M.talkPose || "talk"], box = pose?.faceBox;
+  if (!pose?.still || !box) return;
+  try {
+    const img = new Image(); await new Promise((ok, no) => { img.onload = ok; img.onerror = no; img.src = new URL(pose.still, base).href; });
+    const c = $("face"); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    c.getContext("2d").drawImage(img, 0, 0);
+    comp.still = img; comp.box = box;
+    const n = box.size, mk = (w) => Object.assign(document.createElement("canvas"), { width: w, height: w });
+    comp.tmp = mk(n); comp.mask = mk(n);
+    const g = comp.mask.getContext("2d"), f = Math.round(n * 0.09);  // feather width
+    // Rounded-rect alpha ramp: opaque inside, fading to 0 over the outer f pixels.
+    for (let i = 0; i < f; i++) { g.fillStyle = `rgba(0,0,0,${(i + 1) / f})`; g.beginPath(); g.roundRect(i, i, n - 2 * i, n - 2 * i, f - i); g.fill(); }
+    // Give the face server exactly that crop, unless ?face= picked one.
+    if (params.get("face")) return;
+    const crop = mk(n); crop.getContext("2d").drawImage(img, box.x, box.y, n, n, 0, 0, n, n);
+    const blob = await new Promise((r) => crop.toBlob(r, "image/png"));
+    const r = await fetch(FACE_HTTP + "/faces", { method: "POST", headers: { "X-Name": "santatalk" }, body: blob });
+    if (r.ok) { SANTA_FACE = (await r.json()).id; pickSanta(); }
+  } catch (e) { console.warn("talk face setup", e); }
+}
+function drawFace(bm) {
+  const g = $("face").getContext("2d");
+  if (!comp.still) return g.drawImage(bm, 0, 0, $("face").width, $("face").height);
+  const { x, y, size } = comp.box, t = comp.tmp.getContext("2d");
+  t.globalCompositeOperation = "copy"; t.drawImage(bm, 0, 0, size, size);
+  t.globalCompositeOperation = "destination-in"; t.drawImage(comp.mask, 0, 0);
+  g.drawImage(comp.still, x, y, size, size, x, y, size, size);
+  g.drawImage(comp.tmp, x, y);
+}
 posesReady.then((p) => { poses = p; document.body.classList.toggle("poses", !!p); });
 
 // Santa "picks up": leave the ringing screen and have him say hello first.

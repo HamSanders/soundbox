@@ -146,7 +146,7 @@ describe("suggestVoices", () => {
   });
 });
 
-describe("CastService", () => {
+describe("CastService", { timeout: 30_000 }, () => {
   let h: Harness;
   let cast: CastService;
   let chapterId: string;

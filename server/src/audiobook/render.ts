@@ -144,7 +144,7 @@ export class RenderService {
    */
   async voiceParagraph(
     segmentId: string,
-    opts: { spoken?: string; origin?: TakeOrigin; seed?: number | null; onJob?: (id: string) => void } = {},
+    opts: { spoken?: string; origin?: TakeOrigin; seed?: number | null; onJob?: (id: string) => void; cancelled?: () => boolean } = {},
   ): Promise<VoicedParagraph> {
     const p = this.book.getParagraph(segmentId);
     const chapter = this.book.chapterForSegment(segmentId);
@@ -163,6 +163,11 @@ export class RenderService {
       "segment",
       { model: choice.model, segment_id: segmentId, audiobook: origin },
       async (handle) => {
+        // The run may have been cancelled (or its book deleted) while queued.
+        if (opts.cancelled?.()) {
+          handle.cancel();
+          handle.checkCancelled();
+        }
         const t0 = performance.now();
         const seg = await this.svc.generateSegment(
           segmentId,
@@ -402,6 +407,7 @@ export class RenderService {
           const voiced = await this.voiceParagraph(next, {
             origin: "render",
             onJob: (id) => this.currentJob.set(runId, id),
+            cancelled: () => renders.get(runId)?.status !== "running",
           });
           let transcript: string | null | undefined;
           if (run.options.asr_model) {

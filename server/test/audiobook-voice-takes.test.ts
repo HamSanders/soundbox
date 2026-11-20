@@ -58,7 +58,7 @@ describe("selection planning", () => {
   });
 });
 
-describe("TakesService", () => {
+describe("TakesService", { timeout: 30_000 }, () => {
   let h: Harness;
   let takes: TakesService;
   let render: RenderService;

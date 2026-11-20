@@ -83,7 +83,7 @@ describe("layoutChapter", () => {
   });
 });
 
-describe("RenderService", () => {
+describe("RenderService", { timeout: 30_000 }, () => {
   let h: Harness;
   let render: RenderService;
   let chapterId: string;

@@ -20,6 +20,7 @@ import type { DeviceSpec } from "./devices.js";
 import { catalogById } from "./models/audiocpp.js";
 import { HistoryStore } from "./history.js";
 import { AudiobookStore } from "./audiobook/store.js"; // [audiobooks:core]
+import { ListenStore } from "./audiobook/publish/store.js"; // [audiobooks:listen]
 import { clipMidiSchema } from "./schemas.js";
 
 import type {
@@ -472,6 +473,7 @@ export class Database {
    *  joins against, and this file is long enough already. */
   readonly history: HistoryStore;
   readonly audiobooks: AudiobookStore; // [audiobooks:core]
+  readonly listen: ListenStore; // [audiobooks:listen]
   private readonly conn: Sqlite;
   /** Shared connection for feature stores that run their own SCHEMA (audiobooks). */
   get sqlite(): Sqlite { return this.conn; } // [audiobooks:lead]
@@ -499,6 +501,7 @@ export class Database {
       () => new Date().toISOString(),
     );
     this.audiobooks = new AudiobookStore(this.conn, () => randomUUID(), () => new Date().toISOString()); // [audiobooks:core]
+    this.listen = new ListenStore(this.conn, () => randomUUID(), () => new Date().toISOString()); // [audiobooks:listen]
   }
 
   /** Databases written before the engine->model rename still have the old

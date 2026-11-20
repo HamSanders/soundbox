@@ -4,7 +4,7 @@
  * the chapter's voicing status.
  */
 
-import { useState, type DragEvent } from "react";
+import { memo, useState, type DragEvent } from "react";
 import {
   ClipboardPasteIcon,
   EyeIcon,
@@ -47,7 +47,7 @@ const STATUS_DOT: Record<ChapterStatus, { className: string; label: string }> = 
   mastered: { className: "bg-primary", label: "Mastered" },
 };
 
-export function ChapterList({
+function ChapterListView({
   book,
   selectedId,
   onSelect,
@@ -296,3 +296,7 @@ export function ChapterList({
     </div>
   );
 }
+
+/** Memoised: the editor re-renders on every paragraph selection, and the
+ *  chapter list only changes with the book. */
+export const ChapterList = memo(ChapterListView);

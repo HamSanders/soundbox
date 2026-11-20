@@ -12,7 +12,7 @@
  * file cleanup); this file never writes to `stories` or `story_segments`.
  */
 
-import type { Database } from "better-sqlite3";
+import type { Database, Statement } from "better-sqlite3";
 
 import type {
   Book,
@@ -400,6 +400,21 @@ const STALE_SQL = `(s.sound_id IS NOT NULL AND (p.stale_sound_id = s.sound_id
   OR (p.voiced_sound_id = s.sound_id AND p.voiced_text IS NOT s.text)))`;
 
 export class AudiobookStore {
+  /** Prepared statements by SQL text. Preparing is the expensive part of a
+   *  small query, and a restore or import runs the same few thousands of
+   *  times. Bounded: the IN-list queries vary with their length. */
+  private readonly stmts = new Map<string, Statement>();
+
+  private prep(sql: string): Statement {
+    let stmt = this.stmts.get(sql);
+    if (!stmt) {
+      if (this.stmts.size >= 256) this.stmts.clear();
+      stmt = this.conn.prepare(sql);
+      this.stmts.set(sql, stmt);
+    }
+    return stmt;
+  }
+
   constructor(
     private readonly conn: Database,
     private readonly newId: () => string,
@@ -407,7 +422,7 @@ export class AudiobookStore {
   ) {
     this.conn.exec(SCHEMA);
     // Columns added after the first build of this table.
-    const columns = this.conn.prepare("PRAGMA table_info(book_paragraphs)").all() as {
+    const columns = this.prep("PRAGMA table_info(book_paragraphs)").all() as {
       name: string;
     }[];
     if (!columns.some((c) => c.name === "model_id")) {
@@ -424,14 +439,13 @@ export class AudiobookStore {
   /* ------------------------------------------------------------------ books */
 
   listBooks(): Book[] {
-    const rows = this.conn
-      .prepare("SELECT * FROM books ORDER BY updated_at DESC")
+    const rows = this.prep("SELECT * FROM books ORDER BY updated_at DESC")
       .all() as BookRow[];
     return rows.map(toBook);
   }
 
   getBook(id: string): Book | null {
-    const row = this.conn.prepare("SELECT * FROM books WHERE id=?").get(id) as BookRow | undefined;
+    const row = this.prep("SELECT * FROM books WHERE id=?").get(id) as BookRow | undefined;
     return row ? toBook(row) : null;
   }
 
@@ -439,8 +453,7 @@ export class AudiobookStore {
     const id = this.newId();
     const now = this.now();
     const settings = mergeSettings(DEFAULT_SETTINGS, fields.settings ?? null);
-    this.conn
-      .prepare(
+    this.prep(
         `INSERT INTO books (id, project_id, title, subtitle, author, narrator, description,
            language, genres, series, series_index, isbn, publisher, publication_date,
            cover_path, settings, created_at, updated_at)
@@ -492,37 +505,36 @@ export class AudiobookStore {
     }
     sets.push("updated_at=?");
     values.push(this.now());
-    this.conn.prepare(`UPDATE books SET ${sets.join(", ")} WHERE id=?`).run(...values, id);
+    this.prep(`UPDATE books SET ${sets.join(", ")} WHERE id=?`).run(...values, id);
     return this.getBook(id);
   }
 
   /** Bump `updated_at`, so the shelf orders by last work, not last rename. */
   touchBook(id: string): void {
-    this.conn.prepare("UPDATE books SET updated_at=? WHERE id=?").run(this.now(), id);
+    this.prep("UPDATE books SET updated_at=? WHERE id=?").run(this.now(), id);
   }
 
   deleteBook(id: string): boolean {
-    return this.conn.prepare("DELETE FROM books WHERE id=?").run(id).changes > 0;
+    return this.prep("DELETE FROM books WHERE id=?").run(id).changes > 0;
   }
 
   /* --------------------------------------------------------------- chapters */
 
   listChapters(bookId: string): Chapter[] {
-    const rows = this.conn
-      .prepare("SELECT * FROM book_chapters WHERE book_id=? ORDER BY position ASC")
+    const rows = this.prep("SELECT * FROM book_chapters WHERE book_id=? ORDER BY position ASC")
       .all(bookId) as ChapterRow[];
     return rows.map(toChapter);
   }
 
   getChapter(id: string): Chapter | null {
-    const row = this.conn.prepare("SELECT * FROM book_chapters WHERE id=?").get(id) as
+    const row = this.prep("SELECT * FROM book_chapters WHERE id=?").get(id) as
       | ChapterRow
       | undefined;
     return row ? toChapter(row) : null;
   }
 
   chapterForStory(storyId: string): Chapter | null {
-    const row = this.conn.prepare("SELECT * FROM book_chapters WHERE story_id=?").get(storyId) as
+    const row = this.prep("SELECT * FROM book_chapters WHERE story_id=?").get(storyId) as
       | ChapterRow
       | undefined;
     return row ? toChapter(row) : null;
@@ -531,8 +543,7 @@ export class AudiobookStore {
   /** The chapter a paragraph (a track-0 segment) belongs to; null for a
    *  segment on another track, such as a bed. */
   chapterForParagraph(segmentId: string): Chapter | null {
-    const row = this.conn
-      .prepare(
+    const row = this.prep(
         `SELECT c.* FROM book_chapters c
            JOIN story_segments s ON s.story_id = c.story_id
           WHERE s.id=? AND s.track_index = 0`,
@@ -543,8 +554,7 @@ export class AudiobookStore {
 
   /** The chapter any segment of a chapter story belongs to, beds included. */
   chapterForSegment(segmentId: string): Chapter | null {
-    const row = this.conn
-      .prepare(
+    const row = this.prep(
         `SELECT c.* FROM book_chapters c
            JOIN story_segments s ON s.story_id = c.story_id
           WHERE s.id=?`,
@@ -568,17 +578,15 @@ export class AudiobookStore {
   ): Chapter {
     const id = fields.id ?? this.newId();
     const count = (
-      this.conn.prepare("SELECT COUNT(*) n FROM book_chapters WHERE book_id=?").get(bookId) as {
+      this.prep("SELECT COUNT(*) n FROM book_chapters WHERE book_id=?").get(bookId) as {
         n: number;
       }
     ).n;
     const position =
       fields.position == null ? count : Math.max(0, Math.min(Math.floor(fields.position), count));
-    this.conn
-      .prepare("UPDATE book_chapters SET position = position + 1 WHERE book_id=? AND position >= ?")
+    this.prep("UPDATE book_chapters SET position = position + 1 WHERE book_id=? AND position >= ?")
       .run(bookId, position);
-    this.conn
-      .prepare(
+    this.prep(
         `INSERT INTO book_chapters (id, book_id, story_id, position, title, kind, included)
          VALUES (?,?,?,?,?,?,?)`,
       )
@@ -601,8 +609,7 @@ export class AudiobookStore {
   ): Chapter | null {
     const current = this.getChapter(id);
     if (!current) return null;
-    this.conn
-      .prepare("UPDATE book_chapters SET title=?, kind=?, included=? WHERE id=?")
+    this.prep("UPDATE book_chapters SET title=?, kind=?, included=? WHERE id=?")
       .run(
         fields.title ?? current.title,
         fields.kind ?? current.kind,
@@ -619,7 +626,7 @@ export class AudiobookStore {
     if (existing.length !== ids.length || new Set(ids).size !== ids.length) return false;
     const known = new Set(existing);
     if (!ids.every((id) => known.has(id))) return false;
-    const stmt = this.conn.prepare("UPDATE book_chapters SET position=? WHERE id=?");
+    const stmt = this.prep("UPDATE book_chapters SET position=? WHERE id=?");
     this.conn.transaction(() => ids.forEach((id, i) => stmt.run(i, id)))();
     this.touchBook(bookId);
     return true;
@@ -629,9 +636,8 @@ export class AudiobookStore {
   deleteChapter(id: string): boolean {
     const chapter = this.getChapter(id);
     if (!chapter) return false;
-    this.conn.prepare("DELETE FROM book_chapters WHERE id=?").run(id);
-    this.conn
-      .prepare("UPDATE book_chapters SET position = position - 1 WHERE book_id=? AND position > ?")
+    this.prep("DELETE FROM book_chapters WHERE id=?").run(id);
+    this.prep("UPDATE book_chapters SET position = position - 1 WHERE book_id=? AND position > ?")
       .run(chapter.book_id, chapter.position);
     this.touchBook(chapter.book_id);
     return true;
@@ -651,8 +657,7 @@ export class AudiobookStore {
   syncVoiced(storyIds: string[]): void {
     if (storyIds.length === 0) return;
     const marks = storyIds.map(() => "?").join(",");
-    this.conn
-      .prepare(
+    this.prep(
         `INSERT INTO book_paragraphs (segment_id, voiced_sound_id, voiced_text)
          SELECT s.id, s.sound_id, s.text FROM story_segments s
           WHERE s.story_id IN (${marks}) AND s.track_index = 0 AND s.sound_id IS NOT NULL
@@ -667,8 +672,7 @@ export class AudiobookStore {
   chapterStats(bookId: string): Map<string, ChapterStats & { stale: number }> {
     const chapters = this.listChapters(bookId);
     this.syncVoiced(chapters.map((c) => c.story_id));
-    const rows = this.conn
-      .prepare(
+    const rows = this.prep(
         `SELECT c.id AS chapter_id,
            SUM(CASE WHEN s.kind='line' THEN 1 ELSE 0 END) AS paragraphs,
            SUM(CASE WHEN s.kind='line' AND s.sound_id IS NOT NULL THEN 1 ELSE 0 END) AS voiced,
@@ -709,8 +713,7 @@ export class AudiobookStore {
     // Chunked: SQLite caps bound parameters per statement.
     for (let i = 0; i < segmentIds.length; i += 500) {
       const chunk = segmentIds.slice(i, i + 500);
-      const rows = this.conn
-        .prepare(
+      const rows = this.prep(
           `SELECT segment_id, character_id, locked, is_heading, model_id FROM book_paragraphs
             WHERE segment_id IN (${chunk.map(() => "?").join(",")})`,
         )
@@ -723,8 +726,7 @@ export class AudiobookStore {
   /** Segment ids in a story whose take is stale. */
   staleSegments(storyId: string): Set<string> {
     this.syncVoiced([storyId]);
-    const rows = this.conn
-      .prepare(
+    const rows = this.prep(
         `SELECT s.id FROM story_segments s
            LEFT JOIN book_paragraphs p ON p.segment_id = s.id
           WHERE s.story_id = ? AND s.track_index = 0 AND ${STALE_SQL}`,
@@ -743,38 +745,36 @@ export class AudiobookStore {
       model_id?: string | null;
     },
   ): void {
-    this.conn
-      .prepare("INSERT INTO book_paragraphs (segment_id) VALUES (?) ON CONFLICT DO NOTHING")
-      .run(segmentId);
-    if ("character_id" in fields) {
-      this.conn
-        .prepare("UPDATE book_paragraphs SET character_id=? WHERE segment_id=?")
-        .run(fields.character_id ?? null, segmentId);
-    }
-    if (fields.locked !== undefined) {
-      this.conn
-        .prepare("UPDATE book_paragraphs SET locked=? WHERE segment_id=?")
-        .run(fields.locked ? 1 : 0, segmentId);
-    }
-    if (fields.is_heading !== undefined) {
-      this.conn
-        .prepare("UPDATE book_paragraphs SET is_heading=? WHERE segment_id=?")
-        .run(fields.is_heading ? 1 : 0, segmentId);
-    }
-    if ("model_id" in fields) {
-      this.conn
-        .prepare("UPDATE book_paragraphs SET model_id=? WHERE segment_id=?")
-        .run(fields.model_id ?? null, segmentId);
-    }
+    // One upsert; a flag per column says whether this call sets it.
+    const set = (k: keyof typeof fields) => (k in fields && fields[k] !== undefined ? 1 : 0);
+    this.prep(
+      `INSERT INTO book_paragraphs (segment_id, character_id, locked, is_heading, model_id)
+       VALUES (@id, @character_id, COALESCE(@locked, 0), COALESCE(@is_heading, 0), @model_id)
+       ON CONFLICT(segment_id) DO UPDATE SET
+         character_id = CASE WHEN @set_character THEN @character_id ELSE character_id END,
+         locked       = CASE WHEN @set_locked THEN @locked ELSE locked END,
+         is_heading   = CASE WHEN @set_heading THEN @is_heading ELSE is_heading END,
+         model_id     = CASE WHEN @set_model THEN @model_id ELSE model_id END`,
+    ).run({
+      id: segmentId,
+      set_character: "character_id" in fields ? 1 : 0,
+      character_id: fields.character_id ?? null,
+      set_locked: set("locked"),
+      locked: fields.locked === undefined ? null : fields.locked ? 1 : 0,
+      set_heading: set("is_heading"),
+      is_heading: fields.is_heading === undefined ? null : fields.is_heading ? 1 : 0,
+      set_model: "model_id" in fields ? 1 : 0,
+      model_id: fields.model_id ?? null,
+    });
   }
 
   /** Mark the current take of each segment stale. A new take clears it. */
   markStale(segmentIds: string[]): number {
     let n = 0;
-    const ensure = this.conn.prepare(
+    const ensure = this.prep(
       "INSERT INTO book_paragraphs (segment_id) VALUES (?) ON CONFLICT DO NOTHING",
     );
-    const mark = this.conn.prepare(
+    const mark = this.prep(
       `UPDATE book_paragraphs SET stale_sound_id =
          (SELECT sound_id FROM story_segments WHERE id = ?)
        WHERE segment_id = ?`,
@@ -791,8 +791,7 @@ export class AudiobookStore {
   /** Record that `segmentId`'s current take was voiced from `text`. For the
    *  render path, which knows exactly what it spoke. */
   markVoiced(segmentId: string, text: string): void {
-    this.conn
-      .prepare(
+    this.prep(
         `INSERT INTO book_paragraphs (segment_id, voiced_sound_id, voiced_text, stale_sound_id)
          SELECT id, sound_id, ?, NULL FROM story_segments WHERE id = ?
          ON CONFLICT(segment_id) DO UPDATE SET
@@ -806,14 +805,13 @@ export class AudiobookStore {
   /* ------------------------------------------------------------- characters */
 
   listCharacters(bookId: string): Character[] {
-    const rows = this.conn
-      .prepare("SELECT * FROM book_characters WHERE book_id=? ORDER BY created_at ASC, name ASC")
+    const rows = this.prep("SELECT * FROM book_characters WHERE book_id=? ORDER BY created_at ASC, name ASC")
       .all(bookId) as CharacterRow[];
     return rows.map(toCharacter);
   }
 
   getCharacter(id: string): Character | null {
-    const row = this.conn.prepare("SELECT * FROM book_characters WHERE id=?").get(id) as
+    const row = this.prep("SELECT * FROM book_characters WHERE id=?").get(id) as
       | CharacterRow
       | undefined;
     return row ? toCharacter(row) : null;
@@ -822,12 +820,11 @@ export class AudiobookStore {
   createCharacter(bookId: string, fields: CharacterFields & { name: string }): Character {
     const id = this.newId();
     const count = (
-      this.conn.prepare("SELECT COUNT(*) n FROM book_characters WHERE book_id=?").get(bookId) as {
+      this.prep("SELECT COUNT(*) n FROM book_characters WHERE book_id=?").get(bookId) as {
         n: number;
       }
     ).n;
-    this.conn
-      .prepare(
+    this.prep(
         `INSERT INTO book_characters (id, book_id, name, aliases, description, voice_id,
            model_id, request_options, color, created_at)
          VALUES (?,?,?,?,?,?,?,?,?,?)`,
@@ -853,8 +850,7 @@ export class AudiobookStore {
     const current = this.getCharacter(id);
     if (!current) return null;
     const next = { ...current, ...fields };
-    this.conn
-      .prepare(
+    this.prep(
         `UPDATE book_characters SET name=?, aliases=?, description=?, voice_id=?, model_id=?,
            request_options=?, color=? WHERE id=?`,
       )
@@ -874,8 +870,7 @@ export class AudiobookStore {
 
   /** Write a character exactly as given, id included (restoring a snapshot). */
   putCharacter(c: Character): void {
-    this.conn
-      .prepare(
+    this.prep(
         `INSERT INTO book_characters (id, book_id, name, aliases, description, voice_id,
            model_id, request_options, color, created_at)
          VALUES (?,?,?,?,?,?,?,?,?,?)
@@ -901,15 +896,14 @@ export class AudiobookStore {
   deleteCharacter(id: string): boolean {
     const current = this.getCharacter(id);
     if (!current) return false;
-    this.conn.prepare("DELETE FROM book_characters WHERE id=?").run(id);
+    this.prep("DELETE FROM book_characters WHERE id=?").run(id);
     this.touchBook(current.book_id);
     return true;
   }
 
   /** Paragraphs cast as `characterId`, across the book. */
   segmentsForCharacter(characterId: string): string[] {
-    const rows = this.conn
-      .prepare("SELECT segment_id FROM book_paragraphs WHERE character_id=?")
+    const rows = this.prep("SELECT segment_id FROM book_paragraphs WHERE character_id=?")
       .all(characterId) as { segment_id: string }[];
     return rows.map((r) => r.segment_id);
   }
@@ -934,8 +928,7 @@ export class AudiobookStore {
       where.push("n.segment_id = ?");
       args.push(opts.segmentId);
     }
-    const rows = this.conn
-      .prepare(
+    const rows = this.prep(
         `SELECT n.*, c.id AS chapter_id FROM book_notes n
            JOIN story_segments s ON s.id = n.segment_id
            JOIN book_chapters c ON c.story_id = s.story_id
@@ -947,8 +940,7 @@ export class AudiobookStore {
   }
 
   getNote(id: string): BookNote | null {
-    const row = this.conn
-      .prepare(
+    const row = this.prep(
         `SELECT n.*, c.id AS chapter_id FROM book_notes n
            JOIN story_segments s ON s.id = n.segment_id
            JOIN book_chapters c ON c.story_id = s.story_id
@@ -961,8 +953,7 @@ export class AudiobookStore {
   createNote(bookId: string, segmentId: string, body: string, atS: number | null): BookNote {
     const id = this.newId();
     const now = this.now();
-    this.conn
-      .prepare(
+    this.prep(
         `INSERT INTO book_notes (id, book_id, segment_id, body, at_s, resolved, created_at, updated_at)
          VALUES (?,?,?,?,?,0,?,?)`,
       )
@@ -973,8 +964,7 @@ export class AudiobookStore {
   updateNote(id: string, fields: { body?: string; resolved?: boolean; at_s?: number | null }): BookNote | null {
     const note = this.getNote(id);
     if (!note) return null;
-    this.conn
-      .prepare("UPDATE book_notes SET body=?, resolved=?, at_s=?, updated_at=? WHERE id=?")
+    this.prep("UPDATE book_notes SET body=?, resolved=?, at_s=?, updated_at=? WHERE id=?")
       .run(
         fields.body ?? note.body,
         (fields.resolved ?? note.resolved) ? 1 : 0,
@@ -986,18 +976,17 @@ export class AudiobookStore {
   }
 
   deleteNote(id: string): boolean {
-    return this.conn.prepare("DELETE FROM book_notes WHERE id=?").run(id).changes > 0;
+    return this.prep("DELETE FROM book_notes WHERE id=?").run(id).changes > 0;
   }
 
   /** Move every note on `from` to `to` (a merge folds one paragraph into another). */
   moveNotes(from: string, to: string): void {
-    this.conn.prepare("UPDATE book_notes SET segment_id=?, at_s=NULL WHERE segment_id=?").run(to, from);
+    this.prep("UPDATE book_notes SET segment_id=?, at_s=NULL WHERE segment_id=?").run(to, from);
   }
 
   /** Open notes per chapter id. */
   openNoteCounts(bookId: string): Map<string, number> {
-    const rows = this.conn
-      .prepare(
+    const rows = this.prep(
         `SELECT c.id AS chapter_id, COUNT(*) AS n FROM book_notes n
            JOIN story_segments s ON s.id = n.segment_id
            JOIN book_chapters c ON c.story_id = s.story_id
@@ -1017,8 +1006,7 @@ export class AudiobookStore {
     counts: { chapters: number; paragraphs: number },
   ): SnapshotInfo {
     const id = this.newId();
-    this.conn
-      .prepare(
+    this.prep(
         `INSERT INTO book_snapshots (id, book_id, label, data, chapters, paragraphs, created_at)
          VALUES (?,?,?,?,?,?,?)`,
       )
@@ -1027,8 +1015,7 @@ export class AudiobookStore {
   }
 
   listSnapshots(bookId: string): SnapshotInfo[] {
-    return this.conn
-      .prepare(
+    return this.prep(
         `SELECT id, book_id, label, chapters, paragraphs, created_at FROM book_snapshots
           WHERE book_id=? ORDER BY created_at DESC, rowid DESC`,
       )
@@ -1036,7 +1023,7 @@ export class AudiobookStore {
   }
 
   getSnapshot(id: string): { info: SnapshotInfo; data: unknown } | null {
-    const row = this.conn.prepare("SELECT * FROM book_snapshots WHERE id=?").get(id) as
+    const row = this.prep("SELECT * FROM book_snapshots WHERE id=?").get(id) as
       | (SnapshotInfo & { data: string })
       | undefined;
     if (!row) return null;
@@ -1045,7 +1032,7 @@ export class AudiobookStore {
   }
 
   deleteSnapshot(id: string): boolean {
-    return this.conn.prepare("DELETE FROM book_snapshots WHERE id=?").run(id).changes > 0;
+    return this.prep("DELETE FROM book_snapshots WHERE id=?").run(id).changes > 0;
   }
 
   /** The ParagraphMeta for a row, with defaults for a segment with no row. */

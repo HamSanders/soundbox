@@ -73,6 +73,23 @@ export function AudiobookPage() {
     [setParams],
   );
 
+  // Stable props for the memoised header and chapter list, so moving the
+  // paragraph selection re-renders neither.
+  const toggleFind = useCallback(() => setFindOpen((o) => !o), []);
+  const onRestored = useCallback(() => {
+    history.clear();
+    setSelectedId(null);
+    setChecked(new Set());
+  }, [history]);
+  const reorderChapters = useCallback(
+    (before: string[], after: string[]) => void ops.reorderChapters(before, after),
+    [ops],
+  );
+  const noteCounts = useMemo(
+    () => Object.fromEntries((book.data?.chapters ?? []).map((c) => [c.id, c.open_notes])),
+    [book.data],
+  );
+
   if (book.isLoading) {
     return (
       <div className="flex min-h-0 flex-1 gap-2 p-4">
@@ -109,12 +126,8 @@ export function AudiobookPage() {
         <BookHeader
           book={data}
           findOpen={findOpen}
-          onToggleFind={() => setFindOpen((o) => !o)}
-          onRestored={() => {
-            history.clear();
-            setSelectedId(null);
-            setChecked(new Set());
-          }}
+          onToggleFind={toggleFind}
+          onRestored={onRestored}
         />
         <RenderBar bookId={data.id} />
       </div>
@@ -124,8 +137,8 @@ export function AudiobookPage() {
             book={data}
             selectedId={chapter?.id ?? null}
             onSelect={selectChapter}
-            onReorder={(before, after) => void ops.reorderChapters(before, after)}
-            noteCounts={Object.fromEntries(data.chapters.map((c) => [c.id, c.open_notes]))}
+            onReorder={reorderChapters}
+            noteCounts={noteCounts}
           />
         </aside>
         <section className={`${panel} min-h-[50vh] flex-1 md:min-h-0`} aria-label="Paragraphs">

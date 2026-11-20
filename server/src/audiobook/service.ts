@@ -983,6 +983,7 @@ export class AudiobookService {
       if (only && !only.has(chapter.id)) continue;
       const paragraphs = this.paragraphsOf(chapter);
       this.store.syncVoiced([chapter.story_id]);
+      const edits: [string, string][] = [];
       for (const p of paragraphs) {
         if (p.kind !== "line") continue;
         const count = p.text.match(pattern)?.length ?? 0;
@@ -999,10 +1000,15 @@ export class AudiobookService {
         if (next === p.text) continue;
         result.paragraphs++;
         result.changed.push({ chapter_id: chapter.id, segment_id: p.id });
-        if (!result.dry_run) {
-          this.svc.updateSegment(p.id, { text: next });
-          touched.set(chapter.id, chapter);
-        }
+        if (!result.dry_run) edits.push([p.id, next]);
+      }
+      if (edits.length > 0) {
+        // One transaction and one change notice per chapter, not per paragraph.
+        this.store.transaction(() => {
+          for (const [id, text] of edits) this.svc.db.updateSegment(id, { text });
+        });
+        this.svc.stories.changed(chapter.story_id);
+        touched.set(chapter.id, chapter);
       }
     }
     for (const chapter of touched.values()) {
@@ -1270,20 +1276,33 @@ export class AudiobookService {
         .map((s) => [s.id, s]),
     );
     const keep = new Set(paragraphs.map((p) => p.segment_id));
+    const meta = this.store.getMeta([...existing.keys()]);
+    const sameOptions = (a: Record<string, string>, b: Record<string, string>) =>
+      JSON.stringify(a) === JSON.stringify(b);
     this.store.transaction(() => {
       for (const s of existing.values()) {
         if (!keep.has(s.id)) this.svc.db.deleteSegment(s.id);
       }
       for (const p of paragraphs) {
-        const sound = p.sound_id ? this.svc.db.getSound(p.sound_id) : null;
         const current = existing.get(p.segment_id);
+        // Only touch what differs: a restore of a big book is mostly no-ops.
+        const sound =
+          p.sound_id && p.sound_id === current?.sound_id
+            ? (current.sound ?? null)
+            : p.sound_id
+              ? this.svc.db.getSound(p.sound_id)
+              : null;
         if (current && current.story_id === chapter.story_id) {
-          this.svc.db.updateSegment(p.segment_id, {
-            text: p.text,
-            sound_id: sound?.id ?? null,
-            request_options: p.request_options,
-            ...(p.kind === "pause" && p.duration_s !== null ? { duration_s: p.duration_s } : {}),
-          });
+          const patch: Parameters<typeof this.svc.db.updateSegment>[1] = {};
+          if (current.text !== p.text) patch.text = p.text;
+          if ((current.sound_id ?? null) !== (sound?.id ?? null)) patch.sound_id = sound?.id ?? null;
+          if (!sameOptions(current.request_options ?? {}, p.request_options)) {
+            patch.request_options = p.request_options;
+          }
+          if (p.kind === "pause" && p.duration_s !== null && current.duration_s !== p.duration_s) {
+            patch.duration_s = p.duration_s;
+          }
+          if (Object.keys(patch).length > 0) this.svc.db.updateSegment(p.segment_id, patch);
         } else {
           this.svc.db.createSegment(p.segment_id, chapter.story_id, now, {
             text: p.text,
@@ -1294,13 +1313,22 @@ export class AudiobookService {
             track_index: 0,
           });
         }
-        this.store.setMeta(p.segment_id, {
+        const want = {
           character_id: p.character_id && characters.has(p.character_id) ? p.character_id : null,
           locked: p.locked,
           is_heading: p.is_heading,
           model_id: p.model_id,
-        });
-        if (sound) this.store.markVoiced(p.segment_id, p.text);
+        };
+        const m = meta.get(p.segment_id);
+        const sameMeta =
+          (m ? m.character_id : null) === want.character_id &&
+          (m?.locked === 1) === want.locked &&
+          (m?.is_heading === 1) === want.is_heading &&
+          (m?.model_id ?? null) === want.model_id;
+        if (!sameMeta) this.store.setMeta(p.segment_id, want);
+        if (sound && (!current || current.sound_id !== sound.id || current.text !== p.text)) {
+          this.store.markVoiced(p.segment_id, p.text);
+        }
       }
       const order = this.withParagraphOrder(
         chapter.story_id,

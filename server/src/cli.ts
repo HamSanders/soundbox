@@ -27,6 +27,7 @@ import {
 import { bearerHeaders, TOKEN_ENV, TokenError, tokenFromEnv } from "./auth.js";
 import * as skills from "./skills.js";
 import { writeWav } from "./audio/dsp.js";
+import { closeAndExit } from "./shutdown.js";
 
 const log = getLogger("mirli.cli");
 
@@ -548,9 +549,6 @@ async function serveMain(argv: string[]): Promise<number> {
   return 0;
 }
 
-/** How long a graceful shutdown may take before the process exits anyway. */
-const SHUTDOWN_GRACE_MS = 10_000;
-
 /**
  * Shut down properly on Ctrl+C, a service manager's SIGTERM, or Windows'
  * Ctrl+Break.
@@ -570,19 +568,7 @@ function closeOnSignals(app: { close(): Promise<unknown> }): void {
       process.exit(1);
     }
     closing = true;
-    log.info(`${signal} received, shutting down`);
-    const force = setTimeout(() => {
-      log.warning(`shutdown took over ${SHUTDOWN_GRACE_MS / 1000}s; exiting anyway`);
-      process.exit(1);
-    }, SHUTDOWN_GRACE_MS);
-    force.unref();
-    app.close().then(
-      () => process.exit(0),
-      (exc: unknown) => {
-        log.warning(`error during shutdown: ${message(exc)}`);
-        process.exit(1);
-      },
-    );
+    closeAndExit(app, `${signal} received`);
   };
   const signals: NodeJS.Signals[] = ["SIGINT", "SIGTERM"];
   if (process.platform === "win32") signals.push("SIGBREAK");

@@ -1,0 +1,69 @@
+# Mirli without audio.cpp: the server and web UI only, for a machine that
+# doesn't run models itself and generates through custom endpoints or other
+# remote models. Much smaller than the main image, and no GPU needed.
+#
+#   docker build -f Dockerfile.slim -t mirli-slim .
+#   docker run -d -p 127.0.0.1:17494:17494 -v mirli-data:/data mirli-slim
+#
+# Local models need audio.cpp, which this image leaves out, so it sets
+# MIRLI_DISABLE=local_models and the Models page doesn't offer them. Add
+# MIRLI_SANDBOXED=1 for a shared server (see docs/INSTALL.md). Same build
+# steps as the main Dockerfile.
+
+ARG NODE_VERSION=22
+
+# ── build ─────────────────────────────────────────────────────────────────────
+FROM node:${NODE_VERSION}-bookworm AS build
+WORKDIR /src
+COPY package.json package-lock.json ./
+COPY app/package.json app/
+COPY server/package.json server/
+COPY site/package.json site/
+RUN npm ci --workspace app --workspace server --include-workspace-root=false
+COPY app/ app/
+COPY server/ server/
+RUN npm run build --workspace app \
+ && rm -rf server/web && cp -r app/dist server/web \
+ && npm run build --workspace server
+RUN cd server/src && find . -name '*.json' -exec cp --parents {} ../dist/ \;
+
+FROM node:${NODE_VERSION}-bookworm AS deps
+WORKDIR /src
+COPY package.json package-lock.json ./
+COPY app/package.json app/
+COPY server/package.json server/
+COPY site/package.json site/
+RUN npm ci --omit=dev --workspace server --include-workspace-root=false
+
+# ── runtime: Node and ffmpeg (remote models often answer with MP3 or FLAC) ──
+FROM node:${NODE_VERSION}-bookworm-slim
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ffmpeg ca-certificates curl \
+ && rm -rf /var/lib/apt/lists/*
+WORKDIR /opt/mirli
+COPY --from=deps /src/node_modules ./node_modules
+COPY --from=build /src/server/dist ./server/dist
+COPY --from=build /src/server/web ./server/web
+COPY server/package.json ./server/package.json
+COPY server/skills ./server/skills
+COPY LICENSE ./
+RUN printf '#!/bin/sh\nexec node /opt/mirli/server/dist/cli.js "$@"\n' > /usr/local/bin/soundbox \
+ && chmod +x /usr/local/bin/soundbox \
+ && mkdir -p /data \
+ && chown -R node:node /data
+
+ENV MIRLI_DATA_DIR=/data \
+    MIRLI_DISABLE=local_models \
+    NODE_ENV=production
+# uid 1000, as in the main image: chown a host folder to 1000:1000 before
+# mounting it.
+USER node
+VOLUME ["/data"]
+EXPOSE 17494
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -fsS http://127.0.0.1:17494/api/health >/dev/null || exit 1
+
+ENTRYPOINT ["node", "/opt/mirli/server/dist/cli.js"]
+# Pass --host :: instead to listen on IPv6 too, e.g. on an IPv6-only private network.
+CMD ["--host", "0.0.0.0", "--port", "17494"]

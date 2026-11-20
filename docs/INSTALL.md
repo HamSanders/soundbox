@@ -243,6 +243,17 @@ docker run -d --name soundbox -p 127.0.0.1:17494:17494 \
 or build it yourself with `docker build -t soundbox .` and run `soundbox` in
 place of the image name.
 
+**Without local models.** `Dockerfile.slim` builds the server and web UI
+without audio.cpp, for a machine that generates only through custom endpoints
+(see [ENDPOINTS.md](./ENDPOINTS.md)) or other remote models. It needs no GPU
+and is a fraction of the size. The image sets `MIRLI_DISABLE=local_models`, so
+the Models page doesn't offer models it can't run:
+
+```bash
+docker build -f Dockerfile.slim -t mirli-slim .
+docker run -d -p 127.0.0.1:17494:17494 -v mirli-data:/data mirli-slim
+```
+
 **No authentication unless you set a token.** By default the server has no
 login of any kind. Anyone who can reach the port can generate audio, read and
 delete your library, change settings (including the stored Hugging Face token)
@@ -551,6 +562,7 @@ name, as the table shows.
 | `SOUNDBOX_DEV_HOST` | `npm run dev`, Vite | Address the Vite dev server listens on (`0.0.0.0`, a LAN IP). Default localhost. The server stays on `127.0.0.1`. No authentication, so open it up only on a network you trust or behind a proxy that has some. |
 | `MIRLI_SANDBOXED` | server | `1` for a server whose users don't own the machine: nothing in the UI touches the host. See [Running Mirli for someone else](#running-mirli-for-someone-else). |
 | `MIRLI_DISABLE` | server | Comma-separated capabilities to turn off (`filesystem`, `reveal`, `downloads`, `local_models`, `custom_endpoints`, `updates`, `gpu_status`, `agent_connect`, `skills_install`, `logs`, `setup_wizard`). Turning off `custom_endpoints` also locks the prompt assistant's and artwork's external URLs and the OpenTelemetry endpoint. |
+| `MIRLI_IDLE_EXIT_MINUTES` | server | Exit (status 0) after this many minutes with no requests, none still being answered, and no queued or running jobs, for hosts that scale to zero and start the server again on the next request. Health checks don't count as use. Off by default. |
 | `MIRLI_UPDATE_CHECK` | server | `0` (or `false`, `off`, `no`) turns off the daily "is there a newer version?" request, whatever Settings says; Settings shows the switch as locked. `npm run dev` sets it to `0`. See [PRIVACY.md](./PRIVACY.md). |
 | `MIRLI_UPDATE_URL` | server | Where the update check asks. Default `https://mirli.app/api/update`. |
 | `MIRLI_LOG_LEVEL` | server | `debug`, `info` (default), `warning`, `error` or `critical`; `warn` works too. Used when `--log-level` isn't given, so it reaches `npm run dev`, Docker and the desktop app, none of which pass the flag. The startup banner shows the level in force; an unknown value logs a warning and runs at `info`. At `debug`, every request to the prompt assistant, artwork and custom endpoints is logged with its full URL, HTTP status and timing. Custom endpoints also log the body's field names. Keys, headers, prompts and lyrics are never logged. For the desktop app, set it as a user environment variable (Windows) or with `launchctl setenv` (macOS), then restart the app. |

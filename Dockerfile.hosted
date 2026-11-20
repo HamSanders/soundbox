@@ -1,0 +1,65 @@
+# Mirli in hosted mode: one person's Mirli on a server, behind a proxy that
+# signs them in. No audio.cpp and no GPU; every render goes through Mirli
+# Cloud. See server/src/hosted.ts for what hosted mode changes.
+#
+#   docker build -f Dockerfile.hosted -t mirli-hosted .
+#   docker run -p 17494:17494 -v mirli:/data \
+#     -e MIRLI_API_TOKEN=... -e MIRLI_CLOUD_TOKEN=... mirli-hosted
+#
+# The proxy in front must send `Authorization: Bearer $MIRLI_API_TOKEN` on
+# every request; nothing gets in without it.
+
+ARG NODE_VERSION=22
+
+# ── build: same steps as the main Dockerfile ─────────────────────────────────
+FROM node:${NODE_VERSION}-bookworm AS build
+WORKDIR /src
+COPY package.json package-lock.json ./
+COPY app/package.json app/
+COPY server/package.json server/
+COPY site/package.json site/
+RUN npm ci --workspace app --workspace server --include-workspace-root=false
+COPY app/ app/
+COPY server/ server/
+RUN npm run build --workspace app \
+ && rm -rf server/web && cp -r app/dist server/web \
+ && npm run build --workspace server
+RUN cd server/src && find . -name '*.json' -exec cp --parents {} ../dist/ \;
+
+FROM node:${NODE_VERSION}-bookworm AS deps
+WORKDIR /src
+COPY package.json package-lock.json ./
+COPY app/package.json app/
+COPY server/package.json server/
+COPY site/package.json site/
+RUN npm ci --omit=dev --workspace server --include-workspace-root=false
+
+# ── runtime: Node and ffmpeg (cloud results arrive as MP3 or FLAC too) ───────
+FROM node:${NODE_VERSION}-bookworm-slim
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ffmpeg ca-certificates curl \
+ && rm -rf /var/lib/apt/lists/*
+WORKDIR /opt/mirli
+COPY --from=deps /src/node_modules ./node_modules
+COPY --from=build /src/server/dist ./server/dist
+COPY --from=build /src/server/web ./server/web
+COPY server/package.json ./server/package.json
+COPY server/skills ./server/skills
+COPY LICENSE ./
+
+# Runs as root on purpose: a per-user microVM is the boundary, and volume
+# mounts arrive root-owned, which an unprivileged user could not write.
+ENV MIRLI_HOSTED=1 \
+    MIRLI_DATA_DIR=/data \
+    MIRLI_UPDATE_CHECK=0 \
+    MIRLI_IDLE_EXIT_MINUTES=15 \
+    NODE_ENV=production
+VOLUME ["/data"]
+EXPOSE 17494
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -fsS http://127.0.0.1:17494/api/health >/dev/null || exit 1
+
+# "::" so the proxy can reach it over a private IPv6 network (Fly's is IPv6).
+ENTRYPOINT ["node", "/opt/mirli/server/dist/cli.js"]
+CMD ["--host", "::", "--port", "17494"]

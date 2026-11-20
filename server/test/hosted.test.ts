@@ -88,6 +88,11 @@ describe("hosted app", () => {
     expect(s.cloud_signed_in).toBe(true);
   });
 
+  it("lists no local models: there is nothing to run them on", async () => {
+    const models = (await app.inject({ method: "GET", url: "/api/models" })).json() as { provider: string }[];
+    expect(models.every((m) => m.provider === "cloud")).toBe(true);
+  });
+
   it("is signed in to Mirli Cloud by the host and cannot sign out", async () => {
     const status = (await app.inject({ method: "GET", url: "/api/cloud" })).json();
     expect(status).toMatchObject({ enabled: true, hosted: true, signed_in: true });

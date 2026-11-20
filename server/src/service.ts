@@ -59,6 +59,7 @@ import type {
 import { ImageService, type ImageStatus } from "./image/service.js";
 import { EndpointService } from "./endpoints/service.js";
 import { CloudService } from "./cloud/service.js";
+import { hostedMode } from "./hosted.js";
 
 /**
  * What `GET /api/models/audiocpp/runtime` answers. Shaped like `LlmStatus`'s
@@ -314,7 +315,8 @@ export class MirliService {
   /* -------------------------------------------------------------- models */
 
   async listModels(): Promise<ModelInfo[]> {
-    const infos = await this.models.listInfo();
+    // On the web there is no GPU and nothing to download: only cloud models.
+    const infos = (await this.models.listInfo()).filter((m) => !hostedMode() || m.provider === "cloud");
     for (const info of infos) {
       info.avg_duration_s = this.jobs.avgDuration("generate", info.id);
       this.overlayActiveDownload(info);

@@ -184,7 +184,7 @@ export async function createAudiobook(
 }
 
 /** Manuscript formats the importer reads. */
-const MANUSCRIPT_EXTENSIONS = new Set([".epub", ".pdf", ".docx", ".txt", ".md", ".markdown", ".html", ".htm"]);
+const MANUSCRIPT_EXTENSIONS = new Set([".epub", ".pdf", ".docx", ".txt", ".md", ".markdown", ".html", ".htm", ".xhtml"]);
 const MAX_MANUSCRIPT_BYTES = 200 * 1024 * 1024;
 
 export async function importManuscript(
@@ -478,15 +478,21 @@ export async function masterAndExport(
   progress(0, "Mastering");
   const started = await call<ExportLike>(svc, "POST", `${book(args.book_id)}/exports`, request);
   const done = await pollUntil(
-    async () =>
-      (await call<ExportLike[]>(svc, "GET", `${book(args.book_id)}/exports`)).find((e) => e.id === started.id) ??
-      started,
+    () => call<ExportLike>(svc, "GET", `${book(args.book_id)}/exports/${enc(started.id)}`),
     (e) => e.status === "done" || e.status === "failed",
-    (e) => progress(e.status === "done" ? 1 : 0.5, e.status),
+    (e) => progress(e.status === "done" ? 1 : e.status === "running" ? 0.5 : 0.1, e.status),
     args.timeout_s ?? 3600,
-    1500,
+    1000,
   );
   if (done.status === "failed") throw new Error(done.error ?? "The export failed.");
+  if (done.status !== "done") {
+    return {
+      export_id: done.id,
+      status: done.status,
+      note: "Still exporting. It carries on in the app; call soundbox.get_audiobook later or open the export history.",
+      request,
+    };
+  }
   const failing = (done.qc ?? []).flatMap((c) =>
     c.checks.filter((k) => !k.pass).map((k) => ({ chapter_id: c.chapter_id, check: k.id, message: k.message })),
   );
@@ -494,6 +500,7 @@ export async function masterAndExport(
     export_id: done.id,
     status: done.status,
     path: done.path,
+    download_url: `http://${DEFAULT_HOST}:${DEFAULT_PORT}${book(args.book_id)}/exports/${enc(done.id)}/download`,
     request,
     qc_failures: failing,
     qc_passed: done.status === "done" && failing.length === 0,

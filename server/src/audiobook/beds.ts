@@ -390,6 +390,37 @@ export class BedService {
       // rows need dropping, which ON DELETE CASCADE does for whole books.
       for (const cid of scope.chapter_ids) for (const bed of this.store.listChapter(cid)) this.store.delete(bed.id);
     });
+    audiobooks(svc).onDuplicate((scope) => this.copyBook(scope));
+  }
+
+  /**
+   * After core copies a book (its chapter stories, every clip and the track
+   * rows), copy the bed rows onto the copy, pointing at its chapters and clips.
+   * Track indexes carry over unchanged because the tracks were copied as is.
+   */
+  private copyBook(scope: {
+    from_book_id: string;
+    to_book_id: string;
+    chapters: Map<string, string>;
+    segments: Map<string, string>;
+  }): void {
+    const at = now();
+    const remap = (id: string | null) => (id ? (scope.segments.get(id) ?? null) : null);
+    for (const bed of this.store.listBook(scope.from_book_id)) {
+      const chapter = scope.chapters.get(bed.chapter_id);
+      if (!chapter) continue;
+      this.store.save({
+        ...bed,
+        id: newId(),
+        book_id: scope.to_book_id,
+        chapter_id: chapter,
+        anchor_segment_id: remap(bed.anchor_segment_id),
+        end_segment_id: remap(bed.end_segment_id),
+        segment_ids: bed.segment_ids.map((sid) => scope.segments.get(sid)).filter((x): x is string => !!x),
+        created_at: at,
+        updated_at: at,
+      });
+    }
   }
 
   private get books() {

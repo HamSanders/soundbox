@@ -349,7 +349,7 @@ Initial public release, MIT-licensed. Everything below is new.
   mutating API requests.
 
 [Unreleased]: https://github.com/HamSanders/soundbox/compare/v0.6.2...HEAD
-[0.6.2]: https://github.com/HamSanders/soundbox/compare/v0.6.1...v0.6.2
+[0.6.2]: https://github.com/HamSanders/soundbox/compare/v0.6.0...v0.6.2
 [0.6.0]: https://github.com/HamSanders/soundbox/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/HamSanders/soundbox/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/HamSanders/soundbox/compare/v0.4.0...v0.4.1

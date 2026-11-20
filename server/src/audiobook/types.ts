@@ -210,6 +210,8 @@ export interface ExportRequest {
   include_cover: boolean;
   /** Also write SRT/VTT captions and a read-along JSON (paragraph timings). */
   include_transcripts: boolean;
+  /** Mix music/SFX beds (tracks 1+) into the export. Default true; always off for retail_sample chapters. */
+  include_beds?: boolean;
 }
 
 export interface BookExport {

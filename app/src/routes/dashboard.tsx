@@ -6,7 +6,7 @@
 import { Link } from "react-router-dom";
 import {
   AudioLinesIcon,
-  MessageSquareIcon,
+  PlusIcon,
   MusicIcon,
   SparklesIcon,
   TriangleAlertIcon,
@@ -16,17 +16,19 @@ import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ProjectThumb } from "@/components/project-thumb";
+import { LibraryShelves } from "@/components/library-shelves";
 import { SoundCard } from "@/components/sound-card";
 import { usePrefillStore, prefillFromSound } from "@/lib/generate-store";
-import { useModels, useProjects, useSettings, useSounds } from "@/lib/queries";
+import { useModels, useProjects, useSettings, useSounds, useTags } from "@/lib/queries";
+import { usePlayerStore } from "@/lib/player-store";
+import { useEffect } from "react";
 import { needsModelsBanner } from "@/lib/onboarding";
 import { useNewStudioPicker } from "@/components/new-studio-dialog";
 
 /** How much of the library the dashboard shows before "See all" takes over.
  *  These are full library rows now rather than tiles, so the shelf has to be
  *  short enough that the projects above it stay on screen with it. */
-const RECENT_LIMIT = 5;
+const RECENT_LIMIT = 8;
 
 const QUICK_LINKS = [
   {
@@ -64,6 +66,11 @@ export function DashboardPage() {
     offset: 0,
   });
   const { data: projects, isLoading: projectsLoading } = useProjects();
+  const { data: tags } = useTags();
+  const setQueue = usePlayerStore((s) => s.setQueue);
+  useEffect(() => {
+    if (recent?.items) setQueue(recent.items);
+  }, [recent?.items, setQueue]);
 
   const modelNames = new Map((models ?? []).map((m) => [m.id, m.name]));
 
@@ -71,13 +78,19 @@ export function DashboardPage() {
     <div className="space-y-8">
       {fresh.dialog}
       {reuse.dialog}
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          Welcome back
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          Pick up where you left off, or start something new.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-4xl leading-none font-extrabold tracking-[0.01em] uppercase">
+            Welcome back
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Pick up where you left off, or start something new.
+          </p>
+        </div>
+        <Button onClick={fresh.open}>
+          <PlusIcon />
+          New sound
+        </Button>
       </div>
 
       {/* Setup was skipped and nothing is installed, so every card below this
@@ -104,85 +117,33 @@ export function DashboardPage() {
       )}
 
       {/* --------------------------------------------------------- quick links */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {/* Not a link, because there is nowhere to link to yet: the story has
-            to exist before it can be opened, and which builder makes it is
-            the question the picker asks. Same door as the sidebar's. */}
-        <button type="button" className="group/tile rounded-xl text-left" onClick={fresh.open}>
-          <Card className="group-hover/tile:bg-accent/50 group-hover/tile:ring-border-strong/50 flex h-full flex-col gap-2 p-4 transition-[background-color,box-shadow] duration-(--duration-fast)">
-            <MessageSquareIcon className="text-muted-foreground group-hover/tile:text-primary size-5 transition-colors" aria-hidden="true" />
-            <div>
-              <p className="text-sm font-medium">New sound</p>
-              <p className="text-muted-foreground text-xs">
-                A script to voice, or a track to build
-              </p>
-            </div>
-          </Card>
-        </button>
+      <div className="grid grid-cols-3 gap-2">
         {QUICK_LINKS.map(({ to, icon: Icon, label, hint }) => (
           <Link key={to} to={to} className="group/tile rounded-xl">
-            <Card className="group-hover/tile:bg-accent/50 group-hover/tile:ring-border-strong/50 flex h-full flex-col gap-2 p-4 transition-[background-color,box-shadow] duration-(--duration-fast)">
+            <Card className="group-hover/tile:bg-accent/50 group-hover/tile:ring-border-strong/50 flex h-full flex-col items-start gap-2 px-3 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-4 transition-[background-color,box-shadow] duration-(--duration-fast)">
               <Icon className="text-muted-foreground group-hover/tile:text-primary size-5 transition-colors" aria-hidden="true" />
               <div>
                 <p className="text-sm font-medium">{label}</p>
-                <p className="text-muted-foreground text-xs">{hint}</p>
+                <p className="text-muted-foreground hidden text-xs sm:block">{hint}</p>
               </div>
             </Card>
           </Link>
         ))}
       </div>
 
-      {/* ------------------------------------------------------------ projects */}
-      {/* Above Recent: the shelf is two rows at most, while Recent is a column
-          of full-height library rows that would otherwise push every project
-          below the fold. */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Your projects</h2>
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/projects">See all</Link>
-          </Button>
+      {/* ------------------------------------------------------------ shelves */}
+      {/* The same shelves as the Library's front page: square tiles with the
+          name set on them, one row each. A project opens as a collection; a
+          tag opens the Library filtered to it. */}
+      {projectsLoading ? (
+        <div className="grid auto-cols-[8.5rem] grid-flow-col gap-3 overflow-hidden">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="aspect-square w-full rounded-md" />
+          ))}
         </div>
-        {projectsLoading ? (
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
-            {[0, 1, 2, 3].map((i) => (
-              <Skeleton key={i} className="aspect-2/3 w-full rounded-xl" />
-            ))}
-          </div>
-        ) : projects?.length ? (
-          /* A shelf of portrait covers rather than folder rows — the same
-             posture as a rack of sample-pack sleeves. The library keeps the
-             square variant of the identical artwork (see ProjectThumb). */
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
-            {projects.slice(0, 8).map((project) => (
-              <Link key={project.id} to={`/library?project=${project.id}`} className="group/tile">
-                <div className="ring-foreground/10 group-hover/tile:ring-foreground/25 relative aspect-2/3 overflow-hidden rounded-xl ring-1 transition-shadow">
-                  <ProjectThumb
-                    name={project.name}
-                    className="absolute inset-0 size-full transition-transform duration-300 group-hover/tile:scale-[1.03]"
-                  />
-                  {/* Scrim under the caption, tall enough that two lines of
-                      name never sit on unshaded artwork. */}
-                  <div
-                    aria-hidden="true"
-                    className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-dusk/80 via-dusk/40 to-transparent"
-                  />
-                  <div className="absolute inset-x-0 bottom-0 p-2.5">
-                    <p className="line-clamp-2 text-sm leading-tight font-medium text-white">
-                      {project.name}
-                    </p>
-                    <p className="mt-0.5 text-xs text-white/70">
-                      {project.sound_count} sound{project.sound_count === 1 ? "" : "s"}
-                    </p>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <EmptyState size="sm">No projects yet.</EmptyState>
-        )}
-      </div>
+      ) : (
+        <LibraryShelves projects={projects ?? []} tags={tags ?? []} includeEmpty />
+      )}
 
       {/* -------------------------------------------------------------- recent */}
       {/* The library's own rows, capped at RECENT_LIMIT — a sound that looks
@@ -191,7 +152,7 @@ export function DashboardPage() {
           delete in place. */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Recent</h2>
+          <h2 className="label-caps text-muted-foreground">Recent</h2>
           <Button variant="ghost" size="sm" asChild>
             <Link to="/library">See all</Link>
           </Button>
@@ -199,25 +160,20 @@ export function DashboardPage() {
         {recentLoading ? (
           <div className="grid gap-3">
             {Array.from({ length: RECENT_LIMIT }, (_, i) => (
-              <Skeleton key={i} className="h-28 w-full" />
+              <Skeleton key={i} className="h-12 w-full" />
             ))}
           </div>
         ) : recent?.items.length ? (
-          <div className="grid gap-3">
+          <div role="list" aria-label="Recent sounds" className="@container -mx-2 grid">
             {recent.items.map((sound, i) => (
               <SoundCard
                 key={sound.id}
+                track
                 sound={sound}
                 modelName={modelNames.get(sound.model)}
                 className="animate-in fade-in-0 slide-in-from-bottom-1 duration-300 fill-mode-both"
                 style={{ animationDelay: `${i * 30}ms` }}
                 onReuse={(s) => {
-                  // The prefill needs somewhere with a form in it. /chat is
-                  // the conversation now and has no composer, so reusing a
-                  // sound opens a builder, whose Prompt panel reads the same
-                  // store — and the picker still asks which builder, because
-                  // a sound reused as a bed under a script and one reused as
-                  // the seed of a new track are different jobs.
                   setPrefill(prefillFromSound(s));
                   reuse.open();
                 }}

@@ -14,6 +14,7 @@
  * somebody searched. Everything argumentative comes after they have heard it.
  */
 
+import { useMemo } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import {
   ArrowRightIcon,
@@ -26,7 +27,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CopyButton } from "@/components/docs-primitives";
-import { SampleGrid } from "@/components/sfx/sample-grid";
+import { SampleList, sampleModelName, sampleQueue } from "@/components/sfx/sample-list";
+import { SiteCollectionHeader, SiteDock, SitePlayButton, useSiteAudio } from "@/components/site/site-tracks";
+import { ProjectThumb } from "@/components/project-thumb";
+import { formatDuration } from "@/lib/format";
 import { MarketingLink } from "@/components/marketing-link";
 import { SeoHead, breadcrumbJsonLd, faqJsonLd } from "@/components/seo-head";
 import { getCategory } from "@/content/sfx/categories";
@@ -62,7 +66,7 @@ function Section({
     <section aria-labelledby={id} className={cn("border-border/60 border-t py-12", className)}>
       <h2
         id={id}
-        className="font-heading text-xl font-semibold tracking-tight text-balance sm:text-2xl"
+        className="font-display text-2xl leading-none font-extrabold text-balance uppercase sm:text-3xl"
       >
         {title}
       </h2>
@@ -94,8 +98,16 @@ function CategoryBody({ category }: { category: PublishedCategory }) {
     .map((slug) => getCategory(slug))
     .filter((c): c is NonNullable<typeof c> => Boolean(c));
 
+  const queue = useMemo(() => sampleQueue(category.slug, content.samples), [category.slug, content.samples]);
+  const audio = useSiteAudio(queue);
+  const first = queue[0];
+  const totalS = queue.reduce((n, q) => n + (q.durationS ?? 0), 0);
+  const models = [...new Set(content.samples.map(sampleModelName))];
+
   return (
     <>
+      {audio.element}
+      <SiteDock audio={audio} />
       <SeoHead
         title={category.metaTitle}
         description={category.metaDescription}
@@ -123,37 +135,49 @@ function CategoryBody({ category }: { category: PublishedCategory }) {
         <span className="text-foreground">{category.name}</span>
       </nav>
 
-      <header className="py-8">
-        {category.coverImage && (
-          <img
-            src={assetUrl(category.coverImage)}
-            alt=""
-            width={COVER_SIZE.width}
-            height={COVER_SIZE.height}
-            // The largest thing on the page and the first thing painted, so
-            // the browser should fetch it before anything below the fold.
-            fetchPriority="high"
-            decoding="async"
-            className="ring-border/70 mb-6 aspect-video h-auto w-full rounded-2xl object-cover ring-1"
-          />
-        )}
-        <h1 className="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-          {category.h1}
-        </h1>
-        <p className="text-muted-foreground mt-4 max-w-2xl leading-relaxed">
-          {category.intro}
-        </p>
-        <div className="mt-6 flex flex-wrap gap-2">
-          <Button asChild>
-            <MarketingLink href={GENERATOR_HREF}>Download Mirli</MarketingLink>
-          </Button>
-          <Button variant="outline" asChild>
-            <a href={REPO_URL} target="_blank" rel="noreferrer noopener">
-              View on GitHub
-            </a>
-          </Button>
-        </div>
-      </header>
+      <SiteCollectionHeader
+        tile={
+          category.coverImage ? (
+            <img
+              src={assetUrl(category.coverImage)}
+              alt=""
+              width={COVER_SIZE.width}
+              height={COVER_SIZE.height}
+              // The first thing painted, so fetch it before anything below the fold.
+              fetchPriority="high"
+              decoding="async"
+              className="size-full object-cover"
+            />
+          ) : (
+            <ProjectThumb name={category.name} className="size-full [&>span]:text-4xl" />
+          )
+        }
+        kicker="Sound effect collection"
+        title={category.h1}
+        log={[
+          `${content.samples.length} sample${content.samples.length === 1 ? "" : "s"}`,
+          totalS > 0 ? `${formatDuration(totalS)} in all` : null,
+          models.join(", "),
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+        lede={category.intro}
+      >
+        <SitePlayButton
+          size="icon-lg"
+          playing={Boolean(first && audio.current?.id === first.id && audio.playing)}
+          onClick={() => first && audio.toggle(audio.current?.id ?? first.id)}
+          label={category.name}
+        />
+        <Button size="sm" asChild>
+          <MarketingLink href={GENERATOR_HREF}>Download Mirli</MarketingLink>
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <a href={REPO_URL} target="_blank" rel="noreferrer noopener">
+            View on GitHub
+          </a>
+        </Button>
+      </SiteCollectionHeader>
 
       <Section
         id="samples"
@@ -163,7 +187,7 @@ function CategoryBody({ category }: { category: PublishedCategory }) {
         title={`Listen: ${content.samples.length} samples from the ${category.name.toLowerCase()} collection`}
         lede="Every clip shows the exact prompt that produced it. The render script reads its prompts from the same file as this page. Copy one, change a word and generate your own."
       >
-        <SampleGrid categorySlug={category.slug} samples={content.samples} />
+        <SampleList categorySlug={category.slug} samples={content.samples} audio={audio} />
       </Section>
 
       <Section
@@ -297,7 +321,7 @@ export function SfxCategoryPage() {
 
   return (
     <div className="bg-background text-foreground min-h-svh">
-      <div className="mx-auto w-full max-w-3xl px-4">
+      <div className="mx-auto w-full max-w-4xl px-4 pb-24">
         <CategoryBody category={category} />
       </div>
     </div>

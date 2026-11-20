@@ -2943,7 +2943,7 @@ export function StudioEditor({
           <AssistantChat threadKey={studioThread(storyId)} />
         </div>
       ) : (
-      <div ref={rowRef} className="flex min-h-0 flex-1 flex-col gap-4 @3xl:flex-row">
+      <div ref={rowRef} className="flex min-h-0 flex-1 flex-col gap-4 @3xl:flex-row @3xl:gap-2">
       {/* Three columns: what the story says, what it is, and what you are
           working on it with. The timeline takes the middle and the larger
           share, because it is the one you are always looking at; the script

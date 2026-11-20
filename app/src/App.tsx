@@ -38,7 +38,6 @@ const ConsolePage = lazy(() => import("@/routes/console").then((m) => ({ default
 const LibraryPage = lazy(() => import("@/routes/library").then((m) => ({ default: m.LibraryPage })));
 const SfxLibraryPage = lazy(() => import("@/routes/sfx-library").then((m) => ({ default: m.SfxLibraryPage })));
 const SpeechLibraryPage = lazy(() => import("@/routes/speech-library").then((m) => ({ default: m.SpeechLibraryPage })));
-const MusicStudioPage = lazy(() => import("@/routes/music-studio").then((m) => ({ default: m.MusicStudioPage })));
 const ProjectsPage = lazy(() => import("@/routes/projects").then((m) => ({ default: m.ProjectsPage })));
 const StudioIndexPage = lazy(() => import("@/routes/studio-index").then((m) => ({ default: m.StudioIndexPage })));
 const StudioPage = lazy(() => import("@/routes/studio").then((m) => ({ default: m.StudioPage })));
@@ -79,7 +78,7 @@ function ScrollToTop() {
  *  for reading and for grids, but an editor with a timeline beside it wants
  *  every pixel — capping it at 1152px wastes half a wide monitor. */
 function isFullBleed(pathname: string): boolean {
-  return pathname.startsWith("/studio/") || pathname === "/library/music";
+  return pathname.startsWith("/studio/");
 }
 
 /** The app shell: sidebar, header, and the routes that live inside them. */
@@ -94,15 +93,26 @@ function AppShell() {
     // much room that strip takes, so both panels stop above it.
     <SidebarProvider
       defaultOpen={false}
-      className="pb-(--dock-h)"
-      style={{ "--dock-h": nowPlaying ? `${PLAYER_DOCK_HEIGHT_PX}px` : "0px" } as CSSProperties}
+      // --top-h: the slim header bar above every panel. --panel-h: what is
+      // left for a panel between that bar and the player, less the panels'
+      // own 8px margins. Every panel's height reads it.
+      className="pt-(--top-h) pb-(--dock-h)"
+      style={
+        {
+          "--dock-h": nowPlaying ? `${PLAYER_DOCK_HEIGHT_PX}px` : "0px",
+          "--top-h": "3.5rem",
+          "--panel-h": `calc(100svh - 3.5rem - 1rem - ${nowPlaying ? PLAYER_DOCK_HEIGHT_PX : 0}px)`,
+        } as CSSProperties
+      }
     >
+      {/* The header and the page share a provider so a page can render its
+          own controls into the bar above it — see `header-slot`. The bar is a
+          slim strip across the window, above the panels, not inside one. */}
+      <HeaderSlotProvider>
+      <AppHeader />
       <AppSidebar />
       {/* Between the sidebar and the page on the kind pages: see create-panel.tsx. */}
       <CreatePanel />
-      {/* The header and the page it belongs to share a provider so a page can
-          render controls into the bar above it — see `header-slot`. */}
-      <HeaderSlotProvider>
       {/* Capped at the viewport for full-bleed pages, and only for them.
           The wrapper above is `min-h-svh` — a floor, not a ceiling — so
           without this nothing stops a studio frame from growing with its
@@ -116,11 +126,13 @@ function AppShell() {
         // On desktop the panel is exactly the window less its 8px margins and
         // the player strip, and the page scrolls inside it, so the panel's
         // rounded bottom edge always sits just above the player.
-        className={`bg-background text-foreground min-w-0 md:h-[calc(100svh-1rem-var(--dock-h))]${
-          fullBleed ? " h-[calc(100svh-var(--dock-h))] overflow-hidden" : " md:overflow-y-auto"
+        className={`bg-background text-foreground min-w-0 md:h-(--panel-h)${
+          fullBleed
+            ? // The Studio's own panels are the shell's panels here: the page
+              // panel has no fill, frame or padding of its own around them.
+              " max-md:h-[calc(100svh-3.5rem-var(--dock-h,0px))] overflow-hidden md:bg-transparent! md:ring-0!" : " md:overflow-y-auto"
         }`}
       >
-        <AppHeader />
         {/* The full-bleed column is a flex column with `min-h-0`, which is
             what lets a studio page fill the window: `h-full` cannot do it,
             because this element's own height comes from `flex-1` rather than
@@ -131,7 +143,7 @@ function AppShell() {
         <main
           className={
             fullBleed
-              ? "flex w-full min-h-0 min-w-0 flex-1 flex-col px-4 py-6"
+              ? "flex w-full min-h-0 min-w-0 flex-1 flex-col px-4 py-6 md:p-0"
               : "w-full flex-1 px-6 py-6 [&_p]:max-w-prose"
           }
         >
@@ -178,7 +190,7 @@ function AppShell() {
             <Route path="/create" element={<CreateRedirect />} />
             <Route path="/library" element={<LibraryPage />} />
             <Route path="/library/sfx" element={<SfxLibraryPage />} />
-            <Route path="/library/music" element={<MusicStudioPage />} />
+            <Route path="/library/music" element={<LibraryPage category="music" />} />
             <Route path="/library/speech" element={<SpeechLibraryPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/sounds/:id" element={<SoundDetailPage />} />

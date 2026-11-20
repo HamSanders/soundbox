@@ -5,7 +5,6 @@
  * rail (Ctrl/Cmd+B, or the trigger in the header).
  */
 
-import { BrandMark, Wordmark } from "@/components/brand-mark";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
@@ -21,11 +20,9 @@ import {
   MessagesSquareIcon,
   MicIcon,
   MoonIcon,
-  PanelLeftIcon,
   PlusIcon,
   SearchIcon,
   SettingsIcon,
-  SquarePenIcon,
   SunIcon,
   Trash2Icon,
   XIcon,
@@ -38,7 +35,6 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuButton,
@@ -72,9 +68,8 @@ import {
 import { useUiPrefs, wantsRail } from "@/lib/ui-prefs";
 import { formatMb, formatRelative } from "@/lib/format";
 import { SITE_URL } from "@/lib/marketing-links";
-import { useNewStudioPicker } from "@/components/new-studio-dialog";
 import { useSessionStore } from "@/lib/session-store";
-import { api, IS_MOCK, type Session } from "@/lib/api";
+import { api, type Session } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 /**
@@ -132,7 +127,7 @@ const NAV_SAMPLES: NavItem[] = [
   {
     to: "/create",
     label: "Create",
-    icon: SquarePenIcon,
+    icon: PlusIcon,
     end: false,
     hue: "sfx",
     match: /^\/(create|library\/(music|sfx|speech))(\/|$)/,
@@ -656,34 +651,6 @@ function DeviceStatus() {
   );
 }
 
-/** The "keep expanded" switch, in the sidebar itself so it can be found from
- *  the thing it changes. Only shown on a page that would otherwise fold. */
-function KeepExpandedRow() {
-  const { pathname } = useLocation();
-  const keep = useUiPrefs((s) => s.sidebarKeepExpanded);
-  const set = useUiPrefs((s) => s.set);
-  if (!wantsRail(pathname)) return null;
-  return (
-    <SidebarMenuItem>
-      <SidebarMenuButton
-        tooltip={keep ? "Fold to a rail on studio pages" : "Keep the sidebar open on studio pages"}
-        onClick={() => set({ sidebarKeepExpanded: !keep })}
-        aria-pressed={keep}
-      >
-        <PanelLeftIcon />
-        <span className="flex-1">Keep expanded here</span>
-        <span
-          className={cn(
-            "readout text-xs group-data-[collapsible=icon]:hidden",
-            keep ? "text-sidebar-primary" : "text-muted-foreground",
-          )}
-        >
-          {keep ? "On" : "Off"}
-        </span>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
-  );
-}
 
 function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -702,66 +669,19 @@ function ThemeToggle() {
 
 export function AppSidebar() {
   const { setOpenMobile } = useSidebar();
-  const picker = useNewStudioPicker();
   useRailOnImmersivePages();
 
   return (
-    // The picker is a sibling of the sidebar, not a child of it. On a narrow
-    // window `Sidebar` is a Sheet, and "New sound" closes it on the way to
-    // asking the question — a dialog mounted inside would go with it.
     <>
-      {picker.dialog}
       {/* pr-2.5: panels sit 8px apart, the same as their margin from the
           window edges. */}
       <Sidebar collapsible="icon" variant="inset" className="pr-2.5">
-        <SidebarHeader>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton size="lg" asChild>
-                {/* Home, not the composer. `/app` used to redirect here to
-                    /chat, which made the logo a second door into a page that
-                    is now one conversation among many; `/` lands on the
-                    dashboard through the catch-all. */}
-                <NavLink to="/" end onClick={() => setOpenMobile(false)}>
-                  <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-sm">
-                    <BrandMark inset={0.04} className="size-6" />
-                  </div>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <Wordmark className="truncate text-lg leading-none font-extrabold" />
-                    <span className="text-muted-foreground truncate text-xs">
-                      {IS_MOCK ? "mock backend" : "sound, music and voice"}
-                    </span>
-                  </div>
-                </NavLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                tooltip="New sound"
-                onClick={() => {
-                  // The one door, and the one place the question is asked.
-                  //
-                  // This used to create a story and go, which meant every new
-                  // thread landed in the same studio whatever it turned out to
-                  // be for — and that studio then had to guess, from an empty
-                  // timeline, whether you were writing a script or arranging a
-                  // track. There is nothing to guess from at that moment, which
-                  // is why the picker exists: two cards, one click, and the
-                  // answer is stored on the story.
-                  setOpenMobile(false);
-                  picker.open();
-                }}
-              >
-                <PlusIcon />
-                <span>New sound</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarHeader>
 
         <SidebarContent>
+          {/* Create and Library first: making a sound and finding one are
+              the two things you open the app to do. */}
+          <NavGroup items={NAV_SAMPLES} onNavigate={() => setOpenMobile(false)} className="mt-3" />
           <NavGroup label="Studio" items={NAV_STUDIO} onNavigate={() => setOpenMobile(false)} />
-          <NavGroup label="Sounds" items={NAV_SAMPLES} onNavigate={() => setOpenMobile(false)} />
 
           <RecentSessions />
 
@@ -788,7 +708,6 @@ export function AppSidebar() {
             <SidebarMenuItem>
               <ThemeToggle />
             </SidebarMenuItem>
-            <KeepExpandedRow />
             <SidebarMenuItem>
               <DeviceStatus />
             </SidebarMenuItem>

@@ -182,6 +182,10 @@
       get pose() { return st.pose; }, get live() { return st.live; }, get clip() { return st.clip?.id ?? null; },
       start() {
         if (!st.stopped) return; st.stopped = false;
+        // Open mid-action: start on a pose that has its own acting (list, cocoa...), do it, then come to talk.
+        const busy = [...new Set(M.clips.filter((c) => c.kind === "reaction" && c.from !== talk && c.from === c.to && route(c.from, talk).dist < Infinity).map((c) => c.from))];
+        if (busy.length) { st.pose = busy[Math.floor(Math.random() * busy.length)]; st.visit = true; }
+        else st.wander = true;
         // Show the start pose's still frame at once (first frame of any clip from it), then decide.
         const first = M.clips.find((c) => c.from === st.pose);
         if (first) { a.src = first.src; a.currentTime = 0; }

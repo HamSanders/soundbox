@@ -420,6 +420,14 @@ export class JobManager {
     return this.pending.length;
   }
 
+  /** Anything queued or running. The idle exit (idle.ts) waits while true. */
+  get busy(): boolean {
+    for (const h of this.jobs.values()) {
+      if (h.job.status === "queued" || h.job.status === "running") return true;
+    }
+    return false;
+  }
+
   // ----------------------------------------------------------- pub/sub
 
   subscribe(jobId: string): AsyncQueue<Job> {

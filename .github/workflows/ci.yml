@@ -54,6 +54,25 @@ jobs:
       - run: npm run build
       - run: npm run site:build
 
+  docker-slim:
+    name: Docker (Dockerfile.slim)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Built, not published: proves the image still builds and the server in
+      # it starts and answers.
+      - run: docker build -f Dockerfile.slim -t mirli-slim:ci .
+      - name: Start and probe
+        run: |
+          docker run -d --name slim -p 127.0.0.1:17494:17494 mirli-slim:ci
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:17494/api/health && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:17494/api/capabilities | grep -q '"local_models":false'
+      - if: ${{ failure() }}
+        run: docker logs slim
+
   desktop:
     name: Desktop shell (cargo check)
     runs-on: ubuntu-latest

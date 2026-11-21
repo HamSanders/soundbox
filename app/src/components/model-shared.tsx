@@ -126,10 +126,15 @@ export function useRequestDownload(model: Model) {
   return { start, request, pending: download.isPending };
 }
 
-/** Which actions apply. A custom endpoint runs on somebody else's server:
- *  nothing to fetch, load or delete here. */
+/** Whether a model has weights on this machine to download, load and delete. */
+export function isDownloadable(model: Model): boolean {
+  return model.downloadable ?? (model.provider ?? "local") === "local";
+}
+
+/** Which actions apply. A model that runs somewhere else (a custom endpoint,
+ *  say) has nothing to fetch, load or delete here. */
 export function modelCan(model: Model) {
-  const isEndpoint = model.provider === "endpoint";
+  const isEndpoint = !isDownloadable(model);
   return {
     isEndpoint,
     download: !isEndpoint && model.status === "not_installed",

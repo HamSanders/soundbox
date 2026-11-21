@@ -123,6 +123,11 @@ export class EndpointModel implements GenerationModel {
       installed_deps: true,
       auto_installable: false,
       provider: "endpoint",
+      // A service outside this machine and its network may charge per
+      // render, as the hosted presets do. Erring that way only means it is
+      // never the default; it can always be picked.
+      metered: !isLocalUrl(ep.url),
+      downloadable: false,
     };
   }
 

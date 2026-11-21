@@ -6,6 +6,9 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- Agents and the app no longer pick a model that may charge you per render unless you choose it. A custom endpoint outside your machine, your local network and a private overlay network such as Tailscale (a hosted API used with your own key) is marked as metered: the composer never lands on it by default, and `soundbox.generate` and `soundbox.speak` without a `model` skip it and say how to name one. A voice made on a metered model is still read on it, since choosing the voice chooses its model.
+
 ## [0.6.2] - 2026-11-20
 
 ### Fixed

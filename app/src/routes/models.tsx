@@ -27,6 +27,7 @@ import {
   KIND_ORDER,
   ModelMark,
   ModelPrimaryAction,
+  isDownloadable,
   ON_DISK,
   modelKind,
   useModelJob,
@@ -215,7 +216,7 @@ function RowShell({
 
 function ModelRowBody({ model, entry }: { model: Model; entry?: AudioCppCatalogEntry }) {
   const { job, downloading, progressPct, busyLabel } = useModelJob(model);
-  const vram = model.provider === "endpoint" ? "Remote" : formatMb(model.vram_estimate_mb);
+  const vram = isDownloadable(model) ? formatMb(model.vram_estimate_mb) : "Remote";
   return (
     <RowShell
       vendor={model.vendor}
@@ -331,7 +332,7 @@ export function ModelsPage() {
     if (installedOnly && !(r.type === "model" && ON_DISK.has(r.model.status))) return false;
     if (fitsOnly && vramTotal != null) {
       if (r.type !== "model") return false;
-      if (r.model.provider !== "endpoint" && r.model.vram_estimate_mb > vramTotal) return false;
+      if (isDownloadable(r.model) && r.model.vram_estimate_mb > vramTotal) return false;
     }
     return true;
   });

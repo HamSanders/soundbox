@@ -1,7 +1,8 @@
 /**
  * Import a manuscript as a new audiobook.
  *
- * Four steps: add the text (a file, pasted text or a web address); review the
+ * Four steps: add the text (a file, pasted text, a web address or a classic
+ * from the bundled public-domain library); review the
  * detected sections (kind, include, rename, reorder, merge, split, with the
  * paragraphs shown); check the book's details and cover; choose the cast,
  * narrator voice and model. "Create book" commits the preview with every
@@ -19,6 +20,7 @@ import {
   ClipboardPasteIcon,
   FileUpIcon,
   ImageIcon,
+  LibraryIcon,
   LinkIcon,
   Loader2Icon,
   MergeIcon,
@@ -50,6 +52,7 @@ import type { ChapterKind } from "@/lib/audiobook-types";
 import { cn } from "@/lib/utils";
 
 import { ACCEPT, importApi, type ImportMetadata, type ImportPreview } from "./api";
+import { ClassicsLibrary } from "./classics";
 import {
   breaksFor,
   countParagraphs,
@@ -69,6 +72,8 @@ export interface ImportWizardProps {
   onOpenChange: (open: boolean) => void;
   /** Called with the new book's id once the import is committed. */
   onImported?: (bookId: string) => void;
+  /** Which source tab to open on. Default "file". */
+  initialSource?: SourceMode;
 }
 
 type Step = "source" | "sections" | "details" | "voice";
@@ -78,13 +83,13 @@ const STEPS: { id: Step; label: string }[] = [
   { id: "details", label: "Details" },
   { id: "voice", label: "Voice" },
 ];
-type SourceMode = "file" | "paste" | "url";
+export type SourceMode = "file" | "paste" | "url" | "classics";
 
 const NONE = "__none__";
 const AUTO = "__auto__";
 const KINDS = Object.keys(KIND_LABEL) as ChapterKind[];
 
-export function ImportWizard({ open, onOpenChange, onImported }: ImportWizardProps) {
+export function ImportWizard({ open, onOpenChange, onImported, initialSource = "file" }: ImportWizardProps) {
   const qc = useQueryClient();
   const [step, setStep] = useState<Step>("source");
   const [preview, setPreview] = useState<ImportPreview | null>(null);
@@ -161,8 +166,8 @@ export function ImportWizard({ open, onOpenChange, onImported }: ImportWizardPro
         <DialogHeader className="border-b p-4 pr-12">
           <DialogTitle>Import a manuscript</DialogTitle>
           <DialogDescription>
-            EPUB, PDF, Word, OpenDocument, RTF, FB2, text, Markdown, HTML or a web page. Chapters, front matter and the cover are detected for
-            you to check.
+            EPUB, PDF, Word, OpenDocument, RTF, FB2, text, Markdown, HTML, a web page, or a public-domain classic. Chapters, front matter and
+            the cover are detected for you to check.
           </DialogDescription>
           <ol className="mt-2 flex flex-wrap gap-1.5" aria-label="Steps">
             {STEPS.map((s, i) => (
@@ -190,7 +195,7 @@ export function ImportWizard({ open, onOpenChange, onImported }: ImportWizardPro
               {error}
             </div>
           )}
-          {step === "source" && <SourceStep busy={busy} run={run} onParsed={accept} />}
+          {step === "source" && <SourceStep key={initialSource} initial={initialSource} busy={busy} run={run} onParsed={accept} />}
           {step === "sections" && preview && (
             <SectionsStep preview={preview} sections={sections} onChange={setSections} />
           )}
@@ -252,8 +257,19 @@ export function ImportWizard({ open, onOpenChange, onImported }: ImportWizardPro
 
 type Run = <T>(label: string, fn: () => Promise<T>) => Promise<T | null>;
 
-function SourceStep({ busy, run, onParsed }: { busy: string | null; run: Run; onParsed: (p: ImportPreview) => void }) {
-  const [mode, setMode] = useState<SourceMode>("file");
+function SourceStep({
+  initial,
+  busy,
+  run,
+  onParsed,
+}: {
+  initial: SourceMode;
+  busy: string | null;
+  run: Run;
+  onParsed: (p: ImportPreview) => void;
+}) {
+  const [mode, setMode] = useState<SourceMode>(initial);
+  const [picking, setPicking] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
@@ -280,6 +296,10 @@ function SourceStep({ busy, run, onParsed }: { busy: string | null; run: Run; on
           <TabsTrigger value="url">
             <LinkIcon />
             Web page
+          </TabsTrigger>
+          <TabsTrigger value="classics">
+            <LibraryIcon />
+            Classics
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -352,6 +372,19 @@ function SourceStep({ busy, run, onParsed }: { busy: string | null; run: Run; on
             Continue
           </Button>
         </div>
+      )}
+
+      {mode === "classics" && (
+        <ClassicsLibrary
+          busy={!!busy}
+          picking={picking}
+          onPick={async (id) => {
+            setPicking(id);
+            const p = await run("Opening the classic…", () => importApi.parseClassic(id));
+            setPicking(null);
+            if (p) onParsed(p);
+          }}
+        />
       )}
 
       {mode === "url" && (
@@ -515,7 +548,7 @@ function SectionsStep({
                         Split here
                       </button>
                     )}
-                    <p className="leading-relaxed">{p}</p>
+                    <p className="leading-relaxed whitespace-pre-line">{p}</p>
                   </li>
                 ))}
               </ol>

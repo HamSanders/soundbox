@@ -32,6 +32,31 @@ The review screen shows what was found before anything is created, with any
 parser warnings (for example, PDF pages with no text layer). Rename, re-type or
 leave out sections there.
 
+### Start from a classic
+
+**Classics** (on the Audiobooks page, or the **Classics** tab when importing)
+opens a library of 27 public-domain works that ship with Mirli, so it works
+offline:
+
+- short stories: O. Henry, Poe, W. W. Jacobs, Kate Chopin, Conan Doyle, Chekhov
+  (Constance Garnett's translation), Saki and Washington Irving;
+- stories for children: Oscar Wilde's fairy tales and two of Kipling's *Just So
+  Stories*;
+- novellas: *A Christmas Carol*, *Dr. Jekyll and Mr. Hyde* and *Alice's
+  Adventures in Wonderland*, split into their chapters;
+- poems by Poe, Keats and Whitman, one stanza to a paragraph with the line
+  breaks kept.
+
+Picking one opens the same review screen as any import. The texts are
+[Standard Ebooks](https://standardebooks.org) editions. Standard Ebooks states
+they are in the US public domain and releases its own editing under CC0. Every
+author and translator in the library died more than 70 years ago, so the works
+are also out of copyright where the term is life plus 70. Some countries have
+longer terms: outside the US, check your local law before publishing a recording.
+
+To rebuild the library, run `node scripts/build-classics.mjs` in `server/`. It
+fetches each listed edition once, two seconds apart.
+
 **New book** starts an empty book with one chapter instead.
 
 ## Cast

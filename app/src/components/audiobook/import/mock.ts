@@ -9,7 +9,7 @@
 import { mockAudiobookApi } from "@/lib/audiobook-mock";
 import type { ChapterKind } from "@/lib/audiobook-types";
 
-import type { ImportApi, ImportPreview, ImportSection } from "./api";
+import type { ClassicSummary, ImportApi, ImportPreview, ImportSection } from "./api";
 import { paragraphsFor } from "./sections";
 
 const S = (title: string, kind: ChapterKind, included: boolean, paragraphs: string[], breaks?: number[]): ImportSection => ({
@@ -118,7 +118,28 @@ function splitPasted(text: string): ImportSection[] {
   return sections.map((s) => S(s.title, "chapter", true, s.paragraphs));
 }
 
+const MOCK_CLASSICS: ClassicSummary[] = [
+  { id: "gift-of-the-magi", title: "The Gift of the Magi", author: "O. Henry", life: "1862–1910", year: 1905, form: "story",
+    genres: ["Short stories", "Holiday"], language: "en", words: 2061, chapters: 1, minutes: 13,
+    description: "A young couple with almost no money each give up their most treasured possession to buy the other a Christmas present.",
+    source: { name: "Standard Ebooks", url: "https://standardebooks.org/ebooks/o-henry/short-fiction" } },
+  { id: "the-raven", title: "The Raven", author: "Edgar Allan Poe", life: "1809–1849", year: 1845, form: "poem",
+    genres: ["Poetry", "Horror"], language: "en", words: 1069, chapters: 1, minutes: 7,
+    description: "On a December midnight, a grieving student is visited by a raven that answers every question with one word.",
+    source: { name: "Standard Ebooks", url: "https://standardebooks.org/ebooks/edgar-allan-poe/poetry" } },
+];
+
 export const mockImportApi: ImportApi = {
+  async listClassics() {
+    await delay();
+    return { works: MOCK_CLASSICS, rights: "Public domain in the United States. (Mock data.)" };
+  },
+  async parseClassic(id, maxChars) {
+    await delay();
+    const w = MOCK_CLASSICS.find((x) => x.id === id);
+    if (!w) throw new Error("That classic isn't in the library.");
+    return build(SAMPLE_SECTIONS.slice(3, 5), { title: w.title, author: w.author, description: w.description }, { filename: null, format: "classic", url: w.source.url }, maxChars);
+  },
   async parseFile(file, maxChars) {
     await delay();
     return build(SAMPLE_SECTIONS, SAMPLE_META, { filename: file.name, format: "epub", url: null }, maxChars);

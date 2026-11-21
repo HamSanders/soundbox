@@ -5,7 +5,7 @@
 
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { BookOpenIcon, FileUpIcon, FolderIcon, PlusIcon, SearchIcon, XIcon } from "lucide-react";
+import { BookOpenIcon, FileUpIcon, FolderIcon, LibraryIcon, PlusIcon, SearchIcon, XIcon } from "lucide-react";
 
 import { ImportWizard } from "@/components/audiobook/import";
 import { BookCard } from "@/components/audiobook/shelf/book-card";
@@ -54,7 +54,7 @@ export function AudiobooksPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   // `?import=1` opens the wizard (the command palette links here).
-  const importing = params.get("import") === "1";
+  const importing = params.get("import") === "1" || params.get("import") === "classics";
   const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(params);
     if (value === null) next.delete(key);
@@ -62,6 +62,7 @@ export function AudiobooksPage() {
     setParams(next, { replace: true });
   };
   const setImporting = (open: boolean) => setParam("import", open ? "1" : null);
+  const openClassics = () => setParam("import", "classics");
   const [doomed, setDoomed] = useState<BookSummary | null>(null);
 
   const all = useMemo(() => books.data ?? [], [books.data]);
@@ -96,6 +97,7 @@ export function AudiobooksPage() {
       <ImportWizard
         open={importing}
         onOpenChange={setImporting}
+        initialSource={params.get("import") === "classics" ? "classics" : "file"}
         onImported={(id) => {
           // The wizard commits with no project; file the book here.
           if (projectId) void audiobookApi.updateBook(id, { project_id: projectId });
@@ -128,7 +130,11 @@ export function AudiobooksPage() {
             {totalVoiced > 0 ? ` ${formatDuration(totalVoiced)} voiced so far.` : ""}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={openClassics}>
+            <LibraryIcon />
+            Classics
+          </Button>
           <Button variant="outline" onClick={() => setImporting(true)}>
             <FileUpIcon />
             Import manuscript
@@ -181,7 +187,11 @@ export function AudiobooksPage() {
           title={search ? undefined : "No books yet"}
           action={
             !search && (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button variant="outline" onClick={openClassics}>
+                  <LibraryIcon />
+                  Start from a classic
+                </Button>
                 <Button variant="outline" onClick={() => setImporting(true)}>
                   <FileUpIcon />
                   Import manuscript
@@ -196,7 +206,7 @@ export function AudiobooksPage() {
         >
           {search
             ? "Nothing matches that."
-            : "Import an EPUB, DOCX, PDF or text file, or start a blank book and write it here."}
+            : "Import an EPUB, DOCX, PDF or text file, start from a public-domain classic, or start a blank book and write it here."}
         </EmptyState>
       ) : (
         <div className="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">

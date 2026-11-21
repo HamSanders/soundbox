@@ -23,7 +23,7 @@ export interface StoredPreview {
   id: string;
   cover_token: string | null;
   manuscript: Manuscript;
-  source: { filename: string | null; format: ManuscriptFormat | "pasted"; url: string | null };
+  source: { filename: string | null; format: ManuscriptFormat | "pasted" | "classic"; url: string | null };
   max_chars: number;
   created_at: number;
   expires_at: number;

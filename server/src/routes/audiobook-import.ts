@@ -4,6 +4,7 @@
  *   POST   /parse?filename=&max_chars=   raw file body -> ImportPreview
  *   POST   /text   {text, title?, max_chars?}         -> ImportPreview (pasted text)
  *   POST   /url    {url, max_chars?}                  -> ImportPreview
+ *   POST   /classic {id, max_chars?}                 -> ImportPreview (a bundled public-domain work)
  *   GET    /:preview_id                              -> ImportPreview
  *   PUT    /:preview_id/cover   raw image body       -> ImportPreview (replace cover)
  *   DELETE /:preview_id/cover                        -> ImportPreview (remove cover)
@@ -31,6 +32,7 @@ import {
   toPreview,
 } from "../audiobook/import/preview.js";
 import { fetchDocument, UrlImportError } from "../audiobook/import/url.js";
+import { classicManuscript, getClassic, listClassics, RIGHTS_NOTE } from "../audiobook/classics/index.js";
 import type { MirliService } from "../service.js";
 import { HttpError } from "./helpers.js";
 
@@ -186,6 +188,18 @@ function routes(app: FastifyInstance, svc: MirliService): void {
       toHttp(err);
     }
     const preview = store.add(manuscript, { filename, format, url: finalUrl }, maxChars);
+    return reply.code(201).send(toPreview(preview));
+  });
+
+  // The bundled public-domain library ("Start from a classic").
+  app.get("/api/audiobooks/classics", async () => ({ works: listClassics(), rights: RIGHTS_NOTE }));
+
+  app.post("/api/audiobooks/import/classic", async (request, reply) => {
+    const body = z.object({ id: z.string().min(1).max(200), max_chars: maxCharsSchema }).parse(request.body ?? {});
+    const work = getClassic(body.id);
+    if (!work) throw new HttpError(404, "That classic isn't in the library.");
+    const maxChars = body.max_chars ?? DEFAULT_MAX_CHARS;
+    const preview = store.add(classicManuscript(work), { filename: null, format: "classic", url: work.source.url }, maxChars);
     return reply.code(201).send(toPreview(preview));
   });
 

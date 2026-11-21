@@ -64,7 +64,35 @@ export interface CommitRequest {
   headings?: boolean;
 }
 
+/** One work in the bundled public-domain library (no text). */
+export interface ClassicSummary {
+  id: string;
+  title: string;
+  subtitle?: string;
+  author: string;
+  life: string;
+  translator?: string;
+  translator_life?: string;
+  year: number;
+  form: "story" | "poem" | "novella" | "children";
+  genres: string[];
+  description: string;
+  language: string;
+  words: number;
+  chapters: number;
+  minutes: number;
+  source: { name: string; url: string };
+}
+
+export interface ClassicsLibrary {
+  works: ClassicSummary[];
+  /** Where the rights stand, for the footer of the library. */
+  rights: string;
+}
+
 export interface ImportApi {
+  listClassics(): Promise<ClassicsLibrary>;
+  parseClassic(id: string, maxChars?: number): Promise<ImportPreview>;
   parseFile(file: File, maxChars?: number): Promise<ImportPreview>;
   parseText(text: string, title?: string | null, maxChars?: number): Promise<ImportPreview>;
   parseUrl(url: string, maxChars?: number): Promise<ImportPreview>;
@@ -80,6 +108,8 @@ const json = (body: unknown): RequestInit => ({ method: "POST", body: JSON.strin
 const charsQuery = (maxChars?: number) => (maxChars ? `&max_chars=${maxChars}` : "");
 
 const httpImportApi: ImportApi = {
+  listClassics: () => request<ClassicsLibrary>("/api/audiobooks/classics"),
+  parseClassic: (id, maxChars) => request<ImportPreview>(`${BASE}/classic`, json({ id, max_chars: maxChars })),
   parseFile: (file, maxChars) =>
     request<ImportPreview>(`${BASE}/parse?filename=${encodeURIComponent(file.name)}${charsQuery(maxChars)}`, {
       method: "POST",

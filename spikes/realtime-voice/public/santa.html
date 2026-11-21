@@ -216,7 +216,9 @@ const VOICE_HOST = params.get("server") || (location.port === "17650" ? location
 const VOICE_HTTP = "http://" + VOICE_HOST, VOICE_WS = "ws://" + VOICE_HOST + "/ws";
 // The face server's portrait. With pose clips it becomes the talk still's faceBox crop (see posesReady).
 let SANTA_FACE = params.get("face") || null;  // null: leave the face server on the portrait it was started with
-const FACE_WS = "ws://127.0.0.1:17660/ws", FACE_HTTP = "http://127.0.0.1:17660";
+// ?faceserver=host:port picks another face server (e.g. the MuseTalk one on 17680); default 17660.
+const FACE_HOST = params.get("faceserver") || "127.0.0.1:17660";
+const FACE_WS = "ws://" + FACE_HOST + "/ws", FACE_HTTP = "http://" + FACE_HOST;
 
 // The persona. Written for a small model: short concrete rules, examples, no ambiguity.
 // Prefer the shared persona in personas.js (main spike branch); this one is only a fallback.

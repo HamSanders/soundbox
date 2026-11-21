@@ -25,7 +25,16 @@ import numpy as np
 from aiohttp import web, WSMsgType, ClientSession
 from scipy.signal import resample_poly
 
-import engine as E
+import sys
+# --engine lite|pro|musetalk picks the model; everything else (protocol, ports, pages) is shared.
+ENGINE = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--engine=")), None) or     (sys.argv[sys.argv.index("--engine") + 1] if "--engine" in sys.argv else "lite")
+if ENGINE == "musetalk":
+    import musetalk_engine as E
+else:
+    import engine as E
+    if ENGINE == "pro":  # Wan VAE: 5 motion frames, 28 new frames (1.12 s) per step
+        E.MOTION_FRAMES, E.CHUNK_FRAMES = 5, 28
+        E.CHUNK_SAMPLES = E.CHUNK_FRAMES * E.SAMPLE_RATE // E.FPS
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--image", default=str(E.UPSTREAM / "examples" / "girl.png"))
@@ -36,6 +45,7 @@ ap.add_argument("--tap", default=None, help="also subscribe to the voice spike's
 ap.add_argument("--no-idle", action="store_true", help="do not generate silent 'listening' motion between utterances")
 ap.add_argument("--max-lead", type=float, default=3.0, help="stop generating when this many seconds are already queued for playback")
 ap.add_argument("--compile", action="store_true")
+ap.add_argument("--engine", default="lite", choices=["lite", "pro", "musetalk"])
 ap.add_argument("--jpeg-quality", type=int, default=int(os.environ.get("FACE_JPEG", 92)))
 ap.add_argument("--log", default=None, help="append one JSON line per chunk and per browser report")
 args = ap.parse_args()
@@ -149,7 +159,11 @@ def take_chunk():
 
 def engine_thread():
     global play_head, current_face, pending_face
-    eng = E.FaceEngine(compile_model=args.compile, compile_vae=args.compile)
+    eng = E.FaceEngine(compile_model=args.compile, compile_vae=args.compile, model_type=ENGINE)
+    # MuseTalk's frames trail the newest audio by its look-ahead; delay the audio we send by the same.
+    delay_n = int(round(getattr(eng, "delay_s", 0) * args.input_rate))
+    delay_buf = np.zeros(delay_n, dtype=np.int16)
+    last_flush = flush_gen
     eng.set_image(FACES / f"{current_face}.png")
     for _ in range(2):  # warm-up: the first step is ~1.5 s slower (cuDNN autotune, allocator)
         eng.step(np.zeros(E.CHUNK_SAMPLES, dtype=np.float32))
@@ -174,6 +188,12 @@ def engine_thread():
             continue
         chunk, kind, t0 = job
         gen = flush_gen
+        if gen != last_flush:  # barge-in: the held-back tail belongs to the old utterance
+            delay_buf[:] = 0
+            last_flush = gen
+        if delay_n:
+            both = np.concatenate([delay_buf, chunk])
+            chunk, delay_buf = both[:len(chunk)], both[len(chunk):]
         t_start = time.time()
         f32 = chunk.astype(np.float32) / 32768.0
         if args.input_rate != E.SAMPLE_RATE:

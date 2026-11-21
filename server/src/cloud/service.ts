@@ -89,6 +89,14 @@ export class CloudService implements CloudContext {
 
   private retry: ReturnType<typeof setTimeout> | null = null;
   private retryMs = 5_000;
+  /** When the catalog was last fetched; 0 until the first success. */
+  private fetchedAt = 0;
+  private inflight: Promise<void> | null = null;
+
+  /** How often a running Mirli re-reads the catalog on its own. */
+  static readonly REFRESH_EVERY_MS = 5 * 60_000;
+  /** A model list older than this is re-read when someone opens a picker. */
+  static readonly STALE_AFTER_MS = 60_000;
 
   /**
    * Fetch the catalog and register it. Offline is fine: the last catalog
@@ -97,23 +105,68 @@ export class CloudService implements CloudContext {
    * cloud models without a restart.
    */
   async refresh(): Promise<void> {
+    if (this.inflight) return this.inflight;
+    this.inflight = this.fetchCatalog().finally(() => {
+      this.inflight = null;
+    });
+    return this.inflight;
+  }
+
+  /**
+   * Re-read the catalog if it is older than `maxAgeMs`, so models the gateway
+   * adds show up in a running Mirli (a studio on the web runs for days) the
+   * next time a picker opens, without a restart. Waits at most `waitMs`; a
+   * slower gateway finishes in the background and the next list has it.
+   */
+  async refreshIfStale(maxAgeMs = CloudService.STALE_AFTER_MS, waitMs = 3_000): Promise<void> {
+    if (!this.enabled || Date.now() - this.fetchedAt < maxAgeMs) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      this.refresh(),
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, waitMs);
+        timer.unref?.();
+      }),
+    ]);
+    clearTimeout(timer);
+  }
+
+  private async fetchCatalog(): Promise<void> {
     if (this.retry) clearTimeout(this.retry);
     this.retry = null;
     if (!this.enabled) {
       await this.models.setCloudModels([], this);
       return;
     }
+    const before = JSON.stringify(this.catalog);
     try {
       const { models } = await new CloudClient(this.baseUrl, null, this.fetchImpl).models();
       this.catalog = models;
+      this.fetchedAt = Date.now();
       this.retryMs = 5_000;
+      this.retry = setTimeout(() => void this.refresh(), CloudService.REFRESH_EVERY_MS);
+      this.retry.unref?.();
     } catch (e) {
       log.warning(`Mirli Cloud catalog unavailable, trying again in ${this.retryMs / 1000} s: ${(e as Error).message}`);
       this.retry = setTimeout(() => void this.refresh(), this.retryMs);
       this.retry.unref?.();
       this.retryMs = Math.min(this.retryMs * 2, 120_000);
     }
-    await this.models.setCloudModels(this.catalog, this);
+    // Re-registering drops live cloud model instances, so only when it changed
+    // (or on the first call, which registers even an empty catalog).
+    if (!this.registered || JSON.stringify(this.catalog) !== before) {
+      this.registered = true;
+      await this.models.setCloudModels(this.catalog, this);
+    }
+  }
+
+  private registered = false;
+
+  /** Stop the background re-reads (shutdown, tests). */
+  stop(): void {
+    if (this.retry) clearTimeout(this.retry);
+    this.retry = null;
+    this.cancelPoll();
   }
 
   /** Re-read after a profile switch: each profile has its own sign-in. */

@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { WaveFile } from "wavefile";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CloudClient } from "../src/cloud/client.js";
 import type { CloudModel as CloudModelInfo } from "../src/cloud/contract.js";
@@ -83,6 +83,8 @@ function fakeGateway() {
     created: [] as { body: Record<string, unknown>; key: string | null }[],
     revoked: false,
     uploads: [] as { type: string | null; seconds: number }[],
+    catalog: [SFX] as CloudModelInfo[],
+    modelReads: 0,
   };
   const json = (body: unknown, status = 200) => Response.json(body, { status });
   const err = (status: number, code: string, message: string) => json({ error: { code, message } }, status);
@@ -99,7 +101,8 @@ function fakeGateway() {
     }
     switch (`${method} ${url.pathname}`) {
       case "GET /v1/models":
-        return json({ price_version: 1, models: [SFX] });
+        g.modelReads++;
+        return json({ price_version: 1, models: g.catalog });
       case "POST /v1/device/code":
         return json({
           device_code: "dc",
@@ -288,6 +291,35 @@ describe("Mirli Cloud models", () => {
     g.revoked = true;
     const model = new CloudModel(SFX, cloud, async () => {});
     await expect(model.generate("x", 4)).rejects.toThrow(/signed this device out/);
+  });
+
+  it("picks up models the gateway adds, without a restart", async () => {
+    const gw = fakeGateway();
+    const cloud = new CloudService(config, models, gw.fetchImpl, true);
+    await cloud.refresh();
+    const ids = async () => (await models.listInfo()).filter((m) => m.provider === "cloud").map((m) => m.id);
+    expect(await ids()).toEqual(["cloud:test-sfx"]);
+
+    gw.g.catalog = [SFX, CLONE];
+    // Fresh: a picker opening within the minute doesn't ask the gateway again.
+    await cloud.refreshIfStale();
+    expect(gw.g.modelReads).toBe(1);
+    // Stale: the next list re-reads and shows the new model.
+    await cloud.refreshIfStale(0);
+    expect(gw.g.modelReads).toBe(2);
+    expect(await ids()).toEqual(expect.arrayContaining(["cloud:test-sfx", CLONE.id]));
+    cloud.stop();
+  });
+
+  it("leaves registered models alone when the catalog hasn't changed", async () => {
+    const gw = fakeGateway();
+    const cloud = new CloudService(config, models, gw.fetchImpl, true);
+    await cloud.refresh();
+    const spy = vi.spyOn(models, "setCloudModels");
+    await cloud.refreshIfStale(0);
+    expect(gw.g.modelReads).toBe(2);
+    expect(spy).not.toHaveBeenCalled();
+    cloud.stop();
   });
 });
 

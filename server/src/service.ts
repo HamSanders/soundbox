@@ -290,6 +290,7 @@ export class MirliService {
   async close(): Promise<void> {
     this.jobs.stop();
     this.updates.stop();
+    this.cloud.stop();
     this.telemetry.close();
     await this.models.unload();
     // Our child process, so it does not outlive us.
@@ -323,6 +324,8 @@ export class MirliService {
   /* -------------------------------------------------------------- models */
 
   async listModels(): Promise<ModelInfo[]> {
+    // Pick up models the gateway added since the last read (no-op when off).
+    await this.cloud.refreshIfStale();
     // On the web there is no GPU and nothing to download: only cloud models.
     const infos = (await this.models.listInfo()).filter((m) => !hostedMode() || m.provider === "cloud");
     for (const info of infos) {

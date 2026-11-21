@@ -104,8 +104,8 @@ export function guessMime(name: string): string {
   );
 }
 
-/** Decode a file in the browser: its length, and its samples for analysis. */
-export async function decodeFile(file: File): Promise<AudioBuffer> {
+/** Decode a file (or a microphone recording) in the browser: its length, and its samples for analysis. */
+export async function decodeFile(file: Blob): Promise<AudioBuffer> {
   const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
   const ctx = new Ctx();
   try {

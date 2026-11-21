@@ -1,7 +1,8 @@
 /**
  * The bundled public-domain library: short stories, children's stories,
  * novellas and poems to start a book from. Picking one opens it in the import
- * review, like any manuscript. The texts come from Standard Ebooks and ship
+ * review, like any manuscript. The texts come from Standard Ebooks and
+ * Project Gutenberg editions and ship
  * with Mirli, so this works offline.
  */
 
@@ -137,7 +138,12 @@ export function ClassicsLibrary({ busy, picking, onPick }: { busy: boolean; pick
             Standard Ebooks
             <ExternalLinkIcon className="size-3" />
           </a>
-          , whose editions are released under CC0.
+          {" "}(editing released under CC0) and{" "}
+          <a href="https://www.gutenberg.org" target="_blank" rel="noreferrer" className="hover:text-foreground inline-flex items-center gap-0.5 underline">
+            Project Gutenberg
+            <ExternalLinkIcon className="size-3" />
+          </a>
+          .
         </p>
       )}
     </div>

@@ -1,6 +1,6 @@
 {
  "version": 1,
- "source": "Standard Ebooks (standardebooks.org): texts believed to be in the US public domain; editorial work released under CC0 1.0.",
+ "source": "Standard Ebooks (standardebooks.org): texts believed to be in the US public domain; editorial work released under CC0 1.0. Project Gutenberg (gutenberg.org) plain-text editions: public-domain texts, with the Project Gutenberg header, licence and footer removed.",
  "works": [
   {
    "id": "gift-of-the-magi",
@@ -4154,6 +4154,1701 @@
       "O Captain! my Captain! our fearful trip is done,\nThe ship has weather’d every rack, the prize we sought is won,\nThe port is near, the bells I hear, the people all exulting,\nWhile follow eyes the steady keel, the vessel grim and daring;\nBut O heart! heart! heart!\nO the bleeding drops of red,\nWhere on the deck my Captain lies,\nFallen cold and dead.",
       "O Captain! my Captain! rise up and hear the bells;\nRise up—for you the flag is flung—for you the bugle trills,\nFor you bouquets and ribbon’d wreaths—for you the shores a-crowding,\nFor you they call, the swaying mass, their eager faces turning;\nHere Captain! dear father!\nThis arm beneath your head!\nIt is some dream that on the deck,\nYou’ve fallen cold and dead.",
       "My Captain does not answer, his lips are pale and still,\nMy father does not feel my arm, he has no pulse nor will,\nThe ship is anchor’d safe and sound, its voyage closed and done,\nFrom fearful trip the victor ship comes in with object won;\nExult O shores, and ring O bells!\nBut I with mournful tread,\nWalk the deck my Captain lies,\nFallen cold and dead."
+     ]
+    }
+   ]
+  },
+  {
+   "id": "yellow-wallpaper",
+   "title": "The Yellow Wallpaper",
+   "author": "Charlotte Perkins Gilman",
+   "life": "1860–1935",
+   "year": 1892,
+   "form": "story",
+   "genres": [
+    "Short stories",
+    "Horror"
+   ],
+   "description": "Confined to a rented country house for a “rest cure”, a young mother becomes fixed on the pattern of her bedroom wallpaper.",
+   "language": "en",
+   "words": 6078,
+   "source": {
+    "name": "Project Gutenberg",
+    "url": "https://www.gutenberg.org/ebooks/1952"
+   },
+   "sections": [
+    {
+     "title": "The Yellow Wallpaper",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "It is very seldom that mere ordinary people like John and myself secure ancestral halls for the summer.",
+      "A colonial mansion, a hereditary estate, I would say a haunted house, and reach the height of romantic felicity—but that would be asking too much of fate!",
+      "Still I will proudly declare that there is something queer about it.",
+      "Else, why should it be let so cheaply? And why have stood so long untenanted?",
+      "John laughs at me, of course, but one expects that in marriage.",
+      "John is practical in the extreme. He has no patience with faith, an intense horror of superstition, and he scoffs openly at any talk of things not to be felt and seen and put down in figures.",
+      "John is a physician, and perhaps—(I would not say it to a living soul, of course, but this is dead paper and a great relief to my mind)—perhaps that is one reason I do not get well faster.",
+      "You see, he does not believe I am sick!",
+      "And what can one do?",
+      "If a physician of high standing, and one’s own husband, assures friends and relatives that there is really nothing the matter with one but temporary nervous depression—a slight hysterical tendency—what is one to do?",
+      "My brother is also a physician, and also of high standing, and he says the same thing.",
+      "So I take phosphates or phosphites—whichever it is, and tonics, and journeys, and air, and exercise, and am absolutely forbidden to “work” until I am well again.",
+      "Personally, I disagree with their ideas.",
+      "Personally, I believe that congenial work, with excitement and change, would do me good.",
+      "But what is one to do?",
+      "I did write for a while in spite of them; but it does exhaust me a good deal—having to be so sly about it, or else meet with heavy opposition.",
+      "I sometimes fancy that in my condition if I had less opposition and more society and stimulus—but John says the very worst thing I can do is to think about my condition, and I confess it always makes me feel bad.",
+      "So I will let it alone and talk about the house.",
+      "The most beautiful place! It is quite alone, standing well back from the road, quite three miles from the village. It makes me think of English places that you read about, for there are hedges and walls and gates that lock, and lots of separate little houses for the gardeners and people.",
+      "There is a delicious garden! I never saw such a garden—large and shady, full of box-bordered paths, and lined with long grape-covered arbors with seats under them.",
+      "There were greenhouses, too, but they are all broken now.",
+      "There was some legal trouble, I believe, something about the heirs and co-heirs; anyhow, the place has been empty for years.",
+      "That spoils my ghostliness, I am afraid; but I don’t care—there is something strange about the house—I can feel it.",
+      "I even said so to John one moonlight evening, but he said what I felt was a draught, and shut the window.",
+      "I get unreasonably angry with John sometimes. I’m sure I never used to be so sensitive. I think it is due to this nervous condition.",
+      "But John says if I feel so I shall neglect proper self-control; so I take pains to control myself,—before him, at least,—and that makes me very tired.",
+      "I don’t like our room a bit. I wanted one downstairs that opened on the piazza and had roses all over the window, and such pretty old-fashioned chintz hangings! but John would not hear of it.",
+      "He said there was only one window and not room for two beds, and no near room for him if he took another.",
+      "He is very careful and loving, and hardly lets me stir without special direction.",
+      "I have a schedule prescription for each hour in the day; he takes all care from me, and so I feel basely ungrateful not to value it more.",
+      "He said we came here solely on my account, that I was to have perfect rest and all the air I could get. “Your exercise depends on your strength, my dear,” said he, “and your food somewhat on your appetite; but air you can absorb all the time.” So we took the nursery, at the top of the house.",
+      "It is a big, airy room, the whole floor nearly, with windows that look all ways, and air and sunshine galore. It was nursery first and then playground and gymnasium, I should judge; for the windows are barred for little children, and there are rings and things in the walls.",
+      "The paint and paper look as if a boys’ school had used it. It is stripped off—the paper—in great patches all around the head of my bed, about as far as I can reach, and in a great place on the other side of the room low down. I never saw a worse paper in my life.",
+      "One of those sprawling flamboyant patterns committing every artistic sin.",
+      "It is dull enough to confuse the eye in following, pronounced enough to constantly irritate, and provoke study, and when you follow the lame, uncertain curves for a little distance they suddenly commit suicide—plunge off at outrageous angles, destroy themselves in unheard-of contradictions.",
+      "The color is repellant, almost revolting; a smouldering, unclean yellow, strangely faded by the slow-turning sunlight.",
+      "It is a dull yet lurid orange in some places, a sickly sulphur tint in others.",
+      "No wonder the children hated it! I should hate it myself if I had to live in this room long.",
+      "There comes John, and I must put this away,—he hates to have me write a word.",
+      "We have been here two weeks, and I haven’t felt like writing before, since that first day.",
+      "I am sitting by the window now, up in this atrocious nursery, and there is nothing to hinder my writing as much as I please, save lack of strength.",
+      "John is away all day, and even some nights when his cases are serious.",
+      "I am glad my case is not serious!",
+      "But these nervous troubles are dreadfully depressing.",
+      "John does not know how much I really suffer. He knows there is no reason to suffer, and that satisfies him.",
+      "Of course it is only nervousness. It does weigh on me so not to do my duty in any way!",
+      "I meant to be such a help to John, such a real rest and comfort, and here I am a comparative burden already!",
+      "Nobody would believe what an effort it is to do what little I am able—to dress and entertain, and order things.",
+      "It is fortunate Mary is so good with the baby. Such a dear baby!",
+      "And yet I cannot be with him, it makes me so nervous.",
+      "I suppose John never was nervous in his life. He laughs at me so about this wallpaper!",
+      "At first he meant to repaper the room, but afterwards he said that I was letting it get the better of me, and that nothing was worse for a nervous patient than to give way to such fancies.",
+      "He said that after the wallpaper was changed it would be the heavy bedstead, and then the barred windows, and then that gate at the head of the stairs, and so on.",
+      "“You know the place is doing you good,” he said, “and really, dear, I don’t care to renovate the house just for a three months’ rental.”",
+      "“Then do let us go downstairs,” I said, “there are such pretty rooms there.”",
+      "Then he took me in his arms and called me a blessed little goose, and said he would go down cellar if I wished, and have it whitewashed into the bargain.",
+      "But he is right enough about the beds and windows and things.",
+      "It is as airy and comfortable a room as any one need wish, and, of course, I would not be so silly as to make him uncomfortable just for a whim.",
+      "I’m really getting quite fond of the big room, all but that horrid paper.",
+      "Out of one window I can see the garden, those mysterious deep-shaded arbors, the riotous old-fashioned flowers, and bushes and gnarly trees.",
+      "Out of another I get a lovely view of the bay and a little private wharf belonging to the estate. There is a beautiful shaded lane that runs down there from the house. I always fancy I see people walking in these numerous paths and arbors, but John has cautioned me not to give way to fancy in the least. He says that with my imaginative power and habit of story-making a nervous weakness like mine is sure to lead to all manner of excited fancies, and that I ought to use my will and good sense to check the tendency. So I try.",
+      "I think sometimes that if I were only well enough to write a little it would relieve the press of ideas and rest me.",
+      "But I find I get pretty tired when I try.",
+      "It is so discouraging not to have any advice and companionship about my work. When I get really well John says we will ask Cousin Henry and Julia down for a long visit; but he says he would as soon put fire-works in my pillow-case as to let me have those stimulating people about now.",
+      "I wish I could get well faster.",
+      "But I must not think about that. This paper looks to me as if it knew what a vicious influence it had!",
+      "There is a recurrent spot where the pattern lolls like a broken neck and two bulbous eyes stare at you upside-down.",
+      "I get positively angry with the impertinence of it and the everlastingness. Up and down and sideways they crawl, and those absurd, unblinking eyes are everywhere. There is one place where two breadths didn’t match, and the eyes go all up and down the line, one a little higher than the other.",
+      "I never saw so much expression in an inanimate thing before, and we all know how much expression they have! I used to lie awake as a child and get more entertainment and terror out of blank walls and plain furniture than most children could find in a toy-store.",
+      "I remember what a kindly wink the knobs of our big old bureau used to have, and there was one chair that always seemed like a strong friend.",
+      "I used to feel that if any of the other things looked too fierce I could always hop into that chair and be safe.",
+      "The furniture in this room is no worse than inharmonious, however, for we had to bring it all from downstairs. I suppose when this was used as a playroom they had to take the nursery things out, and no wonder! I never saw such ravages as the children have made here.",
+      "The wallpaper, as I said before, is torn off in spots, and it sticketh closer than a brother—they must have had perseverance as well as hatred.",
+      "Then the floor is scratched and gouged and splintered, the plaster itself is dug out here and there, and this great heavy bed, which is all we found in the room, looks as if it had been through the wars.",
+      "But I don’t mind it a bit—only the paper.",
+      "There comes John’s sister. Such a dear girl as she is, and so careful of me! I must not let her find me writing.",
+      "She is a perfect, and enthusiastic housekeeper, and hopes for no better profession. I verily believe she thinks it is the writing which made me sick!",
+      "But I can write when she is out, and see her a long way off from these windows.",
+      "There is one that commands the road, a lovely, shaded, winding road, and one that just looks off over the country. A lovely country, too, full of great elms and velvet meadows.",
+      "This wallpaper has a kind of sub-pattern in a different shade, a particularly irritating one, for you can only see it in certain lights, and not clearly then.",
+      "But in the places where it isn’t faded, and where the sun is just so, I can see a strange, provoking, formless sort of figure, that seems to sulk about behind that silly and conspicuous front design.",
+      "There’s sister on the stairs!",
+      "Well, the Fourth of July is over! The people are gone and I am tired out. John thought it might do me good to see a little company, so we just had mother and Nellie and the children down for a week.",
+      "Of course I didn’t do a thing. Jennie sees to everything now.",
+      "But it tired me all the same.",
+      "John says if I don’t pick up faster he shall send me to Weir Mitchell in the fall.",
+      "But I don’t want to go there at all. I had a friend who was in his hands once, and she says he is just like John and my brother, only more so!",
+      "Besides, it is such an undertaking to go so far.",
+      "I don’t feel as if it was worth while to turn my hand over for anything, and I’m getting dreadfully fretful and querulous.",
+      "I cry at nothing, and cry most of the time.",
+      "Of course I don’t when John is here, or anybody else, but when I am alone.",
+      "And I am alone a good deal just now. John is kept in town very often by serious cases, and Jennie is good and lets me alone when I want her to.",
+      "So I walk a little in the garden or down that lovely lane, sit on the porch under the roses, and lie down up here a good deal.",
+      "I’m getting really fond of the room in spite of the wallpaper. Perhaps because of the wallpaper.",
+      "It dwells in my mind so!",
+      "I lie here on this great immovable bed—it is nailed down, I believe—and follow that pattern about by the hour. It is as good as gymnastics, I assure you. I start, we’ll say, at the bottom, down in the corner over there where it has not been touched, and I determine for the thousandth time that I will follow that pointless pattern to some sort of a conclusion.",
+      "I know a little of the principle of design, and I know this thing was not arranged on any laws of radiation, or alternation, or repetition, or symmetry, or anything else that I ever heard of.",
+      "It is repeated, of course, by the breadths, but not otherwise.",
+      "Looked at in one way each breadth stands alone, the bloated curves and flourishes—a kind of “debased Romanesque” with delirium tremens—go waddling up and down in isolated columns of fatuity.",
+      "But, on the other hand, they connect diagonally, and the sprawling outlines run off in great slanting waves of optic horror, like a lot of wallowing seaweeds in full chase.",
+      "The whole thing goes horizontally, too, at least it seems so, and I exhaust myself in trying to distinguish the order of its going in that direction.",
+      "They have used a horizontal breadth for a frieze, and that adds wonderfully to the confusion.",
+      "There is one end of the room where it is almost intact, and there, when the cross-lights fade and the low sun shines directly upon it, I can almost fancy radiation after all,—the interminable grotesques seem to form around a common centre and rush off in headlong plunges of equal distraction.",
+      "It makes me tired to follow it. I will take a nap, I guess.",
+      "I don’t know why I should write this.",
+      "I don’t want to.",
+      "I don’t feel able.",
+      "And I know John would think it absurd. But I must say what I feel and think in some way—it is such a relief!",
+      "But the effort is getting to be greater than the relief.",
+      "Half the time now I am awfully lazy, and lie down ever so much.",
+      "John says I mustn’t lose my strength, and has me take cod-liver oil and lots of tonics and things, to say nothing of ale and wine and rare meat.",
+      "Dear John! He loves me very dearly, and hates to have me sick. I tried to have a real earnest reasonable talk with him the other day, and tell him how I wish he would let me go and make a visit to Cousin Henry and Julia.",
+      "But he said I wasn’t able to go, nor able to stand it after I got there; and I did not make out a very good case for myself, for I was crying before I had finished.",
+      "It is getting to be a great effort for me to think straight. Just this nervous weakness, I suppose.",
+      "And dear John gathered me up in his arms, and just carried me upstairs and laid me on the bed, and sat by me and read to me till it tired my head.",
+      "He said I was his darling and his comfort and all he had, and that I must take care of myself for his sake, and keep well.",
+      "He says no one but myself can help me out of it, that I must use my will and self-control and not let any silly fancies run away with me.",
+      "There’s one comfort, the baby is well and happy, and does not have to occupy this nursery with the horrid wallpaper.",
+      "If we had not used it that blessed child would have! What a fortunate escape! Why, I wouldn’t have a child of mine, an impressionable little thing, live in such a room for worlds.",
+      "I never thought of it before, but it is lucky that John kept me here after all. I can stand it so much easier than a baby, you see.",
+      "Of course I never mention it to them any more,—I am too wise,—but I keep watch of it all the same.",
+      "There are things in that paper that nobody knows but me, or ever will.",
+      "Behind that outside pattern the dim shapes get clearer every day.",
+      "It is always the same shape, only very numerous.",
+      "And it is like a woman stooping down and creeping about behind that pattern. I don’t like it a bit. I wonder—I begin to think—I wish John would take me away from here!",
+      "It is so hard to talk with John about my case, because he is so wise, and because he loves me so.",
+      "But I tried it last night.",
+      "It was moonlight. The moon shines in all around, just as the sun does.",
+      "I hate to see it sometimes, it creeps so slowly, and always comes in by one window or another.",
+      "John was asleep and I hated to waken him, so I kept still and watched the moonlight on that undulating wallpaper till I felt creepy.",
+      "The faint figure behind seemed to shake the pattern, just as if she wanted to get out.",
+      "I got up softly and went to feel and see if the paper did move, and when I came back John was awake.",
+      "“What is it, little girl?” he said. “Don’t go walking about like that—you’ll get cold.”",
+      "I thought it was a good time to talk, so I told him that I really was not gaining here, and that I wished he would take me away.",
+      "“Why darling!” said he, “our lease will be up in three weeks, and I can’t see how to leave before.",
+      "“The repairs are not done at home, and I cannot possibly leave town just now. Of course if you were in any danger I could and would, but you really are better, dear, whether you can see it or not. I am a doctor, dear, and I know. You are gaining flesh and color, your appetite is better. I feel really much easier about you.”",
+      "“I don’t weigh a bit more,” said I, “nor as much; and my appetite may be better in the evening, when you are here, but it is worse in the morning when you are away.”",
+      "“Bless her little heart!” said he with a big hug; “she shall be as sick as she pleases! But now let’s improve the shining hours by going to sleep, and talk about it in the morning!”",
+      "“And you won’t go away?” I asked gloomily.",
+      "“Why, how can I, dear? It is only three weeks more and then we will take a nice little trip of a few days while Jennie is getting the house ready. Really, dear, you are better!”",
+      "“Better in body perhaps”—I began, and stopped short, for he sat up straight and looked at me with such a stern, reproachful look that I could not say another word.",
+      "“My darling,” said he, “I beg of you, for my sake and for our child’s sake, as well as for your own, that you will never for one instant let that idea enter your mind! There is nothing so dangerous, so fascinating, to a temperament like yours. It is a false and foolish fancy. Can you not trust me as a physician when I tell you so?”",
+      "So of course I said no more on that score, and we went to sleep before long. He thought I was asleep first, but I wasn’t,—I lay there for hours trying to decide whether that front pattern and the back pattern really did move together or separately.",
+      "On a pattern like this, by daylight, there is a lack of sequence, a defiance of law, that is a constant irritant to a normal mind.",
+      "The color is hideous enough, and unreliable enough, and infuriating enough, but the pattern is torturing.",
+      "You think you have mastered it, but just as you get well under way in following, it turns a back somersault and there you are. It slaps you in the face, knocks you down, and tramples upon you. It is like a bad dream.",
+      "The outside pattern is a florid arabesque, reminding one of a fungus. If you can imagine a toadstool in joints, an interminable string of toadstools, budding and sprouting in endless convolutions,—why, that is something like it.",
+      "That is, sometimes!",
+      "There is one marked peculiarity about this paper, a thing nobody seems to notice but myself, and that is that it changes as the light changes.",
+      "When the sun shoots in through the east window—I always watch for that first long, straight ray—it changes so quickly that I never can quite believe it.",
+      "That is why I watch it always.",
+      "By moonlight—the moon shines in all night when there is a moon—I wouldn’t know it was the same paper.",
+      "At night in any kind of light, in twilight, candlelight, lamplight, and worst of all by moonlight, it becomes bars! The outside pattern I mean, and the woman behind it is as plain as can be.",
+      "I didn’t realize for a long time what the thing was that showed behind,—that dim sub-pattern,—but now I am quite sure it is a woman.",
+      "By daylight she is subdued, quiet. I fancy it is the pattern that keeps her so still. It is so puzzling. It keeps me quiet by the hour.",
+      "I lie down ever so much now. John says it is good for me, and to sleep all I can.",
+      "Indeed, he started the habit by making me lie down for an hour after each meal.",
+      "It is a very bad habit, I am convinced, for, you see, I don’t sleep.",
+      "And that cultivates deceit, for I don’t tell them I’m awake,—oh, no!",
+      "The fact is, I am getting a little afraid of John.",
+      "He seems very queer sometimes, and even Jennie has an inexplicable look.",
+      "It strikes me occasionally, just as a scientific hypothesis, that perhaps it is the paper!",
+      "I have watched John when he did not know I was looking, and come into the room suddenly on the most innocent excuses, and I’ve caught him several times looking at the paper! And Jennie too. I caught Jennie with her hand on it once.",
+      "She didn’t know I was in the room, and when I asked her in a quiet, a very quiet voice, with the most restrained manner possible, what she was doing with the paper she turned around as if she had been caught stealing, and looked quite angry—asked me why I should frighten her so!",
+      "Then she said that the paper stained everything it touched, that she had found yellow smooches on all my clothes and John’s, and she wished we would be more careful!",
+      "Did not that sound innocent? But I know she was studying that pattern, and I am determined that nobody shall find it out but myself!",
+      "Life is very much more exciting now than it used to be. You see I have something more to expect, to look forward to, to watch. I really do eat better, and am more quiet than I was.",
+      "John is so pleased to see me improve! He laughed a little the other day, and said I seemed to be flourishing in spite of my wallpaper.",
+      "I turned it off with a laugh. I had no intention of telling him it was because of the wallpaper—he would make fun of me. He might even want to take me away.",
+      "I don’t want to leave now until I have found it out. There is a week more, and I think that will be enough.",
+      "I’m feeling ever so much better! I don’t sleep much at night, for it is so interesting to watch developments; but I sleep a good deal in the daytime.",
+      "In the daytime it is tiresome and perplexing.",
+      "There are always new shoots on the fungus, and new shades of yellow all over it. I cannot keep count of them, though I have tried conscientiously.",
+      "It is the strangest yellow, that wallpaper! It makes me think of all the yellow things I ever saw—not beautiful ones like buttercups, but old foul, bad yellow things.",
+      "But there is something else about that paper—the smell! I noticed it the moment we came into the room, but with so much air and sun it was not bad. Now we have had a week of fog and rain, and whether the windows are open or not, the smell is here.",
+      "It creeps all over the house.",
+      "I find it hovering in the dining-room, skulking in the parlor, hiding in the hall, lying in wait for me on the stairs.",
+      "It gets into my hair.",
+      "Even when I go to ride, if I turn my head suddenly and surprise it—there is that smell!",
+      "Such a peculiar odor, too! I have spent hours in trying to analyze it, to find what it smelled like.",
+      "It is not bad—at first, and very gentle, but quite the subtlest, most enduring odor I ever met.",
+      "In this damp weather it is awful. I wake up in the night and find it hanging over me.",
+      "It used to disturb me at first. I thought seriously of burning the house—to reach the smell.",
+      "But now I am used to it. The only thing I can think of that it is like is the color of the paper! A yellow smell.",
+      "There is a very funny mark on this wall, low down, near the mopboard. A streak that runs round the room. It goes behind every piece of furniture, except the bed, a long, straight, even smooch, as if it had been rubbed over and over.",
+      "I wonder how it was done and who did it, and what they did it for. Round and round and round—round and round and round—it makes me dizzy!",
+      "I really have discovered something at last.",
+      "Through watching so much at night, when it changes so, I have finally found out.",
+      "The front pattern does move—and no wonder! The woman behind shakes it!",
+      "Sometimes I think there are a great many women behind, and sometimes only one, and she crawls around fast, and her crawling shakes it all over.",
+      "Then in the very bright spots she keeps still, and in the very shady spots she just takes hold of the bars and shakes them hard.",
+      "And she is all the time trying to climb through. But nobody could climb through that pattern—it strangles so; I think that is why it has so many heads.",
+      "They get through, and then the pattern strangles them off and turns them upside-down, and makes their eyes white!",
+      "If those heads were covered or taken off it would not be half so bad.",
+      "I think that woman gets out in the daytime!",
+      "And I’ll tell you why—privately—I’ve seen her!",
+      "I can see her out of every one of my windows!",
+      "It is the same woman, I know, for she is always creeping, and most women do not creep by daylight.",
+      "I see her on that long shaded lane, creeping up and down. I see her in those dark grape arbors, creeping all around the garden.",
+      "I see her on that long road under the trees, creeping along, and when a carriage comes she hides under the blackberry vines.",
+      "I don’t blame her a bit. It must be very humiliating to be caught creeping by daylight!",
+      "I always lock the door when I creep by daylight. I can’t do it at night, for I know John would suspect something at once.",
+      "And John is so queer now, that I don’t want to irritate him. I wish he would take another room! Besides, I don’t want anybody to get that woman out at night but myself.",
+      "I often wonder if I could see her out of all the windows at once.",
+      "But, turn as fast as I can, I can only see out of one at one time.",
+      "And though I always see her she may be able to creep faster than I can turn!",
+      "I have watched her sometimes away off in the open country, creeping as fast as a cloud shadow in a high wind.",
+      "If only that top pattern could be gotten off from the under one! I mean to try it, little by little.",
+      "I have found out another funny thing, but I shan’t tell it this time! It does not do to trust people too much.",
+      "There are only two more days to get this paper off, and I believe John is beginning to notice. I don’t like the look in his eyes.",
+      "And I heard him ask Jennie a lot of professional questions about me. She had a very good report to give.",
+      "She said I slept a good deal in the daytime.",
+      "John knows I don’t sleep very well at night, for all I’m so quiet!",
+      "He asked me all sorts of questions, too, and pretended to be very loving and kind.",
+      "As if I couldn’t see through him!",
+      "Still, I don’t wonder he acts so, sleeping under this paper for three months.",
+      "It only interests me, but I feel sure John and Jennie are secretly affected by it.",
+      "Hurrah! This is the last day, but it is enough. John is to stay in town over night, and won’t be out until this evening.",
+      "Jennie wanted to sleep with me—the sly thing! but I told her I should undoubtedly rest better for a night all alone.",
+      "That was clever, for really I wasn’t alone a bit! As soon as it was moonlight, and that poor thing began to crawl and shake the pattern, I got up and ran to help her.",
+      "I pulled and she shook, I shook and she pulled, and before morning we had peeled off yards of that paper.",
+      "A strip about as high as my head and half around the room.",
+      "And then when the sun came and that awful pattern began to laugh at me I declared I would finish it to-day!",
+      "We go away to-morrow, and they are moving all my furniture down again to leave things as they were before.",
+      "Jennie looked at the wall in amazement, but I told her merrily that I did it out of pure spite at the vicious thing.",
+      "She laughed and said she wouldn’t mind doing it herself, but I must not get tired.",
+      "How she betrayed herself that time!",
+      "But I am here, and no person touches this paper but me—not alive!",
+      "She tried to get me out of the room—it was too patent! But I said it was so quiet and empty and clean now that I believed I would lie down again and sleep all I could; and not to wake me even for dinner—I would call when I woke.",
+      "So now she is gone, and the servants are gone, and the things are gone, and there is nothing left but that great bedstead nailed down, with the canvas mattress we found on it.",
+      "We shall sleep downstairs to-night, and take the boat home to-morrow.",
+      "I quite enjoy the room, now it is bare again.",
+      "How those children did tear about here!",
+      "This bedstead is fairly gnawed!",
+      "But I must get to work.",
+      "I have locked the door and thrown the key down into the front path.",
+      "I don’t want to go out, and I don’t want to have anybody come in, till John comes.",
+      "I want to astonish him.",
+      "I’ve got a rope up here that even Jennie did not find. If that woman does get out, and tries to get away, I can tie her!",
+      "But I forgot I could not reach far without anything to stand on!",
+      "This bed will not move!",
+      "I tried to lift and push it until I was lame, and then I got so angry I bit off a little piece at one corner—but it hurt my teeth.",
+      "Then I peeled off all the paper I could reach standing on the floor. It sticks horribly and the pattern just enjoys it! All those strangled heads and bulbous eyes and waddling fungus growths just shriek with derision!",
+      "I am getting angry enough to do something desperate. To jump out of the window would be admirable exercise, but the bars are too strong even to try.",
+      "Besides I wouldn’t do it. Of course not. I know well enough that a step like that is improper and might be misconstrued.",
+      "I don’t like to look out of the windows even—there are so many of those creeping women, and they creep so fast.",
+      "I wonder if they all come out of that wallpaper as I did?",
+      "But I am securely fastened now by my well-hidden rope—you don’t get me out in the road there!",
+      "I suppose I shall have to get back behind the pattern when it comes night, and that is hard!",
+      "It is so pleasant to be out in this great room and creep around as I please!",
+      "I don’t want to go outside. I won’t, even if Jennie asks me to.",
+      "For outside you have to creep on the ground, and everything is green instead of yellow.",
+      "But here I can creep smoothly on the floor, and my shoulder just fits in that long smooch around the wall, so I cannot lose my way.",
+      "Why, there’s John at the door!",
+      "It is no use, young man, you can’t open it!",
+      "How he does call and pound!",
+      "Now he’s crying for an axe.",
+      "It would be a shame to break down that beautiful door!",
+      "“John dear!” said I in the gentlest voice, “the key is down by the front steps, under a plantain leaf!”",
+      "That silenced him for a few moments.",
+      "Then he said—very quietly indeed, “Open the door, my darling!”",
+      "“I can’t,” said I. “The key is down by the front door under a plantain leaf!”",
+      "And then I said it again, several times, very gently and slowly, and said it so often that he had to go and see, and he got it, of course, and came in. He stopped short by the door.",
+      "“What is the matter?” he cried. “For God’s sake, what are you doing!”",
+      "I kept on creeping just the same, but I looked at him over my shoulder.",
+      "“I’ve got out at last,” said I, “in spite of you and Jane! And I’ve pulled off most of the paper, so you can’t put me back!”",
+      "Now why should that man have fainted? But he did, and right across my path by the wall, so that I had to creep over him every time!"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "aesops-fables",
+   "title": "Aesop’s Fables: a selection",
+   "author": "Aesop",
+   "life": "c. 620–564 BC",
+   "translator": "George Fyler Townsend",
+   "translator_life": "1814–1900",
+   "year": 1867,
+   "form": "children",
+   "genres": [
+    "Fables",
+    "Children"
+   ],
+   "description": "Fifteen of the best-known fables, from the Hare and the Tortoise to the Boy who cried Wolf, each ending in its moral.",
+   "language": "en",
+   "words": 1737,
+   "source": {
+    "name": "Project Gutenberg",
+    "url": "https://www.gutenberg.org/ebooks/21"
+   },
+   "sections": [
+    {
+     "title": "The Lion and the Mouse",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "A Lion was awakened from sleep by a Mouse running over his face. Rising up angrily, he caught him and was about to kill him, when the Mouse piteously entreated, saying: “If you would only spare my life, I would be sure to repay your kindness.” The Lion laughed and let him go. It happened shortly after this that the Lion was caught by some hunters, who bound him by strong ropes to the ground. The Mouse, recognizing his roar, came and gnawed the rope with his teeth, and set him free, exclaiming:",
+      "“You ridiculed the idea of my ever being able to help you, not expecting to receive from me any repayment of your favour; now you know that it is possible for even a Mouse to confer benefits on a Lion.”"
+     ]
+    },
+    {
+     "title": "The Ants and the Grasshopper",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "The Ants were spending a fine winter’s day drying grain collected in the summertime. A Grasshopper, perishing with famine, passed by and earnestly begged for a little food. The Ants inquired of him, “Why did you not treasure up food during the summer?” He replied, “I had not leisure enough. I passed the days in singing.” They then said in derision: “If you were foolish enough to sing all the summer, you must dance supperless to bed in the winter.”"
+     ]
+    },
+    {
+     "title": "The Hare and the Tortoise",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "A Hare one day ridiculed the short feet and slow pace of the Tortoise, who replied, laughing: “Though you be swift as the wind, I will beat you in a race.” The Hare, believing her assertion to be simply impossible, assented to the proposal; and they agreed that the Fox should choose the course and fix the goal. On the day appointed for the race the two started together. The Tortoise never for a moment stopped, but went on with a slow but steady pace straight to the end of the course. The Hare, lying down by the wayside, fell fast asleep. At last waking up, and moving as fast as he could, he saw the Tortoise had reached the goal, and was comfortably dozing after her fatigue.",
+      "Slow but steady wins the race."
+     ]
+    },
+    {
+     "title": "The Dog and the Shadow",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "A Dog, crossing a bridge over a stream with a piece of flesh in his mouth, saw his own shadow in the water and took it for that of another Dog, with a piece of meat double his own in size. He immediately let go of his own, and fiercely attacked the other Dog to get his larger piece from him. He thus lost both: that which he grasped at in the water, because it was a shadow; and his own, because the stream swept it away."
+     ]
+    },
+    {
+     "title": "The Wolf in Sheep’s Clothing",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Once Upon A Time a Wolf resolved to disguise his appearance in order to secure food more easily. Encased in the skin of a sheep, he pastured with the flock deceiving the shepherd by his costume. In the evening he was shut up by the shepherd in the fold; the gate was closed, and the entrance made thoroughly secure. But the shepherd, returning to the fold during the night to obtain meat for the next day, mistakenly caught up the Wolf instead of a sheep, and killed him instantly.",
+      "Harm seek, harm find."
+     ]
+    },
+    {
+     "title": "The Boy and the Filberts",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "A Boy put his hand into a pitcher full of filberts. He grasped as many as he could possibly hold, but when he tried to pull out his hand, he was prevented from doing so by the neck of the pitcher. Unwilling to lose his filberts, and yet unable to withdraw his hand, he burst into tears and bitterly lamented his disappointment. A bystander said to him, “Be satisfied with half the quantity, and you will readily draw out your hand.”",
+      "Do not attempt too much at once."
+     ]
+    },
+    {
+     "title": "The Shepherd’s Boy and the Wolf",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "A Shepherd-boy, who watched a flock of sheep near a village, brought out the villagers three or four times by crying out, “Wolf! Wolf!” and when his neighbors came to help him, laughed at them for their pains. The Wolf, however, did truly come at last. The Shepherd-boy, now really alarmed, shouted in an agony of terror: “Pray, do come and help me; the Wolf is killing the sheep;” but no one paid any heed to his cries, nor rendered any assistance. The Wolf, having no cause of fear, at his leisure lacerated or destroyed the whole flock.",
+      "There is no believing a liar, even when he speaks the truth."
+     ]
+    },
+    {
+     "title": "The Fox and the Crow",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "A Crow having stolen a bit of meat, perched in a tree and held it in her beak. A Fox, seeing this, longed to possess the meat himself, and by a wily stratagem succeeded. “How handsome is the Crow,” he exclaimed, “in the beauty of her shape and in the fairness of her complexion! Oh, if her voice were only equal to her beauty, she would deservedly be considered the Queen of Birds!” This he said deceitfully; but the Crow, anxious to refute the reflection cast upon her voice, set up a loud caw and dropped the flesh. The Fox quickly picked it up, and thus addressed the Crow: “My good Crow, your voice is right enough, but your wit is wanting.”"
+     ]
+    },
+    {
+     "title": "The Mice in Council",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "The Mice summoned a council to decide how they might best devise means of warning themselves of the approach of their great enemy the Cat. Among the many plans suggested, the one that found most favour was the proposal to tie a bell to the neck of the Cat, so that the Mice, being warned by the sound of the tinkling, might run away and hide themselves in their holes at his approach. But when the Mice further debated who among them should thus “bell the Cat,” there was no one found to do it."
+     ]
+    },
+    {
+     "title": "The Milk-Woman and Her Pail",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "A Farmer’s daughter was carrying her Pail of milk from the field to the farmhouse, when she fell a-musing. “The money for which this milk will be sold, will buy at least three hundred eggs. The eggs, allowing for all mishaps, will produce two hundred and fifty chickens. The chickens will become ready for the market when poultry will fetch the highest price, so that by the end of the year I shall have money enough from my share to buy a new gown. In this dress I will go to the Christmas parties, where all the young fellows will propose to me, but I will toss my head and refuse them every one.” At this moment she tossed her head in unison with her thoughts, when down fell the milk pail to the ground, and all her imaginary schemes perished in a moment."
+     ]
+    },
+    {
+     "title": "The Hen and the Golden Eggs",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "A Cottager and his wife had a Hen that laid a golden egg every day. They supposed that the Hen must contain a great lump of gold in its inside, and in order to get the gold they killed it. Having done so, they found to their surprise that the Hen differed in no respect from their other hens. The foolish pair, thus hoping to become rich all at once, deprived themselves of the gain of which they were assured day by day."
+     ]
+    },
+    {
+     "title": "The Crow and the Pitcher",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "A Crow perishing with thirst saw a pitcher, and hoping to find water, flew to it with delight. When he reached it, he discovered to his grief that it contained so little water that he could not possibly get at it. He tried everything he could think of to reach the water, but all his efforts were in vain. At last he collected as many stones as he could carry and dropped them one by one with his beak into the pitcher, until he brought the water within his reach and thus saved his life.",
+      "Necessity is the mother of invention."
+     ]
+    },
+    {
+     "title": "The Fox and the Grapes",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "A Famished Fox saw some clusters of ripe black grapes hanging from a trellised vine. She resorted to all her tricks to get at them, but wearied herself in vain, for she could not reach them. At last she turned away, hiding her disappointment and saying: “The Grapes are sour, and not ripe as I thought.”"
+     ]
+    },
+    {
+     "title": "The Town Mouse and the Country Mouse",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "A Country Mouse invited a Town Mouse, an intimate friend, to pay him a visit and partake of his country fare. As they were on the bare plowlands, eating there wheat-stocks and roots pulled up from the hedgerow, the Town Mouse said to his friend, “You live here the life of the ants, while in my house is the horn of plenty. I am surrounded by every luxury, and if you will come with me, as I wish you would, you shall have an ample share of my dainties.” The Country Mouse was easily persuaded, and returned to town with his friend. On his arrival, the Town Mouse placed before him bread, barley, beans, dried figs, honey, raisins, and, last of all, brought a dainty piece of cheese from a basket. The Country Mouse, being much delighted at the sight of such good cheer, expressed his satisfaction in warm terms and lamented his own hard fate. Just as they were beginning to eat, someone opened the door, and they both ran off squeaking, as fast as they could, to a hole so narrow that two could only find room in it by squeezing. They had scarcely begun their repast again when someone else entered to take something out of a cupboard, whereupon the two Mice, more frightened than before, ran away and hid themselves. At last the Country Mouse, almost famished, said to his friend: “Although you have prepared for me so dainty a feast, I must leave you to enjoy it by yourself. It is surrounded by too many dangers to please me. I prefer my bare plowlands and roots from the hedgerow, where I can live in safety, and without fear.”"
+     ]
+    },
+    {
+     "title": "The North Wind and the Sun",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "The North Wind and the Sun disputed as to which was the most powerful, and agreed that he should be declared the victor who could first strip a wayfaring man of his clothes. The North Wind first tried his power and blew with all his might, but the keener his blasts, the closer the Traveler wrapped his cloak around him, until at last, resigning all hope of victory, the Wind called upon the Sun to see what he could do. The Sun suddenly shone out with all his warmth. The Traveler no sooner felt his genial rays than he took off one garment after another, and at last, fairly overcome with heat, undressed and bathed in a stream that lay in his path.",
+      "Persuasion is better than Force."
+     ]
+    }
+   ]
+  },
+  {
+   "author": "Jacob and Wilhelm Grimm",
+   "life": "1785–1863",
+   "translator": "Margaret Hunt",
+   "translator_life": "1831–1912",
+   "id": "frog-king",
+   "title": "The Frog-King, or Iron Henry",
+   "year": 1812,
+   "form": "children",
+   "genres": [
+    "Fairy tales",
+    "Children"
+   ],
+   "description": "A princess promises a frog her friendship in return for her golden ball, and her father makes her keep her word.",
+   "language": "en",
+   "words": 1410,
+   "source": {
+    "name": "Project Gutenberg",
+    "url": "https://www.gutenberg.org/ebooks/5314"
+   },
+   "sections": [
+    {
+     "title": "The Frog-King, or Iron Henry",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "In old times when wishing still helped one, there lived a king whose daughters were all beautiful, but the youngest was so beautiful that the sun itself, which has seen so much, was astonished whenever it shone in her face. Close by the King’s castle lay a great dark forest, and under an old lime-tree in the forest was a well, and when the day was very warm, the King’s child went out into the forest and sat down by the side of the cool fountain, and when she was dull she took a golden ball, and threw it up on high and caught it, and this ball was her favorite plaything.",
+      "Now it so happened that on one occasion the princess’s golden ball did not fall into the little hand which she was holding up for it, but on to the ground beyond, and rolled straight into the water. The King’s daughter followed it with her eyes, but it vanished, and the well was deep, so deep that the bottom could not be seen. On this she began to cry, and cried louder and louder, and could not be comforted. And as she thus lamented some one said to her, “What ails thee, King’s daughter? Thou weepest so that even a stone would show pity.” She looked round to the side from whence the voice came, and saw a frog stretching forth its thick, ugly head from the water. “Ah! old water-splasher, is it thou?” said she; “I am weeping for my golden ball, which has fallen into the well.”",
+      "“Be quiet, and do not weep,” answered the frog, “I can help thee, but what wilt thou give me if I bring thy plaything up again?” “Whatever thou wilt have, dear frog,” said she—“My clothes, my pearls and jewels, and even the golden crown which I am wearing.”",
+      "The frog answered, “I do not care for thy clothes, thy pearls and jewels, or thy golden crown, but if thou wilt love me and let me be thy companion and play-fellow, and sit by thee at thy little table, and eat off thy little golden plate, and drink out of thy little cup, and sleep in thy little bed—if thou wilt promise me this I will go down below, and bring thee thy golden ball up again.”",
+      "“Oh yes,” said she, “I promise thee all thou wishest, if thou wilt but bring me my ball back again.” She, however, thought, “How the silly frog does talk! He lives in the water with the other frogs, and croaks, and can be no companion to any human being!”",
+      "But the frog when he had received this promise, put his head into the water and sank down, and in a short while came swimmming up again with the ball in his mouth, and threw it on the grass. The King’s daughter was delighted to see her pretty plaything once more, and picked it up, and ran away with it. “Wait, wait,” said the frog. “Take me with thee. I can’t run as thou canst.” But what did it avail him to scream his croak, croak, after her, as loudly as he could? She did not listen to it, but ran home and soon forgot the poor frog, who was forced to go back into his well again.",
+      "The next day when she had seated herself at table with the King and all the courtiers, and was eating from her little golden plate, something came creeping splish splash, splish splash, up the marble staircase, and when it had got to the top, it knocked at the door and cried, “Princess, youngest princess, open the door for me.” She ran to see who was outside, but when she opened the door, there sat the frog in front of it. Then she slammed the door to, in great haste, sat down to dinner again, and was quite frightened. The King saw plainly that her heart was beating violently, and said, “My child, what art thou so afraid of? Is there perchance a giant outside who wants to carry thee away?” “Ah, no,” replied she. “It is no giant but a disgusting frog.”",
+      "“What does a frog want with thee?” “Ah, dear father, yesterday as I was in the forest sitting by the well, playing, my golden ball fell into the water. And because I cried so, the frog brought it out again for me, and because he so insisted, I promised him he should be my companion, but I never thought he would be able to come out of his water! And now he is outside there, and wants to come in to me.”",
+      "In the meantime it knocked a second time, and cried,",
+      "“Princess! youngest princess! Open the door for me! Dost thou not know what thou saidst to me Yesterday by the cool waters of the fountain? Princess, youngest princess! Open the door for me!”",
+      "Then said the King, “That which thou hast promised must thou perform. Go and let him in.” She went and opened the door, and the frog hopped in and followed her, step by step, to her chair. There he sat and cried, “Lift me up beside thee.” She delayed, until at last the King commanded her to do it. When the frog was once on the chair he wanted to be on the table, and when he was on the table he said, “Now, push thy little golden plate nearer to me that we may eat together.” She did this, but it was easy to see that she did not do it willingly. The frog enjoyed what he ate, but almost every mouthful she took choked her. At length he said, “I have eaten and am satisfied; now I am tired, carry me into thy little room and make thy little silken bed ready, and we will both lie down and go to sleep.”",
+      "The King’s daughter began to cry, for she was afraid of the cold frog which she did not like to touch, and which was now to sleep in her pretty, clean little bed. But the King grew angry and said, “He who helped thee when thou wert in trouble ought not afterwards to be despised by thee.” So she took hold of the frog with two fingers, carried him upstairs, and put him in a corner. But when she was in bed he crept to her and said, “I am tired, I want to sleep as well as thou, lift me up or I will tell thy father.” Then she was terribly angry, and took him up and threw him with all her might against the wall. “Now, thou wilt be quiet, odious frog,” said she. But when he fell down he was no frog but a King’s son with beautiful kind eyes. He by her father’s will was now her dear companion and husband. Then he told her how he had been bewitched by a wicked witch, and how no one could have delivered him from the well but herself, and that to-morrow they would go together into his kingdom. Then they went to sleep, and next morning when the sun awoke them, a carriage came driving up with eight white horses, which had white ostrich feathers on their heads, and were harnessed with golden chains, and behind stood the young King’s servant Faithful Henry. Faithful Henry had been so unhappy when his master was changed into a frog, that he had caused three iron bands to be laid round his heart, lest it should burst with grief and sadness. The carriage was to conduct the young King into his Kingdom. Faithful Henry helped them both in, and placed himself behind again, and was full of joy because of this deliverance. And when they had driven a part of the way the King’s son heard a cracking behind him as if something had broken. So he turned round and cried, “Henry, the carriage is breaking.”",
+      "“No, master, it is not the carriage. It is a band from my heart, which was put there in my great pain when you were a frog and imprisoned in the well.” Again and once again while they were on their way something cracked, and each time the King’s son thought the carriage was breaking; but it was only the bands which were springing from the heart of faithful Henry because his master was set free and was happy."
+     ]
+    }
+   ]
+  },
+  {
+   "author": "Jacob and Wilhelm Grimm",
+   "life": "1785–1863",
+   "translator": "Margaret Hunt",
+   "translator_life": "1831–1912",
+   "id": "hansel-and-grethel",
+   "title": "Hansel and Grethel",
+   "subtitle": "Hansel and Gretel",
+   "year": 1812,
+   "form": "children",
+   "genres": [
+    "Fairy tales",
+    "Children"
+   ],
+   "description": "Abandoned in the forest, a brother and sister find a house made of bread and cake, and the witch who lives in it.",
+   "language": "en",
+   "words": 2946,
+   "source": {
+    "name": "Project Gutenberg",
+    "url": "https://www.gutenberg.org/ebooks/5314"
+   },
+   "sections": [
+    {
+     "title": "Hansel and Grethel",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Hard by a great forest dwelt a poor wood-cutter with his wife and his two children. The boy was called Hansel and the girl Grethel. He had little to bite and to break, and once when great scarcity fell on the land, he could no longer procure daily bread. Now when he thought over this by night in his bed, and tossed about in his anxiety, he groaned and said to his wife, “What is to become of us? How are we to feed our poor children, when we no longer have anything even for ourselves?” “I’ll tell you what, husband,” answered the woman, “Early to-morrow morning we will take the children out into the forest to where it is the thickest, there we will light a fire for them, and give each of them one piece of bread more, and then we will go to our work and leave them alone. They will not find the way home again, and we shall be rid of them.” “No, wife,” said the man, “I will not do that; how can I bear to leave my children alone in the forest?—the wild animals would soon come and tear them to pieces.” “O, thou fool!” said she, “Then we must all four die of hunger, thou mayest as well plane the planks for our coffins,” and she left him no peace until he consented. “But I feel very sorry for the poor children, all the same,” said the man.",
+      "The two children had also not been able to sleep for hunger, and had heard what their step-mother had said to their father. Grethel wept bitter tears, and said to Hansel, “Now all is over with us.” “Be quiet, Grethel,” said Hansel, “do not distress thyself, I will soon find a way to help us.” And when the old folks had fallen asleep, he got up, put on his little coat, opened the door below, and crept outside. The moon shone brightly, and the white pebbles which lay in front of the house glittered like real silver pennies. Hansel stooped and put as many of them in the little pocket of his coat as he could possibly get in. Then he went back and said to Grethel, “Be comforted, dear little sister, and sleep in peace, God will not forsake us,” and he lay down again in his bed. When day dawned, but before the sun had risen, the woman came and awoke the two children, saying “Get up, you sluggards! we are going into the forest to fetch wood.” She gave each a little piece of bread, and said, “There is something for your dinner, but do not eat it up before then, for you will get nothing else.” Grethel took the bread under her apron, as Hansel had the stones in his pocket. Then they all set out together on the way to the forest. When they had walked a short time, Hansel stood still and peeped back at the house, and did so again and again. His father said, “Hansel, what art thou looking at there and staying behind for? Mind what thou art about, and do not forget how to use thy legs.” “Ah, father,” said Hansel, “I am looking at my little white cat, which is sitting up on the roof, and wants to say good-bye to me.” The wife said, “Fool, that is not thy little cat, that is the morning sun which is shining on the chimneys.” Hansel, however, had not been looking back at the cat, but had been constantly throwing one of the white pebble-stones out of his pocket on the road.",
+      "When they had reached the middle of the forest, the father said, “Now, children, pile up some wood, and I will light a fire that you may not be cold.” Hansel and Grethel gathered brushwood together, as high as a little hill. The brushwood was lighted, and when the flames were burning very high, the woman said, “Now, children, lay yourselves down by the fire and rest, we will go into the forest and cut some wood. When we have done, we will come back and fetch you away.”",
+      "Hansel and Grethel sat by the fire, and when noon came, each ate a little piece of bread, and as they heard the strokes of the wood-axe they believed that their father was near. It was not, however, the axe, it was a branch which he had fastened to a withered tree which the wind was blowing backwards and forwards. And as they had been sitting such a long time, their eyes shut with fatigue, and they fell fast asleep. When at last they awoke, it was already dark night. Grethel began to cry and said, “How are we to get out of the forest now?” But Hansel comforted her and said, “Just wait a little, until the moon has risen, and then we will soon find the way.” And when the full moon had risen, Hansel took his little sister by the hand, and followed the pebbles which shone like newly-coined silver pieces, and showed them the way.",
+      "They walked the whole night long, and by break of day came once more to their father’s house. They knocked at the door, and when the woman opened it and saw that it was Hansel and Grethel, she said, “You naughty children, why have you slept so long in the forest?—we thought you were never coming back at all!” The father, however, rejoiced, for it had cut him to the heart to leave them behind alone.",
+      "Not long afterwards, there was once more great scarcity in all parts, and the children heard their mother saying at night to their father, “Everything is eaten again, we have one half loaf left, and after that there is an end. The children must go, we will take them farther into the wood, so that they will not find their way out again; there is no other means of saving ourselves!” The man’s heart was heavy, and he thought “it would be better for thee to share the last mouthful with thy children.” The woman, however, would listen to nothing that he had to say, but scolded and reproached him. He who says A must say B, likewise, and as he had yielded the first time, he had to do so a second time also.",
+      "The children were, however, still awake and had heard the conversation. When the old folks were asleep, Hansel again got up, and wanted to go out and pick up pebbles as he had done before, but the woman had locked the door, and Hansel could not get out. Nevertheless he comforted his little sister, and said, “Do not cry, Grethel, go to sleep quietly, the good God will help us.”",
+      "Early in the morning came the woman, and took the children out of their beds. Their bit of bread was given to them, but it was still smaller than the time before. On the way into the forest Hansel crumbled his in his pocket, and often stood still and threw a morsel on the ground. “Hansel, why dost thou stop and look round?” said the father, “go on.” “I am looking back at my little pigeon which is sitting on the roof, and wants to say good-bye to me,” answered Hansel. “Simpleton!” said the woman, “that is not thy little pigeon, that is the morning sun that is shining on the chimney.” Hansel, however, little by little, threw all the crumbs on the path.",
+      "The woman led the children still deeper into the forest, where they had never in their lives been before. Then a great fire was again made, and the mother said, “Just sit there, you children, and when you are tired you may sleep a little; we are going into the forest to cut wood, and in the evening when we are done, we will come and fetch you away.” When it was noon, Grethel shared her piece of bread with Hansel, who had scattered his by the way. Then they fell asleep and evening came and went, but no one came to the poor children. They did not awake until it was dark night, and Hansel comforted his little sister and said, “Just wait, Grethel, until the moon rises, and then we shall see the crumbs of bread which I have strewn about, they will show us our way home again.” When the moon came they set out, but they found no crumbs, for the many thousands of birds which fly about in the woods and fields had picked them all up. Hansel said to Grethel, “We shall soon find the way,” but they did not find it. They walked the whole night and all the next day too from morning till evening, but they did not get out of the forest, and were very hungry, for they had nothing to eat but two or three berries, which grew on the ground. And as they were so weary that their legs would carry them no longer, they lay down beneath a tree and fell asleep.",
+      "It was now three mornings since they had left their father’s house. They began to walk again, but they always got deeper into the forest, and if help did not come soon, they must die of hunger and weariness. When it was mid-day, they saw a beautiful snow-white bird sitting on a bough, which sang so delightfully that they stood still and listened to it. And when it had finished its song, it spread its wings and flew away before them, and they followed it until they reached a little house, on the roof of which it alighted; and when they came quite up to little house they saw that it was built of bread and covered with cakes, but that the windows were of clear sugar. “We will set to work on that,” said Hansel, “and have a good meal. I will eat a bit of the roof, and thou, Grethel, canst eat some of the window, it will taste sweet.” Hansel reached up above, and broke off a little of the roof to try how it tasted, and Grethel leant against the window and nibbled at the panes. Then a soft voice cried from the room,",
+      "“Nibble, nibble, gnaw, Who is nibbling at my little house?”",
+      "The children answered,",
+      "“The wind, the wind, The heaven-born wind,”",
+      "and went on eating without disturbing themselves. Hansel, who thought the roof tasted very nice, tore down a great piece of it, and Grethel pushed out the whole of one round window-pane, sat down, and enjoyed herself with it. Suddenly the door opened, and a very, very old woman, who supported herself on crutches, came creeping out. Hansel and Grethel were so terribly frightened that they let fall what they had in their hands. The old woman, however, nodded her head, and said, “Oh, you dear children, who has brought you here? Do come in, and stay with me. No harm shall happen to you.” She took them both by the hand, and led them into her little house. Then good food was set before them, milk and pancakes, with sugar, apples, and nuts. Afterwards two pretty little beds were covered with clean white linen, and Hansel and Grethel lay down in them, and thought they were in heaven.",
+      "The old woman had only pretended to be so kind; she was in reality a wicked witch, who lay in wait for children, and had only built the little house of bread in order to entice them there. When a child fell into her power, she killed it, cooked and ate it, and that was a feast day with her. Witches have red eyes, and cannot see far, but they have a keen scent like the beasts, and are aware when human beings draw near. When Hansel and Grethel came into her neighborhood, she laughed maliciously, and said mockingly, “I have them, they shall not escape me again!” Early in the morning before the children were awake, she was already up, and when she saw both of them sleeping and looking so pretty, with their plump red cheeks, she muttered to herself, “That will be a dainty mouthful!” Then she seized Hansel with her shrivelled hand, carried him into a little stable, and shut him in with a grated door. He might scream as he liked, that was of no use. Then she went to Grethel, shook her till she awoke, and cried, “Get up, lazy thing, fetch some water, and cook something good for thy brother, he is in the stable outside, and is to be made fat. When he is fat, I will eat him.” Grethel began to weep bitterly, but it was all in vain, she was forced to do what the wicked witch ordered her.",
+      "And now the best food was cooked for poor Hansel, but Grethel got nothing but crab-shells. Every morning the woman crept to the little stable, and cried, “Hansel, stretch out thy finger that I may feel if thou wilt soon be fat.” Hansel, however, stretched out a little bone to her, and the old woman, who had dim eyes, could not see it, and thought it was Hansel’s finger, and was astonished that there was no way of fattening him. When four weeks had gone by, and Hansel still continued thin, she was seized with impatience and would not wait any longer. “Hola, Grethel,” she cried to the girl, “be active, and bring some water. Let Hansel be fat or lean, to-morrow I will kill him, and cook him.” Ah, how the poor little sister did lament when she had to fetch the water, and how her tears did flow down over her cheeks! “Dear God, do help us,” she cried. “If the wild beasts in the forest had but devoured us, we should at any rate have died together.” “Just keep thy noise to thyself,” said the old woman, “all that won’t help thee at all.”",
+      "Early in the morning, Grethel had to go out and hang up the cauldron with the water, and light the fire. “We will bake first,” said the old woman, “I have already heated the oven, and kneaded the dough.” She pushed poor Grethel out to the oven, from which flames of fire were already darting. “Creep in,” said the witch, “and see if it is properly heated, so that we can shut the bread in.” And when once Grethel was inside, she intended to shut the oven and let her bake in it, and then she would eat her, too. But Grethel saw what she had in her mind, and said, “I do not know how I am to do it; how do you get in?” “Silly goose,” said the old woman, “The door is big enough; just look, I can get in myself!” and she crept up and thrust her head into the oven. Then Grethel gave her a push that drove her far into it, and shut the iron door, and fastened the bolt. Oh! then she began to howl quite horribly, but Grethel ran away, and the godless witch was miserably burnt to death.",
+      "Grethel, however, ran like lightning to Hansel, opened his little stable, and cried, “Hansel, we are saved! The old witch is dead!” Then Hansel sprang out like a bird from its cage when the door is opened for it. How they did rejoice and embrace each other, and dance about and kiss each other! And as they had no longer any need to fear her, they went into the witch’s house, and in every corner there stood chests full of pearls and jewels. “These are far better than pebbles!” said Hansel, and thrust into his pockets whatever could be got in, and Grethel said, “I, too, will take something home with me,” and filled her pinafore full. “But now we will go away.” said Hansel, “that we may get out of the witch’s forest.”",
+      "When they had walked for two hours, they came to a great piece of water. “We cannot get over,” said Hansel, “I see no foot-plank, and no bridge.” “And no boat crosses either,” answered Grethel, “but a white duck is swimming there; if I ask her, she will help us over.” Then she cried,",
+      "“Little duck, little duck, dost thou see, Hansel and Grethel are waiting for thee? There’s never a plank, or bridge in sight, Take us across on thy back so white.”",
+      "The duck came to them, and Hansel seated himself on its back, and told his sister to sit by him. “No,” replied Grethel, “that will be too heavy for the little duck; she shall take us across, one after the other.” The good little duck did so, and when they were once safely across and had walked for a short time, the forest seemed to be more and more familiar to them, and at length they saw from afar their father’s house. Then they began to run, rushed into the parlour, and threw themselves into their father’s arms. The man had not known one happy hour since he had left the children in the forest; the woman, however, was dead. Grethel emptied her pinafore until pearls and precious stones ran about the room, and Hansel threw one handful after another out of his pocket to add to them. Then all anxiety was at an end, and they lived together in perfect happiness. My tale is done, there runs a mouse, whosoever catches it, may make himself a big fur cap out of it."
+     ]
+    }
+   ]
+  },
+  {
+   "author": "Jacob and Wilhelm Grimm",
+   "life": "1785–1863",
+   "translator": "Margaret Hunt",
+   "translator_life": "1831–1912",
+   "id": "little-red-cap",
+   "title": "Little Red-Cap",
+   "subtitle": "Little Red Riding Hood",
+   "year": 1812,
+   "form": "children",
+   "genres": [
+    "Fairy tales",
+    "Children"
+   ],
+   "description": "A girl in a red cap takes cake and wine to her grandmother and meets a wolf in the wood.",
+   "language": "en",
+   "words": 1383,
+   "source": {
+    "name": "Project Gutenberg",
+    "url": "https://www.gutenberg.org/ebooks/5314"
+   },
+   "sections": [
+    {
+     "title": "Little Red-Cap",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Once upon a time there was a dear little girl who was loved by every one who looked at her, but most of all by her grandmother, and there was nothing that she would not have given to the child. Once she gave her a little cap of red velvet, which suited her so well that she would never wear anything else; so she was always called “Little Red-Cap.”",
+      "One day her mother said to her, “Come, Little Red-Cap, here is a piece of cake and a bottle of wine; take them to your grandmother, she is ill and weak, and they will do her good. Set out before it gets hot, and when you are going, walk nicely and quietly and do not run off the path, or you may fall and break the bottle, and then your grandmother will get nothing; and when you go into her room, don’t forget to say, ‘Good-morning,’ and don’t peep into every corner before you do it.”",
+      "“I will take great care,” said Little Red-Cap to her mother, and gave her hand on it.",
+      "The grandmother lived out in the wood, half a league from the village, and just as Little Red-Cap entered the wood, a wolf met her. Red-Cap did not know what a wicked creature he was, and was not at all afraid of him.",
+      "“Good-day, Little Red-Cap,” said he.",
+      "“Thank you kindly, wolf.”",
+      "“Whither away so early, Little Red-Cap?”",
+      "“To my grandmother’s.”",
+      "“What have you got in your apron?”",
+      "“Cake and wine; yesterday was baking-day, so poor sick grandmother is to have something good, to make her stronger.”",
+      "“Where does your grandmother live, Little Red-Cap?”",
+      "“A good quarter of a league farther on in the wood; her house stands under the three large oak-trees, the nut-trees are just below; you surely must know it,” replied Little Red-Cap.",
+      "The wolf thought to himself, “What a tender young creature! what a nice plump mouthful—she will be better to eat than the old woman. I must act craftily, so as to catch both.” So he walked for a short time by the side of Little Red-Cap, and then he said, “See Little Red-Cap, how pretty the flowers are about here—why do you not look round? I believe, too, that you do not hear how sweetly the little birds are singing; you walk gravely along as if you were going to school, while everything else out here in the wood is merry.”",
+      "Little Red-Cap raised her eyes, and when she saw the sunbeams dancing here and there through the trees, and pretty flowers growing everywhere, she thought, “Suppose I take grandmother a fresh nosegay; that would please her too. It is so early in the day that I shall still get there in good time;” and so she ran from the path into the wood to look for flowers. And whenever she had picked one, she fancied that she saw a still prettier one farther on, and ran after it, and so got deeper and deeper into the wood.",
+      "Meanwhile the wolf ran straight to the grandmother’s house and knocked at the door.",
+      "“Who is there?”",
+      "“Little Red-Cap,” replied the wolf. “She is bringing cake and wine; open the door.”",
+      "“Lift the latch,” called out the grandmother, “I am too weak, and cannot get up.”",
+      "The wolf lifted the latch, the door flew open, and without saying a word he went straight to the grandmother’s bed, and devoured her. Then he put on her clothes, dressed himself in her cap, laid himself in bed and drew the curtains.",
+      "Little Red-Cap, however, had been running about picking flowers, and when she had gathered so many that she could carry no more, she remembered her grandmother, and set out on the way to her.",
+      "She was surprised to find the cottage-door standing open, and when she went into the room, she had such a strange feeling that she said to herself, “Oh dear! how uneasy I feel to-day, and at other times I like being with grandmother so much.” She called out, “Good morning,” but received no answer; so she went to the bed and drew back the curtains. There lay her grandmother with her cap pulled far over her face, and looking very strange.",
+      "“Oh! grandmother,” she said, “what big ears you have!”",
+      "“The better to hear you with, my child,” was the reply.",
+      "“But, grandmother, what big eyes you have!” she said.",
+      "“The better to see you with, my dear.”",
+      "“But, grandmother, what large hands you have!”",
+      "“The better to hug you with.”",
+      "“Oh! but, grandmother, what a terrible big mouth you have!”",
+      "“The better to eat you with!”",
+      "And scarcely had the wolf said this, than with one bound he was out of bed and swallowed up Red-Cap.",
+      "When the wolf had appeased his appetite, he lay down again in the bed, fell asleep and began to snore very loud. The huntsman was just passing the house, and thought to himself, “How the old woman is snoring! I must just see if she wants anything.” So he went into the room, and when he came to the bed, he saw that the wolf was lying in it. “Do I find thee here, thou old sinner!” said he. “I have long sought thee!” Then just as he was going to fire at him, it occurred to him that the wolf might have devoured the grandmother, and that she might still be saved, so he did not fire, but took a pair of scissors, and began to cut open the stomach of the sleeping wolf. When he had made two snips, he saw the little Red-Cap shining, and then he made two snips more, and the little girl sprang out, crying, “Ah, how frightened I have been! How dark it was inside the wolf;” and after that the aged grandmother came out alive also, but scarcely able to breathe. Red-Cap, however, quickly fetched great stones with which they filled the wolf’s body, and when he awoke, he wanted to run away, but the stones were so heavy that he fell down at once, and fell dead.",
+      "Then all three were delighted. The huntsman drew off the wolf’s skin and went home with it; the grandmother ate the cake and drank the wine which Red-Cap had brought, and revived, but Red-Cap thought to herself, “As long as I live, I will never by myself leave the path, to run into the wood, when my mother has forbidden me to do so.”",
+      "* * * * * * *",
+      "It is also related that once when Red-Cap was again taking cakes to the old grandmother, another wolf spoke to her, and tried to entice her from the path. Red-Cap, however, was on her guard, and went straight forward on her way, and told her grandmother that she had met the wolf, and that he had said “good-morning” to her, but with such a wicked look in his eyes, that if they had not been on the public road she was certain he would have eaten her up. “Well,” said the grandmother, “we will shut the door, that he may not come in.” Soon afterwards the wolf knocked, and cried, “Open the door, grandmother, I am little Red-Cap, and am fetching you some cakes.” But they did not speak, or open the door, so the grey-beard stole twice or thrice round the house, and at last jumped on the roof, intending to wait until Red-Cap went home in the evening, and then to steal after her and devour her in the darkness. But the grandmother saw what was in his thoughts. In front of the house was a great stone trough, so she said to the child, “Take the pail, Red-Cap; I made some sausages yesterday, so carry the water in which I boiled them to the trough.” Red-Cap carried until the great trough was quite full. Then the smell of the sausages reached the wolf, and he sniffed and peeped down, and at last stretched out his neck so far that he could no longer keep his footing and began to slip, and slipped down from the roof straight into the great trough, and was drowned. But Red-Cap went joyously home, and never did anything to harm any one."
+     ]
+    }
+   ]
+  },
+  {
+   "author": "Jacob and Wilhelm Grimm",
+   "life": "1785–1863",
+   "translator": "Margaret Hunt",
+   "translator_life": "1831–1912",
+   "id": "bremen-town-musicians",
+   "title": "The Bremen Town-Musicians",
+   "year": 1819,
+   "form": "children",
+   "genres": [
+    "Fairy tales",
+    "Children",
+    "Comedy"
+   ],
+   "description": "An old donkey, dog, cat and rooster set off to be town musicians, and find a robbers' house on the way.",
+   "language": "en",
+   "words": 1263,
+   "source": {
+    "name": "Project Gutenberg",
+    "url": "https://www.gutenberg.org/ebooks/5314"
+   },
+   "sections": [
+    {
+     "title": "The Bremen Town-Musicians",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "A certain man had a donkey, which had carried the corn-sacks to the mill indefatigably for many a long year; but his strength was going, and he was growing more and more unfit for work. Then his master began to consider how he might best save his keep; but the donkey, seeing that no good wind was blowing, ran away and set out on the road to Bremen. “There,” he thought, “I can surely be town-musician.” When he had walked some distance, he found a hound lying on the road, gasping like one who had run till he was tired. “What are you gasping so for, you big fellow?” asked the donkey.",
+      "“Ah,” replied the hound, “as I am old, and daily grow weaker, and no longer can hunt, my master wanted to kill me, so I took to flight; but now how am I to earn my bread?”",
+      "“I tell you what,” said the donkey, “I am going to Bremen, and shall be town-musician there; go with me and engage yourself also as a musician. I will play the lute, and you shall beat the kettledrum.”",
+      "The hound agreed, and on they went.",
+      "Before long they came to a cat, sitting on the path, with a face like three rainy days! “Now then, old shaver, what has gone askew with you?” asked the donkey.",
+      "“Who can be merry when his neck is in danger?” answered the cat. “Because I am now getting old, and my teeth are worn to stumps, and I prefer to sit by the fire and spin, rather than hunt about after mice, my mistress wanted to drown me, so I ran away. But now good advice is scarce. Where am I to go?”",
+      "“Go with us to Bremen. You understand night-music, you can be a town-musician.”",
+      "The cat thought well of it, and went with them. After this the three fugitives came to a farm-yard, where the cock was sitting upon the gate, crowing with all his might. “Your crow goes through and through one,” said the donkey. “What is the matter?”",
+      "“I have been foretelling fine weather, because it is the day on which Our Lady washes the Christ-child’s little shirts, and wants to dry them,” said the cock; “but guests are coming for Sunday, so the housewife has no pity, and has told the cook that she intends to eat me in the soup to-morrow, and this evening I am to have my head cut off. Now I am crowing at full pitch while I can.”",
+      "“Ah, but red-comb,” said the donkey, “you had better come away with us. We are going to Bremen; you can find something better than death everywhere: you have a good voice, and if we make music together it must have some quality!”",
+      "The cock agreed to this plan, and all four went on together. They could not, however, reach the city of Bremen in one day, and in the evening they came to a forest where they meant to pass the night. The donkey and the hound laid themselves down under a large tree, the cat and the cock settled themselves in the branches; but the cock flew right to the top, where he was most safe. Before he went to sleep he looked round on all four sides, and thought he saw in the distance a little spark burning; so he called out to his companions that there must be a house not far off, for he saw a light. The donkey said, “If so, we had better get up and go on, for the shelter here is bad.” The hound thought that a few bones with some meat on would do him good too!",
+      "So they made their way to the place where the light was, and soon saw it shine brighter and grow larger, until they came to a well-lighted robber’s house. The donkey, as the biggest, went to the window and looked in.",
+      "“What do you see, my grey-horse?” asked the cock. “What do I see?” answered the donkey; “a table covered with good things to eat and drink, and robbers sitting at it enjoying themselves.” “That would be the sort of thing for us,” said the cock. “Yes, yes; ah, how I wish we were there!” said the donkey.",
+      "Then the animals took counsel together how they should manage to drive away the robbers, and at last they thought of a plan. The donkey was to place himself with his fore-feet upon the window-ledge, the hound was to jump on the donkey’s back, the cat was to climb upon the dog, and lastly the cock was to fly up and perch upon the head of the cat.",
+      "When this was done, at a given signal, they began to perform their music together: the donkey brayed, the hound barked, the cat mewed, and the cock crowed; then they burst through the window into the room, so that the glass clattered! At this horrible din, the robbers sprang up, thinking no otherwise than that a ghost had come in, and fled in a great fright out into the forest. The four companions now sat down at the table, well content with what was left, and ate as if they were going to fast for a month.",
+      "As soon as the four minstrels had done, they put out the light, and each sought for himself a sleeping-place according to his nature and to what suited him. The donkey laid himself down upon some straw in the yard, the hound behind the door, the cat upon the hearth near the warm ashes, and the cock perched himself upon a beam of the roof; and being tired from their long walk, they soon went to sleep.",
+      "When it was past midnight, and the robbers saw from afar that the light was no longer burning in their house, and all appeared quiet, the captain said, “We ought not to have let ourselves be frightened out of our wits;” and ordered one of them to go and examine the house.",
+      "The messenger finding all still, went into the kitchen to light a candle, and, taking the glistening fiery eyes of the cat for live coals, he held a lucifer-match to them to light it. But the cat did not understand the joke, and flew in his face, spitting and scratching. He was dreadfully frightened, and ran to the back-door, but the dog, who lay there sprang up and bit his leg; and as he ran across the yard by the straw-heap, the donkey gave him a smart kick with its hind foot. The cock, too, who had been awakened by the noise, and had become lively, cried down from the beam, “Cock-a-doodle-doo!”",
+      "Then the robber ran back as fast as he could to his captain, and said, “Ah, there is a horrible witch sitting in the house, who spat on me and scratched my face with her long claws; and by the door stands a man with a knife, who stabbed me in the leg; and in the yard there lies a black monster, who beat me with a wooden club; and above, upon the roof, sits the judge, who called out, ‘Bring the rogue here to me!’ so I got away as well as I could.”",
+      "After this the robbers did not trust themselves in the house again; but it suited the four musicians of Bremen so well that they did not care to leave it any more. And the mouth of him who last told this story is still warm."
+     ]
+    }
+   ]
+  },
+  {
+   "author": "Jacob and Wilhelm Grimm",
+   "life": "1785–1863",
+   "translator": "Margaret Hunt",
+   "translator_life": "1831–1912",
+   "id": "elves-and-the-shoemaker",
+   "title": "The Elves and the Shoemaker",
+   "year": 1812,
+   "form": "children",
+   "genres": [
+    "Fairy tales",
+    "Children"
+   ],
+   "description": "A poor shoemaker leaves out his last leather at night and finds a finished pair of shoes in the morning.",
+   "language": "en",
+   "words": 656,
+   "source": {
+    "name": "Project Gutenberg",
+    "url": "https://www.gutenberg.org/ebooks/5314"
+   },
+   "sections": [
+    {
+     "title": "The Elves and the Shoemaker",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "A shoemaker, by no fault of his own, had become so poor that at last he had nothing left but leather for one pair of shoes. So in the evening, he cut out the shoes which he wished to begin to make the next morning, and as he had a good conscience, he lay down quietly in his bed, commended himself to God, and fell asleep. In the morning, after he had said his prayers, and was just going to sit down to work, the two shoes stood quite finished on his table. He was astounded, and knew not what to say to it. He took the shoes in his hands to observe them closer, and they were so neatly made that there was not one bad stitch in them, just as if they were intended as a masterpiece. Soon after, a buyer came in, and as the shoes pleased him so well, he paid more for them than was customary, and, with the money, the shoemaker was able to purchase leather for two pairs of shoes. He cut them out at night, and next morning was about to set to work with fresh courage; but he had no need to do so, for, when he got up, they were already made, and buyers also were not wanting, who gave him money enough to buy leather for four pairs of shoes. The following morning, too, he found the four pairs made; and so it went on constantly, what he cut out in the evening was finished by the morning, so that he soon had his honest independence again, and at last became a wealthy man. Now it befell that one evening not long before Christmas, when the man had been cutting out, he said to his wife, before going to bed, “What think you if we were to stay up to-night to see who it is that lends us this helping hand?” The woman liked the idea, and lighted a candle, and then they hid themselves in a corner of the room, behind some clothes which were hanging up there, and watched. When it was midnight, two pretty little naked men came, sat down by the shoemaker’s table, took all the work which was cut out before them and began to stitch, and sew, and hammer so skilfully and so quickly with their little fingers that the shoemaker could not turn away his eyes for astonishment. They did not stop until all was done, and stood finished on the table, and they ran quickly away.",
+      "Next morning the woman said, “The little men have made us rich, and we really must show that we are grateful for it. They run about so, and have nothing on, and must be cold. I’ll tell thee what I’ll do: I will make them little shirts, and coats, and vests, and trousers, and knit both of them a pair of stockings, and do thou, too, make them two little pairs of shoes.” The man said, “I shall be very glad to do it;” and one night, when everything was ready, they laid their presents all together on the table instead of the cut-out work, and then concealed themselves to see how the little men would behave. At midnight they came bounding in, and wanted to get to work at once, but as they did not find any leather cut out, but only the pretty little articles of clothing, they were at first astonished, and then they showed intense delight. They dressed themselves with the greatest rapidity, putting the pretty clothes on, and singing,",
+      "“Now we are boys so fine to see, Why should we longer cobblers be?”",
+      "Then they danced and skipped and leapt over chairs and benches. At last they danced out of doors. From that time forth they came no more, but as long as the shoemaker lived all went well with him, and all his undertakings prospered."
+     ]
+    }
+   ]
+  },
+  {
+   "author": "Jacob and Wilhelm Grimm",
+   "life": "1785–1863",
+   "translator": "Margaret Hunt",
+   "translator_life": "1831–1912",
+   "id": "little-snow-white",
+   "title": "Little Snow-white",
+   "year": 1812,
+   "form": "children",
+   "genres": [
+    "Fairy tales",
+    "Children"
+   ],
+   "description": "A queen's magic mirror names her stepdaughter the fairest in the land, and the girl flees to the seven dwarfs.",
+   "language": "en",
+   "words": 3102,
+   "source": {
+    "name": "Project Gutenberg",
+    "url": "https://www.gutenberg.org/ebooks/5314"
+   },
+   "sections": [
+    {
+     "title": "Little Snow-white",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Once upon a time in the middle of winter, when the flakes of snow were falling like feathers from the sky, a queen sat at a window sewing, and the frame of the window was made of black ebony. And whilst she was sewing and looking out of the window at the snow, she pricked her finger with the needle, and three drops of blood fell upon the snow. And the red looked pretty upon the white snow, and she thought to herself, “Would that I had a child as white as snow, as red as blood, and as black as the wood of the window-frame.”",
+      "Soon after that she had a little daughter, who was as white as snow, and as red as blood, and her hair was as black as ebony; and she was therefore called Little Snow-white. And when the child was born, the Queen died.",
+      "After a year had passed the King took to himself another wife. She was a beautiful woman, but proud and haughty, and she could not bear that anyone else should surpass her in beauty. She had a wonderful looking-glass, and when she stood in front of it and looked at herself in it, and said—",
+      "“Looking-glass, Looking-glass, on the wall, Who in this land is the fairest of all?”",
+      "the looking-glass answered—",
+      "“Thou, O Queen, art the fairest of all!”",
+      "Then she was satisfied, for she knew that the looking-glass spoke the truth.",
+      "But Snow-white was growing up, and grew more and more beautiful; and when she was seven years old she was as beautiful as the day, and more beautiful than the Queen herself. And once when the Queen asked her looking-glass—",
+      "“Looking-glass, Looking-glass, on the wall, Who in this land is the fairest of all?”",
+      "it answered—",
+      "“Thou art fairer than all who are here, Lady Queen.” But more beautiful still is Snow-white, as I ween.”",
+      "Then the Queen was shocked, and turned yellow and green with envy. From that hour, whenever she looked at Snow-white, her heart heaved in her breast, she hated the girl so much.",
+      "And envy and pride grew higher and higher in her heart like a weed, so that she had no peace day or night. She called a huntsman, and said, “Take the child away into the forest; I will no longer have her in my sight. Kill her, and bring me back her heart as a token.” The huntsman obeyed, and took her away; but when he had drawn his knife, and was about to pierce Snow-white’s innocent heart, she began to weep, and said, “Ah dear huntsman, leave me my life! I will run away into the wild forest, and never come home again.”",
+      "And as she was so beautiful the huntsman had pity on her and said, “Run away, then, you poor child.” “The wild beasts will soon have devoured you,” thought he, and yet it seemed as if a stone had been rolled from his heart since it was no longer needful for him to kill her. And as a young boar just then came running by he stabbed it, and cut out its heart and took it to the Queen as proof that the child was dead. The cook had to salt this, and the wicked Queen ate it, and thought she had eaten the heart of Snow-white.",
+      "But now the poor child was all alone in the great forest, and so terrified that she looked at every leaf of every tree, and did not know what to do. Then she began to run, and ran over sharp stones and through thorns, and the wild beasts ran past her, but did her no harm.",
+      "She ran as long as her feet would go until it was almost evening; then she saw a little cottage and went into it to rest herself. Everything in the cottage was small, but neater and cleaner than can be told. There was a table on which was a white cover, and seven little plates, and on each plate a little spoon; moreover, there were seven little knives and forks, and seven little mugs. Against the wall stood seven little beds side by side, and covered with snow-white counterpanes.",
+      "Little Snow-white was so hungry and thirsty that she ate some vegetables and bread from each plate and drank a drop of wine out of each mug, for she did not wish to take all from one only. Then, as she was so tired, she laid herself down on one of the little beds, but none of them suited her; one was too long, another too short, but at last she found that the seventh one was right, and so she remained in it, said a prayer and went to sleep.",
+      "When it was quite dark the owners of the cottage came back; they were seven dwarfs who dug and delved in the mountains for ore. They lit their seven candles, and as it was now light within the cottage they saw that someone had been there, for everything was not in the same order in which they had left it.",
+      "The first said, “Who has been sitting on my chair?”",
+      "The second, “Who has been eating off my plate?”",
+      "The third, “Who has been taking some of my bread?”",
+      "The fourth, “Who has been eating my vegetables?”",
+      "The fifth, “Who has been using my fork?”",
+      "The sixth, “Who has been cutting with my knife?”",
+      "The seventh, “Who has been drinking out of my mug?”",
+      "Then the first looked round and saw that there was a little hole on his bed, and he said, “Who has been getting into my bed?” The others came up and each called out, “Somebody has been lying in my bed too.” But the seventh when he looked at his bed saw little Snow-white, who was lying asleep therein. And he called the others, who came running up, and they cried out with astonishment, and brought their seven little candles and let the light fall on little Snow-white. “Oh, heavens! oh, heavens!” cried they, “what a lovely child!” and they were so glad that they did not wake her up, but let her sleep on in the bed. And the seventh dwarf slept with his companions, one hour with each, and so got through the night.",
+      "When it was morning little Snow-white awoke, and was frightened when she saw the seven dwarfs. But they were friendly and asked her what her name was. “My name is Snow-white,” she answered. “How have you come to our house?” said the dwarfs. Then she told them that her step-mother had wished to have her killed, but that the huntsman had spared her life, and that she had run for the whole day, until at last she had found their dwelling. The dwarfs said, “If you will take care of our house, cook, make the beds, wash, sew, and knit, and if you will keep everything neat and clean, you can stay with us and you shall want for nothing.” “Yes,” said Snow-white, “with all my heart,” and she stayed with them. She kept the house in order for them; in the mornings they went to the mountains and looked for copper and gold, in the evenings they came back, and then their supper had to be ready. The girl was alone the whole day, so the good dwarfs warned her and said, “Beware of your step-mother, she will soon know that you are here; be sure to let no one come in.”",
+      "But the Queen, believing that she had eaten Snow-white’s heart, could not but think that she was again the first and most beautiful of all; and she went to her looking-glass and said—",
+      "“Looking-glass, Looking-glass, on the wall, Who in this land is the fairest of all?”",
+      "and the glass answered—",
+      "“Oh, Queen, thou art fairest of all I see, But over the hills, where the seven dwarfs dwell, Snow-white is still alive and well, And none is so fair as she.”",
+      "Then she was astounded, for she knew that the looking-glass never spoke falsely, and she knew that the huntsman had betrayed her, and that little Snow-white was still alive.",
+      "And so she thought and thought again how she might kill her, for so long as she was not the fairest in the whole land, envy let her have no rest. And when she had at last thought of something to do, she painted her face, and dressed herself like an old peddler-woman, and no one could have known her. In this disguise she went over the seven mountains to the seven dwarfs, and knocked at the door and cried, “Pretty things to sell, very cheap, very cheap.” Little Snow-white looked out of the window and called out, “Good-day my good woman, what have you to sell?” “Good things, pretty things,” she answered; “stay-laces of all colours,” and she pulled out one which was woven of bright-coloured silk. “I may let the worthy old woman in,” thought Snow-white, and she unbolted the door and bought the pretty laces. “Child,” said the old woman, “what a fright you look; come, I will lace you properly for once.” Snow-white had no suspicion, but stood before her, and let herself be laced with the new laces. But the old woman laced so quickly and so tightly that Snow-white lost her breath and fell down as if dead. “Now I am the most beautiful,” said the Queen to herself, and ran away.",
+      "Not long afterwards, in the evening, the seven dwarfs came home, but how shocked they were when they saw their dear little Snow-white lying on the ground, and that she neither stirred nor moved, and seemed to be dead. They lifted her up, and, as they saw that she was laced too tightly, they cut the laces; then she began to breathe a little, and after a while came to life again. When the dwarfs heard what had happened they said, “The old peddler-woman was no one else than the wicked Queen; take care and let no one come in when we are not with you.”",
+      "But the wicked woman when she had reached home went in front of the glass and asked—",
+      "“Looking-glass, Looking-glass, on the wall, Who in this land is the fairest of all?”",
+      "and it answered as before—",
+      "“Oh, Queen, thou art fairest of all I see, But over the hills, where the seven dwarfs dwell, Snow-white is still alive and well, And none is so fair as she.”",
+      "When she heard that, all her blood rushed to her heart with fear, for she saw plainly that little Snow-white was again alive. “But now,” she said, “I will think of something that shall put an end to you,” and by the help of witchcraft, which she understood, she made a poisonous comb. Then she disguised herself and took the shape of another old woman. So she went over the seven mountains to the seven dwarfs, knocked at the door, and cried, “Good things to sell, cheap, cheap!” Little Snow-white looked out and said, “Go away; I cannot let any one come in.” “I suppose you can look,” said the old woman, and pulled the poisonous comb out and held it up. It pleased the girl so well that she let herself be beguiled, and opened the door. When they had made a bargain the old woman said, “Now I will comb you properly for once.” Poor little Snow-white had no suspicion, and let the old woman do as she pleased, but hardly had she put the comb in her hair than the poison in it took effect, and the girl fell down senseless. “You paragon of beauty,” said the wicked woman, “you are done for now,” and she went away.",
+      "But fortunately it was almost evening, when the seven dwarfs came home. When they saw Snow-white lying as if dead upon the ground they at once suspected the step-mother, and they looked and found the poisoned comb. Scarcely had they taken it out when Snow-white came to herself, and told them what had happened. Then they warned her once more to be upon her guard and to open the door to no one.",
+      "The Queen, at home, went in front of the glass and said—",
+      "“Looking-glass, Looking-glass, on the wall, Who in this land is the fairest of all?”",
+      "then it answered as before—",
+      "“Oh, Queen, thou art fairest of all I see, But over the hills, where the seven dwarfs dwell, Snow-white is still alive and well, And none is so fair as she.”",
+      "When she heard the glass speak thus she trembled and shook with rage. “Snow-white shall die,” she cried, “even if it costs me my life!”",
+      "Thereupon she went into a quite secret, lonely room, where no one ever came, and there she made a very poisonous apple. Outside it looked pretty, white with a red cheek, so that everyone who saw it longed for it; but whoever ate a piece of it must surely die.",
+      "When the apple was ready she painted her face, and dressed herself up as a country-woman, and so she went over the seven mountains to the seven dwarfs. She knocked at the door. Snow-white put her head out of the window and said, “I cannot let any one in; the seven dwarfs have forbidden me.” “It is all the same to me,” answered the woman, “I shall soon get rid of my apples. There, I will give you one.”",
+      "“No,” said Snow-white, “I dare not take anything.” “Are you afraid of poison?” said the old woman; “look, I will cut the apple in two pieces; you eat the red cheek, and I will eat the white.” The apple was so cunningly made that only the red cheek was poisoned. Snow-white longed for the fine apple, and when she saw that the woman ate part of it she could resist no longer, and stretched out her hand and took the poisonous half. But hardly had she a bit of it in her mouth than she fell down dead. Then the Queen looked at her with a dreadful look, and laughed aloud and said, “White as snow, red as blood, black as ebony-wood! this time the dwarfs cannot wake you up again.”",
+      "And when she asked of the Looking-glass at home—",
+      "“Looking-glass, Looking-glass, on the wall, Who in this land is the fairest of all?”",
+      "it answered at last—",
+      "“Oh, Queen, in this land thou art fairest of all.”",
+      "Then her envious heart had rest, so far as an envious heart can have rest.",
+      "The dwarfs, when they came home in the evening, found Snow-white lying upon the ground; she breathed no longer and was dead. They lifted her up, looked to see whether they could find anything poisonous, unlaced her, combed her hair, washed her with water and wine, but it was all of no use; the poor child was dead, and remained dead. They laid her upon a bier, and all seven of them sat round it and wept for her, and wept three days long.",
+      "Then they were going to bury her, but she still looked as if she were living, and still had her pretty red cheeks. They said, “We could not bury her in the dark ground,” and they had a transparent coffin of glass made, so that she could be seen from all sides, and they laid her in it, and wrote her name upon it in golden letters, and that she was a king’s daughter. Then they put the coffin out upon the mountain, and one of them always stayed by it and watched it. And birds came too, and wept for Snow-white; first an owl, then a raven, and last a dove.",
+      "And now Snow-white lay a long, long time in the coffin, and she did not change, but looked as if she were asleep; for she was as white as snow, as red as blood, and her hair was as black as ebony.",
+      "It happened, however, that a king’s son came into the forest, and went to the dwarfs’ house to spend the night. He saw the coffin on the mountain, and the beautiful Snow-white within it, and read what was written upon it in golden letters. Then he said to the dwarfs, “Let me have the coffin, I will give you whatever you want for it.” But the dwarfs answered, “We will not part with it for all the gold in the world.” Then he said, “Let me have it as a gift, for I cannot live without seeing Snow-white. I will honour and prize her as my dearest possession.” As he spoke in this way the good dwarfs took pity upon him, and gave him the coffin.",
+      "And now the King’s son had it carried away by his servants on their shoulders. And it happened that they stumbled over a tree-stump, and with the shock the poisonous piece of apple which Snow-white had bitten off came out of her throat. And before long she opened her eyes, lifted up the lid of the coffin, sat up, and was once more alive. “Oh, heavens, where am I?” she cried. The King’s son, full of joy, said, “You are with me,” and told her what had happened, and said, “I love you more than everything in the world; come with me to my father’s palace, you shall be my wife.”",
+      "And Snow-white was willing, and went with him, and their wedding was held with great show and splendour. But Snow-white’s wicked step-mother was also bidden to the feast. When she had arrayed herself in beautiful clothes she went before the Looking-glass, and said—",
+      "“Looking-glass, Looking-glass, on the wall, Who in this land is the fairest of all?”",
+      "the glass answered—",
+      "“Oh, Queen, of all here the fairest art thou, But the young Queen is fairer by far as I trow.”",
+      "Then the wicked woman uttered a curse, and was so wretched, so utterly wretched, that she knew not what to do. At first she would not go to the wedding at all, but she had no peace, and must go to see the young Queen. And when she went in she knew Snow-white; and she stood still with rage and fear, and could not stir. But iron slippers had already been put upon the fire, and they were brought in with tongs, and set before her. Then she was forced to put on the red-hot shoes, and dance until she dropped down dead."
+     ]
+    }
+   ]
+  },
+  {
+   "author": "Jacob and Wilhelm Grimm",
+   "life": "1785–1863",
+   "translator": "Margaret Hunt",
+   "translator_life": "1831–1912",
+   "id": "rumpelstiltskin",
+   "title": "Rumpelstiltskin",
+   "year": 1812,
+   "form": "children",
+   "genres": [
+    "Fairy tales",
+    "Children"
+   ],
+   "description": "A miller's daughter must spin straw into gold, and a little man helps her for a price she can't pay.",
+   "language": "en",
+   "words": 1084,
+   "source": {
+    "name": "Project Gutenberg",
+    "url": "https://www.gutenberg.org/ebooks/5314"
+   },
+   "sections": [
+    {
+     "title": "Rumpelstiltskin",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Once there was a miller who was poor, but who had a beautiful daughter. Now it happened that he had to go and speak to the King, and in order to make himself appear important he said to him, “I have a daughter who can spin straw into gold.” The King said to the miller, “That is an art which pleases me well; if your daughter is as clever as you say, bring her to-morrow to my palace, and I will try what she can do.”",
+      "And when the girl was brought to him he took her into a room which was quite full of straw, gave her a spinning-wheel and a reel, and said, “Now set to work, and if by to-morrow morning early you have not spun this straw into gold during the night, you must die.” Thereupon he himself locked up the room, and left her in it alone. So there sat the poor miller’s daughter, and for the life of her could not tell what to do; she had no idea how straw could be spun into gold, and she grew more and more miserable, until at last she began to weep.",
+      "But all at once the door opened, and in came a little man, and said, “Good evening, Mistress Miller; why are you crying so?” “Alas!” answered the girl, “I have to spin straw into gold, and I do not know how to do it.” “What will you give me,” said the manikin, “if I do it for you?” “My necklace,” said the girl. The little man took the necklace, seated himself in front of the wheel, and “whirr, whirr, whirr,” three turns, and the reel was full; then he put another on, and whirr, whirr, whirr, three times round, and the second was full too. And so it went on until the morning, when all the straw was spun, and all the reels were full of gold. By daybreak the King was already there, and when he saw the gold he was astonished and delighted, but his heart became only more greedy. He had the miller’s daughter taken into another room full of straw, which was much larger, and commanded her to spin that also in one night if she valued her life. The girl knew not how to help herself, and was crying, when the door again opened, and the little man appeared, and said, “What will you give me if I spin that straw into gold for you?” “The ring on my finger,” answered the girl. The little man took the ring, again began to turn the wheel, and by morning had spun all the straw into glittering gold.",
+      "The King rejoiced beyond measure at the sight, but still he had not gold enough; and he had the miller’s daughter taken into a still larger room full of straw, and said, “You must spin this, too, in the course of this night; but if you succeed, you shall be my wife.” “Even if she be a miller’s daughter,” thought he, “I could not find a richer wife in the whole world.”",
+      "When the girl was alone the manikin came again for the third time, and said, “What will you give me if I spin the straw for you this time also?” “I have nothing left that I could give,” answered the girl. “Then promise me, if you should become Queen, your first child.” “Who knows whether that will ever happen?” thought the miller’s daughter; and, not knowing how else to help herself in this strait, she promised the manikin what he wanted, and for that he once more span the straw into gold.",
+      "And when the King came in the morning, and found all as he had wished, he took her in marriage, and the pretty miller’s daughter became a Queen.",
+      "A year after, she had a beautiful child, and she never gave a thought to the manikin. But suddenly he came into her room, and said, “Now give me what you promised.” The Queen was horror-struck, and offered the manikin all the riches of the kingdom if he would leave her the child. But the manikin said, “No, something that is living is dearer to me than all the treasures in the world.” Then the Queen began to weep and cry, so that the manikin pitied her. “I will give you three days’ time,” said he, “if by that time you find out my name, then shall you keep your child.”",
+      "So the Queen thought the whole night of all the names that she had ever heard, and she sent a messenger over the country to inquire, far and wide, for any other names that there might be. When the manikin came the next day, she began with Caspar, Melchior, Balthazar, and said all the names she knew, one after another; but to every one the little man said, “That is not my name.” On the second day she had inquiries made in the neighborhood as to the names of the people there, and she repeated to the manikin the most uncommon and curious. “Perhaps your name is Shortribs, or Sheepshanks, or Laceleg?” but he always answered, “That is not my name.”",
+      "On the third day the messenger came back again, and said, “I have not been able to find a single new name, but as I came to a high mountain at the end of the forest, where the fox and the hare bid each other good night, there I saw a little house, and before the house a fire was burning, and round about the fire quite a ridiculous little man was jumping: he hopped upon one leg, and shouted—",
+      "“To-day I bake, to-morrow brew, The next I’ll have the young Queen’s child. Ha! glad am I that no one knew That Rumpelstiltskin I am styled.”",
+      "You may think how glad the Queen was when she heard the name! And when soon afterwards the little man came in, and asked, “Now, Mistress Queen, what is my name?” at first she said, “Is your name Conrad?” “No.” “Is your name Harry?” “No.”",
+      "“Perhaps your name is Rumpelstiltskin?”",
+      "“The devil has told you that! the devil has told you that!” cried the little man, and in his anger he plunged his right foot so deep into the earth that his whole leg went in; and then in rage he pulled at his left leg so hard with both hands that he tore himself in two."
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dickinson-poems",
+   "title": "Poems of Emily Dickinson: a selection",
+   "author": "Emily Dickinson",
+   "life": "1830–1886",
+   "year": 1890,
+   "form": "poem",
+   "genres": [
+    "Poetry"
+   ],
+   "description": "Eleven poems, from “Because I could not stop for Death” to “Hope is the thing with feathers”, as first printed in 1890–96 with her editors’ punctuation.",
+   "language": "en",
+   "words": 778,
+   "source": {
+    "name": "Project Gutenberg",
+    "url": "https://www.gutenberg.org/ebooks/12242"
+   },
+   "sections": [
+    {
+     "title": "Success is counted sweetest",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Success is counted sweetest\nBy those who ne'er succeed.\nTo comprehend a nectar\nRequires sorest need.",
+      "Not one of all the purple host\nWho took the flag to-day\nCan tell the definition,\nSo clear, of victory,",
+      "As he, defeated, dying,\nOn whose forbidden ear\nThe distant strains of triumph\nBreak, agonized and clear!"
+     ]
+    },
+    {
+     "title": "The soul selects her own society",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "The soul selects her own society,\nThen shuts the door;\nOn her divine majority\nObtrude no more.",
+      "Unmoved, she notes the chariot's pausing\nAt her low gate;\nUnmoved, an emperor is kneeling\nUpon her mat.",
+      "I've known her from an ample nation\nChoose one;\nThen close the valves of her attention\nLike stone."
+     ]
+    },
+    {
+     "title": "I taste a liquor never brewed",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "I taste a liquor never brewed,\nFrom tankards scooped in pearl;\nNot all the vats upon the Rhine\nYield such an alcohol!",
+      "Inebriate of air am I,\nAnd debauchee of dew,\nReeling, through endless summer days,\nFrom inns of molten blue.",
+      "When landlords turn the drunken bee\nOut of the foxglove's door,\nWhen butterflies renounce their drams,\nI shall but drink the more!",
+      "Till seraphs swing their snowy hats,\nAnd saints to windows run,\nTo see the little tippler\nLeaning against the sun!"
+     ]
+    },
+    {
+     "title": "There's a certain slant of light",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "There's a certain slant of light,\nOn winter afternoons,\nThat oppresses, like the weight\nOf cathedral tunes.",
+      "Heavenly hurt it gives us;\nWe can find no scar,\nBut internal difference\nWhere the meanings are.",
+      "None may teach it anything,\n'T is the seal, despair, —\nAn imperial affliction\nSent us of the air.",
+      "When it comes, the landscape listens,\nShadows hold their breath;\nWhen it goes, 't is like the distance\nOn the look of death."
+     ]
+    },
+    {
+     "title": "I never saw a moor",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "I never saw a moor,\nI never saw the sea;\nYet know I how the heather looks,\nAnd what a wave must be.",
+      "I never spoke with God,\nNor visited in heaven;\nYet certain am I of the spot\nAs if the chart were given."
+     ]
+    },
+    {
+     "title": "Because I could not stop for Death",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Because I could not stop for Death,\nHe kindly stopped for me;\nThe carriage held but just ourselves\nAnd Immortality.",
+      "We slowly drove, he knew no haste,\nAnd I had put away\nMy labor, and my leisure too,\nFor his civility.",
+      "We passed the school where children played,\nTheir lessons scarcely done;\nWe passed the fields of gazing grain,\nWe passed the setting sun.",
+      "We paused before a house that seemed\nA swelling of the ground;\nThe roof was scarcely visible,\nThe cornice but a mound.",
+      "Since then 't is centuries; but each\nFeels shorter than the day\nI first surmised the horses' heads\nWere toward eternity."
+     ]
+    },
+    {
+     "title": "I'm nobody! Who are you?",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "I'm nobody! Who are you?\nAre you nobody, too?\nThen there 's a pair of us — don't tell!\nThey 'd banish us, you know.",
+      "How dreary to be somebody!\nHow public, like a frog\nTo tell your name the livelong day\nTo an admiring bog!"
+     ]
+    },
+    {
+     "title": "Hope is the thing with feathers",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Hope is the thing with feathers\nThat perches in the soul,\nAnd sings the tune without the words,\nAnd never stops at all,",
+      "And sweetest in the gale is heard;\nAnd sore must be the storm\nThat could abash the little bird\nThat kept so many warm.",
+      "I 've heard it in the chillest land,\nAnd on the strangest sea;\nYet, never, in extremity,\nIt asked a crumb of me."
+     ]
+    },
+    {
+     "title": "Wild nights! Wild nights!",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Wild nights! Wild nights!\nWere I with thee,\nWild nights should be\nOur luxury!",
+      "Futile the winds\nTo a heart in port, —\nDone with the compass,\nDone with the chart.",
+      "Rowing in Eden!\nAh! the sea!\nMight I but moor\nTo-night in thee!"
+     ]
+    },
+    {
+     "title": "A bird came down the walk",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "A bird came down the walk:\nHe did not know I saw;\nHe bit an angle-worm in halves\nAnd ate the fellow, raw.",
+      "And then he drank a dew\nFrom a convenient grass,\nAnd then hopped sidewise to the wall\nTo let a beetle pass.",
+      "He glanced with rapid eyes\nThat hurried all abroad, —\nThey looked like frightened beads, I thought;\nHe stirred his velvet head",
+      "Like one in danger; cautious,\nI offered him a crumb,\nAnd he unrolled his feathers\nAnd rowed him softer home",
+      "Than oars divide the ocean,\nToo silver for a seam,\nOr butterflies, off banks of noon,\nLeap, splashless, as they swim."
+     ]
+    },
+    {
+     "title": "I heard a fly buzz when I died",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "I heard a fly buzz when I died;\nThe stillness round my form\nWas like the stillness in the air\nBetween the heaves of storm.",
+      "The eyes beside had wrung them dry,\nAnd breaths were gathering sure\nFor that last onset, when the king\nBe witnessed in his power.",
+      "I willed my keepsakes, signed away\nWhat portion of me I\nCould make assignable, — and then\nThere interposed a fly,",
+      "With blue, uncertain, stumbling buzz,\nBetween the light and me;\nAnd then the windows failed, and then\nI could not see to see."
+     ]
+    }
+   ]
+  },
+  {
+   "id": "songs-of-innocence-and-experience",
+   "title": "Songs of Innocence and of Experience",
+   "author": "William Blake",
+   "life": "1757–1827",
+   "year": 1794,
+   "form": "poem",
+   "genres": [
+    "Poetry"
+   ],
+   "description": "Blake's two linked books of short lyrics, from “The Lamb” to “The Tiger” and “London”, showing “the two contrary states of the human soul”.",
+   "language": "en",
+   "words": 5247,
+   "source": {
+    "name": "Project Gutenberg",
+    "url": "https://www.gutenberg.org/ebooks/1934"
+   },
+   "sections": [
+    {
+     "title": "Innocence: Introduction",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Piping down the valleys wild,\nPiping songs of pleasant glee,\nOn a cloud I saw a child,\nAnd he laughing said to me:",
+      "‘Pipe a song about a Lamb!’\nSo I piped with merry cheer.\n‘Piper, pipe that song again.’\nSo I piped: he wept to hear.",
+      "‘Drop thy pipe, thy happy pipe;\nSing thy songs of happy cheer!’\nSo I sung the same again,\nWhile he wept with joy to hear.",
+      "‘Piper, sit thee down and write\nIn a book, that all may read.’\nSo he vanished from my sight;\nAnd I plucked a hollow reed,",
+      "And I made a rural pen,\nAnd I stained the water clear,\nAnd I wrote my happy songs\nEvery child may joy to hear."
+     ]
+    },
+    {
+     "title": "Innocence: The Shepherd",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "How sweet is the shepherd’s sweet lot!\nFrom the morn to the evening he strays;\nHe shall follow his sheep all the day,\nAnd his tongue shall be fillèd with praise.",
+      "For he hears the lambs’ innocent call,\nAnd he hears the ewes’ tender reply;\nHe is watchful while they are in peace,\nFor they know when their shepherd is nigh."
+     ]
+    },
+    {
+     "title": "Innocence: The Echoing Green",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "The sun does arise,\nAnd make happy the skies;\nThe merry bells ring\nTo welcome the Spring;\nThe skylark and thrush,\nThe birds of the bush,\nSing louder around\nTo the bells’ cheerful sound;\nWhile our sports shall be seen\nOn the echoing green.",
+      "Old John, with white hair,\nDoes laugh away care,\nSitting under the oak,\nAmong the old folk.\nThey laugh at our play,\nAnd soon they all say,\n‘Such, such were the joys\nWhen we all—girls and boys—\nIn our youth-time were seen\nOn the echoing green.’",
+      "Till the little ones, weary,\nNo more can be merry:\nThe sun does descend,\nAnd our sports have an end.\nRound the laps of their mothers\nMany sisters and brothers,\nLike birds in their nest,\nAre ready for rest,\nAnd sport no more seen\nOn the darkening green."
+     ]
+    },
+    {
+     "title": "Innocence: The Lamb",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Little lamb, who made thee?\nDoes thou know who made thee,\nGave thee life, and bid thee feed\nBy the stream and o’er the mead;\nGave thee clothing of delight,\nSoftest clothing, woolly, bright;\nGave thee such a tender voice,\nMaking all the vales rejoice?\nLittle lamb, who made thee?\nDoes thou know who made thee?",
+      "Little lamb, I’ll tell thee;\nLittle lamb, I’ll tell thee:\nHe is callèd by thy name,\nFor He calls Himself a Lamb.\nHe is meek, and He is mild,\nHe became a little child.\nI a child, and thou a lamb,\nWe are callèd by His name.\nLittle lamb, God bless thee!\nLittle lamb, God bless thee!"
+     ]
+    },
+    {
+     "title": "Innocence: The Little Black Boy",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "My mother bore me in the southern wild,\nAnd I am black, but O my soul is white!\nWhite as an angel is the English child,\nBut I am black, as if bereaved of light.",
+      "My mother taught me underneath a tree,\nAnd, sitting down before the heat of day,\nShe took me on her lap and kissèd me,\nAnd, pointing to the East, began to say:",
+      "‘Look on the rising sun: there God does live,\nAnd gives His light, and gives His heat away,\nAnd flowers and trees and beasts and men receive\nComfort in morning, joy in the noonday.",
+      "‘And we are put on earth a little space,\nThat we may learn to bear the beams of love;\nAnd these black bodies and this sunburnt face\nAre but a cloud, and like a shady grove.",
+      "‘For, when our souls have learned the heat to bear,\nThe cloud will vanish, we shall hear His voice,\nSaying, “Come out from the grove, my love and care,\nAnd round my golden tent like lambs rejoice.”’",
+      "Thus did my mother say, and kissed me,\nAnd thus I say to little English boy.\nWhen I from black, and he from white cloud free,\nAnd round the tent of God like lambs we joy,",
+      "I’ll shade him from the heat till he can bear\nTo lean in joy upon our Father’s knee;\nAnd then I’ll stand and stroke his silver hair,\nAnd be like him, and he will then love me."
+     ]
+    },
+    {
+     "title": "Innocence: The Blossom",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Merry, merry sparrow!\nUnder leaves so green\nA happy blossom\nSees you, swift as arrow,\nSeek your cradle narrow,\nNear my bosom.",
+      "Pretty, pretty robin!\nUnder leaves so green\nA happy blossom\nHears you sobbing, sobbing,\nPretty, pretty robin,\nNear my bosom."
+     ]
+    },
+    {
+     "title": "Innocence: The Chimney-Sweeper",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "When my mother died I was very young,\nAnd my father sold me while yet my tongue\nCould scarcely cry ‘Weep! weep! weep! weep!’\nSo your chimneys I sweep, and in soot I sleep.",
+      "There’s little Tom Dacre, who cried when his head,\nThat curled like a lamb’s back, was shaved; so I said,\n‘Hush, Tom! never mind it, for, when your head’s bare,\nYou know that the soot cannot spoil your white hair.’",
+      "And so he was quiet, and that very night,\nAs Tom was a-sleeping, he had such a sight!—\nThat thousands of sweepers, Dick, Joe, Ned, and Jack,\nWere all of them locked up in coffins of black.",
+      "And by came an angel, who had a bright key,\nAnd he opened the coffins, and set them all free;\nThen down a green plain, leaping, laughing, they run\nAnd wash in a river, and shine in the sun.",
+      "Then naked and white, all their bags left behind,\nThey rise upon clouds, and sport in the wind:\nAnd the angel told Tom, if he’d be a good boy,\nHe’d have God for his father, and never want joy.",
+      "And so Tom awoke, and we rose in the dark,\nAnd got with our bags and our brushes to work.\nThough the morning was cold, Tom was happy and warm:\nSo, if all do their duty, they need not fear harm."
+     ]
+    },
+    {
+     "title": "Innocence: The Little Boy Lost",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "‘Father, father, where are you going?\nO do not walk so fast!\nSpeak, father, speak to your little boy,\nOr else I shall be lost.’",
+      "The night was dark, no father was there,\nThe child was wet with dew;\nThe mire was deep, and the child did weep,\nAnd away the vapour flew."
+     ]
+    },
+    {
+     "title": "Innocence: The Little Boy Found",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "The little boy lost in the lonely fen,\nLed by the wandering light,\nBegan to cry, but God, ever nigh,\nAppeared like his father, in white.",
+      "He kissed the child, and by the hand led,\nAnd to his mother brought,\nWho in sorrow pale, through the lonely dale,\nHer little boy weeping sought."
+     ]
+    },
+    {
+     "title": "Innocence: Laughing Song",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "When the green woods laugh with the voice of joy,\nAnd the dimpling stream runs laughing by;\nWhen the air does laugh with our merry wit,\nAnd the green hill laughs with the noise of it;",
+      "When the meadows laugh with lively green,\nAnd the grasshopper laughs in the merry scene;\nWhen Mary and Susan and Emily\nWith their sweet round mouths sing ‘Ha ha he!’",
+      "When the painted birds laugh in the shade,\nWhere our table with cherries and nuts is spread:\nCome live, and be merry, and join with me,\nTo sing the sweet chorus of ‘Ha ha he!’"
+     ]
+    },
+    {
+     "title": "Innocence: A Cradle Song",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Sweet dreams, form a shade\nO’er my lovely infant’s head!\nSweet dreams of pleasant streams\nBy happy, silent, moony beams!",
+      "Sweet Sleep, with soft down\nWeave thy brows an infant crown!\nSweet Sleep, angel mild,\nHover o’er my happy child!",
+      "Sweet smiles, in the night\nHover over my delight!\nSweet smiles, mother’s smiles,\nAll the livelong night beguiles.",
+      "Sweet moans, dovelike sighs,\nChase not slumber from thy eyes!\nSweet moans, sweeter smiles,\nAll the dovelike moans beguiles.",
+      "Sleep, sleep, happy child!\nAll creation slept and smiled.\nSleep, sleep, happy sleep,\nWhile o’er thee thy mother weep.",
+      "Sweet babe, in thy face\nHoly image I can trace;\nSweet babe, once like thee\nThy Maker lay, and wept for me:",
+      "Wept for me, for thee, for all,\nWhen He was an infant small.\nThou His image ever see,\nHeavenly face that smiles on thee!",
+      "Smiles on thee, on me, on all,\nWho became an infant small;\nInfant smiles are His own smiles;\nHeaven and earth to peace beguiles."
+     ]
+    },
+    {
+     "title": "Innocence: The Divine Image",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "To Mercy, Pity, Peace, and Love,\nAll pray in their distress,\nAnd to these virtues of delight\nReturn their thankfulness.",
+      "For Mercy, Pity, Peace, and Love,\nIs God our Father dear;\nAnd Mercy, Pity, Peace, and Love,\nIs man, His child and care.",
+      "For Mercy has a human heart;\nPity, a human face;\nAnd Love, the human form divine:\nAnd Peace the human dress.",
+      "Then every man, of every clime,\nThat prays in his distress,\nPrays to the human form divine:\nLove, Mercy, Pity, Peace.",
+      "And all must love the human form,\nIn heathen, Turk, or Jew.\nWhere Mercy, Love, and Pity dwell,\nThere God is dwelling too."
+     ]
+    },
+    {
+     "title": "Innocence: Holy Thursday",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "’Twas on a holy Thursday, their innocent faces clean,\nThe children walking two and two, in red, and blue, and green:\nGrey-headed beadles walked before, with wands as white as snow,\nTill into the high dome of Paul’s they like Thames waters flow.",
+      "O what a multitude they seemed, these flowers of London town!\nSeated in companies they sit, with radiance all their own.\nThe hum of multitudes was there, but multitudes of lambs,\nThousands of little boys and girls raising their innocent hands.",
+      "Now like a mighty wind they raise to heaven the voice of song,\nOr like harmonious thunderings the seats of heaven among:\nBeneath them sit the aged men, wise guardians of the poor.\nThen cherish pity, lest you drive an angel from your door."
+     ]
+    },
+    {
+     "title": "Innocence: Night",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "The sun descending in the West,\nThe evening star does shine;\nThe birds are silent in their nest,\nAnd I must seek for mine.\nThe moon, like a flower\nIn heaven’s high bower,\nWith silent delight,\nSits and smiles on the night.",
+      "Farewell, green fields and happy groves,\nWhere flocks have took delight,\nWhere lambs have nibbled, silent moves\nThe feet of angels bright;\nUnseen, they pour blessing,\nAnd joy without ceasing,\nOn each bud and blossom,\nAnd each sleeping bosom.",
+      "They look in every thoughtless nest\nWhere birds are covered warm;\nThey visit caves of every beast,\nTo keep them all from harm:\nIf they see any weeping\nThat should have been sleeping,\nThey pour sleep on their head,\nAnd sit down by their bed.",
+      "When wolves and tigers howl for prey,\nThey pitying stand and weep;\nSeeking to drive their thirst away,\nAnd keep them from the sheep.\nBut, if they rush dreadful,\nThe angels, most heedful,\nReceive each mild spirit,\nNew worlds to inherit.",
+      "And there the lion’s ruddy eyes\nShall flow with tears of gold:\nAnd pitying the tender cries,\nAnd walking round the fold:\nSaying: ‘Wrath by His meekness,\nAnd, by His health, sickness,\nIs driven away\nFrom our immortal day.",
+      "‘And now beside thee, bleating lamb,\nI can lie down and sleep,\nOr think on Him who bore thy name,\nGraze after thee, and weep.\nFor, washed in life’s river,\nMy bright mane for ever\nShall shine like the gold,\nAs I guard o’er the fold."
+     ]
+    },
+    {
+     "title": "Innocence: Spring",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Sound the flute!\nNow it’s mute!\nBirds delight,\nDay and night,\nNightingale,\nIn the dale,\nLark in sky,—\nMerrily,\nMerrily, merrily to welcome in the year.",
+      "Little boy,\nFull of joy;\nLittle girl,\nSweet and small;\nCock does crow,\nSo do you;\nMerry voice,\nInfant noise;\nMerrily, merrily to welcome in the year.",
+      "Little lamb,\nHere I am;\nCome and lick\nMy white neck;\nLet me pull\nYour soft wool;\nLet me kiss\nYour soft face;\nMerrily, merrily we welcome in the year."
+     ]
+    },
+    {
+     "title": "Innocence: Nurse’s Song",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "When voices of children are heard on the green,\nAnd laughing is heard on the hill,\nMy heart is at rest within my breast,\nAnd everything else is still.",
+      "‘Then come home, my children, the sun is gone down,\nAnd the dews of night arise;\nCome, come, leave off play, and let us away,\nTill the morning appears in the skies.’",
+      "‘No, no, let us play, for it is yet day,\nAnd we cannot go to sleep;\nBesides, in the sky the little birds fly,\nAnd the hills are all covered with sheep.’",
+      "‘Well, well, go and play till the light fades away,\nAnd then go home to bed.’\nThe little ones leaped, and shouted, and laughed,\nAnd all the hills echoèd."
+     ]
+    },
+    {
+     "title": "Innocence: Infant Joy",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "‘I have no name;\nI am but two days old.’\nWhat shall I call thee?\n‘I happy am,\nJoy is my name.’\nSweet joy befall thee!",
+      "Pretty joy!\nSweet joy, but two days old.\nSweet joy I call thee:\nThou dost smile,\nI sing the while;\nSweet joy befall thee!"
+     ]
+    },
+    {
+     "title": "Innocence: A Dream",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Once a dream did weave a shade\nO’er my angel-guarded bed,\nThat an emmet lost its way\nWhere on grass methought I lay.",
+      "Troubled, wildered, and forlorn,\nDark, benighted, travel-worn,\nOver many a tangled spray,\nAll heart-broke, I heard her say:",
+      "‘O my children! do they cry,\nDo they hear their father sigh?\nNow they look abroad to see,\nNow return and weep for me.’",
+      "Pitying, I dropped a tear:\nBut I saw a glow-worm near,\nWho replied, ‘What wailing wight\nCalls the watchman of the night?’",
+      "‘I am set to light the ground,\nWhile the beetle goes his round:\nFollow now the beetle’s hum;\nLittle wanderer, hie thee home!’"
+     ]
+    },
+    {
+     "title": "Innocence: On Another’s Sorrow",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Can I see another’s woe,\nAnd not be in sorrow too?\nCan I see another’s grief,\nAnd not seek for kind relief?",
+      "Can I see a falling tear,\nAnd not feel my sorrow’s share?\nCan a father see his child\nWeep, nor be with sorrow filled?",
+      "Can a mother sit and hear\nAn infant groan, an infant fear?\nNo, no! never can it be!\nNever, never can it be!",
+      "And can He who smiles on all\nHear the wren with sorrows small,\nHear the small bird’s grief and care,\nHear the woes that infants bear—",
+      "And not sit beside the nest,\nPouring pity in their breast,\nAnd not sit the cradle near,\nWeeping tear on infant’s tear?",
+      "And not sit both night and day,\nWiping all our tears away?\nO no! never can it be!\nNever, never can it be!",
+      "He doth give His joy to all:\nHe becomes an infant small,\nHe becomes a man of woe,\nHe doth feel the sorrow too.",
+      "Think not thou canst sigh a sigh,\nAnd thy Maker is not by:\nThink not thou canst weep a tear,\nAnd thy Maker is not near.",
+      "O He gives to us His joy,\nThat our grief He may destroy:\nTill our grief is fled and gone\nHe doth sit by us and moan."
+     ]
+    },
+    {
+     "title": "Experience: Introduction",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Hear the voice of the Bard,\nWho present, past, and future, sees;\nWhose ears have heard\nThe Holy Word\nThat walked among the ancient trees;",
+      "Calling the lapséd soul,\nAnd weeping in the evening dew;\nThat might control\nThe starry pole,\nAnd fallen, fallen light renew!",
+      "‘O Earth, O Earth, return!\nArise from out the dewy grass!\nNight is worn,\nAnd the morn\nRises from the slumbrous mass.",
+      "‘Turn away no more;\nWhy wilt thou turn away?\nThe starry floor,\nThe watery shore,\nIs given thee till the break of day.’"
+     ]
+    },
+    {
+     "title": "Experience: Earth’s Answer",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Earth raised up her head\nFrom the darkness dread and drear,\nHer light fled,\nStony, dread,\nAnd her locks covered with grey despair.",
+      "‘Prisoned on watery shore,\nStarry jealousy does keep my den\nCold and hoar;\nWeeping o’er,\nI hear the father of the ancient men.",
+      "‘Selfish father of men!\nCruel, jealous, selfish fear!\nCan delight,\nChained in night,\nThe virgins of youth and morning bear.",
+      "‘Does spring hide its joy,\nWhen buds and blossoms grow?\nDoes the sower\nSow by night,\nOr the ploughman in darkness plough?",
+      "‘Break this heavy chain,\nThat does freeze my bones around!\nSelfish, vain,\nEternal bane,\nThat free love with bondage bound.’"
+     ]
+    },
+    {
+     "title": "Experience: The Clod and the Pebble",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "‘Love seeketh not itself to please,\nNor for itself hath any care,\nBut for another gives its ease,\nAnd builds a heaven in hell’s despair.’",
+      "So sung a little clod of clay,\nTrodden with the cattle’s feet,\nBut a pebble of the brook\nWarbled out these metres meet:",
+      "‘Love seeketh only Self to please,\nTo bind another to its delight,\nJoys in another’s loss of ease,\nAnd builds a hell in heaven’s despite.’"
+     ]
+    },
+    {
+     "title": "Experience: Holy Thursday",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Is this a holy thing to see\nIn a rich and fruitful land,—\nBabes reduced to misery,\nFed with cold and usurous hand?",
+      "Is that trembling cry a song?\nCan it be a song of joy?\nAnd so many children poor?\nIt is a land of poverty!",
+      "And their sun does never shine,\nAnd their fields are bleak and bare,\nAnd their ways are filled with thorns,\nIt is eternal winter there.",
+      "For where’er the sun does shine,\nAnd where’er the rain does fall,\nBabe can never hunger there,\nNor poverty the mind appal."
+     ]
+    },
+    {
+     "title": "Experience: The Little Girl Lost",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "In futurity\nI prophesy\nThat the earth from sleep\n(Grave the sentence deep)",
+      "Shall arise, and seek\nFor her Maker meek;\nAnd the desert wild\nBecome a garden mild.",
+      "In the southern clime,\nWhere the summer’s prime\nNever fades away,\nLovely Lyca lay.",
+      "Seven summers old\nLovely Lyca told.\nShe had wandered long,\nHearing wild birds’ song.",
+      "‘Sweet sleep, come to me,\nUnderneath this tree;\nDo father, mother, weep?\nWhere can Lyca sleep?",
+      "‘Lost in desert wild\nIs your little child.\nHow can Lyca sleep\nIf her mother weep?",
+      "‘If her heart does ache,\nThen let Lyca wake;\nIf my mother sleep,\nLyca shall not weep.",
+      "‘Frowning, frowning night,\nO’er this desert bright\nLet thy moon arise,\nWhile I close my eyes.’",
+      "Sleeping Lyca lay,\nWhile the beasts of prey,\nCome from caverns deep,\nViewed the maid asleep.",
+      "The kingly lion stood,\nAnd the virgin viewed:\nThen he gambolled round\nO’er the hallowed ground.",
+      "Leopards, tigers, play\nRound her as she lay;\nWhile the lion old\nBowed his mane of gold,",
+      "And her bosom lick,\nAnd upon her neck,\nFrom his eyes of flame,\nRuby tears there came;",
+      "While the lioness\nLoosed her slender dress,\nAnd naked they conveyed\nTo caves the sleeping maid."
+     ]
+    },
+    {
+     "title": "Experience: The Little Girl Found",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "All the night in woe\nLyca’s parents go\nOver valleys deep,\nWhile the deserts weep.",
+      "Tired and woe-begone,\nHoarse with making moan,\nArm in arm, seven days\nThey traced the desert ways.",
+      "Seven nights they sleep\nAmong shadows deep,\nAnd dream they see their child\nStarved in desert wild.",
+      "Pale through pathless ways\nThe fancied image strays,\nFamished, weeping, weak,\nWith hollow piteous shriek.",
+      "Rising from unrest,\nThe trembling woman pressed\nWith feet of weary woe;\nShe could no further go.",
+      "In his arms he bore\nHer, armed with sorrow sore;\nTill before their way\nA couching lion lay.",
+      "Turning back was vain:\nSoon his heavy mane\nBore them to the ground,\nThen he stalked around,",
+      "Smelling to his prey;\nBut their fears allay\nWhen he licks their hands,\nAnd silent by them stands.",
+      "They look upon his eyes,\nFilled with deep surprise;\nAnd wondering behold\nA spirit armed in gold.",
+      "On his head a crown,\nOn his shoulders down\nFlowed his golden hair.\nGone was all their care.",
+      "‘Follow me,’ he said;\n‘Weep not for the maid;\nIn my palace deep,\nLyca lies asleep.’",
+      "Then they followèd\nWhere the vision led,\nAnd saw their sleeping child\nAmong tigers wild.",
+      "To this day they dwell\nIn a lonely dell,\nNor fear the wolvish howl\nNor the lion’s growl."
+     ]
+    },
+    {
+     "title": "Experience: The Chimney-Sweeper",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "A little black thing among the snow,\nCrying! ‘weep! weep!’ in notes of woe!\n‘Where are thy father and mother? Say!’—\n‘They are both gone up to the church to pray.",
+      "‘Because I was happy upon the heath,\nAnd smiled among the winter’s snow,\nThey clothed me in the clothes of death,\nAnd taught me to sing the notes of woe.",
+      "‘And because I am happy and dance and sing,\nThey think they have done me no injury,\nAnd are gone to praise God and His priest and king,\nWho made up a heaven of our misery.’"
+     ]
+    },
+    {
+     "title": "Experience: Nurse’s Song",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "When the voices of children are heard on the green,\nAnd whisperings are in the dale,\nThe days of my youth rise fresh in my mind,\nMy face turns green and pale.",
+      "Then come home, my children, the sun is gone down,\nAnd the dews of night arise;\nYour spring and your day are wasted in play,\nAnd your winter and night in disguise."
+     ]
+    },
+    {
+     "title": "Experience: The Sick Rose",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "O rose, thou art sick!\nThe invisible worm,\nThat flies in the night,\nIn the howling storm,",
+      "Has found out thy bed\nOf crimson joy,\nAnd his dark secret love\nDoes thy life destroy."
+     ]
+    },
+    {
+     "title": "Experience: The Fly",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Little Fly,\nThy summer’s play\nMy thoughtless hand\nHas brushed away.",
+      "Am not I\nA fly like thee?\nOr art not thou\nA man like me?",
+      "For I dance,\nAnd drink, and sing,\nTill some blind hand\nShall brush my wing.",
+      "If thought is life\nAnd strength and breath,\nAnd the want\nOf thought is death;",
+      "Then am I\nA happy fly.\nIf I live,\nOr if I die."
+     ]
+    },
+    {
+     "title": "Experience: The Angel",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "I dreamt a dream! What can it mean?\nAnd that I was a maiden Queen\nGuarded by an Angel mild:\nWitless woe was ne’er beguiled!",
+      "And I wept both night and day,\nAnd he wiped my tears away;\nAnd I wept both day and night,\nAnd hid from him my heart’s delight.",
+      "So he took his wings, and fled;\nThen the morn blushed rosy red.\nI dried my tears, and armed my fears\nWith ten thousand shields and spears.",
+      "Soon my Angel came again;\nI was armed, he came in vain;\nFor the time of youth was fled,\nAnd grey hairs were on my head."
+     ]
+    },
+    {
+     "title": "Experience: The Tiger",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Tiger, tiger, burning bright\nIn the forests of the night,\nWhat immortal hand or eye\nCould frame thy fearful symmetry?",
+      "In what distant deeps or skies\nBurnt the fire of thine eyes?\nOn what wings dare he aspire?\nWhat the hand dare seize the fire?",
+      "And what shoulder and what art\nCould twist the sinews of thy heart?\nAnd, when thy heart began to beat,\nWhat dread hand and what dread feet?",
+      "What the hammer? what the chain?\nIn what furnace was thy brain?\nWhat the anvil? what dread grasp\nDare its deadly terrors clasp?",
+      "When the stars threw down their spears,\nAnd watered heaven with their tears,\nDid He smile His work to see?\nDid He who made the lamb make thee?",
+      "Tiger, tiger, burning bright\nIn the forests of the night,\nWhat immortal hand or eye\nDare frame thy fearful symmetry?"
+     ]
+    },
+    {
+     "title": "Experience: My Pretty Rose Tree",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "A flower was offered to me,\nSuch a flower as May never bore;\nBut I said, ‘I’ve a pretty rose tree,’\nAnd I passed the sweet flower o’er.",
+      "Then I went to my pretty rose tree,\nTo tend her by day and by night;\nBut my rose turned away with jealousy,\nAnd her thorns were my only delight."
+     ]
+    },
+    {
+     "title": "Experience: Ah, Sunflower",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Ah, sunflower, weary of time,\nWho countest the steps of the sun;\nSeeking after that sweet golden clime\nWhere the traveller’s journey is done;",
+      "Where the Youth pined away with desire,\nAnd the pale virgin shrouded in snow,\nArise from their graves, and aspire\nWhere my Sunflower wishes to go!"
+     ]
+    },
+    {
+     "title": "Experience: The Lily",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "The modest Rose puts forth a thorn,\nThe humble sheep a threat’ning horn:\nWhile the Lily white shall in love delight,\nNor a thorn nor a threat stain her beauty bright."
+     ]
+    },
+    {
+     "title": "Experience: The Garden of Love",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "I went to the Garden of Love,\nAnd saw what I never had seen;\nA Chapel was built in the midst,\nWhere I used to play on the green.",
+      "And the gates of this Chapel were shut,\nAnd ‘Thou shalt not’ writ over the door;\nSo I turned to the Garden of Love\nThat so many sweet flowers bore.",
+      "And I saw it was filled with graves,\nAnd tombstones where flowers should be;\nAnd priests in black gowns were walking their rounds,\nAnd binding with briars my joys and desires."
+     ]
+    },
+    {
+     "title": "Experience: The Little Vagabond",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Dear mother, dear mother, the Church is cold;\nBut the Alehouse is healthy, and pleasant, and warm.\nBesides, I can tell where I am used well;\nSuch usage in heaven will never do well.",
+      "But, if at the Church they would give us some ale,\nAnd a pleasant fire our souls to regale,\nWe’d sing and we’d pray all the livelong day,\nNor ever once wish from the Church to stray.",
+      "Then the Parson might preach, and drink, and sing,\nAnd we’d be as happy as birds in the spring;\nAnd modest Dame Lurch, who is always at church,\nWould not have bandy children, nor fasting, nor birch.",
+      "And God, like a father, rejoicing to see\nHis children as pleasant and happy as He,\nWould have no more quarrel with the Devil or the barrel,\nBut kiss him, and give him both drink and apparel."
+     ]
+    },
+    {
+     "title": "Experience: London",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "I wander through each chartered street,\nNear where the chartered Thames does flow,\nA mark in every face I meet,\nMarks of weakness, marks of woe.",
+      "In every cry of every man,\nIn every infant’s cry of fear,\nIn every voice, in every ban,\nThe mind-forged manacles I hear:",
+      "How the chimney-sweeper’s cry\nEvery blackening church appals,\nAnd the hapless soldier’s sigh\nRuns in blood down palace-walls.",
+      "But most, through midnight streets I hear\nHow the youthful harlot’s curse\nBlasts the new-born infant’s tear,\nAnd blights with plagues the marriage hearse."
+     ]
+    },
+    {
+     "title": "Experience: The Human Abstract",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Pity would be no more\nIf we did not make somebody poor,\nAnd Mercy no more could be\nIf all were as happy as we.",
+      "And mutual fear brings Peace,\nTill the selfish loves increase;\nThen Cruelty knits a snare,\nAnd spreads his baits with care.",
+      "He sits down with holy fears,\nAnd waters the ground with tears;\nThen Humility takes its root\nUnderneath his foot.",
+      "Soon spreads the dismal shade\nOf Mystery over his head,\nAnd the caterpillar and fly\nFeed on the Mystery.",
+      "And it bears the fruit of Deceit,\nRuddy and sweet to eat,\nAnd the raven his nest has made\nIn its thickest shade.",
+      "The gods of the earth and sea\nSought through nature to find this tree,\nBut their search was all in vain:\nThere grows one in the human Brain."
+     ]
+    },
+    {
+     "title": "Experience: Infant Sorrow",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "My mother groaned, my father wept:\nInto the dangerous world I leapt,\nHelpless, naked, piping loud,\nLike a fiend hid in a cloud.",
+      "Struggling in my father’s hands,\nStriving against my swaddling bands,\nBound and weary, I thought best\nTo sulk upon my mother’s breast."
+     ]
+    },
+    {
+     "title": "Experience: A Poison Tree",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "I was angry with my friend:\nI told my wrath, my wrath did end.\nI was angry with my foe:\nI told it not, my wrath did grow.",
+      "And I watered it in fears\nNight and morning with my tears,\nAnd I sunnèd it with smiles\nAnd with soft deceitful wiles.",
+      "And it grew both day and night,\nTill it bore an apple bright,\nAnd my foe beheld it shine,\nAnd he knew that it was mine,—",
+      "And into my garden stole\nWhen the night had veiled the pole;\nIn the morning, glad, I see\nMy foe outstretched beneath the tree."
+     ]
+    },
+    {
+     "title": "Experience: A Little Boy Lost",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "‘Nought loves another as itself,\nNor venerates another so,\nNor is it possible to thought\nA greater than itself to know.",
+      "‘And, father, how can I love you\nOr any of my brothers more?\nI love you like the little bird\nThat picks up crumbs around the door.’",
+      "The Priest sat by and heard the child;\nIn trembling zeal he seized his hair,\nHe led him by his little coat,\nAnd all admired his priestly care.",
+      "And standing on the altar high,\n‘Lo, what a fiend is here!’ said he:\n‘One who sets reason up for judge\nOf our most holy mystery.’",
+      "The weeping child could not be heard,\nThe weeping parents wept in vain:\nThey stripped him to his little shirt,\nAnd bound him in an iron chain,",
+      "And burned him in a holy place\nWhere many had been burned before;\nThe weeping parents wept in vain.\nAre such things done on Albion’s shore?"
+     ]
+    },
+    {
+     "title": "Experience: A Little Girl Lost",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Children of the future age,\nReading this indignant page,\nKnow that in a former time\nLove, sweet love, was thought a crime.",
+      "In the age of gold,\nFree from winter’s cold,\nYouth and maiden bright,\nTo the holy light,\nNaked in the sunny beams delight.",
+      "Once a youthful pair,\nFilled with softest care,\nMet in garden bright\nWhere the holy light\nHad just removed the curtains of the night.",
+      "There, in rising day,\nOn the grass they play;\nParents were afar,\nStrangers came not near,\nAnd the maiden soon forgot her fear.",
+      "Tired with kisses sweet,\nThey agree to meet\nWhen the silent sleep\nWaves o’er heaven’s deep,\nAnd the weary tired wanderers weep.",
+      "To her father white\nCame the maiden bright;\nBut his loving look,\nLike the holy book,\nAll her tender limbs with terror shook.",
+      "Ona, pale and weak,\nTo thy father speak!\nO the trembling fear!\nO the dismal care\nThat shakes the blossoms of my hoary hair!’"
+     ]
+    },
+    {
+     "title": "Experience: A Divine Image",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Cruelty has a human heart,\nAnd Jealousy a human face;\nTerror the human form divine,\nAnd Secrecy the human dress.",
+      "The human dress is forgèd iron,\nThe human form a fiery forge,\nThe human face a furnace sealed,\nThe human heart its hungry gorge."
+     ]
+    },
+    {
+     "title": "Experience: A Cradle Song",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Sleep, sleep, beauty bright,\nDreaming in the joys of night;\nSleep, sleep; in thy sleep\nLittle sorrows sit and weep.",
+      "Sweet babe, in thy face\nSoft desires I can trace,\nSecret joys and secret smiles,\nLittle pretty infant wiles.",
+      "As thy softest limbs I feel,\nSmiles as of the morning steal\nO’er thy cheek, and o’er thy breast\nWhere thy little heart doth rest.",
+      "O the cunning wiles that creep\nIn thy little heart asleep!\nWhen thy little heart doth wake,\nThen the dreadful light shall break."
+     ]
+    },
+    {
+     "title": "Experience: To Tirzah",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Whate’er is born of mortal birth\nMust be consumèd with the earth,\nTo rise from generation free:\nThen what have I to do with thee?",
+      "The sexes sprung from shame and pride,\nBlowed in the morn, in evening died;\nBut mercy changed death into sleep;\nThe sexes rose to work and weep.",
+      "Thou, mother of my mortal part,\nWith cruelty didst mould my heart,\nAnd with false self-deceiving tears\nDidst blind my nostrils, eyes, and ears,",
+      "Didst close my tongue in senseless clay,\nAnd me to mortal life betray.\nThe death of Jesus set me free:\nThen what have I to do with thee?"
+     ]
+    },
+    {
+     "title": "Experience: The Schoolboy",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "I love to rise in a summer morn,\nWhen the birds sing on every tree;\nThe distant huntsman winds his horn,\nAnd the skylark sings with me:\nO what sweet company!",
+      "But to go to school in a summer morn,—\nO it drives all joy away!\nUnder a cruel eye outworn,\nThe little ones spend the day\nIn sighing and dismay.",
+      "Ah then at times I drooping sit,\nAnd spend many an anxious hour;\nNor in my book can I take delight,\nNor sit in learning’s bower,\nWorn through with the dreary shower.",
+      "How can the bird that is born for joy\nSit in a cage and sing?\nHow can a child, when fears annoy,\nBut droop his tender wing,\nAnd forget his youthful spring!",
+      "O father and mother if buds are nipped,\nAnd blossoms blown away;\nAnd if the tender plants are stripped\nOf their joy in the springing day,\nBy sorrow and care’s dismay,—",
+      "How shall the summer arise in joy,\nOr the summer fruits appear?\nOr how shall we gather what griefs destroy,\nOr bless the mellowing year,\nWhen the blasts of winter appear?"
+     ]
+    },
+    {
+     "title": "Experience: The Voice of the Ancient Bard",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Youth of delight! come hither\nAnd see the opening morn,\nImage of Truth new-born.\nDoubt is fled, and clouds of reason,\nDark disputes and artful teazing.\nFolly is an endless maze;\nTangled roots perplex her ways;\nHow many have fallen there!\nThey stumble all night over bones of the dead;\nAnd feel—they know not what but care;\nAnd wish to lead others, when they should be led."
+     ]
+    }
+   ]
+  },
+  {
+   "id": "goblin-market",
+   "title": "Goblin Market",
+   "author": "Christina Rossetti",
+   "life": "1830–1894",
+   "year": 1862,
+   "form": "poem",
+   "genres": [
+    "Poetry",
+    "Fantasy"
+   ],
+   "description": "Two sisters hear goblin merchants crying their fruit at dusk. One eats, and the other must save her.",
+   "language": "en",
+   "words": 3042,
+   "source": {
+    "name": "Project Gutenberg",
+    "url": "https://www.gutenberg.org/ebooks/16950"
+   },
+   "sections": [
+    {
+     "title": "Goblin Market",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Morning and evening\nMaids heard the goblins cry:\n'Come buy our orchard fruits,\nCome buy, come buy:\nApples and quinces,\nLemons and oranges,\nPlump unpecked cherries,\nMelons and raspberries,\nBloom-down-cheeked peaches,\nSwart-headed mulberries,\nWild free-born cranberries,\nCrab-apples, dewberries,\nPine-apples, blackberries,\nApricots, strawberries;—\nAll ripe together\nIn summer weather,—\nMorns that pass by,\nFair eves that fly;\nCome buy, come buy:\nOur grapes fresh from the vine,\nPomegranates full and fine,\nDates and sharp bullaces,\nRare pears and greengages,\nDamsons and bilberries,\nTaste them and try:\nCurrants and gooseberries,\nBright-fire-like barberries,\nFigs to fill your mouth,\nCitrons from the South,\nSweet to tongue and sound to eye;\nCome buy, come buy.'",
+      "Evening by evening\nAmong the brookside rushes,\nLaura bowed her head to hear,\nLizzie veiled her blushes:\nCrouching close together\nIn the cooling weather,\nWith clasping arms and cautioning lips,\nWith tingling cheeks and finger tips.\n'Lie close,' Laura said,\nPricking up her golden head:\n'We must not look at goblin men,\nWe must not buy their fruits:\nWho knows upon what soil they fed\nTheir hungry thirsty roots?'\n'Come buy,' call the goblins\nHobbling down the glen.\n'Oh,' cried Lizzie, 'Laura, Laura,\nYou should not peep at goblin men.'\nLizzie covered up her eyes,\nCovered close lest they should look;\nLaura reared her glossy head,\nAnd whispered like the restless brook:\n'Look, Lizzie, look, Lizzie,\nDown the glen tramp little men.\nOne hauls a basket,\nOne bears a plate,\nOne lugs a golden dish\nOf many pounds weight.\nHow fair the vine must grow\nWhose grapes are so luscious;\nHow warm the wind must blow\nThrough those fruit bushes.'\n'No,' said Lizzie, 'No, no, no;\nTheir offers should not charm us,\nTheir evil gifts would harm us.'\nShe thrust a dimpled finger\nIn each ear, shut eyes and ran:\nCurious Laura chose to linger\nWondering at each merchant man.\nOne had a cat's face,\nOne whisked a tail,\nOne tramped at a rat's pace,\nOne crawled like a snail,\nOne like a wombat prowled obtuse and furry,\nOne like a ratel tumbled hurry skurry.\nShe heard a voice like voice of doves\nCooing all together:\nThey sounded kind and full of loves\nIn the pleasant weather.",
+      "Laura stretched her gleaming neck\nLike a rush-imbedded swan,\nLike a lily from the beck,\nLike a moonlit poplar branch,\nLike a vessel at the launch\nWhen its last restraint is gone.",
+      "Backwards up the mossy glen\nTurned and trooped the goblin men,\nWith their shrill repeated cry,\n'Come buy, come buy.'\nWhen they reached where Laura was\nThey stood stock still upon the moss,\nLeering at each other,\nBrother with queer brother;\nSignalling each other,\nBrother with sly brother.\nOne set his basket down,\nOne reared his plate;\nOne began to weave a crown\nOf tendrils, leaves, and rough nuts brown\n(Men sell not such in any town);\nOne heaved the golden weight\nOf dish and fruit to offer her:\n'Come buy, come buy,' was still their cry.\nLaura stared but did not stir,\nLonged but had no money:\nThe whisk-tailed merchant bade her taste\nIn tones as smooth as honey,\nThe cat-faced purr'd,\nThe rat-faced spoke a word\nOf welcome, and the snail-paced even was heard;\nOne parrot-voiced and jolly\nCried 'Pretty Goblin' still for 'Pretty Polly;'—\nOne whistled like a bird.",
+      "But sweet-tooth Laura spoke in haste:\n'Good folk, I have no coin;\nTo take were to purloin:\nI have no copper in my purse,\nI have no silver either,\nAnd all my gold is on the furze\nThat shakes in windy weather\nAbove the rusty heather.'\n'You have much gold upon your head,'\nThey answered all together:\n'Buy from us with a golden curl.'\nShe clipped a precious golden lock,\nShe dropped a tear more rare than pearl,\nThen sucked their fruit globes fair or red:\nSweeter than honey from the rock,\nStronger than man-rejoicing wine,\nClearer than water flowed that juice;\nShe never tasted such before,\nHow should it cloy with length of use?\nShe sucked and sucked and sucked the more\nFruits which that unknown orchard bore;\nShe sucked until her lips were sore;\nThen flung the emptied rinds away\nBut gathered up one kernel stone,\nAnd knew not was it night or day\nAs she turned home alone.",
+      "Lizzie met her at the gate\nFull of wise upbraidings:\n'Dear, you should not stay so late,\nTwilight is not good for maidens;\nShould not loiter in the glen\nIn the haunts of goblin men.\nDo you not remember Jeanie,\nHow she met them in the moonlight,\nTook their gifts both choice and many,\nAte their fruits and wore their flowers\nPlucked from bowers\nWhere summer ripens at all hours?\nBut ever in the noonlight\nShe pined and pined away;\nSought them by night and day,\nFound them no more, but dwindled and grew grey;\nThen fell with the first snow,\nWhile to this day no grass will grow\nWhere she lies low:\nI planted daisies there a year ago\nThat never blow.\nYou should not loiter so.'\n'Nay, hush,' said Laura:\n'Nay, hush, my sister:\nI ate and ate my fill,\nYet my mouth waters still;\nTo-morrow night I will\nBuy more:' and kissed her:\n'Have done with sorrow;\nI'll bring you plums to-morrow\nFresh on their mother twigs,\nCherries worth getting;\nYou cannot think what figs\nMy teeth have met in,\nWhat melons icy-cold\nPiled on a dish of gold\nToo huge for me to hold,\nWhat peaches with a velvet nap,\nPellucid grapes without one seed:\nOdorous indeed must be the mead\nWhereon they grow, and pure the wave they drink\nWith lilies at the brink,\nAnd sugar-sweet their sap.'",
+      "Golden head by golden head,\nLike two pigeons in one nest\nFolded in each other's wings,\nThey lay down in their curtained bed:\nLike two blossoms on one stem,\nLike two flakes of new-fall'n snow,\nLike two wands of ivory\nTipped with gold for awful kings.\nMoon and stars gazed in at them,\nWind sang to them lullaby,\nLumbering owls forbore to fly,\nNot a bat flapped to and fro\nRound their rest:\nCheek to cheek and breast to breast\nLocked together in one nest.",
+      "Early in the morning\nWhen the first cock crowed his warning,\nNeat like bees, as sweet and busy,\nLaura rose with Lizzie:\nFetched in honey, milked the cows,\nAired and set to rights the house,\nKneaded cakes of whitest wheat,\nCakes for dainty mouths to eat,\nNext churned butter, whipped up cream,\nFed their poultry, sat and sewed;\nTalked as modest maidens should:\nLizzie with an open heart,\nLaura in an absent dream,\nOne content, one sick in part;\nOne warbling for the mere bright day's delight,\nOne longing for the night.",
+      "At length slow evening came:\nThey went with pitchers to the reedy brook;\nLizzie most placid in her look,\nLaura most like a leaping flame.\nThey drew the gurgling water from its deep;\nLizzie plucked purple and rich golden flags,\nThen turning homeward said: 'The sunset flushes\nThose furthest loftiest crags;\nCome, Laura, not another maiden lags,\nNo wilful squirrel wags,\nThe beasts and birds are fast asleep.'\nBut Laura loitered still among the rushes\nAnd said the bank was steep.",
+      "And said the hour was early still\nThe dew not fall'n, the wind not chill:\nListening ever, but not catching\nThe customary cry,\n'Come buy, come buy,'\nWith its iterated jingle\nOf sugar-baited words:\nNot for all her watching\nOnce discerning even one goblin\nRacing, whisking, tumbling, hobbling;\nLet alone the herds\nThat used to tramp along the glen,\nIn groups or single,\nOf brisk fruit-merchant men.",
+      "Till Lizzie urged, 'O Laura, come;\nI hear the fruit-call but I dare not look:\nYou should not loiter longer at this brook:\nCome with me home.\nThe stars rise, the moon bends her arc,\nEach glowworm winks her spark,\nLet us get home before the night grows dark:\nFor clouds may gather\nThough this is summer weather,\nPut out the lights and drench us through;\nThen if we lost our way what should we do?'",
+      "Laura turned cold as stone\nTo find her sister heard that cry alone,\nThat goblin cry,\n'Come buy our fruits, come buy.'\nMust she then buy no more such dainty fruit?\nMust she no more such succous pasture find,\nGone deaf and blind?\nHer tree of life drooped from the root:\nShe said not one word in her heart's sore ache;\nBut peering thro' the dimness, nought discerning,\nTrudged home, her pitcher dripping all the way;\nSo crept to bed, and lay\nSilent till Lizzie slept;\nThen sat up in a passionate yearning,\nAnd gnashed her teeth for baulked desire, and wept\nAs if her heart would break.",
+      "Day after day, night after night,\nLaura kept watch in vain\nIn sullen silence of exceeding pain.\nShe never caught again the goblin cry:\n'Come buy, come buy;'—\nShe never spied the goblin men\nHawking their fruits along the glen:\nBut when the noon waxed bright\nHer hair grew thin and grey;\nShe dwindled, as the fair full moon doth turn\nTo swift decay and burn\nHer fire away.",
+      "One day remembering her kernel-stone\nShe set it by a wall that faced the south;\nDewed it with tears, hoped for a root,\nWatched for a waxing shoot,\nBut there came none;\nIt never saw the sun,\nIt never felt the trickling moisture run:\nWhile with sunk eyes and faded mouth\nShe dreamed of melons, as a traveller sees\nFalse waves in desert drouth\nWith shade of leaf-crowned trees,\nAnd burns the thirstier in the sandful breeze.",
+      "She no more swept the house,\nTended the fowls or cows,\nFetched honey, kneaded cakes of wheat,\nBrought water from the brook:\nBut sat down listless in the chimney-nook\nAnd would not eat.",
+      "Tender Lizzie could not bear\nTo watch her sister's cankerous care\nYet not to share.\nShe night and morning\nCaught the goblins' cry:\n'Come buy our orchard fruits,\nCome buy, come buy:'—\nBeside the brook, along the glen,\nShe heard the tramp of goblin men,\nThe voice and stir\nPoor Laura could not hear;\nLonged to buy fruit to comfort her,\nBut feared to pay too dear.\nShe thought of Jeanie in her grave,\nWho should have been a bride;\nBut who for joys brides hope to have\nFell sick and died\nIn her gay prime,\nIn earliest Winter time\nWith the first glazing rime,\nWith the first snow-fall of crisp Winter time.",
+      "Till Laura dwindling\nSeemed knocking at Death's door:\nThen Lizzie weighed no more\nBetter and worse;\nBut put a silver penny in her purse,\nKissed Laura, crossed the heath with clumps of furze\nAt twilight, halted by the brook:\nAnd for the first time in her life\nBegan to listen and look.",
+      "Laughed every goblin\nWhen they spied her peeping:\nCame towards her hobbling,\nFlying, running, leaping,\nPuffing and blowing,\nChuckling, clapping, crowing,\nClucking and gobbling,\nMopping and mowing,\nFull of airs and graces,\nPulling wry faces,\nDemure grimaces,\nCat-like and rat-like,\nRatel- and wombat-like,\nSnail-paced in a hurry,\nParrot-voiced and whistler,\nHelter skelter, hurry skurry,\nChattering like magpies,\nFluttering like pigeons,\nGliding like fishes,—\nHugged her and kissed her:\nSqueezed and caressed her:\nStretched up their dishes,\nPanniers, and plates:\n'Look at our apples\nRusset and dun,\nBob at our cherries,\nBite at our peaches,\nCitrons and dates,\nGrapes for the asking,\nPears red with basking\nOut in the sun,\nPlums on their twigs;\nPluck them and suck them,\nPomegranates, figs.'—",
+      "'Good folk,' said Lizzie,\nMindful of Jeanie:\n'Give me much and many:'—\nHeld out her apron,\nTossed them her penny.\n'Nay, take a seat with us,\nHonour and eat with us,'\nThey answered grinning:\n'Our feast is but beginning.\nNight yet is early,\nWarm and dew-pearly,\nWakeful and starry:\nSuch fruits as these\nNo man can carry;\nHalf their bloom would fly,\nHalf their dew would dry,\nHalf their flavour would pass by.\nSit down and feast with us,\nBe welcome guest with us,\nCheer you and rest with us.'—\n'Thank you,' said Lizzie: 'But one waits\nAt home alone for me:\nSo without further parleying,\nIf you will not sell me any\nOf your fruits though much and many,\nGive me back my silver penny\nI tossed you for a fee.'—\nThey began to scratch their pates,\nNo longer wagging, purring,\nBut visibly demurring,\nGrunting and snarling.\nOne called her proud,\nCross-grained, uncivil;\nTheir tones waxed loud,\nTheir looks were evil.\nLashing their tails\nThey trod and hustled her,\nElbowed and jostled her,\nClawed with their nails,\nBarking, mewing, hissing, mocking,\nTore her gown and soiled her stocking,\nTwitched her hair out by the roots,\nStamped upon her tender feet,\nHeld her hands and squeezed their fruits\nAgainst her mouth to make her eat.",
+      "White and golden Lizzie stood,\nLike a lily in a flood,—\nLike a rock of blue-veined stone\nLashed by tides obstreperously,—\nLike a beacon left alone\nIn a hoary roaring sea,\nSending up a golden fire,—\nLike a fruit-crowned orange-tree\nWhite with blossoms honey-sweet\nSore beset by wasp and bee,—\nLike a royal virgin town\nTopped with gilded dome and spire\nClose beleaguered by a fleet\nMad to tug her standard down.",
+      "One may lead a horse to water,\nTwenty cannot make him drink.\nThough the goblins cuffed and caught her,\nCoaxed and fought her,\nBullied and besought her,\nScratched her, pinched her black as ink,\nKicked and knocked her,\nMauled and mocked her,\nLizzie uttered not a word;\nWould not open lip from lip\nLest they should cram a mouthful in:\nBut laughed in heart to feel the drip\nOf juice that syrupped all her face,\nAnd lodged in dimples of her chin,\nAnd streaked her neck which quaked like curd.\nAt last the evil people,\nWorn out by her resistance,\nFlung back her penny, kicked their fruit\nAlong whichever road they took,\nNot leaving root or stone or shoot;\nSome writhed into the ground,\nSome dived into the brook\nWith ring and ripple,\nSome scudded on the gale without a sound,\nSome vanished in the distance.",
+      "In a smart, ache, tingle,\nLizzie went her way;\nKnew not was it night or day;\nSprang up the bank, tore thro' the furze,\nThreaded copse and dingle,\nAnd heard her penny jingle\nBouncing in her purse,—\nIts bounce was music to her ear.\nShe ran and ran\nAs if she feared some goblin man\nDogged her with gibe or curse\nOr something worse:\nBut not one goblin skurried after,\nNor was she pricked by fear;\nThe kind heart made her windy-paced\nThat urged her home quite out of breath with haste\nAnd inward laughter.",
+      "She cried 'Laura,' up the garden,\n'Did you miss me?\nCome and kiss me.\nNever mind my bruises,\nHug me, kiss me, suck my juices\nSqueezed from goblin fruits for you,\nGoblin pulp and goblin dew.\nEat me, drink me, love me;\nLaura, make much of me:\nFor your sake I have braved the glen\nAnd had to do with goblin merchant men.'",
+      "Laura started from her chair,\nFlung her arms up in the air,\nClutched her hair:\n'Lizzie, Lizzie, have you tasted\nFor my sake the fruit forbidden?\nMust your light like mine be hidden,\nYour young life like mine be wasted,\nUndone in mine undoing,\nAnd ruined in my ruin,\nThirsty, cankered, goblin-ridden?'—\nShe clung about her sister,\nKissed and kissed and kissed her:\nTears once again\nRefreshed her shrunken eyes,\nDropping like rain\nAfter long sultry drouth;\nShaking with aguish fear, and pain,\nShe kissed and kissed her with a hungry mouth.",
+      "Her lips began to scorch,\nThat juice was wormwood to her tongue,\nShe loathed the feast:\nWrithing as one possessed she leaped and sung,\nRent all her robe, and wrung\nHer hands in lamentable haste,\nAnd beat her breast.\nHer locks streamed like the torch\nBorne by a racer at full speed,\nOr like the mane of horses in their flight,\nOr like an eagle when she stems the light\nStraight toward the sun,\nOr like a caged thing freed,\nOr like a flying flag when armies run.",
+      "Swift fire spread through her veins, knocked at her heart,\nMet the fire smouldering there\nAnd overbore its lesser flame;\nShe gorged on bitterness without a name:\nAh! fool, to choose such part\nOf soul-consuming care!\nSense failed in the mortal strife:\nLike the watch-tower of a town\nWhich an earthquake shatters down,\nLike a lightning-stricken mast,\nLike a wind-uprooted tree\nSpun about,\nLike a foam-topped waterspout\nCast down headlong in the sea,\nShe fell at last;\nPleasure past and anguish past,\nIs it death or is it life?",
+      "Life out of death.\nThat night long Lizzie watched by her,\nCounted her pulse's flagging stir,\nFelt for her breath,\nHeld water to her lips, and cooled her face\nWith tears and fanning leaves:\nBut when the first birds chirped about their eaves,\nAnd early reapers plodded to the place\nOf golden sheaves,\nAnd dew-wet grass\nBowed in the morning winds so brisk to pass,\nAnd new buds with new day\nOpened of cup-like lilies on the stream,\nLaura awoke as from a dream,\nLaughed in the innocent old way,\nHugged Lizzie but not twice or thrice;\nHer gleaming locks showed not one thread of grey,\nHer breath was sweet as May\nAnd light danced in her eyes.",
+      "Days, weeks, months, years\nAfterwards, when both were wives\nWith children of their own;\nTheir mother-hearts beset with fears,\nTheir lives bound up in tender lives;\nLaura would call the little ones\nAnd tell them of her early prime,\nThose pleasant days long gone\nOf not-returning time:\nWould talk about the haunted glen,\nThe wicked, quaint fruit-merchant men,\nTheir fruits like honey to the throat\nBut poison in the blood;\n(Men sell not such in any town:)\nWould tell them how her sister stood\nIn deadly peril to do her good,\nAnd win the fiery antidote:\nThen joining hands to little hands\nWould bid them cling together,\n'For there is no friend like a sister\nIn calm or stormy weather;\nTo cheer one on the tedious way,\nTo fetch one if one goes astray,\nTo lift one if one totters down,\nTo strengthen whilst one stands.'"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ozymandias",
+   "title": "Ozymandias",
+   "author": "Percy Bysshe Shelley",
+   "life": "1792–1822",
+   "year": 1818,
+   "form": "poem",
+   "genres": [
+    "Poetry"
+   ],
+   "description": "A traveller describes a ruined statue in the desert and the boast carved on its pedestal.",
+   "language": "en",
+   "words": 110,
+   "source": {
+    "name": "Project Gutenberg",
+    "url": "https://www.gutenberg.org/ebooks/4800"
+   },
+   "sections": [
+    {
+     "title": "Ozymandias",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "I met a traveller from an antique land\nWho said: Two vast and trunkless legs of stone\nStand in the desert...Near them, on the sand,\nHalf sunk, a shattered visage lies, whose frown,\nAnd wrinkled lip, and sneer of cold command,\nTell that its sculptor well those passions read\nWhich yet survive, stamped on these lifeless things,\nThe hand that mocked them, and the heart that fed:\nAnd on the pedestal these words appear:\n‘My name is Ozymandias, king of kings:\nLook on my works, ye Mighty, and despair!’\nNothing beside remains. Round the decay\nOf that colossal wreck, boundless and bare\nThe lone and level sands stretch far away."
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ode-to-the-west-wind",
+   "title": "Ode to the West Wind",
+   "author": "Percy Bysshe Shelley",
+   "life": "1792–1822",
+   "year": 1820,
+   "form": "poem",
+   "genres": [
+    "Poetry"
+   ],
+   "description": "The poet calls on the autumn wind, destroyer and preserver, to scatter his words like leaves.",
+   "language": "en",
+   "words": 547,
+   "source": {
+    "name": "Project Gutenberg",
+    "url": "https://www.gutenberg.org/ebooks/4800"
+   },
+   "sections": [
+    {
+     "title": "Ode to the West Wind",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "O wild West Wind, thou breath of Autumn’s being,\nThou, from whose unseen presence the leaves dead\nAre driven, like ghosts from an enchanter fleeing,",
+      "Yellow, and black, and pale, and hectic red,\nPestilence-stricken multitudes: O thou,\nWho chariotest to their dark wintry bed",
+      "The winged seeds, where they lie cold and low,\nEach like a corpse within its grave, until\nThine azure sister of the Spring shall blow",
+      "Her clarion o’er the dreaming earth, and fill\n(Driving sweet buds like flocks to feed in air)\nWith living hues and odours plain and hill:",
+      "Wild Spirit, which art moving everywhere;\nDestroyer and preserver; hear, oh, hear!",
+      "Thou on whose stream, mid the steep sky’s commotion,\nLoose clouds like earth’s decaying leaves are shed,\nShook from the tangled boughs of Heaven and Ocean,",
+      "Angels of rain and lightning: there are spread\nOn the blue surface of thine aery surge,\nLike the bright hair uplifted from the head",
+      "Of some fierce Maenad, even from the dim verge\nOf the horizon to the zenith’s height,\nThe locks of the approaching storm. Thou dirge",
+      "Of the dying year, to which this closing night\nWill be the dome of a vast sepulchre,\nVaulted with all thy congregated might",
+      "Of vapours, from whose solid atmosphere\nBlack rain, and fire, and hail will burst: oh, hear!",
+      "Thou who didst waken from his summer dreams\nThe blue Mediterranean, where he lay,\nLulled by the coil of his crystalline streams,",
+      "Beside a pumice isle in Baiae’s bay,\nAnd saw in sleep old palaces and towers\nQuivering within the wave’s intenser day,",
+      "All overgrown with azure moss and flowers\nSo sweet, the sense faints picturing them! Thou\nFor whose path the Atlantic’s level powers",
+      "Cleave themselves into chasms, while far below\nThe sea-blooms and the oozy woods which wear\nThe sapless foliage of the ocean, know",
+      "Thy voice, and suddenly grow gray with fear,\nAnd tremble and despoil themselves: oh, hear!",
+      "If I were a dead leaf thou mightest bear;\nIf I were a swift cloud to fly with thee;\nA wave to pant beneath thy power, and share",
+      "The impulse of thy strength, only less free\nThan thou, O uncontrollable! If even\nI were as in my boyhood, and could be",
+      "The comrade of thy wanderings over Heaven,\nAs then, when to outstrip thy skiey speed\nScarce seemed a vision; I would ne’er have striven",
+      "As thus with thee in prayer in my sore need.\nOh, lift me as a wave, a leaf, a cloud!\nI fall upon the thorns of life! I bleed!",
+      "A heavy weight of hours has chained and bowed\nOne too like thee: tameless, and swift, and proud.",
+      "Make me thy lyre, even as the forest is:\nWhat if my leaves are falling like its own!\nThe tumult of thy mighty harmonies",
+      "Will take from both a deep, autumnal tone,\nSweet though in sadness. Be thou, Spirit fierce,\nMy spirit! Be thou me, impetuous one!",
+      "Drive my dead thoughts over the universe\nLike withered leaves to quicken a new birth!\nAnd, by the incantation of this verse,",
+      "Scatter, as from an unextinguished hearth\nAshes and sparks, my words among mankind!\nBe through my lips to unawakened earth",
+      "The trumpet of a prophecy! O, Wind,\nIf Winter comes, can Spring be far behind?"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "to-a-skylark",
+   "title": "To a Skylark",
+   "author": "Percy Bysshe Shelley",
+   "life": "1792–1822",
+   "year": 1820,
+   "form": "poem",
+   "genres": [
+    "Poetry"
+   ],
+   "description": "A skylark's song, heard but never seen, becomes the image of a joy no human poet can reach.",
+   "language": "en",
+   "words": 565,
+   "source": {
+    "name": "Project Gutenberg",
+    "url": "https://www.gutenberg.org/ebooks/4800"
+   },
+   "sections": [
+    {
+     "title": "To a Skylark",
+     "kind": "chapter",
+     "included": true,
+     "paragraphs": [
+      "Hail to thee, blithe Spirit!\nBird thou never wert,\nThat from Heaven, or near it,\nPourest thy full heart\nIn profuse strains of unpremeditated art.",
+      "Higher still and higher\nFrom the earth thou springest\nLike a cloud of fire;\nThe blue deep thou wingest,\nAnd singing still dost soar, and soaring ever singest.",
+      "In the golden lightning\nOf the sunken sun,\nO’er which clouds are bright’ning.\nThou dost float and run;\nLike an unbodied joy whose race is just begun.",
+      "The pale purple even\nMelts around thy flight;\nLike a star of Heaven,\nIn the broad daylight\nThou art unseen, but yet I hear thy shrill delight,",
+      "Keen as are the arrows\nOf that silver sphere,\nWhose intense lamp narrows\nIn the white dawn clear\nUntil we hardly see—we feel that it is there.",
+      "All the earth and air\nWith thy voice is loud,\nAs, when night is bare,\nFrom one lonely cloud\nThe moon rains out her beams, and Heaven is overflowed.",
+      "What thou art we know not;\nWhat is most like thee?\nFrom rainbow clouds there flow not\nDrops so bright to see\nAs from thy presence showers a rain of melody.",
+      "Like a Poet hidden\nIn the light of thought,\nSinging hymns unbidden,\nTill the world is wrought\nTo sympathy with hopes and fears it heeded not:",
+      "Like a high-born maiden\nIn a palace-tower,\nSoothing her love-laden\nSoul in secret hour\nWith music sweet as love, which overflows her bower:",
+      "Like a glow-worm golden\nIn a dell of dew,\nScattering unbeholden\nIts aereal hue\nAmong the flowers and grass, which screen it from the view!",
+      "Like a rose embowered\nIn its own green leaves,\nBy warm winds deflowered,\nTill the scent it gives\nMakes faint with too much sweet those heavy-winged thieves:",
+      "Sound of vernal showers\nOn the twinkling grass,\nRain-awakened flowers,\nAll that ever was\nJoyous, and clear, and fresh, thy music doth surpass:",
+      "Teach us, Sprite or Bird,\nWhat sweet thoughts are thine:\nI have never heard\nPraise of love or wine\nThat panted forth a flood of rapture so divine.",
+      "Chorus Hymeneal,\nOr triumphal chant,\nMatched with thine would be all\nBut an empty vaunt,\nA thing wherein we feel there is some hidden want.",
+      "What objects are the fountains\nOf thy happy strain?\nWhat fields, or waves, or mountains?\nWhat shapes of sky or plain?\nWhat love of thine own kind? what ignorance of pain?",
+      "With thy clear keen joyance\nLanguor cannot be:\nShadow of annoyance\nNever came near thee:\nThou lovest—but ne’er knew love’s sad satiety.",
+      "Waking or asleep,\nThou of death must deem\nThings more true and deep\nThan we mortals dream,\nOr how could thy notes flow in such a crystal stream?",
+      "We look before and after,\nAnd pine for what is not:\nOur sincerest laughter\nWith some pain is fraught;\nOur sweetest songs are those that tell of saddest thought.",
+      "Yet if we could scorn\nHate, and pride, and fear;\nIf we were things born\nNot to shed a tear,\nI know not how thy joy we ever should come near.",
+      "Better than all measures\nOf delightful sound,\nBetter than all treasures\nThat in books are found,\nThy skill to poet were, thou scorner of the ground!",
+      "Teach me half the gladness\nThat thy brain must know,\nSuch harmonious madness\nFrom my lips would flow\nThe world should listen then—as I am listening now."
      ]
     }
    ]

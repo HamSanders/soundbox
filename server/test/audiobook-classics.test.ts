@@ -22,14 +22,15 @@ describe("classics catalogue", () => {
     expect(new Set(works.map((w) => w.id)).size).toBe(works.length);
     for (const w of works) {
       expect(w.title && w.author && w.description, w.id).toBeTruthy();
-      expect(w.source.url, w.id).toMatch(/^https:\/\/standardebooks\.org\/ebooks\//);
+      expect(w.source.url, w.id).toMatch(/^https:\/\/(standardebooks\.org\/ebooks\/|www\.gutenberg\.org\/ebooks\/\d+$)/);
       expect(["story", "poem", "novella", "children"], w.id).toContain(w.form);
       expect(w.sections.length, w.id).toBeGreaterThan(0);
     }
   });
 
   it("only lists authors and translators who died 70+ years before 2026", () => {
-    const died = (life: string) => Number(life.split("–")[1]);
+    // An ancient author ("c. 620–564 BC") is out of copyright everywhere.
+    const died = (life: string) => (/BC$/.test(life) ? 0 : Number(life.split("–")[1]));
     for (const w of works) {
       expect(died(w.life), w.id).toBeLessThanOrEqual(1955);
       if (w.translator_life) expect(died(w.translator_life), w.id).toBeLessThanOrEqual(1955);
@@ -47,6 +48,19 @@ describe("classics catalogue", () => {
         for (const b of s.breaks ?? []) expect(b > 0 && b < s.paragraphs.length, w.id).toBe(true);
       }
     }
+  });
+
+  it("carries none of Project Gutenberg's header, licence or footer", () => {
+    const pg = works.filter((w) => w.source.name === "Project Gutenberg");
+    expect(pg.length).toBeGreaterThanOrEqual(15);
+    for (const w of pg) {
+      for (const s of w.sections) {
+        for (const p of s.paragraphs) expect(p, w.id).not.toMatch(/gutenberg|\*\*\*|\[(Picture|Illustration)|^[IVX\d]+\.?$/im);
+      }
+    }
+    const fables = works.find((w) => w.id === "aesops-fables")!;
+    expect(fables.sections[0]!.paragraphs[0]).toMatch(/^A Lion was awakened/);
+    expect(works.find((w) => w.id === "ozymandias")!.sections[0]!.paragraphs[0]!.split("\n")).toHaveLength(14);
   });
 
   it("keeps a poem's line breaks and a novella's chapters", () => {

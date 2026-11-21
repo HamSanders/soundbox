@@ -35,27 +35,34 @@ leave out sections there.
 ### Start from a classic
 
 **Classics** (on the Audiobooks page, or the **Classics** tab when importing)
-opens a library of 27 public-domain works that ship with Mirli, so it works
+opens a library of 42 public-domain works that ship with Mirli, so it works
 offline:
 
 - short stories: O. Henry, Poe, W. W. Jacobs, Kate Chopin, Conan Doyle, Chekhov
-  (Constance Garnett's translation), Saki and Washington Irving;
-- stories for children: Oscar Wilde's fairy tales and two of Kipling's *Just So
-  Stories*;
+  (Constance Garnett's translation), Saki, Washington Irving and Charlotte
+  Perkins Gilman (*The Yellow Wallpaper*);
+- stories for children: Oscar Wilde's fairy tales, two of Kipling's *Just So
+  Stories*, seven Grimm fairy tales (Margaret Hunt's translation) and fifteen of
+  Aesop's fables (George Fyler Townsend's translation);
 - novellas: *A Christmas Carol*, *Dr. Jekyll and Mr. Hyde* and *Alice's
   Adventures in Wonderland*, split into their chapters;
-- poems by Poe, Keats and Whitman, one stanza to a paragraph with the line
-  breaks kept.
+- poems by Poe, Keats, Whitman, Shelley, Christina Rossetti (*Goblin Market*)
+  and Emily Dickinson, and all of Blake's *Songs of Innocence and of Experience*,
+  one stanza to a paragraph with the line breaks kept.
 
-Picking one opens the same review screen as any import. The texts are
+Picking one opens the same review screen as any import. Most texts are
 [Standard Ebooks](https://standardebooks.org) editions. Standard Ebooks states
-they are in the US public domain and releases its own editing under CC0. Every
+they are in the US public domain and releases its own editing under CC0. Works
+Standard Ebooks doesn't carry come from [Project Gutenberg](https://www.gutenberg.org)
+plain-text editions, with the Project Gutenberg header, licence and footer
+removed, as its licence asks when the text is passed on without them. Every
 author and translator in the library died more than 70 years ago, so the works
 are also out of copyright where the term is life plus 70. Some countries have
 longer terms: outside the US, check your local law before publishing a recording.
 
 To rebuild the library, run `node scripts/build-classics.mjs` in `server/`. It
-fetches each listed edition once, two seconds apart.
+fetches each listed edition once, two seconds apart, taking Gutenberg files from
+its PGLAF mirror as Gutenberg's robot policy asks.
 
 **New book** starts an empty book with one chapter instead.
 

@@ -2,7 +2,8 @@
  * Audiobooks: the bundled library of public-domain classics.
  *
  * `classics.json` is built by `scripts/build-classics.mjs` from Standard
- * Ebooks editions (US public domain texts; the editors' work under CC0 1.0).
+ * Ebooks editions (US public domain texts; the editors' work under CC0 1.0)
+ * and Project Gutenberg plain-text editions (the public-domain text only).
  * It ships with the server, so "Start from a classic" works offline. A work
  * becomes an ordinary import preview, so the review screen, edits and commit
  * are the same as for any manuscript.

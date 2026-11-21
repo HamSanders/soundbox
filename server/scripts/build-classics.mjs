@@ -4,18 +4,27 @@
  * public-domain stories, poems and novellas the audiobook builder offers as
  * "Start from a classic".
  *
- * Source: Standard Ebooks (https://standardebooks.org). Each edition carries
- * an "Uncopyright" page stating that the text is believed to be in the US
- * public domain. The editors release their own work (proofreading, markup,
- * metadata) under CC0 1.0, which dedicates it to the worldwide public domain.
+ * Sources:
+ * - Standard Ebooks (https://standardebooks.org). Each edition carries an
+ *   "Uncopyright" page stating that the text is believed to be in the US
+ *   public domain. The editors release their own work (proofreading, markup,
+ *   metadata) under CC0 1.0, which dedicates it to the worldwide public domain.
+ * - Project Gutenberg plain-text editions, for works Standard Ebooks doesn't
+ *   carry. Only the public-domain text is kept: the Project Gutenberg header,
+ *   licence and footer are stripped, as its licence asks of anyone who
+ *   redistributes the text without the trademark
+ *   (https://www.gutenberg.org/policy/license). Files come from the PGLAF
+ *   mirror, as Gutenberg's robot policy asks of automated downloads
+ *   (https://www.gutenberg.org/policy/robot_access.html).
+ *
  * Every author and translator below died in 1946 or earlier, so each work is
  * also out of copyright where the term is life plus 70 years. Countries with
  * longer terms (Mexico's life plus 100, for one) can differ, so the app
- * repeats Standard Ebooks' advice to check local law.
+ * repeats the advice to check local law.
  *
- * The script fetches one single-page edition per source book, two seconds
- * apart, and only the URLs listed here. Set CLASSICS_CACHE to a folder to
- * reuse downloads between runs.
+ * The script fetches one edition per source book, two seconds apart, and
+ * only the URLs listed here. Set CLASSICS_CACHE to a folder to reuse
+ * downloads between runs.
  *
  *   node scripts/build-classics.mjs
  *   CLASSICS_CACHE=/tmp/se node scripts/build-classics.mjs
@@ -131,6 +140,89 @@ const WORKS = [
     book: "walt-whitman/leaves-of-grass", sections: ["o-captain-my-captain"] },
 ];
 
+/**
+ * Works from Project Gutenberg plain-text editions. `pg` is the ebook number.
+ * Each piece is one chapter: it starts after the line equal to `heading`, or
+ * at the line starting with `first` (a poem's first line, skipping an
+ * editor's note above it), and runs to the line equal to `until`, an editor's
+ * note or `***` divider, or three blank lines in a row. Pieces are found in
+ * order, each after the last. Descriptions are our own.
+ */
+const GRIMM = { author: "Jacob and Wilhelm Grimm", life: "1785–1863", translator: "Margaret Hunt", translator_life: "1831–1912", pg: 5314 };
+const PG_WORKS = [
+  { id: "yellow-wallpaper", title: "The Yellow Wallpaper", author: "Charlotte Perkins Gilman", life: "1860–1935", year: 1892, form: "story", genres: ["Short stories", "Horror"],
+    description: "Confined to a rented country house for a “rest cure”, a young mother becomes fixed on the pattern of her bedroom wallpaper.",
+    pg: 1952, pieces: [{ heading: "By Charlotte Perkins Gilman", until: /^\*\*\* END/ }] },
+  { id: "aesops-fables", title: "Aesop’s Fables: a selection", author: "Aesop", life: "c. 620–564 BC", translator: "George Fyler Townsend", translator_life: "1814–1900", year: 1867, form: "children", genres: ["Fables", "Children"],
+    description: "Fifteen of the best-known fables, from the Hare and the Tortoise to the Boy who cried Wolf, each ending in its moral.",
+    pg: 21, pieces: [
+      "The Lion And The Mouse", "The Ants and the Grasshopper", "The Hare and the Tortoise", "The Dog and the Shadow", "The Wolf in Sheep’s Clothing",
+      "The Boy and the Filberts", "The Shepherd’s Boy and the Wolf", "The Fox and the Crow", "The Mice in Council", "The Milk-Woman and Her Pail",
+      "The Hen and the Golden Eggs", "The Crow and the Pitcher", "The Fox and the Grapes", "The Town Mouse and the Country Mouse", "The North Wind and the Sun",
+    ].map((h) => ({ heading: h, title: h.replace("Lion And The", "Lion and the") })) },
+  { ...GRIMM, id: "frog-king", title: "The Frog-King, or Iron Henry", year: 1812, form: "children", genres: ["Fairy tales", "Children"],
+    description: "A princess promises a frog her friendship in return for her golden ball, and her father makes her keep her word.",
+    pieces: [{ heading: "1 The Frog-King, or Iron Henry" }] },
+  { ...GRIMM, id: "hansel-and-grethel", title: "Hansel and Grethel", subtitle: "Hansel and Gretel", year: 1812, form: "children", genres: ["Fairy tales", "Children"],
+    description: "Abandoned in the forest, a brother and sister find a house made of bread and cake, and the witch who lives in it.",
+    pieces: [{ heading: "15 Hansel and Grethel" }] },
+  { ...GRIMM, id: "little-red-cap", title: "Little Red-Cap", subtitle: "Little Red Riding Hood", year: 1812, form: "children", genres: ["Fairy tales", "Children"],
+    description: "A girl in a red cap takes cake and wine to her grandmother and meets a wolf in the wood.",
+    pieces: [{ heading: "26 Little Red-Cap" }] },
+  { ...GRIMM, id: "bremen-town-musicians", title: "The Bremen Town-Musicians", year: 1819, form: "children", genres: ["Fairy tales", "Children", "Comedy"],
+    description: "An old donkey, dog, cat and rooster set off to be town musicians, and find a robbers' house on the way.",
+    pieces: [{ heading: "27 The Bremen Town-Musicians" }] },
+  { ...GRIMM, id: "elves-and-the-shoemaker", title: "The Elves and the Shoemaker", year: 1812, form: "children", genres: ["Fairy tales", "Children"],
+    description: "A poor shoemaker leaves out his last leather at night and finds a finished pair of shoes in the morning.",
+    pieces: [{ heading: "FIRST STORY", until: "SECOND STORY", after: "39 The Elves" }] },
+  { ...GRIMM, id: "little-snow-white", title: "Little Snow-white", year: 1812, form: "children", genres: ["Fairy tales", "Children"],
+    description: "A queen's magic mirror names her stepdaughter the fairest in the land, and the girl flees to the seven dwarfs.",
+    pieces: [{ heading: "53 Little Snow-white" }] },
+  { ...GRIMM, id: "rumpelstiltskin", title: "Rumpelstiltskin", year: 1812, form: "children", genres: ["Fairy tales", "Children"],
+    description: "A miller's daughter must spin straw into gold, and a little man helps her for a price she can't pay.",
+    pieces: [{ heading: "55 Rumpelstiltskin" }] },
+  { id: "dickinson-poems", title: "Poems of Emily Dickinson: a selection", author: "Emily Dickinson", life: "1830–1886", year: 1890, form: "poem", genres: ["Poetry"],
+    description: "Eleven poems, from “Because I could not stop for Death” to “Hope is the thing with feathers”, as first printed in 1890–96 with her editors’ punctuation.",
+    pg: 12242, pieces: [
+      "Success is counted sweetest", "The soul selects her own society,", "I taste a liquor never brewed,", "There's a certain slant of light,",
+      "I never saw a moor,", "Because I could not stop for Death,", "I'm nobody! Who are you?", "Hope is the thing with feathers",
+      "Wild nights! Wild nights!", "A bird came down the walk:", "I heard a fly buzz when I died;",
+    ].map((f) => ({ first: f, title: f.replace(/[,;:]$/, "") })) },
+  { id: "songs-of-innocence-and-experience", title: "Songs of Innocence and of Experience", author: "William Blake", life: "1757–1827", year: 1794, form: "poem", genres: ["Poetry"],
+    description: "Blake's two linked books of short lyrics, from “The Lamb” to “The Tiger” and “London”, showing “the two contrary states of the human soul”.",
+    pg: 1934, pieces: blakePieces() },
+  { id: "goblin-market", title: "Goblin Market", author: "Christina Rossetti", life: "1830–1894", year: 1862, form: "poem", genres: ["Poetry", "Fantasy"],
+    description: "Two sisters hear goblin merchants crying their fruit at dusk. One eats, and the other must save her.",
+    pg: 16950, pieces: [{ heading: "GOBLIN MARKET" }] },
+  { id: "ozymandias", title: "Ozymandias", author: "Percy Bysshe Shelley", life: "1792–1822", year: 1818, form: "poem", genres: ["Poetry"],
+    description: "A traveller describes a ruined statue in the desert and the boast carved on its pedestal.",
+    pg: 4800, pieces: [{ first: "I met a traveller from an antique land" }] },
+  { id: "ode-to-the-west-wind", title: "Ode to the West Wind", author: "Percy Bysshe Shelley", life: "1792–1822", year: 1820, form: "poem", genres: ["Poetry"],
+    description: "The poet calls on the autumn wind, destroyer and preserver, to scatter his words like leaves.",
+    pg: 4800, pieces: [{ first: "O wild West Wind, thou breath of Autumn’s being," }] },
+  { id: "to-a-skylark", title: "To a Skylark", author: "Percy Bysshe Shelley", life: "1792–1822", year: 1820, form: "poem", genres: ["Poetry"],
+    description: "A skylark's song, heard but never seen, becomes the image of a joy no human poet can reach.",
+    pg: 4800, pieces: [{ first: "Hail to thee, blithe Spirit!" }] },
+];
+
+/** Blake's book in the 1901 edition's order: two parts, each poem a chapter. */
+function blakePieces() {
+  const innocence = ["INTRODUCTION", "THE SHEPHERD", "THE ECHOING GREEN", "THE LAMB", "THE LITTLE BLACK BOY", "THE BLOSSOM", "THE CHIMNEY-SWEEPER",
+    "THE LITTLE BOY LOST", "THE LITTLE BOY FOUND", "LAUGHING SONG", "A CRADLE SONG", "THE DIVINE IMAGE", "HOLY THURSDAY", "NIGHT", "SPRING",
+    "NURSE’S SONG", "INFANT JOY", "A DREAM", "ON ANOTHER’S SORROW"];
+  const experience = ["INTRODUCTION", "EARTH’S ANSWER", "THE CLOD AND THE PEBBLE", "HOLY THURSDAY", "THE LITTLE GIRL LOST", "THE LITTLE GIRL FOUND",
+    "THE CHIMNEY-SWEEPER", "NURSE’S SONG", "THE SICK ROSE", "THE FLY", "THE ANGEL", "THE TIGER", "MY PRETTY ROSE TREE", "AH, SUNFLOWER", "THE LILY",
+    "THE GARDEN OF LOVE", "THE LITTLE VAGABOND", "LONDON", "THE HUMAN ABSTRACT", "INFANT SORROW", "A POISON TREE", "A LITTLE BOY LOST",
+    "A LITTLE GIRL LOST", "A DIVINE IMAGE", "A CRADLE SONG", "TO TIRZAH", "THE SCHOOLBOY", "THE VOICE OF THE ANCIENT BARD"];
+  const title = (h) => h.toLowerCase().replace(/(^|[\s-])(\p{L})/gu, (_, s, c) => s + c.toUpperCase()).replace(/ (And|Of|The|On)\b/g, (m) => m.toLowerCase());
+  // Headings match whole unindented lines, so the indented title page and
+  // contents are skipped; the shared titles resolve in order.
+  return [
+    ...innocence.map((h) => ({ heading: h, title: `Innocence: ${title(h)}` })),
+    ...experience.map((h, i) => ({ heading: h, title: `Experience: ${title(h)}`, ...(i === 0 ? { after: "SONGS OF EXPERIENCE" } : {}) })),
+  ];
+}
+
 /* ------------------------------------------------------------- fetching */
 
 const cacheDir = process.env.CLASSICS_CACHE ?? null;
@@ -151,6 +243,108 @@ async function page(book) {
     await writeFile(join(cacheDir, name), html);
   }
   return html;
+}
+
+const PGLAF = "https://gutenberg.pglaf.org";
+
+/** A Gutenberg plain-text edition from the PGLAF mirror, as LF lines. */
+async function pgText(n) {
+  const name = `pg${n}.txt`;
+  let text = cacheDir && existsSync(join(cacheDir, name)) ? await readFile(join(cacheDir, name), "utf8") : null;
+  if (!text) {
+    const s = String(n);
+    const dir = s.length === 1 ? `0/${s}` : `${[...s.slice(0, -1)].join("/")}/${s}`;
+    for (const file of [`${s}-0.txt`, `${s}.txt`]) {
+      const wait = lastFetch + 2000 - Date.now();
+      if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+      lastFetch = Date.now();
+      const res = await fetch(`${PGLAF}/${dir}/${file}`, { headers: { "User-Agent": UA } });
+      if (res.ok) {
+        text = await res.text();
+        break;
+      }
+    }
+    if (!text) throw new Error(`Gutenberg #${n}: not on the mirror`);
+    if (cacheDir) {
+      await mkdir(cacheDir, { recursive: true });
+      await writeFile(join(cacheDir, name), text);
+    }
+  }
+  if (/Temporarily Down for Maintenance/.test(text)) throw new Error(`Gutenberg #${n}: got the maintenance page`);
+  const lines = text.replace(/^﻿/, "").replace(/\r/g, "").split("\n");
+  // Keep only the work: drop the Gutenberg header and everything from the end marker on.
+  const start = lines.findIndex((l) => /^\*\*\* ?START OF (THE|THIS) PROJECT GUTENBERG/.test(l));
+  const end = lines.findIndex((l) => /^\*\*\* ?END OF (THE|THIS) PROJECT GUTENBERG/.test(l));
+  if (start < 0 || end < 0) throw new Error(`Gutenberg #${n}: no start/end markers`);
+  return lines.slice(start + 1, end).concat(["*** END"]);
+}
+
+/** Inline clean-up for a Gutenberg line: italics marks, line numbers, notes. */
+function pgLine(line) {
+  return line
+    .replace(INVISIBLE, "")
+    .replace(/\s{2,}_?\d+\s*$/, "") // verse line numbers, e.g. "…command,      _5" or "…raspberries,     10"
+    .replace(/\[\d+\]/g, "") // footnote markers
+    .replace(/_([^_]+)_/g, "$1") // _italics_
+    .replace(/\s*--\s*/g, (m) => (/\s/.test(m) ? " — " : "—"))
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Small capitals at the start of a fable ("THE ANTS were…") as plain words. */
+const unshout = (p) => p.replace(/^(?:[A-Z][A-Z’'-]*\s?)+?(?=\s[a-z]|[,.;:]|$)/, (run) =>
+  run.replace(/[A-Z][A-Z’'-]+/g, (w) => (w.length === 1 ? w : w[0] + w.slice(1).toLowerCase())));
+
+const same = (a, b) => a.replace(/\s+/g, " ").trim() === b.replace(/\s+/g, " ").trim();
+
+/** One piece of a Gutenberg text, from `from` (a line index): paragraphs and where it stopped. */
+function pgPiece(lines, piece, from, verse, id) {
+  let i = from;
+  if (piece.after) {
+    while (i < lines.length && lines[i].trimEnd() !== piece.after) i++;
+    if (i >= lines.length) throw new Error(`${id}: no line "${piece.after}"`);
+  }
+  if (piece.heading) {
+    while (i < lines.length && lines[i].trimEnd() !== piece.heading) i++;
+    if (i >= lines.length) throw new Error(`${id}: no heading "${piece.heading}"`);
+    i++;
+  } else {
+    while (i < lines.length && !lines[i].trim().replace(/\s+/g, " ").startsWith(piece.first)) i++;
+    if (i >= lines.length) throw new Error(`${id}: no line starting "${piece.first}"`);
+  }
+  const paragraphs = [];
+  let block = [];
+  let blanks = 0;
+  const flush = () => {
+    // A bare section number ("2.") would be read aloud: drop it.
+    const kept = block.map(pgLine).filter((l) => l && !/^\[(Picture|Illustration)/i.test(l) && !/^[IVXL\d]+\.?$/.test(l));
+    if (kept.length) paragraphs.push(verse ? kept.join("\n") : unshout(kept.join(" ")));
+    block = [];
+  };
+  for (; i < lines.length; i++) {
+    const raw = lines[i];
+    const stop =
+      raw.startsWith("*** END") ||
+      (piece.until instanceof RegExp ? piece.until.test(raw) : piece.until && raw.trimEnd() === piece.until) ||
+      /^(NOTE:|NOTES:|\*\*\*)\s*$/.test(raw.trim());
+    if (stop) break;
+    if (!raw.trim()) {
+      blanks++;
+      flush();
+      if (blanks >= 3 && paragraphs.length && !piece.until) break;
+      continue;
+    }
+    blanks = 0;
+    // An editor's bracketed note before a poem: skip it whole.
+    if (!paragraphs.length && !block.length && raw.trim().startsWith("[")) {
+      while (i < lines.length && !lines[i].includes("]")) i++;
+      continue;
+    }
+    block.push(raw);
+  }
+  flush();
+  if (!paragraphs.length) throw new Error(`${id}: "${piece.heading ?? piece.first}" has no text`);
+  return { paragraphs, next: i };
 }
 
 /* ------------------------------------------------------------ extraction */
@@ -266,13 +460,38 @@ for (const w of WORKS) {
   console.log(`${w.id.padEnd(26)} ${String(sections.length).padStart(2)} ch  ${String(count).padStart(6)} words`);
 }
 
+const texts = new Map();
+for (const w of PG_WORKS) {
+  if (!texts.has(w.pg)) texts.set(w.pg, await pgText(w.pg));
+  const lines = texts.get(w.pg);
+  const verse = w.form === "poem";
+  let at = 0;
+  const sections = w.pieces.map((piece) => {
+    const { paragraphs, next } = pgPiece(lines, piece, at, verse, w.id);
+    at = next;
+    return { title: w.pieces.length === 1 ? w.title : piece.title, kind: "chapter", included: true, paragraphs };
+  });
+  const { pg, pieces: _p, ...meta } = w;
+  const count = sections.reduce((n, s) => n + words(s.paragraphs), 0);
+  works.push({
+    ...meta,
+    language: "en",
+    words: count,
+    source: { name: "Project Gutenberg", url: `https://www.gutenberg.org/ebooks/${pg}` },
+    sections,
+  });
+  console.log(`${w.id.padEnd(26)} ${String(sections.length).padStart(2)} ch  ${String(count).padStart(6)} words`);
+}
+
 await mkdir(dirname(OUT), { recursive: true });
 await writeFile(
   OUT,
   JSON.stringify(
     {
       version: 1,
-      source: "Standard Ebooks (standardebooks.org): texts believed to be in the US public domain; editorial work released under CC0 1.0.",
+      source:
+        "Standard Ebooks (standardebooks.org): texts believed to be in the US public domain; editorial work released under CC0 1.0. " +
+        "Project Gutenberg (gutenberg.org) plain-text editions: public-domain texts, with the Project Gutenberg header, licence and footer removed.",
       works,
     },
     null,

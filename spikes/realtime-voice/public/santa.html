@@ -499,7 +499,7 @@ async function onJson(m) {
   } else if (m.type === "final") {
     if (youEl) { if (m.text) { youEl.textContent = m.text; youEl.classList.remove("partial"); } else youEl.remove(); }
     else if (m.text && m.text !== lastTyped) bubble("you", m.text);
-    youEl = null; santaEl = null; lastTyped = null; reply = ""; tags = SantaPoses.tagStream();
+    youEl = null; santaEl = null; lastTyped = null; reply = ""; cued = new Set(); tags = SantaPoses.tagStream();
   } else if (m.type === "reply_delta") {
     typing(false);
     // [laugh], [wink]...: acting cues for the pose clips, never shown. (TTS strips them server-side: TODO.)
@@ -508,6 +508,8 @@ async function onJson(m) {
     santaEl ??= bubble("santa", ""); santaEl.textContent += m.text;
     const c = $("chat"); if (c.scrollHeight - c.scrollTop - c.clientHeight < 160) c.scrollTop = c.scrollHeight;
     reply += m.text;
+    // The LLM doesn't write [tags] yet, so cue the acting from what Santa says too (once per reply).
+    for (const [tag, re] of WORD_CUES) if (!cued.has(tag) && re.test(reply)) { cued.add(tag); poses?.react(tag); }
     $("cc").textContent = reply.length > 150 ? "…" + reply.slice(-150) : reply;
   } else if (m.type === "flush") {
     player?.port.postMessage("flush"); faceFlush();
@@ -515,7 +517,9 @@ async function onJson(m) {
     typing(false); const t = "Oh dear, the line to the North Pole is crackly. Try again in a moment."; $("cc").textContent = t; bubble("santa", t); console.warn(m.message);
   }
 }
-let reply = "";
+let reply = "", cued = new Set();
+const WORD_CUES = [["laugh", /ho,? ho|ha,? ?ha|hee hee|chuckle/i], ["shh", /secret|shh+|between (you|us)/i],
+  ["check_list", /(naughty|nice) list|my list|check(ing)? (it|my list|twice)/i], ["sip_cocoa", /cocoa|hot chocolate|cookies? and milk/i]];
 function onPcm(buf) {
   if (face.on || !player) return;
   const i16 = new Int16Array(buf), f32 = new Float32Array(i16.length);

@@ -49,7 +49,7 @@
     return { ...manifest, clips };
   }
 
-  function create({ manifest, base, a, b, bg, onLive, liveReady, wanderS = 25, thinkDelayS = 1.2, log }) {
+  function create({ manifest, base, a, b, bg, onLive, liveReady, wanderS = 7, thinkDelayS = 0.6, log }) {
     const M = resolve(manifest, base);
     const talk = M.talkPose || "talk", rest = M.restPose || null;
     const moves = M.clips.filter((c) => c.from !== c.to && M.poses[c.from] && M.poses[c.to]);
@@ -80,7 +80,7 @@
     // Clips run only to act (thinking, reactions, the odd wander). Without a live face, idle clips loop.
     const canLive = liveReady || (() => false);
     const st = { pose: M.startPose || talk, mode: "idle", live: false, queue: [], thought: false, idles: 0, front: a, back: b, clip: null,
-      token: 0, stopped: true, parkedAt: 0, modeAt: 0, wander: false };
+      token: 0, stopped: true, parkedAt: 0, modeAt: 0, wander: false, visit: false, wanderAfter: 0 };
     a.muted = b.muted = true; a.playsInline = b.playsInline = true; a.preload = b.preload = "auto";
     a.classList.add("front"); b.classList.remove("front");
 
@@ -105,8 +105,17 @@
       }
       if (st.wander && st.pose === talk) {
         st.wander = false;
+        // Go somewhere (and act there), or play a talk-pose gag. Talk idles are only the no-face fallback.
         const out = moves.filter((m) => m.from === talk && m.kind === "transition" && route(m.to, talk).dist < Infinity);
-        if (out.length) return pick(out);
+        const gags = M.clips.filter((c) => c.from === talk && c.to === talk && c.kind === "idle" && !/^talk_idle/.test(c.id));
+        const all = [...out, ...gags];
+        if (all.length) { const c = pick(all); st.visit = c.kind === "transition"; return c; }
+      }
+      // Wandered to a pose with its own acting (list -> check_list, cocoa -> sip_cocoa): do it once, then head home.
+      if (st.visit && st.pose !== talk && st.mode === "idle") {
+        st.visit = false;
+        const here = M.clips.filter((c) => c.kind === "reaction" && c.from === st.pose);
+        if (here.length) return pick(here);
       }
       if (st.pose !== talk && (live || st.mode === "talk" || st.mode === "think")) return route(st.pose, talk).first || idleAt(st.pose);
       if (st.pose === talk && live) return null;
@@ -130,7 +139,7 @@
     function next() {
       const clip = choose();
       if (clip) return play(clip);
-      st.clip = null; st.parkedAt = performance.now(); setLive(true);
+      st.clip = null; st.parkedAt = performance.now(); st.wanderAfter = wanderS * (0.7 + Math.random() * 0.8) * 1000; setLive(true);
     }
     function play(clip) {
       if (st.stopped) return;
@@ -159,7 +168,7 @@
     const timer = setInterval(() => {
       if (!parked()) return;
       if (!canLive() || st.mode === "think") return kick();
-      if (st.mode === "idle" && wanderS && performance.now() - st.parkedAt > wanderS * 1000) { st.wander = true; kick(); }
+      if (st.mode === "idle" && wanderS && performance.now() - st.parkedAt > st.wanderAfter) { st.wander = true; kick(); }
     }, 250);
 
     // Blurred fill behind the frame: draw whatever the front video shows, small.
@@ -183,6 +192,7 @@
       setState(s) {
         const mode = s === "speaking" ? "talk" : s === "thinking" ? "think" : "idle";
         if (mode !== "think") st.thought = false;
+        if (mode !== "idle") st.visit = false;
         if (mode !== st.mode) st.parkedAt = st.modeAt = performance.now();
         st.mode = mode;
         // Speech starts mid-acting on the talk pose (a laugh, a think): cut straight to the live face rather

@@ -15,6 +15,9 @@ to follow [Semantic Versioning](https://semver.org/).
 - **Two setups: on this computer, or elsewhere.** First-run setup now starts by asking where sounds should be made. "On this computer" is the app as before. "Elsewhere" is a simple setup with nothing to download: renders go to a server you run or a hosted API with your own key, the Models page and pickers list only those models, and the settings for running models locally are hidden. Settings → Setup switches between them, and can keep the models already installed here in the simple setup; switching to it unloads a model left in memory. "On this computer" is preselected, and a server that can't run models itself skips the question.
 - Agents and the app no longer pick a model that may charge you per render unless you choose it. A custom endpoint outside your machine, your local network and a private overlay network such as Tailscale (a hosted API used with your own key) is marked as metered: the composer never lands on it by default, and `soundbox.generate` and `soundbox.speak` without a `model` skip it and say how to name one. A voice made on a metered model is still read on it, since choosing the voice chooses its model.
 
+### Fixed
+- **Recent opens the sound, not a chat.** Clicking an entry under **Recent** in the sidebar used to replay that session as a chat on the old Generate page. It now opens the session's newest sound on its own library page (Music, SFX or Speech) with its details panel open. The entry stays highlighted, and anything made from that page's composer still joins the session.
+
 ## [0.6.2] - 2026-11-20
 
 ### Fixed

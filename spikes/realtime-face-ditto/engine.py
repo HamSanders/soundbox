@@ -100,7 +100,9 @@ class FaceEngine:
         self._kw = kw
         self._f_s = torch.from_numpy(info["f_s_lst"][0]).cuda().half()
         self._seed = seed
+        self._still_cache = None
         self.reset()
+        self._still_cache = self._still()  # render the resting face once per image, not after every reset()
 
     def reset(self):
         """Forget audio and motion state (new utterance, barge-in)."""
@@ -130,7 +132,7 @@ class FaceEngine:
         self._res = None           # motion sequence so far, [1, n, 265]
         self._valid = None         # index in _res of the next frame to emit
         self._pending = np.zeros(0, np.float32)
-        self._hold = None          # last frame, repeated while the delay fills
+        self._hold = self._still_cache  # last frame, repeated while the delay fills (starts as the still)
 
     # -- streaming ---------------------------------------------------------------------------
     @torch.no_grad()

@@ -28,7 +28,8 @@ import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
 import { DEFAULT_HOST, DEFAULT_PORT, VERSION } from "../config.js";
-import { allowedHostEntries, isListedHost, isTrustedOrigin } from "../origins.js";
+import { REMOTE_INSTRUCTIONS, type RemoteView, remoteViewOf, signedLink } from "./links.js";
+import { allowedHostEntries, hostnameOf, isListedHost, isTrustedOrigin } from "../origins.js";
 import type { Job, ModelInfo, McpToolInfo, Origin, Sound, StorySegment } from "../schemas.js";
 import type { MirliService } from "../service.js";
 import type { CallRecord, TrackOptions } from "../telemetry.js";
@@ -241,12 +242,16 @@ function toResult(
   svc: MirliService,
   sound: Sound,
   separators?: Set<string>,
+  remote: RemoteView | null = null,
 ): SoundResult {
+  // Behind a proxy (links.ts) the file is not on the caller's machine: no
+  // path, and a signed link in place of the server-relative URL.
+  const linked = remote?.linkBase ? signedLink(remote, sound.file) : null;
   return {
     id: sound.id,
     name: sound.name,
-    path: svc.absolutePath(sound.id) ?? "",
-    url: sound.file,
+    path: linked ? "" : (svc.absolutePath(sound.id) ?? ""),
+    url: linked ?? sound.file,
     model: sound.model,
     prompt: sound.prompt,
     duration_s: sound.duration_s,
@@ -734,9 +739,10 @@ async function claiming<T>(
  * Which of the two builders opens it is the story's own answer — a script
  * dropped into the Music Builder would arrive with its script panel missing.
  */
-function studioUrl(svc: MirliService, story_id: string): string {
+function studioUrl(svc: MirliService, story_id: string, remote: RemoteView | null = null): string {
   const builder = svc.getStory(story_id)?.builder ?? "script";
-  return `http://${DEFAULT_HOST}:${DEFAULT_PORT}/#/studio/${builder}/${story_id}`;
+  const origin = remote?.publicUrl ?? `http://${DEFAULT_HOST}:${DEFAULT_PORT}`;
+  return `${origin}/#/studio/${builder}/${story_id}`;
 }
 
 /**
@@ -749,7 +755,7 @@ function studioUrl(svc: MirliService, story_id: string): string {
  * they see the rest. `soundbox.get_story` still returns the lines, because
  * that call is explicitly asking for them.
  */
-function storySummary(svc: MirliService, storyId: string) {
+function storySummary(svc: MirliService, storyId: string, remote: RemoteView | null = null) {
   const story = svc.getStory(storyId);
   if (story === null) throw new Error("No story with id " + storyId);
   const lines = svc.listSegments(storyId);
@@ -769,7 +775,7 @@ function storySummary(svc: MirliService, storyId: string) {
     duration_s: Math.round(end * 10) / 10,
     delivery:
       Object.keys(story.request_options).length > 0 ? story.request_options : undefined,
-    open_in_studio: studioUrl(svc, story.id),
+    open_in_studio: studioUrl(svc, story.id, remote),
   };
 }
 
@@ -1007,11 +1013,19 @@ function modelsUsed(choices: TtsChoice[]): {
 export function buildMcp(
   getService: () => MirliService,
   transport: "http" | "stdio" = "http",
+  remote: RemoteView | null = null,
 ): McpServer {
   const mcp = new McpServer(
     { name: "mirli", version: VERSION },
-    { instructions: MCP_INSTRUCTIONS },
+    { instructions: remote?.linkBase ? MCP_INSTRUCTIONS + REMOTE_INSTRUCTIONS : MCP_INSTRUCTIONS },
   );
+
+  // Every result goes through these, so a session behind a proxy gets links
+  // it can use (see links.ts) and a local one is unchanged.
+  const resultOf = (svc: MirliService, sound: Sound, separators?: Set<string>) =>
+    toResult(svc, sound, separators, remote);
+  const studioOf = (svc: MirliService, storyId: string) => studioUrl(svc, storyId, remote);
+  const summaryOf = (svc: MirliService, storyId: string) => storySummary(svc, storyId, remote);
 
   type Extra = RequestHandlerExtra<ServerRequest, ServerNotification>;
 
@@ -1101,7 +1115,7 @@ export function buildMcp(
           rec.setSounds(ids);
           const sounds = ids.map((i) => svc.getSound(i)).filter((s): s is Sound => s !== null);
           const result: GenerateResult = {
-            sounds: sounds.map((s) => toResult(svc, s)),
+            sounds: sounds.map((s) => resultOf(svc, s)),
             model: modelId,
             elapsed_s: Math.round((performance.now() - started) / 10) / 100,
           };
@@ -1161,7 +1175,7 @@ export function buildMcp(
         });
         rec.setSounds(page.items.map((s) => s.id));
         const separators = await separatorIds(svc);
-        return json(page.items.map((s) => toResult(svc, s, separators)));
+        return json(page.items.map((s) => resultOf(svc, s, separators)));
       }),
   );
 
@@ -1178,7 +1192,7 @@ export function buildMcp(
         const sound = svc.getSound(sound_id);
         if (sound === null) throw new Error(`No sound with id ${sound_id}`);
         rec.setSounds([sound.id]);
-        return json(toResult(svc, sound, await separatorIds(svc)));
+        return json(resultOf(svc, sound, await separatorIds(svc)));
       }),
   );
 
@@ -1267,7 +1281,7 @@ export function buildMcp(
         const { models, notes } = modelsUsed(choices);
         return json(
           ids.map((id) => ({
-            ...toResult(svc, svc.getSound(id)!),
+            ...resultOf(svc, svc.getSound(id)!),
             // `model` alone cannot say a dialogue was read on two families.
             models: Object.keys(models).length > 1 ? models : undefined,
             notes,
@@ -1299,7 +1313,7 @@ export function buildMcp(
         if (delivery && Object.keys(delivery).length > 0) {
           svc.setStoryOptions(story.id, delivery);
         }
-        return json(storySummary(svc, story.id));
+        return json(summaryOf(svc, story.id));
       }),
   );
 
@@ -1330,7 +1344,7 @@ export function buildMcp(
         if (story === null) throw new Error("No story with id " + story_id);
         return json({
           ...story,
-          open_in_studio: studioUrl(svc, story_id),
+          open_in_studio: studioOf(svc, story_id),
           lines: svc.listSegments(story_id).map(lineView),
           // Only lanes that have been touched have a row; the rest are at
           // defaults with an empty rack.
@@ -1367,7 +1381,7 @@ export function buildMcp(
               }),
             ),
         );
-        return json({ added: added.length, ...storySummary(svc, story_id) });
+        return json({ added: added.length, ...summaryOf(svc, story_id) });
         });
       }),
   );
@@ -1444,7 +1458,7 @@ export function buildMcp(
           done.push(...((job.result?.sounds as string[]) ?? []));
         }
         rec.setSounds(done);
-        return json({ read: done.length, ...modelsUsed(choices), ...storySummary(svc, story_id) });
+        return json({ read: done.length, ...modelsUsed(choices), ...summaryOf(svc, story_id) });
         });
       }),
   );
@@ -1467,7 +1481,7 @@ export function buildMcp(
         rec.setSounds(ids);
         const sound = ids[0] ? svc.getSound(ids[0]) : null;
         if (sound === null) throw new Error("The export produced no audio.");
-        return json({ ...toResult(svc, sound), open_in_studio: studioUrl(svc, story_id) });
+        return json({ ...resultOf(svc, sound), open_in_studio: studioOf(svc, story_id) });
         });
       }),
   );
@@ -1531,7 +1545,7 @@ export function buildMcp(
         const sounds = ids
           .map((i) => svc.getSound(i))
           .filter((x): x is Sound => x !== null)
-          .map((x) => toResult(svc, x, separators));
+          .map((x) => resultOf(svc, x, separators));
         const result: GenerateResult = {
           sounds,
           model: modelId,
@@ -1590,7 +1604,7 @@ export function buildMcp(
         const storyId = job.result?.story_id as string | undefined;
         if (!storyId) throw new Error("Nothing was opened.");
         rec.setSounds((job.result?.sounds as string[]) ?? []);
-        return json(storySummary(svc, storyId));
+        return json(summaryOf(svc, storyId));
       }),
   );
 
@@ -1620,7 +1634,7 @@ export function buildMcp(
           const svc = getService();
           const updated = svc.updateTrack(story_id, track_index, patch);
           if (updated === null) throw new Error("No story with id " + story_id);
-          return json({ ...updated, open_in_studio: studioUrl(svc, story_id) });
+          return json({ ...updated, open_in_studio: studioOf(svc, story_id) });
         },
       ),
   );
@@ -1640,7 +1654,7 @@ export function buildMcp(
         const svc = getService();
         const removed = svc.deleteTrack(story_id, track_index);
         if (removed === null) throw new Error("No story with id " + story_id);
-        return json({ removed_clips: removed, ...storySummary(svc, story_id) });
+        return json({ removed_clips: removed, ...summaryOf(svc, story_id) });
       }),
   );
 
@@ -1690,7 +1704,7 @@ export function buildMcp(
       ...extra,
       devices: chainOf(svc, storyId, trackIndex),
       note: "Heard in the studio's timeline playback; soundbox.export_story mixes dry.",
-      open_in_studio: studioUrl(svc, storyId),
+      open_in_studio: studioOf(svc, storyId),
     });
   }
 
@@ -1855,7 +1869,7 @@ export function buildMcp(
         // story to describe.
         const storyId = svc.getSegment(line_id)?.story_id ?? null;
         if (!svc.deleteSegment(line_id)) throw new Error("No line with id " + line_id);
-        return json(storyId ? storySummary(svc, storyId) : { deleted: line_id });
+        return json(storyId ? summaryOf(svc, storyId) : { deleted: line_id });
       }),
   );
 
@@ -1879,7 +1893,7 @@ export function buildMcp(
         if (halves === null) throw new Error("No line with id " + line_id);
         return json({
           halves: halves.map(lineView),
-          ...storySummary(svc, halves[0].story_id),
+          ...summaryOf(svc, halves[0].story_id),
         });
       }),
   );
@@ -1905,8 +1919,13 @@ export function allowedHosts(): string[] {
  * allowedHosts/allowedOrigins/enableDnsRebindingProtection options are left
  * off (this replaces them, it does not add to them).
  */
-function isHostAllowed(hostHeader: string | undefined): boolean {
+function isHostAllowed(hostHeader: string | undefined, extra: McpHostPolicy = []): boolean {
   if (!hostHeader) return false;
+  // Bound to a wildcard address, the app checks no Host either (app.ts): the
+  // server is reached by whatever name its network gives it, e.g. a proxy
+  // forwarding to a private address.
+  if (extra === "any") return true;
+  if (extra.includes(hostnameOf(hostHeader))) return true;
   if (/^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/.test(hostHeader)) return true;
   return isListedHost(hostHeader);
 }
@@ -1970,15 +1989,34 @@ interface McpSession {
  * spec's "no valid session" answer and re-initializes, which every client
  * already handles for a server restart.
  */
+/** Extra Host names the endpoint accepts: the app's own `allowedHosts`. */
+export type McpHostPolicy = string[] | "any";
+
+export interface McpEndpointOptions {
+  /** As `BuildAppOptions.allowedHosts`: the names the server was bound to, or "any". */
+  allowedHosts?: McpHostPolicy;
+  /** The access token, when one is set; enables proxy links (links.ts). */
+  apiToken?: string | null;
+}
+
 export class McpEndpoint {
   private readonly sessions = new Map<string, McpSession>();
   private readonly getService: () => MirliService;
   private readonly idleMs: number;
   private readonly sweeper: NodeJS.Timeout;
+  private readonly hosts: McpHostPolicy;
+  private readonly apiToken: string | null;
 
-  constructor(getService: () => MirliService, idleMs: number = MCP_SESSION_IDLE_MS) {
+  constructor(
+    getService: () => MirliService,
+    idleMs: number = MCP_SESSION_IDLE_MS,
+    options: McpEndpointOptions = {},
+  ) {
     this.getService = getService;
     this.idleMs = idleMs;
+    const hosts = options.allowedHosts ?? [];
+    this.hosts = hosts === "any" ? "any" : hosts.map((h) => hostnameOf(h));
+    this.apiToken = options.apiToken ?? null;
     this.sweeper = setInterval(
       () => void this.sweep(),
       Math.min(MCP_SWEEP_INTERVAL_MS, idleMs),
@@ -2020,7 +2058,7 @@ export class McpEndpoint {
     // exactly what DNS rebinding targets, so re-checking only on init would
     // defeat the point.
     const hostHeader = firstHeader(req.headers.host);
-    if (!isHostAllowed(hostHeader)) {
+    if (!isHostAllowed(hostHeader, this.hosts)) {
       rejectInsecureRequest(res, "Host", hostHeader);
       return;
     }
@@ -2037,6 +2075,20 @@ export class McpEndpoint {
     if (existing) {
       this.touch(existing, res);
       await existing.transport.handleRequest(req, res, body);
+      return;
+    }
+    if (sessionId) {
+      // A session id we don't hold: swept for idleness, or this server
+      // restarted. The spec's answer is 404, which tells the client to start
+      // a new session; a 400 reads as a broken request and most give up.
+      res.writeHead(404, { "content-type": "application/json" });
+      res.end(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          error: { code: -32001, message: "Session not found" },
+          id: null,
+        }),
+      );
       return;
     }
     if (req.method !== "POST" || !isInitializeRequest(body)) {
@@ -2062,7 +2114,7 @@ export class McpEndpoint {
         this.touch(session, res);
       },
     });
-    const server = buildMcp(this.getService);
+    const server = buildMcp(this.getService, "http", remoteViewOf(req.headers, this.apiToken));
     transport.onclose = () => {
       if (transport.sessionId) this.sessions.delete(transport.sessionId);
     };
@@ -2095,8 +2147,9 @@ export function mountMcp(
     }): unknown;
   },
   getService: () => MirliService,
+  options: McpEndpointOptions = {},
 ): McpEndpoint {
-  const endpoint = new McpEndpoint(getService);
+  const endpoint = new McpEndpoint(getService, MCP_SESSION_IDLE_MS, options);
   for (const url of ["/mcp", "/mcp/"]) {
     app.route({
       method: ["POST", "GET", "DELETE"],

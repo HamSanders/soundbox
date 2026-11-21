@@ -260,7 +260,7 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
   // separate from registerMcp above, which only serves the JSON status/calls
   // routes under /api/mcp/* — easy to conflate since both files are named
   // "mcp", but they are the transport and the telemetry dashboard respectively.
-  const mcpEndpoint = mountMcp(app, () => app.soundbox);
+  const mcpEndpoint = mountMcp(app, () => app.soundbox, { allowedHosts, apiToken });
 
   app.setErrorHandler((error, _request, reply) => {
     // Any ModelError that reaches the boundary is something the user can act

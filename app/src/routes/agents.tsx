@@ -44,7 +44,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CopyBlock } from "@/components/docs-primitives";
 import { formatRelative } from "@/lib/format";
 import { SearchInput } from "@/components/search-input";
-import { useInstallSkills, useMcpCalls, useMcpStatus } from "@/lib/queries";
+import { useCan, useInstallSkills, useMcpCalls, useMcpStatus } from "@/lib/queries";
 import type { McpCall, McpClient, SkillInfo, SkillTarget } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -320,8 +320,27 @@ function CallRow({ call }: { call: McpCall }) {
 
 /* ------------------------------------------------------------------ page */
 
+/** For a server that doesn't hand out agent connections (see capabilities). */
+function NoConnectCard() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <PlugZapIcon className="size-4" aria-hidden="true" />
+          Connect an agent
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="text-muted-foreground text-sm leading-relaxed">
+        This server doesn't offer agent connections. To drive Mirli from Claude Code or another MCP client,
+        run it on your own computer.
+      </CardContent>
+    </Card>
+  );
+}
+
 export function AgentsPage() {
   const { data: status, isLoading: statusLoading } = useMcpStatus();
+  const can = useCan();
   const { data: calls, isLoading: callsLoading } = useMcpCalls({ limit: 100 });
   const [callQuery, setCallQuery] = useState("");
 
@@ -385,20 +404,24 @@ export function AgentsPage() {
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="skills" className="gap-1.5">
-            Skills
-            {status && status.skills.length > 0 && (
-              <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[0.65rem]">
-                {status.skills.length}
-              </Badge>
-            )}
-          </TabsTrigger>
+          {can.skills_install && (
+            <TabsTrigger value="skills" className="gap-1.5">
+              Skills
+              {status && status.skills.length > 0 && (
+                <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[0.65rem]">
+                  {status.skills.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="overview" className="mt-4 space-y-6">
           <div className="grid gap-4 lg:grid-cols-2">
-            {status && (
-              <ConnectCard endpoint={status.endpoint} stdioCommand={status.stdio_command} />
+            {can.agent_connect ? (
+              status && <ConnectCard endpoint={status.endpoint} stdioCommand={status.stdio_command} />
+            ) : (
+              <NoConnectCard />
             )}
 
             <Card>
@@ -429,7 +452,7 @@ export function AgentsPage() {
             </Card>
           </div>
 
-          {status && !status.otel.enabled && !status.otel.error && (
+          {can.custom_endpoints && status && !status.otel.enabled && !status.otel.error && (
             <div className="flex items-start gap-2 rounded-lg border px-3 py-2.5 text-sm">
               <AlertTriangleIcon
                 className="mt-0.5 size-4 shrink-0 text-warn"

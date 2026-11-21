@@ -7,6 +7,8 @@
  * the words you see, and `#/settings?s=<id>` deep-links to it.
  */
 
+import type { Capabilities, CapabilityKey } from "@/lib/api";
+
 export interface SettingsGroupMeta {
   id: string;
   title: string;
@@ -224,6 +226,35 @@ export const SETTINGS: SettingMeta[] = [
 ];
 
 const BY_ID = new Map(SETTINGS.map((s) => [s.id, s]));
+
+/**
+ * The capability a setting needs (see `Capabilities`). A server that turns it
+ * off neither shows the row nor finds it in search; rows not listed are
+ * always there.
+ */
+const NEEDS: Record<string, CapabilityKey> = {
+  device: "local_models",
+  "auto-unload": "local_models",
+  "audiocpp-mode": "downloads",
+  "models-dir": "filesystem",
+  endpoints: "custom_endpoints",
+  "hf-token": "downloads",
+  "llm-mode": "downloads",
+  artwork: "downloads",
+  "data-dir": "filesystem",
+  "sounds-dir": "filesystem",
+  "weights-dir": "filesystem",
+  "update-check": "updates",
+  // The server sends traces to a URL you give it: the same trust as an endpoint.
+  "otel-endpoint": "custom_endpoints",
+  "clear-hf-token": "downloads",
+  "rerun-setup": "setup_wizard",
+};
+
+export function settingAllowed(id: string, can: Capabilities): boolean {
+  const need = NEEDS[id];
+  return !need || can[need];
+}
 
 export function settingMeta(id: string): SettingMeta {
   const meta = BY_ID.get(id);

@@ -10,9 +10,9 @@ import { DownloadIcon, EjectIcon, PlusIcon, WrenchIcon, ZapIcon } from "lucide-r
 
 import { Button } from "@/components/ui/button";
 import { useJobStream } from "@/hooks/use-job-stream";
-import type { AudioCppCatalogEntry, Job, Model } from "@/lib/api";
+import type { AudioCppCatalogEntry, Capabilities, Job, Model } from "@/lib/api";
 import { useModelDetailStore } from "@/lib/model-detail-store";
-import { useModelAction } from "@/lib/queries";
+import { useCan, useModelAction } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
 export type ModelKind = "sfx" | "music" | "speech" | "voice-change" | "separation" | "other";
@@ -132,16 +132,20 @@ export function isDownloadable(model: Model): boolean {
 }
 
 /** Which actions apply. A model that runs somewhere else (a custom endpoint,
- *  say) has nothing to fetch, load or delete here. */
-export function modelCan(model: Model) {
+ *  say) has nothing to fetch, load or delete here, and the server decides
+ *  whether it allows downloads (download, repair, delete) and running models
+ *  itself (load, unload). */
+export function modelCan(model: Model, server: Pick<Capabilities, "downloads" | "local_models">) {
   const isEndpoint = !isDownloadable(model);
+  const fetch = !isEndpoint && server.downloads;
+  const run = !isEndpoint && server.local_models;
   return {
     isEndpoint,
-    download: !isEndpoint && model.status === "not_installed",
-    repair: !isEndpoint && model.status === "incomplete",
-    load: !isEndpoint && (model.status === "installed" || model.status === "error"),
-    unload: !isEndpoint && model.status === "loaded",
-    remove: !isEndpoint && model.status !== "not_installed" && model.status !== "downloading",
+    download: fetch && model.status === "not_installed",
+    repair: fetch && model.status === "incomplete",
+    load: run && (model.status === "installed" || model.status === "error"),
+    unload: run && model.status === "loaded",
+    remove: fetch && model.status !== "not_installed" && model.status !== "downloading",
   };
 }
 
@@ -159,7 +163,7 @@ export function ModelPrimaryAction({
 }) {
   const { load, unload } = useModelAction();
   const dl = useRequestDownload(model);
-  const can = modelCan(model);
+  const can = modelCan(model, useCan());
   if (downloading) return null;
   if (can.repair)
     return (

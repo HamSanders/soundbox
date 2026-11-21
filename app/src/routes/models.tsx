@@ -54,6 +54,7 @@ import {
   useSetAudioCppEnabled,
   useSettings,
   useUpdateSettings,
+  useCan,
 } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import type { AudioCppCatalogEntry, LlmModelEntry, Model } from "@/lib/api";
@@ -294,6 +295,7 @@ export function ModelsPage() {
   const { data: catalog } = useAudioCppCatalog();
   const { data: settings } = useSettings();
   const { data: health } = useHealth();
+  const can = useCan();
   const selectedId = useModelDetailStore((s) => s.modelId);
   const closePanel = useModelDetailStore((s) => s.close);
 
@@ -312,11 +314,12 @@ export function ModelsPage() {
     const byId = new Map((catalog ?? []).map((e) => [e.id, e]));
     const out: Row[] = (models ?? []).map((m) => ({ type: "model", id: m.id, model: m, entry: byId.get(m.id) }));
     const listed = new Set(out.map((r) => r.id));
-    for (const e of catalog ?? []) {
+    // Models to add from the catalog only where this server runs models itself.
+    for (const e of can.local_models ? (catalog ?? []) : []) {
       if (!listed.has(e.id) && !e.always_on) out.push({ type: "catalog", id: e.id, entry: e });
     }
     return out.map((r, i) => ({ r, i })).sort((a, b) => rank(a.r) - rank(b.r) || a.i - b.i).map(({ r }) => r);
-  }, [models, catalog]);
+  }, [models, catalog, can.local_models]);
 
   const kinds = useMemo(() => {
     const seen = new Set(rows.map((r) => rowFacts(r).kind));
@@ -352,12 +355,13 @@ export function ModelsPage() {
       <div>
         <h1 className="font-heading text-2xl font-semibold tracking-tight">Models</h1>
         <p className="text-muted-foreground text-sm">
-          The open-weight models that make your sounds. One sits in VRAM at a time; loading another
-          unloads it.
+          {can.local_models
+            ? "The open-weight models that make your sounds. One sits in VRAM at a time; loading another unloads it."
+            : "The models this server offers. They run elsewhere, so there is nothing to download."}
         </p>
       </div>
 
-      {!isLoading && !isError && (models?.length ?? 0) > 0 && (
+      {can.downloads && !isLoading && !isError && (models?.length ?? 0) > 0 && (
         <ModelPacks models={models!} hfTokenSet={settings?.hf_token_set ?? false} />
       )}
 
@@ -372,7 +376,9 @@ export function ModelsPage() {
           {error instanceof Error ? error.message : "Unknown error"}
         </EmptyState>
       ) : !models?.length ? (
-        <EmptyState>The backend reported no models.</EmptyState>
+        <EmptyState>
+          {can.local_models ? "The backend reported no models." : "This server offers no models yet."}
+        </EmptyState>
       ) : (
         <>
           {/* One row: search, the kind switch, then each filter as a pill. */}
@@ -394,12 +400,14 @@ export function ModelsPage() {
               />
             </div>
             {kinds.length > 1 && <KindSwitch value={kind} kinds={kinds} onChange={setKind} />}
-            <TogglePill
-              pressed={installedOnly}
-              onToggle={() => setInstalledOnly((v) => !v)}
-              icon={<HardDriveIcon />}
-              label={`Installed · ${installedCount}`}
-            />
+            {can.local_models && (
+              <TogglePill
+                pressed={installedOnly}
+                onToggle={() => setInstalledOnly((v) => !v)}
+                icon={<HardDriveIcon />}
+                label={`Installed · ${installedCount}`}
+              />
+            )}
             <TogglePill
               pressed={commercialOnly}
               onToggle={() => setCommercialOnly((v) => !v)}
@@ -407,7 +415,7 @@ export function ModelsPage() {
               label="Commercial use"
               title="Only models whose licence allows commercial use without conditions."
             />
-            {vramTotal != null && (
+            {vramTotal != null && can.local_models && (
               <TogglePill
                 pressed={fitsOnly}
                 onToggle={() => setFitsOnly((v) => !v)}
@@ -437,7 +445,8 @@ export function ModelsPage() {
         </>
       )}
 
-      <LlmSection />
+      {/* The prompt assistant is a local download. */}
+      {can.downloads && <LlmSection />}
     </div>
   );
 }

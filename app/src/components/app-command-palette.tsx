@@ -30,11 +30,12 @@ import {
   useSounds,
   useStories,
   useVoices,
+  useCan,
 } from "@/lib/queries";
 import { isDownloadable } from "@/components/model-shared";
 import { MOD } from "@/lib/platform";
 import { useSessionStore } from "@/lib/session-store";
-import type { Model, Profile } from "@/lib/api";
+import type { CapabilityKey, Model, Profile } from "@/lib/api";
 
 const NO_PROFILES: Profile[] = [];
 
@@ -57,16 +58,46 @@ const PAGES: { label: string; to: string }[] = [
 
 /** Settings rows, by the words people search for. Each lands on its section
  *  of the one Settings page. Hidden until typed: see the file comment. */
-const SETTINGS: { label: string; section: string; keywords: string }[] = [
+const SETTINGS: { label: string; section: string; keywords: string; needs?: CapabilityKey }[] = [
   { label: "Output format", section: "audio", keywords: "wav mp3 output device" },
   { label: "Loudness and silence", section: "audio", keywords: "normalise lufs trim silence" },
-  { label: "Prompt assistant", section: "generation", keywords: "llm assistant enhance rewrite ollama" },
-  { label: "Device and auto-unload", section: "generation", keywords: "cuda cpu gpu unload minutes vram idle" },
-  { label: "Artwork", section: "generation", keywords: "cover art image thumbnails" },
-  { label: "Endpoints", section: "endpoints", keywords: "remote audio.cpp custom endpoint api key" },
-  { label: "Storage and folders", section: "storage", keywords: "data directory models folder sounds folder disk path" },
-  { label: "Hugging Face token", section: "accounts", keywords: "hf token gated accounts" },
-  { label: "MCP telemetry", section: "advanced", keywords: "otel opentelemetry collector traces advanced" },
+  {
+    label: "Prompt assistant",
+    section: "generation",
+    keywords: "llm assistant enhance rewrite ollama",
+    needs: "downloads",
+  },
+  {
+    label: "Device and auto-unload",
+    section: "generation",
+    keywords: "cuda cpu gpu unload minutes vram idle",
+    needs: "local_models",
+  },
+  { label: "Artwork", section: "generation", keywords: "cover art image thumbnails", needs: "downloads" },
+  {
+    label: "Endpoints",
+    section: "endpoints",
+    keywords: "remote audio.cpp custom endpoint api key",
+    needs: "custom_endpoints",
+  },
+  {
+    label: "Storage and folders",
+    section: "storage",
+    keywords: "data directory models folder sounds folder disk path",
+    needs: "filesystem",
+  },
+  {
+    label: "Hugging Face token",
+    section: "accounts",
+    keywords: "hf token gated accounts",
+    needs: "downloads",
+  },
+  {
+    label: "MCP telemetry",
+    section: "advanced",
+    keywords: "otel opentelemetry collector traces advanced",
+    needs: "custom_endpoints",
+  },
 ];
 
 /** Pages whose composer is the one `GENERATE_EVENT` reaches. */
@@ -88,9 +119,10 @@ function pageOwnsTheKey(pathname: string): boolean {
 
 /** What the row for a model offers, by its state. Null when nothing applies
  *  (downloading, or a state the palette should not poke). */
-function modelVerb(model: Model): "Load" | "Unload" | null {
-  // Only a model with weights here loads into memory.
-  if (!isDownloadable(model)) return null;
+function modelVerb(model: Model, localModels: boolean): "Load" | "Unload" | null {
+  // Only a model with weights here loads into memory, and only on a server
+  // that runs models itself.
+  if (!localModels || !isDownloadable(model)) return null;
   switch (model.status) {
     case "loaded":
       return "Unload";
@@ -108,6 +140,7 @@ export function AppCommandPalette() {
   const [keysOpen, setKeysOpen] = useState(false);
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const can = useCan();
   const { data } = useProfiles();
   const activate = useActivateProfile();
   // The sound index is only fetched once the palette has been opened; until
@@ -219,7 +252,7 @@ export function AppCommandPalette() {
     }));
 
     const modelRows: Command[] = (models ?? []).map((model) => {
-      const verb = modelVerb(model);
+      const verb = modelVerb(model, can.local_models);
       return {
         id: `model:${model.id}`,
         // Downloading is not offered from here: a non-commercial model asks
@@ -244,15 +277,18 @@ export function AppCommandPalette() {
       };
     });
 
-    const settingRows: Command[] = SETTINGS.map((row) => ({
-      id: `settings:${row.section}:${row.label}`,
-      label: row.label,
-      detail: "Settings",
-      keywords: `settings ${row.keywords}`,
-      group: "Settings",
-      hidden: true,
-      run: () => goToSettings(row.section),
-    }));
+    // Only rows for settings this server lets its user change.
+    const settingRows: Command[] = SETTINGS.filter((row) => !row.needs || can[row.needs]).map(
+      (row) => ({
+        id: `settings:${row.section}:${row.label}`,
+        label: row.label,
+        detail: "Settings",
+        keywords: `settings ${row.keywords}`,
+        group: "Settings",
+        hidden: true,
+        run: () => goToSettings(row.section),
+      }),
+    );
 
     return [
       ...contextual,
@@ -290,6 +326,7 @@ export function AppCommandPalette() {
     modelAction,
     navigate,
     goToSettings,
+    can,
   ]);
 
   return (

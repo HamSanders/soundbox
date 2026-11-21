@@ -7,6 +7,8 @@ import { DocPageRoute } from "./routes/doc";
 import { BlogIndexPage } from "./routes/blog-index";
 import { BlogPostPage } from "./routes/blog-post";
 import { McpPage } from "./routes/mcp";
+import { VocalRemoverPage } from "./routes/tools/vocal-remover";
+import { BpmKeyFinderPage } from "./routes/tools/bpm-key-finder";
 import { PressPage } from "./routes/press";
 import { DownloadPage } from "./routes/download";
 import { DevelopersPage } from "./routes/developers";
@@ -131,6 +133,19 @@ export const routes: RouteRecord[] = [
         path: "mcp",
         Component: McpPage,
         entry: "src/routes/mcp.tsx",
+      },
+      {
+        // Free tools (lead magnets). The vocal remover talks to Mirli Cloud's
+        // free-tools API (src/tools/free-api.ts); the BPM and key finder runs
+        // entirely in the browser.
+        path: "tools/vocal-remover",
+        Component: VocalRemoverPage,
+        entry: "src/routes/tools/vocal-remover.tsx",
+      },
+      {
+        path: "tools/bpm-key-finder",
+        Component: BpmKeyFinderPage,
+        entry: "src/routes/tools/bpm-key-finder.tsx",
       },
       {
         // The press kit: quotable copy, a fact sheet and direct downloads for

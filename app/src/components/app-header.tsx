@@ -30,6 +30,8 @@ const TITLES: Record<string, string> = {
   "/voice/new/builtin": "Built-in Voice",
   "/projects": "Projects",
   "/audiobooks": "Audiobooks", // [audiobooks:core]
+  "/listen": "Listen", // [audiobooks:listen]
+  "/listen/explore": "Explore", // [audiobooks:listen]
   "/models": "Models",
   "/activity": "Activity",
   "/settings": "Settings",

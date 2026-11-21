@@ -53,6 +53,7 @@ const ActivityPage = lazy(() => import("@/routes/activity").then((m) => ({ defau
 const AudiobooksPage = lazy(() => import("@/routes/audiobooks").then((m) => ({ default: m.AudiobooksPage }))); // [audiobooks:core]
 const AudiobookPage = lazy(() => import("@/routes/audiobook").then((m) => ({ default: m.AudiobookPage }))); // [audiobooks:core]
 const ListenPage = lazy(() => import("@/routes/listen").then((m) => ({ default: m.ListenPage }))); // [audiobooks:listen]
+const ListenExplorePage = lazy(() => import("@/routes/listen-explore").then((m) => ({ default: m.ListenExplorePage }))); // [audiobooks:listen]
 const ListenBookPage = lazy(() => import("@/routes/listen-book").then((m) => ({ default: m.ListenBookPage }))); // [audiobooks:listen]
 const SoundDetailPage = lazy(() => import("@/routes/sound-detail").then((m) => ({ default: m.SoundDetailPage })));
 
@@ -201,6 +202,7 @@ function AppShell() {
             <Route path="/audiobooks" element={<AudiobooksPage />} /> {/* [audiobooks:core] */}
             <Route path="/audiobooks/:id" element={<AudiobookPage />} /> {/* [audiobooks:core] */}
             <Route path="/listen" element={<ListenPage />} /> {/* [audiobooks:listen] */}
+            <Route path="/listen/explore" element={<ListenExplorePage />} /> {/* [audiobooks:listen] */}
             <Route path="/listen/:id" element={<ListenBookPage />} /> {/* [audiobooks:listen] */}
             <Route path="/sounds/:id" element={<SoundDetailPage />} />
             <Route path="/models" element={<ModelsPage />} />

@@ -220,7 +220,7 @@ when it is missing, Mirli says so and how to install it.
 ## Listen
 
 **Listen** is a shelf for the books you have made: continue listening first,
-then finished books, then a shelf per genre and per series. Search and the
+then finished books, every book, then a shelf per genre and per series. Search and the
 genre, tag, language and length filters switch to a grid of matches. Each book
 has a detail page with its cover, description, length, narrator, table of
 contents and a preview.
@@ -232,6 +232,28 @@ where they exist, otherwise estimated from the paragraph's timing. Tap any
 voiced paragraph to play from there. A book can also be published as a
 self-contained web player or a podcast RSS feed, with a checklist of what each
 store needs.
+
+### Explore
+
+**Explore** (the second tab in Listen) is for finding the next thing to
+listen to, among your own books and the bundled classics you haven't added
+yet. A classic you have already added shows once, as your book. It has:
+
+- **Top picks**, a cover carousel: what you have been listening to, your
+  newest voiced books, then well-known classics. Arrow keys move it.
+- **Collections** made from what is there, such as short listens, poems, fairy
+  tales and fables, something dark, mysteries, novellas, books ready to voice,
+  and each series. A collection shows only when it has at least two books.
+- **Rows**: your books, classics to add, and one per genre with three or more
+  books, each with **View all**.
+- **Filters**: genre, tags, narration (voiced, or not voiced yet), language,
+  length and sort order, plus search. They apply inside a View all list too.
+
+A classic opens its details, with where the text comes from and the rights
+note. **Add to library** imports the whole work with default settings and opens
+it in Audiobooks to cast and voice; to change sections first, use
+**Classics** on the Audiobooks page instead. Lengths for anything not voiced
+are estimates at about 155 words a minute.
 
 ## Compared with ElevenLabs
 

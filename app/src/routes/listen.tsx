@@ -10,6 +10,7 @@ import { HeadphonesIcon, SearchIcon, XIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { BookTile } from "@/components/listen/book-tile";
+import { ListenTabs } from "@/components/listen/listen-tabs";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,7 +138,8 @@ export function ListenPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
+        <div className="space-y-2">
+          <ListenTabs />
           <h1 className="font-heading text-2xl font-semibold tracking-tight">Listen</h1>
           <p className="text-muted-foreground mt-1 text-sm">
             Your audiobooks, with read-along text. Pick up where you left off.
@@ -267,6 +269,8 @@ export function ListenPage() {
         <div className="space-y-8">
           <Shelf title="Continue listening" books={continuing} />
           <Shelf title="Recently finished" books={finished} />
+          {/* Every book, newest first, so one with no genre, series or progress still shows. */}
+          <Shelf title="All books" books={[...all].sort((a, b) => b.updated_at.localeCompare(a.updated_at))} />
           {facets.genres.map(([g]) => (
             <Shelf
               key={g}

@@ -49,6 +49,8 @@ export interface BookSettings {
    * words and the narrator reads the rest ("she said"). Default true.
    */
   dialogue_only?: boolean;
+  /** Set when the book was started from a bundled classic: its catalogue id. */
+  classic_id?: string | null;
 }
 
 export interface Book {

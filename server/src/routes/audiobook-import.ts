@@ -199,7 +199,7 @@ function routes(app: FastifyInstance, svc: MirliService): void {
     const work = getClassic(body.id);
     if (!work) throw new HttpError(404, "That classic isn't in the library.");
     const maxChars = body.max_chars ?? DEFAULT_MAX_CHARS;
-    const preview = store.add(classicManuscript(work), { filename: null, format: "classic", url: work.source.url }, maxChars);
+    const preview = store.add(classicManuscript(work), { filename: null, format: "classic", url: work.source.url, classic_id: work.id }, maxChars);
     return reply.code(201).send(toPreview(preview));
   });
 
@@ -248,7 +248,10 @@ function routes(app: FastifyInstance, svc: MirliService): void {
     } catch (err) {
       toHttp(err);
     }
-    const book = await commitManuscript(svc, manuscript, (body.settings ?? {}) as SettingsPatch, {
+    const settings = { ...(body.settings ?? {}) } as SettingsPatch;
+    // Remember which classic a book came from, so Explore can tell it's owned.
+    if (preview.source.classic_id) settings.classic_id = preview.source.classic_id;
+    const book = await commitManuscript(svc, manuscript, settings, {
       headings: body.headings,
       project_id: body.project_id ?? null,
     });

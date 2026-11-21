@@ -56,6 +56,11 @@ const bookmarkPatchSchema = z.object({
 
 const tagsSchema = z.object({ tags: z.array(z.string().max(80)).max(50) });
 
+/** Characters read aloud per second, for a length estimate of unvoiced text:
+ *  about 155 words a minute at roughly six characters a word with the space.
+ *  Our own round figure, the same pace the classics library uses. */
+const CHARS_PER_S = 15.5;
+
 const encodingSchema = z.enum(["auto", "mp3", "wav"]).optional();
 
 const webPlayerSchema = z.object({ encoding: encodingSchema, zip: z.boolean().optional() });
@@ -84,9 +89,13 @@ export interface ShelfBook {
   publication_date: string | null;
   cover_url: string | null;
   duration_s: number;
+  /** Rough length of the whole text when read aloud, voiced or not. */
+  estimated_s: number;
   chapters: number;
   /** Chapters with any audio: a book with none is not playable yet. */
   playable_chapters: number;
+  /** The bundled classic this book was started from, if any. */
+  classic_id: string | null;
   progress: import("../audiobook/publish/store.js").ListenProgress | null;
   created_at: string;
   updated_at: string;
@@ -166,8 +175,10 @@ export function registerAudiobookListen(app: FastifyInstance, svc: MirliService)
           publication_date: summary.publication_date,
           cover_url: coverUrl(summary),
           duration_s: Math.round(duration * 100) / 100,
+          estimated_s: Math.round(listenable.reduce((n, c) => n + (byId.get(c.id)?.stats.characters ?? 0), 0) / CHARS_PER_S),
           chapters: listenable.length,
           playable_chapters: playable.length,
+          classic_id: detail?.settings.classic_id ?? null,
           progress: progress.get(summary.id) ?? null,
           created_at: summary.created_at,
           updated_at: summary.updated_at,

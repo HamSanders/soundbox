@@ -49,6 +49,9 @@ export interface BookSettings {
    * words and the narrator reads the rest ("she said"). Default true.
    */
   dialogue_only?: boolean;
+  /** Set when the book was started from a bundled classic: its catalogue id.
+   *  Listen's Explore view uses it so a classic you own isn't offered again. */
+  classic_id?: string | null;
 }
 
 export interface Book {

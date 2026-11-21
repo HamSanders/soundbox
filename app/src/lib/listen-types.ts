@@ -55,6 +55,10 @@ export interface ShelfBook {
   duration_s: number;
   chapters: number;
   playable_chapters: number;
+  /** Rough length of the whole text read aloud, voiced or not. */
+  estimated_s: number;
+  /** The bundled classic this book was started from, if any. */
+  classic_id: string | null;
   progress: ListenProgress | null;
   created_at: string;
   updated_at: string;

@@ -17,8 +17,10 @@ import {
   UNGUARDED_ROUTES,
   capabilitiesFromEnv,
   refusedBy,
+  withSetup,
 } from "../src/capabilities.js";
 import { Config } from "../src/config.js";
+import { MirliService } from "../src/service.js";
 
 describe("capabilitiesFromEnv", () => {
   it("turns everything on for a desktop", () => {
@@ -231,5 +233,91 @@ describe("a sandboxed server", () => {
   it("lists no local models and no custom endpoints", async () => {
     const models = (await app.inject({ method: "GET", url: "/api/models" })).json() as unknown[];
     expect(models).toEqual([]);
+  });
+});
+
+describe("withSetup: the two paths", () => {
+  const desktop = capabilitiesFromEnv({});
+
+  it("leaves a full setup as the server allows it", () => {
+    expect(withSetup(desktop, { setup: "full", setup_include_local: false })).toEqual(desktop);
+  });
+
+  it("switches the local half off in the simple setup", () => {
+    const simple = withSetup(desktop, { setup: "simple", setup_include_local: false });
+    expect(simple).toMatchObject({ setup: "simple", downloads: false, gpu_status: false, local_models: false });
+    expect(simple.custom_endpoints).toBe(true);
+  });
+
+  it("keeps installed local models in the simple setup only when asked", () => {
+    expect(withSetup(desktop, { setup: "simple", setup_include_local: true }).local_models).toBe(true);
+  });
+
+  it("is simple and locked on a server that can't run models itself", () => {
+    const sandboxed = capabilitiesFromEnv({ MIRLI_SANDBOXED: "1" });
+    expect(sandboxed).toMatchObject({ setup: "simple", setup_locked: true });
+    expect(withSetup(sandboxed, { setup: "full", setup_include_local: true })).toEqual(sandboxed);
+  });
+});
+
+describe("a desktop server switching setup", () => {
+  let dataDir: string;
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    dataDir = await mkdtemp(join(tmpdir(), "mirli-setup-test-"));
+    app = buildApp(new Config(dataDir), { serveUi: false });
+    await app.ready();
+  });
+
+  afterAll(async () => {
+    await app.close();
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  const patch = (payload: Record<string, unknown>) =>
+    app.inject({ method: "PATCH", url: "/api/settings", headers: { "content-type": "application/json" }, payload });
+  const caps = async () => (await app.inject({ method: "GET", url: "/api/capabilities" })).json();
+  const providers = async () =>
+    ((await app.inject({ method: "GET", url: "/api/models" })).json() as { provider: string }[]).map((m) => m.provider);
+
+  it("lists local models and allows downloads in the full setup", async () => {
+    expect(await caps()).toMatchObject({ setup: "full", downloads: true });
+    expect(await providers()).toContain("local");
+  });
+
+  it("drops local models and refuses downloads in the simple setup", async () => {
+    expect((await patch({ setup: "simple" })).statusCode).toBe(200);
+    expect(await caps()).toMatchObject({ setup: "simple", downloads: false, local_models: false });
+    expect(await providers()).not.toContain("local");
+    const dl = await app.inject({ method: "POST", url: "/api/models/x/download", headers: { "x-soundbox": "1" } });
+    expect(dl.statusCode).toBe(403);
+  });
+
+  it("brings installed local models back only when asked", async () => {
+    await patch({ setup_include_local: true });
+    expect((await caps()).local_models).toBe(true);
+    await patch({ setup: "full", setup_include_local: false });
+    expect(await caps()).toMatchObject({ setup: "full", downloads: true });
+  });
+
+  it("unloads a resident local model on switching to the simple setup", async () => {
+    // Out of reach once switched (hidden, and unload refused), so it must not
+    // be left holding VRAM.
+    const config = new Config(await mkdtemp(join(tmpdir(), "mirli-setup-unload-")));
+    const svc = new MirliService(config);
+    try {
+      const manager = svc.models;
+      vi.spyOn(manager, "resident", "get").mockReturnValue("acestep");
+      vi.spyOn(manager, "get").mockReturnValue({
+        status: async () => ({ provider: "local" }),
+      } as unknown as ReturnType<typeof manager.get>);
+      const unload = vi.spyOn(manager, "unload").mockResolvedValue(null);
+      await svc.updateSettings({ setup: "simple" });
+      expect(unload).toHaveBeenCalledWith("acestep");
+    } finally {
+      await svc.close();
+      await rm(config.base, { recursive: true, force: true });
+    }
   });
 });

@@ -94,6 +94,7 @@ export function SettingsPage() {
         <PerformanceGroup settings={settings} />
         <ModelsGroup settings={settings} />
         <HelpersGroup settings={settings} />
+        <SetupGroup settings={settings} />
         <StorageGroup settings={settings} />
         <InterfaceGroup />
         <PrivacyGroup settings={settings} />
@@ -715,6 +716,36 @@ function InterfaceGroup() {
 }
 
 // ------------------------------------------------------------- privacy
+
+function SetupGroup({ settings }: { settings: Settings }) {
+  const { save } = useSettingSave();
+  return (
+    <SettingsGroup id="setup">
+      <SettingRow
+        id="setup-simple"
+        htmlFor="setup-simple"
+        control={
+          <Switch
+            id="setup-simple"
+            checked={settings.setup === "simple"}
+            onCheckedChange={(on) => save("setup-simple", { setup: on ? "simple" : "full" })}
+          />
+        }
+      />
+      <SettingRow
+        id="setup-include-local"
+        htmlFor="setup-include-local"
+        control={
+          <Switch
+            id="setup-include-local"
+            checked={settings.setup_include_local ?? false}
+            onCheckedChange={(on) => save("setup-include-local", { setup_include_local: on })}
+          />
+        }
+      />
+    </SettingsGroup>
+  );
+}
 
 function PrivacyGroup({ settings }: { settings: Settings }) {
   const { save } = useSettingSave();

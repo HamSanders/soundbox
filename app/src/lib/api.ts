@@ -46,9 +46,16 @@ export interface Capabilities {
   skills_install: boolean;
   logs: boolean;
   setup_wizard: boolean;
+  /** Which path is in force: models on this computer ("full"), or only
+   *  models that run elsewhere ("simple"). See Settings → Setup. */
+  setup: SetupMode;
+  /** The server can't run models itself, so the setup is always "simple". */
+  setup_locked: boolean;
 }
 
-export type CapabilityKey = Exclude<keyof Capabilities, "sandboxed" | "settings_locked">;
+export type SetupMode = "full" | "simple";
+
+export type CapabilityKey = Exclude<keyof Capabilities, "sandboxed" | "settings_locked" | "setup" | "setup_locked">;
 
 export const DESKTOP_CAPABILITIES: Capabilities = {
   sandboxed: false,
@@ -64,6 +71,8 @@ export const DESKTOP_CAPABILITIES: Capabilities = {
   skills_install: true,
   logs: true,
   setup_wizard: true,
+  setup: "full",
+  setup_locked: false,
 };
 
 /** What the UI assumes before the server has said, or when it can't be asked:
@@ -1324,6 +1333,9 @@ export interface Settings {
   onboarded_at: string | null;
   /** Ask once a day whether a newer version exists. See Settings → Updates. */
   update_check: boolean;
+  /** Absent from an older server, which only had the full setup. */
+  setup?: SetupMode;
+  setup_include_local?: boolean;
 }
 
 /** What the daily update check knows. See Settings → Updates. */
@@ -1380,6 +1392,8 @@ export interface SettingsPatch {
    *  wizard opens again. */
   onboarded_at?: string;
   update_check?: boolean;
+  setup?: SetupMode;
+  setup_include_local?: boolean;
 }
 
 /**

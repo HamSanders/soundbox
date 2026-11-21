@@ -131,7 +131,18 @@ export interface SettingsData {
    * and nothing else (see `updateCheck.ts`). Off means no request at all.
    */
   update_check: boolean;
+  /**
+   * How this profile makes sounds. "full": models on this machine, plus any
+   * from elsewhere the user added. "simple": only models that run elsewhere;
+   * nothing to download, and the settings for running models here are hidden.
+   * Chosen at first run, switchable in Settings. See capabilities.ts.
+   */
+  setup: SetupMode;
+  /** In the simple setup, also offer the models already installed here. */
+  setup_include_local: boolean;
 }
+
+export type SetupMode = "full" | "simple";
 
 const DEFAULT_SETTINGS: SettingsData = {
   output_format: "wav",
@@ -160,6 +171,8 @@ const DEFAULT_SETTINGS: SettingsData = {
   audio_endpoints: [],
   onboarded_at: null,
   update_check: true,
+  setup: "full",
+  setup_include_local: false,
 };
 
 /** Every key a client is allowed to set, so an unknown field is ignored rather
@@ -197,6 +210,8 @@ export interface PublicSettings {
   image_auto_artwork: boolean;
   onboarded_at: string | null;
   update_check: boolean;
+  setup: SetupMode;
+  setup_include_local: boolean;
 }
 
 export class Settings {
@@ -226,6 +241,8 @@ export class Settings {
   audio_endpoints: AudioEndpoint[] = [];
   onboarded_at: string | null = DEFAULT_SETTINGS.onboarded_at;
   update_check: boolean = DEFAULT_SETTINGS.update_check;
+  setup: SetupMode = DEFAULT_SETTINGS.setup;
+  setup_include_local: boolean = DEFAULT_SETTINGS.setup_include_local;
 
   constructor(data: Partial<SettingsData> = {}) {
     Object.assign(this, DEFAULT_SETTINGS, {
@@ -279,6 +296,8 @@ export class Settings {
       image_auto_artwork: this.image_auto_artwork,
       onboarded_at: this.onboarded_at,
       update_check: this.update_check,
+      setup: this.setup,
+      setup_include_local: this.setup_include_local,
     };
   }
 
@@ -344,6 +363,8 @@ export class Settings {
       audio_endpoints: this.audio_endpoints,
       onboarded_at: this.onboarded_at,
       update_check: this.update_check,
+      setup: this.setup,
+      setup_include_local: this.setup_include_local,
     };
   }
 }

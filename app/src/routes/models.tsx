@@ -14,6 +14,7 @@
  * out loud before it starts.
  */
 
+import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { BriefcaseIcon, CpuIcon, DownloadIcon, HardDriveIcon, SearchIcon, Trash2Icon } from "lucide-react";
@@ -357,7 +358,7 @@ export function ModelsPage() {
         <p className="text-muted-foreground text-sm">
           {can.local_models
             ? "The open-weight models that make your sounds. One sits in VRAM at a time; loading another unloads it."
-            : "The models this server offers. They run elsewhere, so there is nothing to download."}
+            : "Models that run elsewhere: each render is sent to them, so there is nothing to download."}
         </p>
       </div>
 
@@ -377,7 +378,19 @@ export function ModelsPage() {
         </EmptyState>
       ) : !models?.length ? (
         <EmptyState>
-          {can.local_models ? "The backend reported no models." : "This server offers no models yet."}
+          {can.local_models ? (
+            "The backend reported no models."
+          ) : can.custom_endpoints ? (
+            <>
+              No models yet. Add a server you run or a hosted API in{" "}
+              <Link to="/settings?s=endpoints" className="underline underline-offset-2">
+                Settings → Endpoints
+              </Link>
+              .
+            </>
+          ) : (
+            "No models are available here yet."
+          )}
         </EmptyState>
       ) : (
         <>

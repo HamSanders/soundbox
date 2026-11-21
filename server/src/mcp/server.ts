@@ -1062,7 +1062,10 @@ export function buildMcp(
         },
         async (rec) => {
           const svc = getService();
-          let modelId = model ?? svc.models.resident;
+          // The resident model, unless the profile's setup has put local
+          // models out of reach (it is unloaded then, but a render may still
+          // be finishing on it).
+          let modelId = model ?? (svc.capabilities.local_models ? svc.models.resident : null);
           if (modelId === null || modelId === undefined) {
             const models = await svc.listModels();
             // Never a metered model by default: those cost the user money.

@@ -48,6 +48,11 @@ export const SETTINGS_GROUPS: SettingsGroupMeta[] = [
     description: "Optional helper models. Both are off by default.",
   },
   {
+    id: "setup",
+    title: "Setup",
+    description: "Where sounds are made: with models on this computer, or only with models that run elsewhere.",
+  },
+  {
     id: "storage",
     title: "Storage",
     description: "Where sounds, weights and the index live on disk.",
@@ -71,6 +76,22 @@ export const SETTINGS_GROUPS: SettingsGroupMeta[] = [
 ];
 
 export const SETTINGS: SettingMeta[] = [
+  // Setup
+  {
+    id: "setup-simple",
+    group: "setup",
+    label: "Simple setup",
+    description:
+      "Only models that run elsewhere: a server you run or a hosted API. Nothing to download, and the settings for running models here are hidden.",
+    keywords: ["simple", "full", "local", "gpu", "remote", "download", "mode", "setup"],
+  },
+  {
+    id: "setup-include-local",
+    group: "setup",
+    label: "Also use models on this computer",
+    description: "In the simple setup, offer the models already installed here too.",
+    keywords: ["local", "installed", "simple", "mix"],
+  },
   // Sound & files
   {
     id: "output-device",
@@ -236,14 +257,15 @@ const NEEDS: Record<string, CapabilityKey> = {
   device: "local_models",
   "auto-unload": "local_models",
   "audiocpp-mode": "downloads",
-  "models-dir": "filesystem",
+  // Where weights go: only meaningful where models are downloaded.
+  "models-dir": "downloads",
   endpoints: "custom_endpoints",
   "hf-token": "downloads",
   "llm-mode": "downloads",
   artwork: "downloads",
   "data-dir": "filesystem",
   "sounds-dir": "filesystem",
-  "weights-dir": "filesystem",
+  "weights-dir": "downloads",
   "update-check": "updates",
   // The server sends traces to a URL you give it: the same trust as an endpoint.
   "otel-endpoint": "custom_endpoints",
@@ -251,9 +273,16 @@ const NEEDS: Record<string, CapabilityKey> = {
   "rerun-setup": "setup_wizard",
 };
 
+/** Rows that depend on the setup rather than on a single capability. */
+const WHEN: Record<string, (can: Capabilities) => boolean> = {
+  "setup-simple": (can) => !can.setup_locked,
+  "setup-include-local": (can) => can.setup === "simple" && !can.setup_locked,
+};
+
 export function settingAllowed(id: string, can: Capabilities): boolean {
   const need = NEEDS[id];
-  return !need || can[need];
+  const when = WHEN[id];
+  return (!need || can[need]) && (!when || when(can));
 }
 
 export function settingMeta(id: string): SettingMeta {

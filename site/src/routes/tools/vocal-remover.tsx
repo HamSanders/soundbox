@@ -1,5 +1,6 @@
 /**
- * /tools/vocal-remover: a free vocal remover in the browser.
+ * /tools/vocal-remover: a free vocal remover in the browser, laid out as a
+ * Mirli window (src/tools/shell.tsx).
  *
  * The song is checked here first (type, size, length), then sent to Mirli
  * Cloud, split on a GPU into vocals and instrumental with Mel-Band RoFormer,
@@ -9,24 +10,37 @@
  *
  * Tempo and key are worked out locally from the same decoded file
  * (src/tools/analyze.ts), so the page gives something useful even before
- * the split comes back.
+ * the split comes back. The original plays from the visitor's own disk.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { ArrowDownIcon, BookOpenIcon, CpuIcon, DownloadIcon, FileAudioIcon, HelpCircleIcon, ScissorsIcon, ShieldCheckIcon, SlidersHorizontalIcon, TrashIcon, UploadIcon, XIcon } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { PeakGlyph } from "@/components/peak-glyph";
 import { faqJsonLd, SeoHead } from "@/components/seo-head";
+import { SiteDock, type SiteTrack, useSiteAudio } from "@/components/site/site-tracks";
 import { Button } from "@/components/ui/button";
+import { laneColor } from "@/lib/lanes";
 import { type Analysis, analyze, mixDown } from "../../tools/analyze";
+import { MUSIC_LANE, SplitArt, VOCAL_LANE } from "../../tools/art";
 import { decodeFile, FreeError, freeStatus, guessMime, mountTurnstile, separate, type Stems, UPLOAD_HINTS } from "../../tools/free-api";
-import { Block, DownloadLink, DropZone, formatDuration, Funnel } from "../../tools/ui";
+import { Faq, PanelAction, PanelField, PanelHead, peaksOf, RowList, Section, Steps, ToolHero, ToolShell, TrackRow, Workspace } from "../../tools/shell";
+import { DropZone, formatDuration, Funnel } from "../../tools/ui";
 
 type Phase =
   | { kind: "idle" }
-  | { kind: "checking"; name: string }
-  | { kind: "working"; name: string; stage: "uploading" | "queued" | "running"; fraction?: number }
-  | { kind: "done"; name: string; stems: Stems }
+  | { kind: "checking" }
+  | { kind: "working"; stage: "uploading" | "queued" | "running"; fraction?: number }
+  | { kind: "done"; stems: Stems }
   | { kind: "error"; message: string };
+
+interface Song {
+  file: File;
+  seconds: number;
+  peaks: number[];
+  url: string;
+}
 
 const FAQ = [
   {
@@ -61,15 +75,30 @@ const FAQ = [
   },
 ];
 
+const STEPS = [
+  { icon: FileAudioIcon, title: "Your browser reads it", body: "The file is checked and its tempo and key worked out on your computer. That part never leaves it." },
+  { icon: UploadIcon, title: "It goes up to be split", body: "The song is uploaded to our storage and handed to a GPU running Mel-Band RoFormer." },
+  { icon: ScissorsIcon, title: "Two tracks come back", body: "The acapella for remixes and samples, and the instrumental for karaoke and practice, as MP3s." },
+  { icon: TrashIcon, title: "Then it's deleted", body: "The upload goes as soon as the split is done. The two results go after 24 hours." },
+];
+
+const STEMS: { key: string; title: string; log: string; lane: number }[] = [
+  { key: "vocals", title: "Vocals", log: "Acapella · MP3 320 kbps", lane: VOCAL_LANE },
+  { key: "instrumental", title: "Instrumental", log: "Karaoke · MP3 320 kbps", lane: MUSIC_LANE },
+];
+
+const MODEL = "Mel-Band RoFormer";
+
 export function VocalRemoverPage() {
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [open, setOpen] = useState<{ open: boolean; reason?: string } | null>(null);
   const [rights, setRights] = useState(false);
   const [token, setToken] = useState<string | null>(null);
-  const [analysis, setAnalysis] = useState<(Analysis & { seconds: number }) | null>(null);
+  const [song, setSong] = useState<Song | null>(null);
+  const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [stemPeaks, setStemPeaks] = useState<Record<string, number[]>>({});
   const captcha = useRef<HTMLDivElement>(null);
   const resetCaptcha = useRef<() => void>(() => {});
-  const pending = useRef<{ file: File; seconds: number } | null>(null);
 
   useEffect(() => {
     freeStatus()
@@ -82,36 +111,26 @@ export function VocalRemoverPage() {
     }
   }, []);
 
-  // A file dropped before the human check finished starts as soon as it does.
-  useEffect(() => {
-    if (token && pending.current) {
-      const p = pending.current;
-      pending.current = null;
-      void start(p.file, p.seconds, token);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  // The original plays from a local object URL; let it go when the song changes.
+  useEffect(() => () => (song ? URL.revokeObjectURL(song.url) : undefined), [song]);
 
-  async function start(file: File, seconds: number, t: string) {
-    setPhase({ kind: "working", name: file.name, stage: "uploading", fraction: 0 });
-    try {
-      const stems = await separate(file, seconds, t, (stage, fraction) => setPhase({ kind: "working", name: file.name, stage, fraction }));
-      setPhase({ kind: "done", name: file.name, stems });
-    } catch (e) {
-      setPhase({ kind: "error", message: e instanceof FreeError ? e.message : "Something went wrong. Try again." });
-      if (e instanceof FreeError && e.code === "closed") setOpen({ open: false, reason: "daily_limit" });
-    } finally {
-      // A Turnstile token is single use.
-      setToken(null);
-      resetCaptcha.current();
+  // Draw each stem's own glyph once it exists.
+  useEffect(() => {
+    if (phase.kind !== "done") return;
+    let live = true;
+    for (const [name, { url }] of Object.entries(phase.stems.stems)) {
+      fetch(url)
+        .then((r) => r.blob())
+        .then(decodeFile)
+        .then((b) => live && setStemPeaks((p) => ({ ...p, [name]: peaksOf(b) })))
+        .catch(() => {});
     }
-  }
+    return () => {
+      live = false;
+    };
+  }, [phase]);
 
   async function onFile(file: File) {
-    if (!rights) {
-      setPhase({ kind: "error", message: "Tick the box first to confirm you have the rights to this recording." });
-      return;
-    }
     const mime = file.type || guessMime(file.name);
     if (!mime.startsWith("audio/")) {
       setPhase({ kind: "error", message: "That isn't an audio file. Use an MP3, WAV, FLAC, M4A or OGG." });
@@ -121,8 +140,9 @@ export function VocalRemoverPage() {
       setPhase({ kind: "error", message: "That file is too big for the free tool. Try an MP3, or split it in Mirli on your computer." });
       return;
     }
-    setPhase({ kind: "checking", name: file.name });
+    setPhase({ kind: "checking" });
     setAnalysis(null);
+    setStemPeaks({});
     let buffer: AudioBuffer;
     try {
       buffer = await decodeFile(file);
@@ -134,28 +154,100 @@ export function VocalRemoverPage() {
       setPhase({ kind: "error", message: `That song is ${formatDuration(buffer.duration)}, too long for the free tool. Mirli on your computer takes any length.` });
       return;
     }
+    setSong({ file, seconds: buffer.duration, peaks: peaksOf(buffer), url: URL.createObjectURL(file) });
+    setPhase({ kind: "idle" });
     // Tempo and key from up to a minute in the middle, off the main path.
     setTimeout(() => {
       const chans = Array.from({ length: buffer.numberOfChannels }, (_, i) => buffer.getChannelData(i));
       const mono = mixDown(chans);
       const len = Math.min(mono.length, buffer.sampleRate * 60);
       const from = Math.max(0, Math.floor((mono.length - len) / 2));
-      setAnalysis({ ...analyze(mono.subarray(from, from + len), buffer.sampleRate), seconds: buffer.duration });
+      setAnalysis(analyze(mono.subarray(from, from + len), buffer.sampleRate));
     }, 0);
-    if (!token) {
-      pending.current = { file, seconds: buffer.duration };
-      setPhase({ kind: "checking", name: file.name });
+  }
+
+  async function split() {
+    if (!song || !token) return;
+    if (!rights) {
+      setPhase({ kind: "error", message: "Tick the box first to confirm you have the rights to this recording." });
       return;
     }
-    await start(file, buffer.duration, token);
+    setPhase({ kind: "working", stage: "uploading", fraction: 0 });
+    try {
+      const stems = await separate(song.file, song.seconds, token, (stage, fraction) => setPhase({ kind: "working", stage, fraction }));
+      setPhase({ kind: "done", stems });
+    } catch (e) {
+      setPhase({ kind: "error", message: e instanceof FreeError ? e.message : "Something went wrong. Try again." });
+      if (e instanceof FreeError && e.code === "closed") setOpen({ open: false, reason: "daily_limit" });
+    } finally {
+      // A Turnstile token is single use.
+      setToken(null);
+      resetCaptcha.current();
+    }
+  }
+
+  function reset() {
+    setSong(null);
+    setAnalysis(null);
+    setStemPeaks({});
+    setPhase({ kind: "idle" });
   }
 
   const busy = phase.kind === "checking" || phase.kind === "working";
   const closed = open !== null && !open.open;
-  const stemsOrder = phase.kind === "done" ? Object.keys(phase.stems.stems).sort((a) => (a === "vocals" ? -1 : 1)) : [];
+  const base = song ? song.file.name.replace(/\.[^.]+$/, "") : "";
+
+  const queue = useMemo<SiteTrack[]>(() => {
+    const q: SiteTrack[] = [];
+    if (song) {
+      q.push({ id: "original", title: base, sub: "Original · your file", url: song.url, durationS: song.seconds, tile: <Glyph peaks={song.peaks} /> });
+    }
+    if (phase.kind === "done") {
+      for (const s of STEMS) {
+        const url = phase.stems.stems[s.key]?.url;
+        if (url) q.push({ id: s.key, title: `${base} · ${s.title}`, sub: s.log, url, durationS: song?.seconds, tile: <Glyph peaks={stemPeaks[s.key] ?? song?.peaks} lane={s.lane} /> });
+      }
+    }
+    return q;
+  }, [song, phase, stemPeaks, base]);
+  const player = useSiteAudio(queue);
+
+  const pendingLog =
+    phase.kind === "checking"
+      ? "Reading the file…"
+      : phase.kind === "working"
+        ? phase.stage === "uploading"
+          ? `Uploading · ${Math.round((phase.fraction ?? 0) * 100)}%`
+          : phase.stage === "queued"
+            ? "Waiting for a GPU…"
+            : "Separating…"
+        : song
+          ? "Ready to split"
+          : "Waiting for a song";
+
+  const actionLabel = !song
+    ? "Split into stems"
+    : phase.kind === "working"
+      ? phase.stage === "uploading"
+        ? `Uploading ${Math.round((phase.fraction ?? 0) * 100)}%`
+        : phase.stage === "queued"
+          ? "Waiting for a GPU…"
+          : "Separating…"
+      : phase.kind === "done"
+        ? "Split another song"
+        : !token
+          ? "Checking you're human…"
+          : "Split into stems";
 
   return (
-    <main id="main">
+    <ToolShell
+      onThisPage={[
+        { href: "#tool", label: "The tool", icon: SlidersHorizontalIcon },
+        { href: "#how", label: "How it works", icon: CpuIcon },
+        { href: "#questions", label: "Questions", icon: HelpCircleIcon },
+        { href: "#mirli", label: "Get Mirli", icon: BookOpenIcon },
+      ]}
+    >
       <SeoHead
         title="Free AI vocal remover: split vocals and instrumental online | Mirli"
         description="Remove vocals from any song for free, in your browser. Get the acapella and the instrumental as MP3s in seconds, plus the tempo and key. No account, no watermark."
@@ -172,142 +264,209 @@ export function VocalRemoverPage() {
           },
         ]}
       />
+      {player.element}
 
-      <section aria-labelledby="vr-h1" className="px-4">
-        <div className="mx-auto w-full max-w-3xl py-14 text-center sm:py-20">
-          <p className="label-caps text-muted-foreground">Free tool · Vocal remover</p>
-          <h1 id="vr-h1" className="mt-4 text-4xl text-balance sm:text-6xl">
-            Remove the vocals from any song
-          </h1>
-          <p className="text-muted-foreground mx-auto mt-5 max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
-            Drop in a song and get the acapella and the instrumental back as two MP3s, split by an AI model on a GPU. No
-            account, no watermark.
-          </p>
+      <ToolHero
+        kicker="Free tool · Vocal remover"
+        title="Remove the vocals from any song"
+        lede="Drop in a song and get the acapella and the instrumental back as two MP3s, split by an AI model on a GPU. Tempo and key come free."
+        facts={["No account", "No watermark", "MP3 320 kbps", "Deleted after 24 h"]}
+        art={<SplitArt />}
+        lanes={[VOCAL_LANE, MUSIC_LANE]}
+      />
 
-          <div className="mt-10 text-left">
-            {closed ? (
-              <div className="border-border rounded-md border p-6 text-center">
-                <p className="font-semibold tracking-tight">
-                  {open?.reason === "paused"
-                    ? "The free vocal remover is paused right now."
-                    : open?.reason === "unreachable"
-                      ? "We can't reach the vocal remover right now."
-                      : "Today's free splits are used up."}
-                </p>
-                <p className="text-muted-foreground mt-2 text-sm">
-                  Mirli splits songs on your own computer, free and with no limit.
-                </p>
+      <Workspace
+        crumb="Vocal remover"
+        active="vocal-remover"
+        side={
+          <>
+            <PanelField label="Model">{MODEL}</PanelField>
+            <PanelField label="Output">Vocals + instrumental, MP3</PanelField>
+
+            {song ? (
+              <div className="border-border bg-field flex items-center gap-3 rounded-md border p-3">
+                <span className="ring-border bg-muted flex size-11 shrink-0 items-center justify-center rounded-sm ring-1 ring-inset">
+                  <PeakGlyph peaks={song.peaks} className="text-foreground/70 h-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{song.file.name}</p>
+                  <p className="readout text-muted-foreground">
+                    {formatDuration(song.seconds)} · {(song.file.size / 1e6).toFixed(1)} MB
+                  </p>
+                </div>
+                <Button variant="ghost" size="icon-sm" aria-label="Choose a different song" onClick={reset} disabled={busy}>
+                  <XIcon />
+                </Button>
               </div>
             ) : (
-              <>
-                <label className="mb-4 flex items-start gap-3 text-sm">
-                  <input type="checkbox" checked={rights} onChange={(e) => setRights(e.target.checked)} className="mt-0.5 size-4" />
-                  <span>
-                    I own this recording or have the rights to process it. The upload is deleted once it's split, and the results
-                    after 24 hours.
-                  </span>
-                </label>
-                <DropZone onFile={onFile} disabled={busy} hint="MP3, WAV, FLAC, M4A or OGG, up to 6 minutes" />
-                <div ref={captcha} className="mt-3 flex justify-center" />
-              </>
+              <DropZone compact onFile={onFile} disabled={busy || closed} hint="MP3, WAV, FLAC, M4A or OGG, up to 6 minutes" />
             )}
 
-            <div aria-live="polite" className="mt-6">
-              {phase.kind === "checking" ? <p className="text-muted-foreground text-sm">Reading {phase.name}…</p> : null}
-              {phase.kind === "working" ? (
-                <div>
-                  <p className="text-sm">
-                    {phase.stage === "uploading"
-                      ? `Uploading ${phase.name}… ${Math.round((phase.fraction ?? 0) * 100)}%`
-                      : phase.stage === "queued"
-                        ? "Waiting for a GPU…"
-                        : "Separating the vocals…"}
-                  </p>
-                  <div className="bg-muted mt-2 h-1.5 overflow-hidden rounded">
-                    <div
-                      className="bg-foreground h-full transition-all"
-                      style={{ width: `${phase.stage === "uploading" ? Math.round((phase.fraction ?? 0) * 60) : phase.stage === "queued" ? 65 : 85}%` }}
-                    />
-                  </div>
-                </div>
-              ) : null}
-              {phase.kind === "error" ? (
-                <p role="alert" className="text-sm text-red-700 dark:text-red-400">
-                  {phase.message}
-                </p>
-              ) : null}
-              {phase.kind === "done" ? (
-                <div className="space-y-5">
-                  {stemsOrder.map((name) => (
-                    <div key={name} className="border-border rounded-md border p-4">
-                      <div className="mb-2 flex items-center justify-between">
-                        <p className="font-semibold">{name === "vocals" ? "Vocals (acapella)" : name === "instrumental" ? "Instrumental (karaoke)" : name}</p>
-                        <DownloadLink href={phase.stems.stems[name]!.url} name={`${phase.name.replace(/\.[^.]+$/, "")} - ${name}.mp3`} label="Download MP3" />
-                      </div>
-                      <audio controls preload="none" src={phase.stems.stems[name]!.url} className="w-full" />
-                    </div>
-                  ))}
-                  <p className="text-muted-foreground text-xs">
-                    These files are deleted {new Date(phase.stems.expires_at).toLocaleString()}.{" "}
-                    <Button variant="link" className="h-auto p-0 text-xs" onClick={() => setPhase({ kind: "idle" })}>
-                      Split another song
-                    </Button>
-                  </p>
-                </div>
-              ) : null}
-              {analysis ? (
-                <p className="text-muted-foreground mt-4 text-sm">
-                  <span className="text-foreground font-medium">{Math.round(analysis.bpm)} BPM</span>
-                  {analysis.bpmAlt ? ` (or ${Math.round(analysis.bpmAlt)})` : ""} ·{" "}
-                  <span className="text-foreground font-medium">
-                    {analysis.key} {analysis.mode}
-                  </span>{" "}
-                  ({analysis.camelot}) · {formatDuration(analysis.seconds)} ·{" "}
-                  <Link to="/tools/bpm-key-finder" className="underline underline-offset-4">
-                    tempo and key finder
-                  </Link>
-                </p>
-              ) : null}
-            </div>
+            <label className="border-border bg-field flex items-start gap-3 rounded-md border p-3 text-xs leading-relaxed">
+              <input type="checkbox" checked={rights} onChange={(e) => setRights(e.target.checked)} className="accent-foreground mt-0.5 size-4 shrink-0" />
+              <span>
+                <span className="text-foreground font-medium">I have the rights to this recording.</span>{" "}
+                <span className="text-muted-foreground">The upload is deleted once it's split, the results after 24 hours.</span>
+              </span>
+            </label>
 
-            {phase.kind === "done" ? (
+            <div ref={captcha} className="flex justify-center empty:hidden" />
+
+            <PanelAction
+              icon={phase.kind === "done" ? undefined : ScissorsIcon}
+              onClick={phase.kind === "done" ? reset : () => void split()}
+              disabled={closed || (phase.kind !== "done" && (!song || busy || !token))}
+            >
+              {actionLabel}
+            </PanelAction>
+          </>
+        }
+      >
+        <PanelHead
+          kicker="Stems"
+          title={song ? base : "Vocal remover"}
+          log={
+            song
+              ? `${formatDuration(song.seconds)} · ${analysis ? `${Math.round(analysis.bpm)} BPM · ${analysis.key} ${analysis.mode} · ${analysis.camelot}` : "reading tempo and key…"}`
+              : "Vocals and instrumental · MP3 320 kbps · ready in seconds"
+          }
+        />
+
+        {closed ? (
+          <div className="border-border bg-field mb-4 rounded-md border p-4">
+            <p className="font-semibold tracking-tight">
+              {open?.reason === "paused"
+                ? "The free vocal remover is paused right now."
+                : open?.reason === "unreachable"
+                  ? "We can't reach the vocal remover right now."
+                  : "Today's free splits are used up."}
+            </p>
+            <p className="text-muted-foreground mt-1 text-sm">Mirli splits songs on your own computer, free and with no limit.</p>
+          </div>
+        ) : null}
+
+        <RowList>
+          {song ? (
+            <TrackRow
+              no="01"
+              tile={<Glyph peaks={song.peaks} />}
+              title="Original"
+              log={`${song.file.name} · stays on your computer`}
+              model="—"
+              length={formatDuration(song.seconds)}
+              isCurrent={player.current?.id === "original"}
+              playing={player.playing}
+              onPlay={() => player.toggle("original")}
+            />
+          ) : (
+            <TrackRow no="01" tile={null} title="Original" log="Waiting for a song" model="—" length="–:––" pending="waiting" />
+          )}
+          {STEMS.map((s, i) => {
+            const url = phase.kind === "done" ? phase.stems.stems[s.key]?.url : undefined;
+            const no = String(i + 2).padStart(2, "0");
+            return url ? (
+              <TrackRow
+                key={s.key}
+                no={no}
+                tile={<Glyph peaks={stemPeaks[s.key] ?? song?.peaks} lane={s.lane} />}
+                title={s.title}
+                log={s.log}
+                model={MODEL}
+                length={song ? formatDuration(song.seconds) : ""}
+                isCurrent={player.current?.id === s.key}
+                playing={player.playing}
+                onPlay={() => player.toggle(s.key)}
+                actions={
+                  <Button variant="ghost" size="sm" asChild>
+                    <a href={url} download={`${base} - ${s.key}.mp3`} aria-label={`Download ${s.title} MP3`}>
+                      <DownloadIcon />
+                      <span className="max-sm:hidden">MP3</span>
+                    </a>
+                  </Button>
+                }
+              />
+            ) : (
+              <TrackRow
+                key={s.key}
+                no={no}
+                tile={null}
+                title={s.title}
+                log={pendingLog}
+                model={MODEL}
+                length="–:––"
+                pending={phase.kind === "working" || phase.kind === "checking" ? "working" : "waiting"}
+              />
+            );
+          })}
+        </RowList>
+
+        <div aria-live="polite">
+          {phase.kind === "error" ? (
+            <p role="alert" className="text-danger mt-4 text-sm">
+              {phase.message}
+            </p>
+          ) : null}
+          {phase.kind === "done" ? (
+            <>
+              <p className="readout text-muted-foreground mt-4">
+                Deleted {new Date(phase.stems.expires_at).toLocaleString()} · download what you want to keep
+              </p>
               <Funnel
                 source="vocal-remover"
                 title="Want drums, bass and the rest?"
                 body="Mirli runs more stem models on your own computer: free, offline and as many songs as you like. It also makes sound effects, music and voices."
               />
-            ) : null}
-          </div>
+            </>
+          ) : null}
         </div>
-      </section>
+      </Workspace>
 
-      <Block id="how" label="How it works" title="Two tracks from one song">
-        <ol className="text-muted-foreground list-decimal space-y-3 pl-5 text-sm leading-relaxed">
-          <li>Your browser checks the file and works out its tempo and key. That part never leaves your computer.</li>
-          <li>The song is uploaded to our storage and split on a GPU by Mel-Band RoFormer into vocals and everything else.</li>
-          <li>You get two MP3s: the acapella for remixes and samples, and the instrumental for karaoke and practice.</li>
-          <li>The upload is deleted straight away; the two results are deleted after 24 hours.</li>
-        </ol>
-      </Block>
+      <Section id="how" title="How it works" lede="Two tracks from one song, and nothing kept longer than it has to be.">
+        <Steps steps={STEPS} />
+      </Section>
 
-      <Block id="questions" label="Questions" title="What people ask first">
-        <dl className="space-y-7">
-          {FAQ.map((f) => (
-            <div key={f.question}>
-              <dt className="font-semibold tracking-tight">{f.question}</dt>
-              <dd className="text-muted-foreground mt-1.5 text-sm leading-relaxed">{f.answer}</dd>
-            </div>
-          ))}
-        </dl>
-      </Block>
+      <Section id="questions" title="What people ask first">
+        <Faq items={FAQ} />
+      </Section>
 
-      <Block id="mirli" label="Mirli" title="The same thing, on your computer, with no limits">
-        <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
-          Mirli is a free, open-source audio app that runs AI models on your own machine: stem splitting, sound effects,
-          music and voices. Nothing is uploaded and there's nothing to pay.
-        </p>
-        <Funnel source="vocal-remover" title="Download Mirli" body="Windows and macOS. Free and open source." />
-      </Block>
-    </main>
+      <Section id="mirli" title="The same thing, on your computer, with no limits">
+        <div className="border-border bg-card grid gap-6 rounded-md border p-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          <div>
+            <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
+              Mirli is a free, open-source audio app that runs AI models on your own machine: stem splitting, sound effects, music and
+              voices. Nothing is uploaded and there's nothing to pay.
+            </p>
+            <ul className="readout text-muted-foreground mt-3 flex flex-wrap gap-x-4 gap-y-1">
+              <li className="flex items-center gap-1.5">
+                <ShieldCheckIcon className="size-3.5" aria-hidden="true" /> Offline
+              </li>
+              <li className="flex items-center gap-1.5">
+                <ArrowDownIcon className="size-3.5" aria-hidden="true" /> Windows and macOS
+              </li>
+              <li className="flex items-center gap-1.5">
+                <BookOpenIcon className="size-3.5" aria-hidden="true" /> MIT licence
+              </li>
+            </ul>
+          </div>
+          <Button size="lg" asChild>
+            <Link to="/download">Download Mirli</Link>
+          </Button>
+        </div>
+      </Section>
+
+      <SiteDock audio={player} />
+    </ToolShell>
+  );
+}
+
+/** A row's tile: the sound's own glyph, on its lane's colour when it has one. */
+function Glyph({ peaks, lane }: { peaks?: number[]; lane?: number }) {
+  return (
+    <span
+      className="flex size-full items-center justify-center"
+      style={lane === undefined ? undefined : { background: `linear-gradient(135deg, ${laneColor(lane, 0.55)}, ${laneColor(lane, 0.15)})` }}
+    >
+      <PeakGlyph peaks={peaks} className="text-foreground/80 h-5" />
+    </span>
   );
 }

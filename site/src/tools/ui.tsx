@@ -13,10 +13,13 @@ export function DropZone({
   onFile,
   disabled,
   hint,
+  compact,
 }: {
   onFile: (f: File) => void;
   disabled?: boolean;
   hint: string;
+  /** The smaller version that sits in a tool's create panel. */
+  compact?: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
@@ -44,13 +47,15 @@ export function DropZone({
         if (f && !disabled) onFile(f);
       }}
       className={cn(
-        "border-border flex cursor-pointer flex-col items-center justify-center gap-3 rounded-md border-2 border-dashed px-6 py-12 text-center transition-colors",
+        "border-border flex cursor-pointer flex-col items-center justify-center gap-3 rounded-md border-2 border-dashed text-center transition-colors",
+        compact ? "bg-field px-4 py-8" : "px-6 py-12",
         over && "border-foreground bg-muted/40",
+        !disabled && "hover:border-border-strong",
         disabled && "cursor-not-allowed opacity-60",
       )}
     >
-      <UploadIcon className="text-muted-foreground size-7" aria-hidden="true" />
-      <p className="text-base font-semibold tracking-tight">Drop a song here, or click to choose one</p>
+      <UploadIcon className={cn("text-muted-foreground", compact ? "size-6" : "size-7")} aria-hidden="true" />
+      <p className={cn("font-semibold tracking-tight", compact ? "text-sm" : "text-base")}>Drop a song here, or click to choose one</p>
       <p className="text-muted-foreground text-xs">{hint}</p>
       <input
         ref={input}

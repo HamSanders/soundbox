@@ -18,7 +18,7 @@
 </main>
 <script>
 const cv = document.getElementById('c'), g = cv.getContext('2d'), statusEl = document.getElementById('s');
-let ctx, ws, nextTime = 0, frames = [], sources = [], lastSeqDrawn = -1;
+let ctx, ws, nextTime = 0, chunkStart = {}, frames = [], sources = [], lastSeqDrawn = -1;
 // Counters since the last report to the server.
 let st = { drawn: 0, skipped: 0, underruns: 0, lateSum: 0, lateMax: 0, first: [] };
 let totals = { chunks: 0, speech: 0, idle: 0, drawn: 0, skipped: 0, underruns: 0 };
@@ -31,7 +31,8 @@ document.getElementById('start').onclick = async () => {
   ctx = new AudioContext({ latencyHint: 'interactive' });
   ws = new WebSocket(`ws://${location.host}/ws`);
   ws.binaryType = 'arraybuffer';
-  ws.onmessage = onMessage;
+  let queue = Promise.resolve();   // handle messages in order: decoding is async
+  ws.onmessage = ev => { queue = queue.then(() => onMessage(ev)).catch(console.error); };
   ws.onclose = () => statusEl.textContent = 'disconnected';
   requestAnimationFrame(draw);
   setInterval(report, 1000);
@@ -44,7 +45,7 @@ async function onMessage(ev) {
     const m = JSON.parse(ev.data);
     if (m.type === 'flush') {
       for (const s of sources) try { s.stop(); } catch {}
-      sources = []; frames = []; nextTime = 0;
+      sources = []; frames = []; nextTime = 0; chunkStart = {};
     }
     return;
   }
@@ -54,6 +55,13 @@ async function onMessage(ev) {
   const pcm = new Int16Array(ev.data.slice(off, off + h.samples * 2)); off += h.samples * 2;
   const blobs = h.frames.map(n => { const b = new Blob([new Uint8Array(ev.data, off, n)], { type: 'image/jpeg' }); off += n; return b; });
   const bitmaps = await Promise.all(blobs.map(b => createImageBitmap(b)));
+  if (h.cont) {   // more frames of a chunk whose audio already arrived (fast first frame)
+    const t0 = chunkStart[h.seq];
+    if (t0 === undefined) { bitmaps.forEach(b => b.close()); return; }   // flushed meanwhile
+    bitmaps.forEach((bm, i) => frames.push({ t: t0 + (h.start_i + i) / h.fps, bm, seq: h.seq, i: h.start_i + i, t_audio0: null }));
+    frames.sort((a, b) => a.t - b.t);
+    return;
+  }
 
   const buf = ctx.createBuffer(1, h.samples, h.rate), ch = buf.getChannelData(0);
   for (let i = 0; i < pcm.length; i++) ch[i] = pcm[i] / 32768;
@@ -61,6 +69,7 @@ async function onMessage(ev) {
   const now = ctx.currentTime;
   if (nextTime < now + 0.03) { if (nextTime) st.underruns++, totals.underruns++; nextTime = now + 0.06; }
   src.start(nextTime); sources.push(src); src.onended = () => sources.splice(sources.indexOf(src), 1);
+  chunkStart = { [h.seq]: nextTime, [h.seq - 1]: chunkStart[h.seq - 1] };
   bitmaps.forEach((bm, i) => frames.push({ t: nextTime + i / h.fps, bm, seq: h.seq, i, t_audio0: i === 0 ? h.t_audio0 : null }));
   nextTime += h.samples / h.rate;
   totals.chunks++; totals[h.kind]++;

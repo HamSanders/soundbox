@@ -1,0 +1,80 @@
+{
+  "generated_by": "scripts/capture-media.mjs",
+  "captured_on": "2026-11-22",
+  "commit": "d6138c3de5581c50330ccbeedbba343259691896",
+  "uncommitted_changes": false,
+  "backend": "in-browser mock (VITE_MOCK=1) with the demo fixture, app/src/lib/mock-demo.ts",
+  "viewport": {
+    "width": 1200,
+    "height": 750,
+    "device_scale_factor": 2
+  },
+  "browser": "chromium 159.0.8154.6",
+  "shots": [
+    {
+      "file": "app-dashboard.webp",
+      "route": "#/dashboard",
+      "theme": "dark"
+    },
+    {
+      "file": "app-dashboard-light.webp",
+      "route": "#/dashboard",
+      "theme": "light"
+    },
+    {
+      "file": "app-studio.webp",
+      "route": "#/studio/script/story-demo-trailer",
+      "theme": "dark"
+    },
+    {
+      "file": "app-studio.jpg",
+      "route": "#/studio/script/story-demo-trailer",
+      "theme": "dark"
+    },
+    {
+      "file": "app-sfx.webp",
+      "route": "#/library/sfx",
+      "theme": "dark"
+    },
+    {
+      "file": "app-music.webp",
+      "route": "#/library/music",
+      "theme": "dark"
+    },
+    {
+      "file": "app-library.webp",
+      "route": "#/library",
+      "theme": "dark"
+    },
+    {
+      "file": "app-details.webp",
+      "route": "#/library",
+      "theme": "dark"
+    },
+    {
+      "file": "app-voice-lab.webp",
+      "route": "#/voice/lab",
+      "theme": "dark"
+    },
+    {
+      "file": "app-models.webp",
+      "route": "#/models",
+      "theme": "dark"
+    },
+    {
+      "file": "app-agents.webp",
+      "route": "#/agents",
+      "theme": "dark"
+    },
+    {
+      "file": "app-voice-new.webp",
+      "route": "#/voice/new",
+      "theme": "dark"
+    },
+    {
+      "file": "app-voice-clone.webp",
+      "route": "#/voice/new/clone",
+      "theme": "dark"
+    }
+  ]
+}

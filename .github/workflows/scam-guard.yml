@@ -1,0 +1,55 @@
+name: Scam guard
+
+# Looks at new and edited issues and comments from people who cannot push
+# here, for text that tells readers to download and run something: a
+# PowerShell `irm … | iex`, a `curl … | sh`, a "fixed installer" on some other
+# host. Mirli's own hosts (mirli.app, github.com/HamSanders) are allowed.
+#
+# A sure match is taken out of view (a comment is minimised, an issue's lines
+# are replaced), labelled `possible-scam` and explained in a reply. An unsure
+# one is only labelled. The rules are in .github/scripts/scam-detect.mjs and
+# its tests; what is done about a match is in .github/scripts/scam-guard.mjs.
+#
+# Safety of the workflow itself:
+#   - `issues` and `issue_comment` always run the workflow and the scripts
+#     from the default branch. Nothing the author of the text controls is
+#     checked out, installed or executed, and there is no `pull_request_target`.
+#   - The text reaches the script as the event file on disk, never through
+#     `${{ }}` in a shell line.
+#   - The token can read the repository and write issues and pull request
+#     conversations, and nothing else.
+
+on:
+  issues:
+    types: [opened, edited]
+  issue_comment:
+    types: [created, edited]
+
+permissions: {}
+
+jobs:
+  scan:
+    name: Scan
+    # Skipped outright for people who can push here and for bots; the script
+    # checks again.
+    if: >-
+      !contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'),
+        github.event.comment.author_association || github.event.issue.author_association) &&
+      (github.event.comment.user.type || github.event.issue.user.type) != 'Bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+      # A comment on a pull request's conversation is an issue comment too,
+      # and labelling or replying there needs this.
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - name: Check the text
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/scripts/scam-guard.mjs

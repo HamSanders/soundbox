@@ -36,6 +36,9 @@ class Comfy:
         return f"{j['subfolder']}/{j['name']}" if j.get("subfolder") else j["name"]
 
     def run(self, g: dict) -> dict:
+        if not hasattr(self, "_info"):
+            self._info = requests.get(f"{self.s}/object_info").json()
+        g = graphs.fit_to_server(g, self._info)
         r = requests.post(f"{self.s}/prompt", json={"prompt": g, "client_id": str(uuid.uuid4())}).json()
         if "prompt_id" not in r:
             sys.exit(f"ComfyUI refused the graph: {json.dumps(r)[:2000]}")
@@ -58,6 +61,19 @@ class Comfy:
 
     def images(self, hist: dict, node: str) -> list[Image.Image]:
         return [Image.open(BytesIO(self.fetch(i))).convert("RGB") for i in hist["outputs"][node]["images"]]
+
+
+def encode(frames: list, dst: Path, fps: int):
+    """H.264 yuv420p, BT.709 tags, CRF 16: the same encode as santa-clips/render.py."""
+    import shutil, subprocess, tempfile
+    tmp = Path(tempfile.mkdtemp())
+    for i, f in enumerate(frames):
+        f.save(tmp / f"{i:04d}.png")
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(fps), "-i", str(tmp / "%04d.png"),
+                    "-c:v", "libx264", "-crf", "16", "-preset", "slow", "-pix_fmt", "yuv420p",
+                    "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709",
+                    "-movflags", "+faststart", str(dst)], check=True)
+    shutil.rmtree(tmp)
 
 
 def mad(a: Image.Image, b: Image.Image) -> float:
@@ -125,7 +141,11 @@ def main():
                         fps=FPS, prefix=f"avatar/{spec['id']}_{clip['id']}", fast=not a.full_steps)
         h = c.run(g)
         frames = c.images(h, "15")
-        dst.write_bytes(c.fetch(h["outputs"]["17"]["images"][0]))
+        vid = (h["outputs"].get("17") or {}).get("images")
+        if vid:
+            dst.write_bytes(c.fetch(vid[0]))
+        else:  # older ComfyUI (e.g. 0.30 in RunPod's template) doesn't report SaveVideo's file: encode the frames here
+            encode(frames, dst, FPS)
         first = mad(frames[0], Image.open(out / "stills" / f"{clip['from']}.png").convert("RGB"))
         last = mad(frames[-1], Image.open(out / "stills" / f"{clip['to']}.png").convert("RGB"))
         seams[clip["id"]] = {"frames": len(frames), "firstMAD": round(first, 2), "lastMAD": round(last, 2),

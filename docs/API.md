@@ -133,6 +133,12 @@ segment generation return HTTP 400 before queueing if any is missing, naming
 the voice and clips to fix. Existing voices remain readable with null
 transcripts; other models do not require them.
 
+`PATCH /api/voices/:id` with `model_id` pins a clone to the model that reads
+it (Voice Lab: **Edit → Reads on**). It must be a text-to-speech model that
+reads from a reference clip (`supports.voice_reference`); `null` unpins it, and
+an unpinned clone (one saved before voices carried a model) reads on the first
+ready model. A built-in voice belongs to its model and returns HTTP 400.
+
 Mirli derives `request_options.reference_text` from the selected voice's
 samples in the same `created_at, id` order used to join their audio, separated
 by spaces. This overrides any story, line, request or catalog transcript.

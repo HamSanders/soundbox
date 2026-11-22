@@ -853,6 +853,10 @@ export type VoiceExport = z.infer<typeof voiceExportSchema>;
 export const voicePatchSchema = z.object({
   name: z.string().min(1).max(120).optional(),
   notes: z.string().max(2000).nullish(),
+  /** The model a clone reads on; null unpins it (the first ready model then
+   *  reads it, as for a clone saved before voices carried one). A built-in
+   *  voice belongs to its model and can't be moved. */
+  model_id: z.string().min(1).max(200).nullish(),
   /** Update transcripts by sample id, without changing the audio or its order. */
   samples: z.array(z.object({ id: z.string(), reference_text: referenceTextSchema }))
     .max(5).optional(),

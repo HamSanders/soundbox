@@ -1592,6 +1592,10 @@ export class Database {
       sets.push("notes=?");
       args.push(patch.notes ?? null);
     }
+    if (patch.model_id !== undefined) {
+      sets.push("model_id=?");
+      args.push(patch.model_id ?? null);
+    }
     return this.conn.transaction(() => {
       if (sets.length) {
         args.push(voiceId);

@@ -270,6 +270,8 @@ export interface VoiceCreate {
 export interface VoicePatch {
   name?: string;
   notes?: string | null;
+  /** A clone's model; null unpins it. A built-in voice can't move. */
+  model_id?: string | null;
   samples?: { id: string; reference_text?: string | null }[];
 }
 

@@ -243,6 +243,28 @@ describe("voice routes", () => {
     expect(res.statusCode).toBe(400);
   });
 
+  it("pins a clone to a model that reads from a reference clip, and unpins it", async () => {
+    // Speech families are opt-in; turn on one that clones and one that can't.
+    const on = await app.inject({ method: "PATCH", url: "/api/settings", payload: { enabled_audiocpp_models: ["audiocpp-chatterbox", "audiocpp-kokoro"] } });
+    expect(on.statusCode, on.body).toBe(200);
+    const voice = await upload("Pinned", tone(3));
+    const patch = (id: string, payload: object) => app.inject({ method: "PATCH", url: `/api/voices/${id}`, payload });
+    const pinned = await patch(voice.id, { model_id: "audiocpp-chatterbox" });
+    expect(pinned.statusCode, pinned.body).toBe(200);
+    expect((pinned.json() as Voice).model_id).toBe("audiocpp-chatterbox");
+    // Kokoro has only its own voices: it can't read a clone.
+    const kokoro = await patch(voice.id, { model_id: "audiocpp-kokoro" });
+    expect(kokoro.statusCode).toBe(400);
+    expect(kokoro.body).toContain("reference clip");
+    const unpinned = await patch(voice.id, { model_id: null });
+    expect((unpinned.json() as Voice).model_id).toBeNull();
+    // A built-in voice belongs to its model.
+    const builtin = (await app.inject({ method: "POST", url: "/api/voices", payload: { name: "Fixed", kind: "builtin", voice_id: "fixed" } })).json() as Voice;
+    expect((await patch(builtin.id, { model_id: "audiocpp-chatterbox" })).statusCode).toBe(400);
+    // Renaming one leaves its model alone.
+    expect((await patch(builtin.id, { name: "Still fixed" })).statusCode).toBe(200);
+  });
+
   it("deletes every clip file with the voice", async () => {
     const voice = await upload("Fen", tone(3));
     const two = (await addSample(voice.id, tone(2))).json() as Voice;

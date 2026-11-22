@@ -3370,6 +3370,7 @@ export const mockApi: MirliApi = {
     if (!voice) throw new Error(`Unknown voice ${id}`);
     if (patch.name !== undefined) voice.name = patch.name;
     if (patch.notes !== undefined) voice.notes = patch.notes ?? null;
+    if (patch.model_id !== undefined && voice.kind === "clone") voice.model_id = patch.model_id ?? null;
     for (const sample of patch.samples ?? []) {
       const stored = voice.samples?.find((s) => s.id === sample.id);
       if (stored && sample.reference_text !== undefined) stored.reference_text = sample.reference_text;

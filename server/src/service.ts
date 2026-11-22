@@ -2603,6 +2603,16 @@ export class MirliService {
         throw new ModelError("A transcript can only be changed for this voice's own clips.");
       }
     }
+    if (patch.model_id !== undefined && (patch.model_id ?? null) !== (voice.model_id ?? null)) {
+      if (voice.kind !== "clone") throw new ModelError(`${voice.name} is one of its model's own voices and can't move to another.`);
+      // Same check as saving a clone: a text-to-speech model that reads from
+      // a reference clip.
+      if (patch.model_id) {
+        const info = this.models.get(patch.model_id).describe();
+        if (info.task !== "tts") throw new ModelError(`${info.name} is not a text-to-speech model.`);
+        if (!info.supports.voice_reference) throw new ModelError(`${info.name} cannot read from a reference clip.`);
+      }
+    }
     return this.db.updateVoice(voiceId, patch);
   }
 

@@ -567,6 +567,8 @@ function VoiceConvertPanel({ models, voices }: { models: Model[]; voices: Voice[
 
 /* --------------------------------------------------------------- details */
 
+const UNPINNED = "__unpinned__";
+
 /** A voice's model family, or its model id when the catalogue doesn't know
  *  the model (not installed, or still loading). Null for a clone saved
  *  before voices carried a model. */
@@ -598,6 +600,8 @@ export function VoiceLabPage() {
   const [editing, setEditing] = useState<Voice | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [notesDraft, setNotesDraft] = useState("");
+  /** The model a clone reads on, or UNPINNED. */
+  const [modelDraft, setModelDraft] = useState(UNPINNED);
   const [transcriptDrafts, setTranscriptDrafts] = useState<Record<string, string>>({});
   const [deleting, setDeleting] = useState<Voice | null>(null);
   /** By id rather than by object, so the dialog follows the voice as its
@@ -625,6 +629,9 @@ export function VoiceLabPage() {
     [models.data],
   );
   const readyTts = useMemo(() => ttsModels.filter(isReady), [ttsModels]);
+  /** Ready models that read from a reference clip: what a clone can be
+   *  pinned to. */
+  const cloningModels = useMemo(() => readyTts.filter((m) => m.supports.voice_reference), [readyTts]);
   const vcModels = useMemo(
     () => (models.data ?? []).filter((m) => m.task === "vc"),
     [models.data],
@@ -673,6 +680,7 @@ export function VoiceLabPage() {
   const openEdit = (voice: Voice) => {
     setNameDraft(voice.name);
     setNotesDraft(voice.notes ?? "");
+    setModelDraft(voice.model_id ?? UNPINNED);
     setTranscriptDrafts(Object.fromEntries(
       (voice.samples ?? []).map((s) => [s.id, s.reference_text ?? ""]),
     ));
@@ -958,7 +966,8 @@ export function VoiceLabPage() {
             <DialogTitle>Edit voice</DialogTitle>
             <DialogDescription>
               The name is how this voice appears in the script editor. Notes are
-              for you — accent, tone, where the clip came from.
+              for you — accent, tone, where the clip came from. A cloned voice
+              also chooses the model that reads it.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -980,6 +989,33 @@ export function VoiceLabPage() {
                 onChange={(e) => setNotesDraft(e.target.value)}
               />
             </div>
+            {editing?.kind === "clone" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="voice-lab-model">Reads on</Label>
+                <Select value={modelDraft} onValueChange={setModelDraft}>
+                  <SelectTrigger id="voice-lab-model" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={UNPINNED}>Not set: the first ready model</SelectItem>
+                    {editing.model_id && !cloningModels.some((m) => m.id === editing.model_id) && (
+                      <SelectItem value={editing.model_id}>
+                        {modelsById.get(editing.model_id)?.name ?? editing.model_id} (not installed)
+                      </SelectItem>
+                    )}
+                    {cloningModels.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-muted-foreground text-xs">
+                  The model that reads this voice everywhere: scripts, stories and
+                  audiobooks. Only models that clone from a clip are listed.
+                </p>
+              </div>
+            )}
             {editing?.kind === "clone" && (editing.samples ?? []).map((sample, i) => (
               <div key={sample.id} className="space-y-1.5">
                 <Label htmlFor={`transcript-${sample.id}`}>
@@ -1015,6 +1051,10 @@ export function VoiceLabPage() {
                     patch: {
                       name: nameDraft.trim(),
                       notes: notesDraft.trim() || null,
+                      model_id:
+                        editing.kind === "clone" && modelDraft !== (editing.model_id ?? UNPINNED)
+                          ? modelDraft === UNPINNED ? null : modelDraft
+                          : undefined,
                       samples: editing.kind === "clone" ? (editing.samples ?? []).map((s) => ({
                         id: s.id, reference_text: transcriptDrafts[s.id]?.trim() || null,
                       })) : undefined,

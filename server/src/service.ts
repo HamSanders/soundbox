@@ -61,6 +61,8 @@ import type {
 } from "./llm/assistant.js";
 import { ImageService, type ImageStatus } from "./image/service.js";
 import { EndpointService } from "./endpoints/service.js";
+import { EndpointSource } from "./endpoints/source.js";
+import { type Capabilities, capabilitiesFromEnv, withSetup } from "./capabilities.js";
 
 /**
  * What `GET /api/models/audiocpp/runtime` answers. Shaped like `LlmStatus`'s
@@ -233,6 +235,8 @@ export class MirliService {
    *  call time, so the reassignment is the whole of it. */
   db: Database;
   readonly models: ModelManager;
+  /** What this server allows, from its environment at start; see capabilities.ts. */
+  readonly serverCapabilities: Capabilities;
   readonly jobs: JobManager;
   readonly llm: LlmService;
   readonly image: ImageService;
@@ -253,14 +257,24 @@ export class MirliService {
   constructor(config: Config) {
     this.config = config;
     this.db = openDatabase(config.paths.db, true);
+    this.serverCapabilities = capabilitiesFromEnv();
+    const endpointSource = new EndpointSource(
+      this.serverCapabilities.custom_endpoints ? config.settings.audio_endpoints : [],
+    );
     this.models = new ModelManager(
       config.paths.models,
       config.settings.effectiveHfToken(),
       config.settings.enabled_audiocpp_models,
       config.settings.effectiveAudiocppModelsDir(config.paths),
-      config.settings.audio_endpoints,
+      [endpointSource],
+      this.serverCapabilities.local_models,
     );
-    this.endpoints = new EndpointService(config, this.models);
+    this.endpoints = new EndpointService(
+      config,
+      this.models,
+      endpointSource,
+      this.serverCapabilities.custom_endpoints,
+    );
     this.jobs = new JobManager();
     this.llm = new LlmService(config);
     this.image = new ImageService(config);
@@ -274,7 +288,7 @@ export class MirliService {
     this.jobs.start();
     // Tests and the dev server must not phone anyone: the endpoint counts
     // requests, and a contributor's restarts are not installs.
-    if (!process.env.VITEST) this.updates.start();
+    if (!process.env.VITEST && this.serverCapabilities.updates) this.updates.start();
   }
 
   async close(): Promise<void> {
@@ -297,7 +311,8 @@ export class MirliService {
     // so `device` comes from the same ggml backend detection the model uses,
     // and the hardware detail comes from nvidia-smi (see gpu.ts). Without it
     // (Metal, AMD, Intel, CPU) those fields stay null rather than being guessed.
-    const gpu = pickGpu(await listGpus());
+    // A server that doesn't show its hardware doesn't run nvidia-smi for it.
+    const gpu = this.capabilities.gpu_status ? pickGpu(await listGpus()) : null;
     return {
       status: "ok",
       version: VERSION,
@@ -312,8 +327,16 @@ export class MirliService {
 
   /* -------------------------------------------------------------- models */
 
+  /** What the profile may do now: the server's capabilities, narrowed by its setup. */
+  get capabilities(): Capabilities {
+    return withSetup(this.serverCapabilities, this.config.settings);
+  }
+
   async listModels(): Promise<ModelInfo[]> {
-    const infos = await this.models.listInfo();
+    // The simple setup lists only models that run elsewhere, unless the
+    // profile asked to keep the ones installed here.
+    const local = this.capabilities.local_models;
+    const infos = (await this.models.listInfo()).filter((m) => local || m.provider !== "local");
     for (const info of infos) {
       info.avg_duration_s = this.jobs.avgDuration("generate", info.id);
       this.overlayActiveDownload(info);
@@ -3055,6 +3078,11 @@ export class MirliService {
     if (previousSounds !== null && previousSounds !== this.config.paths.sounds) {
       await this.moveSounds(previousSounds, this.config.paths.sounds);
     }
+    if (("setup" in patch || "setup_include_local" in patch) && !this.capabilities.local_models) {
+      // The simple setup hides local models and refuses to load or unload
+      // them, so one left resident would hold VRAM nobody can free from here.
+      await this.unloadResidentLocal();
+    }
     if ("hf_token" in patch) this.models.setHfToken(this.config.settings.effectiveHfToken());
     if ("otel_endpoint" in patch) this.telemetry.otel.reconfigure();
     if ("enabled_audiocpp_models" in patch) {
@@ -3082,6 +3110,13 @@ export class MirliService {
       await this.image.onSettingsChanged();
     }
     return this.getSettings();
+  }
+
+  private async unloadResidentLocal(): Promise<void> {
+    const resident = this.models.resident;
+    if (resident === null) return;
+    const info = await this.models.get(resident).status();
+    if (info.provider === "local") await this.models.unload(resident);
   }
 
   /**

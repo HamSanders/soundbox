@@ -21,9 +21,11 @@ import { CreatePanel, CreateRedirect } from "@/components/create-panel";
 import { SoundDetailPanel } from "@/components/sound-detail-panel";
 import { VoiceDetailPanel } from "@/components/voice-detail-panel";
 import { ModelDetailPanel } from "@/components/model-detail-panel";
+import { Button } from "@/components/ui/button";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { PLAYER_DOCK_HEIGHT_PX } from "@/components/player-dock";
 import { usePlayerStore } from "@/lib/player-store";
+import { useCapabilities } from "@/lib/queries";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { DashboardPage } from "@/routes/dashboard";
@@ -89,6 +91,27 @@ function isFullBleed(pathname: string): boolean {
 
 /** The app shell: sidebar, header, and the routes that live inside them. */
 function AppShell() {
+  // What this server allows decides what the shell draws: wait for it (one
+  // small request) rather than flash controls that are about to disappear.
+  const capabilities = useCapabilities();
+  if (capabilities.isPending) return null;
+  if (capabilities.isError) {
+    return (
+      <div className="flex h-dvh flex-col items-center justify-center gap-3 p-6 text-center">
+        <p className="text-sm">Mirli can't reach its server.</p>
+        <p className="text-muted-foreground max-w-sm text-xs">
+          {capabilities.error instanceof Error ? capabilities.error.message : String(capabilities.error)}
+        </p>
+        <Button size="sm" variant="outline" onClick={() => void capabilities.refetch()}>
+          Try again
+        </Button>
+      </div>
+    );
+  }
+  return <AppShellReady />;
+}
+
+function AppShellReady() {
   const { pathname } = useLocation();
   const fullBleed = isFullBleed(pathname);
   const nowPlaying = usePlayerStore((s) => s.sound !== null);

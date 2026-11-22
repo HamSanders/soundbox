@@ -53,6 +53,7 @@ import {
   useModels,
   useSettings,
   useUpdateSettings,
+  useCan,
 } from "@/lib/queries";
 import {
   INTENTS,
@@ -61,10 +62,15 @@ import {
   type Intent,
   type Usage,
 } from "@/lib/onboarding";
-import { api, type JobRef } from "@/lib/api";
+import { api, type JobRef, type SetupMode } from "@/lib/api";
+import { StepConnect } from "@/components/onboarding/step-connect";
+import { StepWhere } from "@/components/onboarding/step-where";
 import { cn } from "@/lib/utils";
 
-const STEPS = ["What you make", "Licence", "Models", "Extras"] as const;
+/** The full setup's questions, after "Where it runs". The simple setup has
+ *  nothing to download, so it asks only where renders should go. */
+const LOCAL_STEPS = ["What you make", "Licence", "Models", "Extras"] as const;
+type StepName = "Where it runs" | "Connect" | (typeof LOCAL_STEPS)[number];
 
 /** Resolve when a job reaches a terminal status, so the engine install can be
  *  sequenced ahead of the model download that needs it. Never rejects: a
@@ -93,6 +99,7 @@ export function OnboardingDialog() {
   const { data: settings } = useSettings();
   const { data: models } = useModels();
   const { data: health } = useHealth();
+  const can = useCan();
   const { data: catalog } = useAudioCppCatalog();
   const { data: llm } = useLlmStatus();
   const { data: image } = useImageStatus();
@@ -112,13 +119,29 @@ export function OnboardingDialog() {
   const [assistant, setAssistant] = useState(false);
   const [artwork, setArtwork] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState<SetupMode | null>(null);
+  // A server that can't run models itself has already decided (setup_locked):
+  // no fork, no model downloads, straight to connecting a source. Otherwise
+  // this computer unless the person picks Elsewhere.
+  const locked = can.setup_locked || !can.local_models;
+  const path: SetupMode = locked ? "simple" : (mode ?? "full");
+  // The model questions only lead to downloads, so a server that runs models
+  // but doesn't allow fetching them (MIRLI_DISABLE=downloads) skips them
+  // rather than queue requests it would refuse.
+  const STEPS: readonly StepName[] = locked
+    ? ["Connect"]
+    : path === "simple"
+      ? ["Where it runs", "Connect"]
+      : ["Where it runs", ...(can.downloads ? LOCAL_STEPS : [])];
+  const current = STEPS[Math.min(step, STEPS.length - 1)]!;
 
   // Opened from the queries rather than held open by them: once it is up, a
   // refetch that flips `shouldOnboard` (the first download landing, say) must
   // not yank the dialog out from under whoever is halfway through it.
   useEffect(() => {
-    if (shouldOnboard(settings, models)) setOpen(true);
-  }, [settings, models]);
+    // A server with nothing to set up (no downloads, see capabilities) never asks.
+    if (can.setup_wizard && shouldOnboard(settings, models)) setOpen(true);
+  }, [settings, models, can.setup_wizard]);
 
   const recommendations = useMemo(
     () =>
@@ -178,18 +201,23 @@ export function OnboardingDialog() {
     }
   }
 
-  /** Both exits write the flag; only Finish queues anything. */
-  async function close(finish: boolean) {
+  /** Both exits write the flag; only Finish saves the path and queues anything.
+   *  `then` is where to go after: the endpoint settings, from the simple setup. */
+  async function close(finish: boolean, then?: string) {
     setBusy(true);
     try {
-      await update.mutateAsync({ onboarded_at: new Date().toISOString() });
+      await update.mutateAsync({
+        onboarded_at: new Date().toISOString(),
+        ...(finish && !locked ? { setup: path } : {}),
+      });
     } catch {
       // The flag failing to save is not a reason to trap someone in the
       // wizard — the worst case is that it opens once more.
     }
     setBusy(false);
     setOpen(false);
-    if (!finish) return;
+    if (then) navigate(then);
+    if (!finish || path === "simple" || !can.downloads) return;
     void runInstalls();
     if (selectedIds.length || assistant || artwork) {
       toast.success("Downloading in the background", {
@@ -202,7 +230,7 @@ export function OnboardingDialog() {
   // Only the first step can block: every later one has a valid default, and
   // a disabled Next with nothing saying why is worse than a step someone
   // clicks straight through.
-  const canAdvance = step > 0 || intents.length > 0;
+  const canAdvance = current !== "What you make" || intents.length > 0;
 
   return (
     <Dialog
@@ -218,7 +246,9 @@ export function OnboardingDialog() {
         <DialogHeader>
           <DialogTitle>Set up Mirli</DialogTitle>
           <DialogDescription>
-            Four questions, then it downloads in the background.
+            {path === "simple"
+              ? "Nothing to download: choose where renders should go."
+              : "A few questions, then it downloads in the background."}
           </DialogDescription>
         </DialogHeader>
 
@@ -243,9 +273,13 @@ export function OnboardingDialog() {
         </div>
 
         <div className="min-h-64 py-1">
-          {step === 0 && <StepIntent value={intents} onChange={setIntents} />}
-          {step === 1 && <StepUsage value={usage} onChange={setUsage} />}
-          {step === 2 && (
+          {current === "Where it runs" && <StepWhere value={path} onChange={setMode} health={health} />}
+          {current === "Connect" && (
+            <StepConnect onEndpoint={() => void close(true, "/settings?s=endpoints")} />
+          )}
+          {current === "What you make" && <StepIntent value={intents} onChange={setIntents} />}
+          {current === "Licence" && <StepUsage value={usage} onChange={setUsage} />}
+          {current === "Models" && (
             <StepModels
               recommendations={recommendations}
               missing={missing}
@@ -262,7 +296,7 @@ export function OnboardingDialog() {
               onSwap={(intent, id) => setChosen((prev) => ({ ...prev, [intent]: id }))}
             />
           )}
-          {step === 3 && (
+          {current === "Extras" && (
             <StepExtras
               llm={llm}
               image={image}
@@ -290,9 +324,11 @@ export function OnboardingDialog() {
               </Button>
             ) : (
               <Button disabled={busy} onClick={() => void close(true)}>
-                {selectedIds.length || assistant || artwork
-                  ? "Install and start"
-                  : "Start with nothing"}
+                {path === "simple"
+                  ? "Start"
+                  : selectedIds.length || assistant || artwork
+                    ? "Install and start"
+                    : "Start with nothing"}
               </Button>
             )}
           </div>

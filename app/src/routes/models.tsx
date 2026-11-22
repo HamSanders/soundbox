@@ -14,6 +14,7 @@
  * out loud before it starts.
  */
 
+import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { BriefcaseIcon, CpuIcon, DownloadIcon, HardDriveIcon, SearchIcon, Trash2Icon } from "lucide-react";
@@ -27,6 +28,7 @@ import {
   KIND_ORDER,
   ModelMark,
   ModelPrimaryAction,
+  isDownloadable,
   ON_DISK,
   modelKind,
   useModelJob,
@@ -53,6 +55,7 @@ import {
   useSetAudioCppEnabled,
   useSettings,
   useUpdateSettings,
+  useCan,
 } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import type { AudioCppCatalogEntry, LlmModelEntry, Model } from "@/lib/api";
@@ -215,7 +218,7 @@ function RowShell({
 
 function ModelRowBody({ model, entry }: { model: Model; entry?: AudioCppCatalogEntry }) {
   const { job, downloading, progressPct, busyLabel } = useModelJob(model);
-  const vram = model.provider === "endpoint" ? "Remote" : formatMb(model.vram_estimate_mb);
+  const vram = isDownloadable(model) ? formatMb(model.vram_estimate_mb) : "Remote";
   return (
     <RowShell
       vendor={model.vendor}
@@ -293,6 +296,7 @@ export function ModelsPage() {
   const { data: catalog } = useAudioCppCatalog();
   const { data: settings } = useSettings();
   const { data: health } = useHealth();
+  const can = useCan();
   const selectedId = useModelDetailStore((s) => s.modelId);
   const closePanel = useModelDetailStore((s) => s.close);
 
@@ -311,11 +315,12 @@ export function ModelsPage() {
     const byId = new Map((catalog ?? []).map((e) => [e.id, e]));
     const out: Row[] = (models ?? []).map((m) => ({ type: "model", id: m.id, model: m, entry: byId.get(m.id) }));
     const listed = new Set(out.map((r) => r.id));
-    for (const e of catalog ?? []) {
+    // Models to add from the catalog only where this server runs models itself.
+    for (const e of can.local_models ? (catalog ?? []) : []) {
       if (!listed.has(e.id) && !e.always_on) out.push({ type: "catalog", id: e.id, entry: e });
     }
     return out.map((r, i) => ({ r, i })).sort((a, b) => rank(a.r) - rank(b.r) || a.i - b.i).map(({ r }) => r);
-  }, [models, catalog]);
+  }, [models, catalog, can.local_models]);
 
   const kinds = useMemo(() => {
     const seen = new Set(rows.map((r) => rowFacts(r).kind));
@@ -331,7 +336,7 @@ export function ModelsPage() {
     if (installedOnly && !(r.type === "model" && ON_DISK.has(r.model.status))) return false;
     if (fitsOnly && vramTotal != null) {
       if (r.type !== "model") return false;
-      if (r.model.provider !== "endpoint" && r.model.vram_estimate_mb > vramTotal) return false;
+      if (isDownloadable(r.model) && r.model.vram_estimate_mb > vramTotal) return false;
     }
     return true;
   });
@@ -351,12 +356,13 @@ export function ModelsPage() {
       <div>
         <h1 className="font-heading text-2xl font-semibold tracking-tight">Models</h1>
         <p className="text-muted-foreground text-sm">
-          The open-weight models that make your sounds. One sits in VRAM at a time; loading another
-          unloads it.
+          {can.local_models
+            ? "The open-weight models that make your sounds. One sits in VRAM at a time; loading another unloads it."
+            : "Models that run elsewhere: each render is sent to them, so there is nothing to download."}
         </p>
       </div>
 
-      {!isLoading && !isError && (models?.length ?? 0) > 0 && (
+      {can.downloads && !isLoading && !isError && (models?.length ?? 0) > 0 && (
         <ModelPacks models={models!} hfTokenSet={settings?.hf_token_set ?? false} />
       )}
 
@@ -371,7 +377,21 @@ export function ModelsPage() {
           {error instanceof Error ? error.message : "Unknown error"}
         </EmptyState>
       ) : !models?.length ? (
-        <EmptyState>The backend reported no models.</EmptyState>
+        <EmptyState>
+          {can.local_models ? (
+            "The backend reported no models."
+          ) : can.custom_endpoints ? (
+            <>
+              No models yet. Add a server you run or a hosted API in{" "}
+              <Link to="/settings?s=endpoints" className="underline underline-offset-2">
+                Settings → Endpoints
+              </Link>
+              .
+            </>
+          ) : (
+            "No models are available here yet."
+          )}
+        </EmptyState>
       ) : (
         <>
           {/* One row: search, the kind switch, then each filter as a pill. */}
@@ -393,12 +413,14 @@ export function ModelsPage() {
               />
             </div>
             {kinds.length > 1 && <KindSwitch value={kind} kinds={kinds} onChange={setKind} />}
-            <TogglePill
-              pressed={installedOnly}
-              onToggle={() => setInstalledOnly((v) => !v)}
-              icon={<HardDriveIcon />}
-              label={`Installed · ${installedCount}`}
-            />
+            {can.local_models && (
+              <TogglePill
+                pressed={installedOnly}
+                onToggle={() => setInstalledOnly((v) => !v)}
+                icon={<HardDriveIcon />}
+                label={`Installed · ${installedCount}`}
+              />
+            )}
             <TogglePill
               pressed={commercialOnly}
               onToggle={() => setCommercialOnly((v) => !v)}
@@ -406,7 +428,7 @@ export function ModelsPage() {
               label="Commercial use"
               title="Only models whose licence allows commercial use without conditions."
             />
-            {vramTotal != null && (
+            {vramTotal != null && can.local_models && (
               <TogglePill
                 pressed={fitsOnly}
                 onToggle={() => setFitsOnly((v) => !v)}
@@ -436,7 +458,8 @@ export function ModelsPage() {
         </>
       )}
 
-      <LlmSection />
+      {/* The prompt assistant is a local download. */}
+      {can.downloads && <LlmSection />}
     </div>
   );
 }

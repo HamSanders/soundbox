@@ -190,10 +190,12 @@ the web app), Rust (stable), and the platform toolchain Tauri needs:
 ## Updates
 
 An installed copy checks the newest published GitHub Release once per launch,
-after the server is up. When a newer version exists it asks; **Install and
-restart** downloads it, stops the server, installs and restarts. **Later**
-asks again next launch. A failed check (offline, rate-limited) is logged and
-otherwise ignored. A checkout run with `npm run desktop` never checks. **Settings → Updates →
+on the splash screen, before the app window opens. When a newer version exists
+it installs right there: the splash shows the download's progress, the server
+stops, the installer runs (silently on Windows) and Mirli reopens on the new
+version. Models and projects are kept. The check waits at most 5 seconds, and a
+failed check or download (offline, rate-limited) is logged and the app opens
+as usual. A checkout run with `npm run desktop` never checks. **Settings → Updates →
 Check for updates** turns the check off, and with it off the app asks nobody,
 GitHub included. The server's own daily version check is described in
 [PRIVACY.md](./PRIVACY.md).

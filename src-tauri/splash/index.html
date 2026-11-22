@@ -39,74 +39,133 @@
         cursor: default;
       }
       .wrap { text-align: center; max-width: 30rem; padding: 2rem; }
-      .mark { width: 5.5rem; height: 3.5rem; margin: 0 auto 1.5rem; color: var(--fg); }
+      .mark { width: 8rem; height: 5rem; margin: 0 auto 1.75rem; color: var(--fg); }
       .mark svg { width: 100%; height: 100%; overflow: visible; }
       .mark path {
         fill: none; stroke: currentColor; stroke-width: 14;
         stroke-linecap: round; stroke-linejoin: round;
       }
       body[data-stage="error"] .mark { color: var(--muted); }
-      /* Three steps, lit as the backend reports them. */
-      .steps { display: flex; gap: 0.5rem; justify-content: center; margin: 1.25rem 0 0; }
-      .steps i {
-        width: 1.75rem; height: 3px; border-radius: 2px; background: var(--line);
-        transition: background 0.3s;
+      .mark .drop { stroke: var(--signal); stroke-width: 9; stroke-linecap: round; }
+      /* A slow ambient glow from the window's edges while we work. It fades
+         once the app is ready, and holds still for reduced motion. */
+      body::before {
+        content: ""; position: fixed; inset: 0; pointer-events: none;
+        background: radial-gradient(ellipse at center, transparent 55%, var(--signal) 160%);
+        opacity: 0.1; animation: glow 5.5s ease-in-out infinite;
+        transition: opacity 0.8s;
       }
-      body[data-stage="starting"] .steps i:nth-child(1),
-      body[data-stage="waiting"] .steps i:nth-child(-n+2),
-      body[data-stage="ready"] .steps i { background: var(--signal); }
-      body[data-stage="error"] .steps { display: none; }
-      .tag { font-size: 0.8125rem; color: var(--muted); margin: 0 0 1rem; }
-      h1 { font-size: 1rem; font-weight: 600; margin: 0 0 0.375rem; letter-spacing: -0.01em; }
-      p {
-        font-size: 0.875rem; color: var(--muted); margin: 0;
-        line-height: 1.5; white-space: pre-wrap;
+      @keyframes glow { 0%, 100% { opacity: 0.06; } 50% { opacity: 0.22; } }
+      body.settled::before, body[data-stage="error"]::before { animation: none; opacity: 0; }
+      @media (prefers-reduced-motion: reduce) { body::before { animation: none; } }
+      .wrap { text-align: center; width: min(30rem, 100%); padding: 2rem; }
+      /* One thin bar under the mark. It fills as startup moves along, and
+         with the download while an update installs. */
+      .bar { width: 9rem; height: 2px; margin: 0 auto; border-radius: 2px; background: var(--line); overflow: hidden; }
+      .bar span { display: block; height: 100%; width: 8%; background: var(--signal); transition: width 0.6s ease; }
+      body.settled .bar { opacity: 0; transition: opacity 0.6s; }
+      /* One status line; a new message fades in over the old. */
+      #status {
+        font-size: 0.875rem; color: var(--muted); margin: 0.9rem 0 0; min-height: 1.3em;
+        line-height: 1.5; white-space: pre-wrap; transition: opacity 0.2s;
       }
-      body[data-stage="error"] p { color: var(--fg); }
-      .hint { margin-top: 1.25rem; font-size: 0.75rem; color: var(--muted); }
+      #status.swap { opacity: 0; }
+      /* A heading only when there is something to say: an update or a failure. */
+      h1 { display: none; font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 0.9rem; }
+      body[data-stage="updating"] h1, body[data-stage="error"] h1 { display: block; }
+      body[data-stage="error"] .bar { display: none; }
+      body[data-stage="error"] #status { color: var(--fg); margin-top: 0; }
+      /* Tips sit at the bottom edge, apart from the status, and take turns. */
+      .tip {
+        position: fixed; left: 0; right: 0; bottom: 1.75rem; margin: 0 auto; max-width: 32rem;
+        padding: 0 1.5rem; text-align: center; font-size: 0.75rem; line-height: 1.5;
+        color: var(--muted); opacity: 0; transition: opacity 0.6s;
+      }
+      .tip.show { opacity: 1; }
+      .tip b { color: var(--fg); font-weight: 600; }
+      body.settled .tip, body[data-stage="error"] .tip { opacity: 0; }
     </style>
   </head>
   <body data-stage="starting">
     <div class="wrap">
       <div class="mark" aria-hidden="true">
         <svg viewBox="-4 -4 230 135">
+          <g id="drops"></g>
           <path id="wave" d="M0 107.5C1.8 106.9 6.7 105.9 11 104C15.3 102.1 21.1 99.3 26 96C30.9 92.7 36.2 88 40.5 84C44.8 80 48.1 76 51.5 72C54.9 68 58.3 63.3 61 60C63.7 56.7 65.7 54 67.5 52C69.3 50 70.2 50 72 48C73.8 46 75.8 42.1 78 40C80.2 37.9 82.5 36.8 85 35.5C87.5 34.2 90.6 31.9 93 32C95.4 32.1 97.6 34 99.5 36C101.4 38 103.2 41 104.5 44C105.8 47 106.6 50 107.5 54C108.4 58 109.2 63.7 110 68C110.8 72.3 111.3 76 112 80C112.7 84 113.2 88.3 114 92C114.8 95.7 115.5 98.8 116.5 102C117.5 105.2 118.6 108.6 120 111C121.4 113.4 123.5 116.3 125 116.5C126.5 116.7 127.8 114.2 129 112C130.2 109.8 131.1 106.3 132 103C132.9 99.7 133.8 95.3 134.5 92C135.2 88.7 135.8 86.3 136.5 83C137.2 79.7 138.2 75.8 139 72C139.8 68.2 140.3 63.3 141 60C141.7 56.7 142.2 55 143 52C143.8 49 144.4 45.3 145.5 42C146.6 38.7 148.1 34.8 149.5 32C150.9 29.2 152.4 26.9 154 25.5C155.6 24.1 157.2 23.2 159 23.5C160.8 23.8 163.1 25.4 164.5 27.5C165.9 29.6 166.7 31.9 167.5 36C168.3 40.1 168.9 47.3 169.5 52C170.1 56.7 170.5 59.3 171 64C171.5 68.7 172 75.3 172.5 80C173 84.7 173.3 88 174 92C174.7 96 175.6 100.3 176.5 104C177.4 107.7 178.2 111 179.5 114C180.8 117 181.8 119.8 184 122C186.2 124.2 189.8 127.2 192.5 127.5C195.2 127.8 197.6 125.6 200 124C202.4 122.4 204.9 120.5 207 118C209.1 115.5 210.8 112.3 212.5 109C214.2 105.7 215.9 102 217 98C218.1 94 218.9 89.3 219.3 85C219.7 80.7 219.6 76.2 219.2 72C218.8 67.8 218 63.2 217 60C216 56.8 214.2 53.4 213 52.5C211.8 51.6 210.7 52.4 210 54.5C209.3 56.6 209.2 60.8 209 65C208.8 69.2 209.2 75.8 209 80C208.8 84.2 208.2 87 207.5 90C206.8 93 205.8 96.2 204.5 98C203.2 99.8 201.5 101.2 200 101C198.5 100.8 196.8 98.8 195.5 96.5C194.2 94.2 193.4 90.6 192.5 87C191.6 83.4 190.8 79.3 190 75C189.2 70.7 188.7 66.2 188 61C187.3 55.8 186.7 49.2 186 44C185.3 38.8 184.8 34.7 184 30C183.2 25.3 182.5 19.8 181.5 16C180.5 12.2 179.4 9.4 178 7C176.6 4.6 174.8 2.7 173 1.5C171.2 0.3 169.5 -0.1 167.5 0C165.5 0.1 163.2 0.7 161 2C158.8 3.3 156.4 5.7 154.5 8C152.6 10.3 151 13.3 149.5 16C148 18.7 146.8 21.2 145.5 24C144.2 26.8 143 30 142 33C141 36 140.2 38.8 139.5 42C138.8 45.2 138.2 48.3 137.5 52C136.8 55.7 136.2 60.3 135.5 64C134.8 67.7 134.2 71.2 133.5 74C132.8 76.8 131.8 80.2 131 80.5C130.2 80.8 129.2 78.6 128.5 76C127.8 73.4 127.2 68.7 126.5 65C125.8 61.3 125.2 57.7 124.5 54C123.8 50.3 122.8 46.7 122 43C121.2 39.3 120.4 35.8 119.5 32C118.6 28.2 117.5 23.7 116.5 20C115.5 16.3 114.8 12.8 113.5 10C112.2 7.2 110.7 4.7 109 3C107.3 1.3 105.4 0.1 103.5 0C101.6 -0.1 99.4 1.2 97.5 2.5C95.6 3.8 93.7 6.1 92 8C90.3 9.9 88.9 11.7 87.5 14C86.1 16.3 84.8 19.3 83.5 22C82.2 24.7 81 27.5 80 30C79 32.5 78.3 34.7 77.5 37C76.7 39.3 75.8 41.3 75 44C74.2 46.7 73.2 49.8 72.5 53C71.8 56.2 71.2 59.8 70.5 63C69.8 66.2 69.2 68.3 68.5 72C67.8 75.7 67.1 81 66.5 85C65.9 89 65.5 92.2 65 96C64.5 99.8 63.8 104.3 63.5 108C63.2 111.7 63.1 115.2 63 118C62.9 120.8 62.8 123.4 62.8 124.5" />
         </svg>
       </div>
-      <h1 id="title">Mirli</h1>
-      <p class="tag" id="tag">your AI soundbox</p>
-      <p id="status">Starting…</p>
-      <div class="steps" aria-hidden="true"><i></i><i></i><i></i></div>
-      <p class="hint" id="hint">First launch takes a little longer while models warm up.</p>
+      <h1 id="title"></h1>
+      <div class="bar" aria-hidden="true"><span id="bar"></span></div>
+      <p id="status" role="status" aria-live="polite">Starting…</p>
     </div>
+    <p class="tip" id="tip"></p>
 
     <script type="module">
       const { listen } = window.__TAURI__.event;
       const statusEl = document.getElementById("status");
       const titleEl = document.getElementById("title");
-      const tagEl = document.getElementById("tag");
-      const hintEl = document.getElementById("hint");
+      const barEl = document.getElementById("bar");
+      const tipEl = document.getElementById("tip");
 
-      // Rotating tips shown while the backend starts up. Keep each one short
-      // enough to fit the 30rem wrap without wrapping awkwardly.
+      // A new status fades in over the old one instead of jumping.
+      let shown = statusEl.textContent;
+      let swapTimer = null;
+      function setStatus(text) {
+        if (!text || text === shown) return;
+        shown = text;
+        statusEl.classList.add("swap");
+        clearTimeout(swapTimer);
+        swapTimer = setTimeout(() => {
+          statusEl.textContent = text;
+          statusEl.classList.remove("swap");
+        }, 200);
+      }
+
+      // How full the bar is at each startup stage.
+      const FILL = { starting: 22, waiting: 55, checking: 80, ready: 100 };
+
+      // Tips take turns at the bottom edge, starting once startup has taken a
+      // moment, so a quick launch shows none.
       const tips = [
-        "First launch takes a little longer while models warm up.",
-        "Tip: describe material, action, and space — \"heavy wooden door slamming in a stone corridor\" beats \"scary sound\".",
-        "Tip: models differ in licensing — check before using output commercially.",
-        "Tip: generation runs locally, so results stay on this machine.",
-        "Tip: you can browse past generations from the library once Mirli opens.",
+        "<b>First launch</b> takes a little longer while models warm up.",
+        "<b>Tip</b> Describe material, action and space: “heavy wooden door slamming in a stone corridor” beats “scary sound”.",
+        "<b>Tip</b> Models differ in licensing. Check before using output commercially.",
+        "<b>Tip</b> Everything is made on this computer, so your sounds stay here.",
+        "<b>Tip</b> Every sound you make is kept in the Library.",
       ];
-      let tipIndex = 0;
-      let tipTimer = setInterval(() => {
-        if (document.body.dataset.stage === "error") return;
-        tipIndex = (tipIndex + 1) % tips.length;
-        hintEl.textContent = tips[tipIndex];
-      }, 4000);
+      let tipIndex = -1;
+      function nextTip() {
+        tipEl.classList.remove("show");
+        setTimeout(() => {
+          tipIndex = (tipIndex + 1) % tips.length;
+          tipEl.innerHTML = tips[tipIndex];
+          tipEl.classList.add("show");
+        }, 600);
+      }
+      let tipTimer = null;
+      const tipStart = setTimeout(() => {
+        nextTip();
+        tipTimer = setInterval(nextTip, 5200);
+      }, 2200);
+      function stopTips(fixed) {
+        clearTimeout(tipStart);
+        clearInterval(tipTimer);
+        if (fixed) {
+          tipEl.innerHTML = fixed;
+          tipEl.classList.add("show");
+        } else {
+          tipEl.classList.remove("show");
+        }
+      }
 
-      // The mark is a looping "M". While we work it morphs into a sound wave,
-      // lets the wave run, and folds back into the M. Both shapes are the same
-      // number of points, so each frame is a straight blend between the two.
+      // The mark tells a small story on a loop while we work: rain falls into
+      // a puddle, the ripples swell into a sound wave, the wave folds into the
+      // M, the M opens into a ring that pulses like a speaker, and the ring
+      // sinks back into the puddle for the next shower. The line is one path
+      // of N points throughout, so every change is a blend between two shapes
+      // with the same number of points; the drops are separate little lines.
       const wave = document.getElementById("wave");
+      const dropsEl = document.getElementById("drops");
       const rest = (() => {
         const n = 140;
         const len = wave.getTotalLength();
@@ -116,69 +175,152 @@
         });
       })();
       const N = rest.length;
-      const HOLD = 1400, OUT = 1100, RUN = 2600, BACK = 1100;
-      const CYCLE = HOLD + OUT + RUN + BACK;
+      const SURFACE = 112; // the puddle's waterline, in the mark's box
       const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
       const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-      // A waveform across the same box as the M: a bell-shaped envelope, a few
-      // crests that travel, and an amplitude that breathes.
-      function sound(i, t) {
-        const u = i / (N - 1);
-        const env = Math.pow(Math.sin(Math.PI * u), 1.3);
-        const amp = 46 * (0.65 + 0.35 * Math.sin(t / 380));
-        const y = 64 + env * amp * Math.sin(u * Math.PI * 7 - t / 140);
-        return [4 + u * 214, y];
+      // Shapes. Each returns N points; `t` is the time in ms.
+      const ripples = []; // { x, t0 }
+      function puddle(t) {
+        return Array.from({ length: N }, (_, i) => {
+          const x = 4 + (i / (N - 1)) * 214;
+          let y = SURFACE;
+          for (const r of ripples) {
+            const age = t - r.t0;
+            if (age < 0 || age > 2400) continue;
+            const d = Math.abs(x - r.x) - age * 0.05; // the ring spreads outward
+            const fade = Math.exp(-age / 700);
+            y -= 9 * fade * Math.exp(-(d * d) / 50) * Math.cos(d / 3);
+          }
+          return [x, y];
+        });
       }
+      function sound(t) {
+        return Array.from({ length: N }, (_, i) => {
+          const u = i / (N - 1);
+          const env = Math.pow(Math.sin(Math.PI * u), 1.3);
+          const amp = 46 * (0.65 + 0.35 * Math.sin(t / 380));
+          return [4 + u * 214, 64 + env * amp * Math.sin(u * Math.PI * 7 - t / 140)];
+        });
+      }
+      function ring(t) {
+        const r = 44 * (1 + 0.07 * Math.sin(t / 260));
+        return Array.from({ length: N }, (_, i) => {
+          // Start and end at the bottom, where the M's ends sit.
+          const a = Math.PI / 2 + (i / (N - 1)) * Math.PI * 2;
+          return [111 + r * Math.cos(a), 62 + r * Math.sin(a)];
+        });
+      }
+      const still = () => rest;
 
-      function draw(mix, t) {
-        let d = "";
-        for (let i = 0; i < N; i++) {
-          const [sx, sy] = sound(i, t);
-          const x = rest[i][0] + (sx - rest[i][0]) * mix;
-          const y = rest[i][1] + (sy - rest[i][1]) * mix;
-          d += (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1);
+      // The loop. A scene with the same shape at both ends holds that shape
+      // and lets it move.
+      const SCENES = [
+        { from: puddle, to: puddle, ms: 3400, rain: true },
+        { from: puddle, to: sound, ms: 1300 },
+        { from: sound, to: sound, ms: 2200 },
+        { from: sound, to: still, ms: 1100 },
+        { from: still, to: still, ms: 1500 },
+        { from: still, to: ring, ms: 1100 },
+        { from: ring, to: ring, ms: 1700 },
+        { from: ring, to: puddle, ms: 1100 },
+      ];
+      const CYCLE = SCENES.reduce((n, s) => n + s.ms, 0);
+
+      // Rain: a drop every so often, falling to the waterline, where it
+      // starts a ripple.
+      const drops = [];
+      let nextDrop = 0;
+      function rain(t) {
+        if (t < nextDrop) return;
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("class", "drop");
+        dropsEl.appendChild(line);
+        drops.push({ x: 24 + Math.random() * 174, t0: t, line });
+        nextDrop = t + 260 + Math.random() * 320;
+      }
+      function moveDrops(t) {
+        for (let k = drops.length - 1; k >= 0; k--) {
+          const d = drops[k];
+          const f = (t - d.t0) / 520; // fall time
+          if (f >= 1) {
+            ripples.push({ x: d.x, t0: t });
+            d.line.remove();
+            drops.splice(k, 1);
+            continue;
+          }
+          const y = -16 + (SURFACE + 4) * f * f; // accelerating, like a drop
+          d.line.setAttribute("x1", d.x);
+          d.line.setAttribute("x2", d.x);
+          d.line.setAttribute("y1", y);
+          d.line.setAttribute("y2", y + 9);
         }
-        wave.setAttribute("d", d);
+        while (ripples.length && t - ripples[0].t0 > 2400) ripples.shift();
       }
 
-      let settling = null; // when set, ease back to the M and stop
-      let lastMix = 0;
+      function pathOf(pts) {
+        let d = "";
+        for (let i = 0; i < pts.length; i++) {
+          d += (i ? "L" : "M") + pts[i][0].toFixed(1) + " " + pts[i][1].toFixed(1);
+        }
+        return d;
+      }
+      function blend(a, b, k) {
+        return a.map((p, i) => [p[0] + (b[i][0] - p[0]) * k, p[1] + (b[i][1] - p[1]) * k]);
+      }
+
+      let settling = null; // set when work is done: ease back to the M and stop
+      let current = rest;
+      let start = null;
       function frame(now) {
-        let mix;
         if (settling !== null) {
-          const k = Math.min(1, (now - settling) / 700);
-          mix = lastMix * (1 - ease(k));
-          draw(mix, now);
+          const k = Math.min(1, (now - settling.at) / 700);
+          wave.setAttribute("d", pathOf(blend(settling.from, rest, ease(k))));
+          dropsEl.style.opacity = String(1 - k);
           if (k < 1) requestAnimationFrame(frame);
           return;
         }
-        const c = now % CYCLE;
-        if (c < HOLD) mix = 0;
-        else if (c < HOLD + OUT) mix = ease((c - HOLD) / OUT);
-        else if (c < HOLD + OUT + RUN) mix = 1;
-        else mix = 1 - ease((c - HOLD - OUT - RUN) / BACK);
-        lastMix = mix;
-        draw(mix, now);
+        if (start === null) start = now;
+        let c = (now - start) % CYCLE;
+        let scene = SCENES[0];
+        for (const s of SCENES) {
+          if (c < s.ms) { scene = s; break; }
+          c -= s.ms;
+        }
+        if (scene.rain) rain(now);
+        moveDrops(now);
+        const k = scene.from === scene.to ? 0 : ease(c / scene.ms);
+        current = blend(scene.from(now), scene.to(now), k);
+        wave.setAttribute("d", pathOf(current));
         requestAnimationFrame(frame);
       }
       if (!reduceMotion) requestAnimationFrame(frame);
       function settle() {
         if (reduceMotion || settling !== null) return;
-        settling = performance.now();
+        settling = { at: performance.now(), from: current };
+        document.body.classList.add("settled");
       }
-
       listen("backend-status", (event) => {
         const { stage, message } = event.payload ?? {};
         document.body.dataset.stage = stage ?? "starting";
         if (stage === "ready" || stage === "error") settle();
-        if (message) statusEl.textContent = message;
+        if (stage === "updating") {
+          // "Updating to Mirli 0.6.1… 42%": the bar shows the download.
+          const pct = /(\d+)%$/.exec(message ?? "");
+          barEl.style.width = (pct ? pct[1] : 4) + "%";
+          titleEl.textContent = "Updating Mirli";
+          stopTips("Your models and projects are kept. Mirli reopens by itself when it's done.");
+        } else if (stage in FILL) {
+          barEl.style.width = FILL[stage] + "%";
+        }
         if (stage === "error") {
           titleEl.textContent = "Mirli could not start";
-          tagEl.textContent = "";
-          hintEl.textContent = "";
-          clearInterval(tipTimer);
+          stopTips();
+          statusEl.textContent = message ?? "";
+          shown = statusEl.textContent;
+          return;
         }
+        setStatus(message);
       });
     </script>
   </body>

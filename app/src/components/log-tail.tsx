@@ -27,10 +27,26 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/lib/api";
+import { useCan } from "@/lib/queries";
 import { LEVEL_CLASS, LOG_POLL_MS, LOG_TAIL_LINES, isProblem, parseLog } from "@/lib/logs";
 import { cn } from "@/lib/utils";
 
-export function LogTail({
+type LogTailProps = Parameters<typeof LogTailView>[0];
+
+/** The log, or a line saying this server keeps it to itself. */
+export function LogTail(props: LogTailProps) {
+  const can = useCan();
+  if (!can.logs) {
+    return (
+      <p className={cn("text-muted-foreground p-4 text-sm", props.className)}>
+        This server doesn't share its log.
+      </p>
+    );
+  }
+  return <LogTailView {...props} />;
+}
+
+function LogTailView({
   compact = false,
   jobFilter: jobFilterProp,
   onJobFilter,

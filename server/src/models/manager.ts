@@ -22,34 +22,38 @@ import {
   type ProgressFn,
 } from "./audiocpp.js";
 import { AudioCppRuntime } from "./audiocppRuntime.js";
+import type { ModelSource } from "./source.js";
 import type { GenerationModel } from "./types.js";
-import { EndpointModel } from "../endpoints/model.js";
-import { type AudioEndpoint, endpointModelId } from "../endpoints/types.js";
 
 /**
  * A registry entry. Tagged so `instantiate()` stays the single place that
  * knows which class runs which kind of entry.
  */
-type Entry = { kind: "local"; spec: ModelSpec } | { kind: "endpoint"; endpoint: AudioEndpoint };
+type Entry = { kind: "local"; spec: ModelSpec } | { kind: "source"; source: ModelSource; id: string };
 
 /**
  * audio.cpp runs everything that runs on this machine; every model-specific
  * Python stack (MOSS, Stable Audio, TangoFlux, AudioLDM2, AudioGen) was
  * removed in favour of it. See docs/AUDIOCPP.md.
  *
- * Custom endpoints come after the local models, so anything that picks "the
- * first installed model" lands on one this machine runs.
+ * Sources (custom endpoints, and any other provider) come after the local
+ * models, in the order they were given, so anything that picks "the first
+ * installed model" lands on one this machine runs. The first entry for an id
+ * wins, so a source can never shadow a local model.
  */
 function registry(
-  enabledAudiocppIds: ReadonlySet<string>,
-  endpoints: readonly AudioEndpoint[],
+  enabledAudiocppIds: ReadonlySet<string> | null,
+  sources: readonly ModelSource[],
 ): Map<string, Entry> {
   const entries = new Map<string, Entry>();
-  for (const spec of modelSpecs(enabledAudiocppIds)) {
+  // null: this server runs no local models at all (see capabilities.ts).
+  for (const spec of enabledAudiocppIds ? modelSpecs(enabledAudiocppIds) : []) {
     entries.set(spec.id, { kind: "local", spec });
   }
-  for (const endpoint of endpoints) {
-    if (endpoint.enabled) entries.set(endpointModelId(endpoint.id), { kind: "endpoint", endpoint });
+  for (const source of sources) {
+    for (const id of source.ids()) {
+      if (!entries.has(id)) entries.set(id, { kind: "source", source, id });
+    }
   }
   return entries;
 }
@@ -90,8 +94,8 @@ export class ModelManager {
    * is "hide the weights I already have".
    */
   private presentAudiocpp = new Set<string>();
-  /** The profile's custom endpoints, as of the last `setEndpoints()`. */
-  private endpoints: AudioEndpoint[] = [];
+  /** Models from elsewhere: custom endpoints and other providers. See `source.ts`. */
+  private readonly sources: ModelSource[];
   private specs: Map<string, Entry>;
   private instances = new Map<string, GenerationModel>();
   private _resident: string | null = null;
@@ -106,14 +110,16 @@ export class ModelManager {
     hfToken: string | null = null,
     enabledAudiocppModels: string[] = [],
     audiocppRoot?: string,
-    endpoints: AudioEndpoint[] = [],
+    sources: readonly ModelSource[] = [],
+    /** False on a server that must not run models itself: only sources. */
+    private readonly localModels = true,
   ) {
     this.modelsDir = modelsDir;
     this.hfToken = hfToken;
     this.audiocppRoot = audiocppRoot ?? join(modelsDir, "audiocpp");
     this.enabledAudiocpp = new Set(enabledAudiocppModels);
-    this.endpoints = [...endpoints];
-    this.specs = registry(this.audiocppEnabled(), this.endpoints);
+    this.sources = [...sources];
+    this.specs = registry(this.localIds(), this.sources);
   }
 
   /**
@@ -124,6 +130,11 @@ export class ModelManager {
    */
   private audiocppEnabled(): ReadonlySet<string> {
     return new Set([...this.enabledAudiocpp, ...this.presentAudiocpp]);
+  }
+
+  /** What `registry()` takes for the local models: none when they are off. */
+  private localIds(): ReadonlySet<string> | null {
+    return this.localModels ? this.audiocppEnabled() : null;
   }
 
   /**
@@ -163,7 +174,7 @@ export class ModelManager {
     if (!added.length && !dropped.length) return [];
     await this.locked(async () => {
       this.presentAudiocpp = present;
-      const next = registry(this.audiocppEnabled(), this.endpoints);
+      const next = registry(this.localIds(), this.sources);
       for (const id of this.specs.keys()) {
         if (next.has(id) || !this.instances.has(id)) continue;
         if (this._resident === id) await this.unloadInner(id);
@@ -176,23 +187,31 @@ export class ModelManager {
 
   /** The one place that knows which class runs which kind of entry. */
   private instantiate(entry: Entry, hfToken = this.hfToken): GenerationModel {
-    if (entry.kind === "endpoint") return new EndpointModel(entry.endpoint);
+    if (entry.kind === "source") return entry.source.create(entry.id);
     return new AudioCppModel(entry.spec, this.modelsDir, hfToken, this.audiocppRoot, this.runtime);
   }
 
   /**
-   * Replace the custom endpoints, after an edit or a profile switch.
+   * Re-read a source's models after it changed: an endpoint edited, a
+   * profile switch.
    *
-   * Every endpoint instance is dropped rather than just the changed ones: an
-   * instance holds its config, so an edited URL or template has to reach the
-   * next request, and rebuilding one is free. Local instances are untouched.
+   * Every instance from that source is dropped rather than just the changed
+   * ones: an instance holds its config, so an edited URL or template has to
+   * reach the next request, and rebuilding one is meant to be free. Local
+   * instances and other sources' instances are untouched.
    */
-  async setEndpoints(endpoints: AudioEndpoint[]): Promise<void> {
+  async refreshSource(source: ModelSource): Promise<void> {
     await this.locked(async () => {
-      this.endpoints = [...endpoints];
-      this.specs = registry(this.audiocppEnabled(), this.endpoints);
-      for (const [id, model] of this.instances) {
-        if (model instanceof EndpointModel) this.instances.delete(id);
+      const previous = this.specs;
+      this.specs = registry(this.localIds(), this.sources);
+      for (const id of [...this.instances.keys()]) {
+        const entry = previous.get(id);
+        if (entry?.kind !== "source" || entry.source !== source) continue;
+        if (this._resident === id) {
+          await this.instances.get(id)!.unload();
+          this._resident = null;
+        }
+        this.instances.delete(id);
       }
     });
   }
@@ -275,7 +294,7 @@ export class ModelManager {
   async setAudiocppEnabled(enabledIds: string[]): Promise<void> {
     await this.locked(async () => {
       this.enabledAudiocpp = new Set(enabledIds);
-      const next = registry(this.audiocppEnabled(), this.endpoints);
+      const next = registry(this.localIds(), this.sources);
       for (const id of this.specs.keys()) {
         if (next.has(id) || !this.instances.has(id)) continue;
         if (this._resident === id) await this.unloadInner(id);

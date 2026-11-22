@@ -37,6 +37,8 @@ import { registerLlm } from "./routes/llm.js";
 import { registerImage } from "./routes/image.js";
 import { registerEndpoints } from "./routes/endpoints.js";
 import { AccessGuard, FAILURE_WINDOW_MS, MAX_FAILURES, registerAuth } from "./auth.js";
+import { registerCapabilityGuards } from "./capabilities.js";
+import { registerIdleExit } from "./idle.js";
 import { mountMcp, toolInfos } from "./mcp/server.js";
 import { hostnameOf, isListedHost } from "./origins.js";
 import { registerMcp, type McpToolsProvider } from "./routes/mcp.js";
@@ -231,6 +233,10 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
   });
 
   registerAuth(app, guard);
+  // After auth: refuse what this server has turned off (see capabilities.ts).
+  registerCapabilityGuards(app, () => svc.capabilities);
+  // MIRLI_IDLE_EXIT_MINUTES: exit when nobody has used it for that long.
+  registerIdleExit(app, { busy: () => svc.jobs.busy });
   registerModels(app, svc);
   registerInstruments(app, svc);
   registerJobs(app, svc);

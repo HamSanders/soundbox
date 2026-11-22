@@ -3,7 +3,7 @@
  *
  * Kept out of `service.ts`, which only needs to hand it the config and the
  * model manager. Storage is the profile's settings.json (`audio_endpoints`);
- * every write re-registers the list with `ModelManager`, so a saved endpoint
+ * every write updates the `EndpointSource` and has `ModelManager` re-read it, so a saved endpoint
  * is in the pickers on the next models fetch with no restart.
  */
 
@@ -17,6 +17,7 @@ import {
   ENDPOINT_ID,
 } from "../schemas.js";
 import { EndpointModel } from "./model.js";
+import type { EndpointSource } from "./source.js";
 import { ENDPOINT_PRESETS, type EndpointPreset } from "./presets.js";
 import { TEMPLATE_VARIABLES, validateTemplate, validateUrlTemplate } from "./template.js";
 import { type AudioEndpoint, type PublicAudioEndpoint, toPublicEndpoint } from "./types.js";
@@ -45,6 +46,9 @@ export class EndpointService {
   constructor(
     private readonly config: Config,
     private readonly models: ModelManager,
+    private readonly source: EndpointSource,
+    /** False when this server doesn't allow custom endpoints: none are offered. */
+    private readonly enabled = true,
   ) {}
 
   private get stored(): AudioEndpoint[] {
@@ -111,7 +115,8 @@ export class EndpointService {
 
   /** Re-register after a profile switch, whose settings.json has its own list. */
   async reload(): Promise<void> {
-    await this.models.setEndpoints(this.stored);
+    this.source.set(this.enabled ? this.stored : []);
+    await this.models.refreshSource(this.source);
   }
 
   private build(id: string, input: AudioEndpointInput, previous: AudioEndpoint | null): AudioEndpoint {
@@ -142,7 +147,8 @@ export class EndpointService {
 
   private async persist(next: AudioEndpoint[]): Promise<void> {
     this.config.updateSettings({ audio_endpoints: next });
-    await this.models.setEndpoints(next);
+    this.source.set(next);
+    await this.models.refreshSource(this.source);
   }
 }
 

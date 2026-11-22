@@ -58,6 +58,7 @@ import { repoFile } from "@/lib/marketing-links";
 import { useModelDetailStore } from "@/lib/model-detail-store";
 import {
   useAudioCppCatalog,
+  useCan,
   useModelAction,
   useModels,
   useSetAudioCppEnabled,
@@ -201,7 +202,7 @@ function ModelBody({ model, entry }: { model: Model; entry?: AudioCppCatalogEntr
   const setFailure = useModelDetailStore((s) => s.setFailure);
   const { job, downloading, progressPct, busyLabel } = useModelJob(model);
   const dl = useRequestDownload(model);
-  const can = modelCan(model);
+  const can = modelCan(model, useCan());
 
   const [selfTest, setSelfTest] = useState<ModelSelfTest | null>(null);
   const [testing, setTesting] = useState(false);

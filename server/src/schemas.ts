@@ -205,6 +205,14 @@ export interface ModelInfo {
   /** Where this model runs: weights on this machine driven by audio.cpp, or a
    *  custom endpoint. See `ModelProvider`. */
   provider: ModelProvider;
+  /**
+   * Each render may cost the user money (a paid API used with their key).
+   * Never picked by default, by the app or by MCP: only when chosen or named.
+   */
+  metered: boolean;
+  /** Has weights to fetch, load into memory and delete. False for anything
+   *  that runs somewhere else. */
+  downloadable: boolean;
   installed_deps: boolean;
   auto_installable: boolean;
   manual_install_reason?: string | null;
@@ -1284,6 +1292,8 @@ export const settingsPatchSchema = z.object({
   image_external_api_key: z.string().nullish(),
   image_auto_artwork: z.boolean().nullish(),
   update_check: z.boolean().nullish(),
+  setup: z.enum(["full", "simple"]).nullish(),
+  setup_include_local: z.boolean().nullish(),
   // ISO timestamp when first-run setup was finished or skipped. "" clears it,
   // the `sounds_dir` convention — see `Config.updateSettings`.
   onboarded_at: z.string().nullish(),

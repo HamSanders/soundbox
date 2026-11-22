@@ -66,7 +66,10 @@ import type {
   Transcription,
   Unsubscribe,
 } from "./api";
-import { ApiError } from "./api";
+import { ApiError, DESKTOP_CAPABILITIES } from "./api";
+
+/** `npm run dev:mock:sandboxed`: play a sandboxed server (MIRLI_SANDBOXED=1). */
+const MOCK_SANDBOXED = import.meta.env.VITE_MOCK_SANDBOXED === "1";
 import { clampDeviceParams, createDevice } from "./devices";
 import { followPlacement } from "./reading-order";
 
@@ -1058,6 +1061,8 @@ let settings: Settings = {
   image_auto_artwork: false,
   onboarded_at: null,
   update_check: true,
+  setup: "full",
+  setup_include_local: false,
 };
 
 function mockUpdateStatus(): UpdateStatus {
@@ -2311,7 +2316,11 @@ export const mockApi: MirliApi = {
     const extra = AUDIOCPP_CATALOG_EXTRA.filter(
       (e) => settings.enabled_audiocpp_models.includes(e.id) || DOWNLOADED_EXTRAS.has(e.id),
     ).map(audioCppModelFromCatalog);
-    return [...models, ...extra].map((e) => ({ ...e }));
+    // A sandboxed server registers no local models, and the simple setup
+    // lists them only when asked: only ones from elsewhere.
+    const local = !MOCK_SANDBOXED && (settings.setup !== "simple" || settings.setup_include_local);
+    const all = local ? [...models, ...extra] : models.filter((m) => m.provider && m.provider !== "local");
+    return all.map((e) => ({ ...e }));
   },
 
   async getAudioCppRuntime() {
@@ -3440,6 +3449,38 @@ export const mockApi: MirliApi = {
   async getSettings() {
     await wait(60);
     return { ...settings };
+  },
+
+  async getCapabilities() {
+    await wait(20);
+    if (!MOCK_SANDBOXED) {
+      // The server's withSetup(): the simple setup switches the local half off.
+      if (settings.setup !== "simple") return { ...DESKTOP_CAPABILITIES };
+      return {
+        ...DESKTOP_CAPABILITIES,
+        setup: "simple" as const,
+        downloads: false,
+        gpu_status: false,
+        local_models: settings.setup_include_local ?? false,
+      };
+    }
+    return {
+      sandboxed: true,
+      settings_locked: ["sounds_dir", "audiocpp_mode", "audiocpp_models_dir", "hf_token", "device"],
+      filesystem: false,
+      reveal: false,
+      downloads: false,
+      local_models: false,
+      custom_endpoints: false,
+      updates: false,
+      gpu_status: false,
+      agent_connect: false,
+      skills_install: false,
+      logs: false,
+      setup_wizard: false,
+      setup: "simple" as const,
+      setup_locked: true,
+    };
   },
 
   async getUpdateStatus() {

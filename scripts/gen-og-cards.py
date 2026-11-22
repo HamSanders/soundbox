@@ -79,7 +79,7 @@ def card(screenshot: str | None, eyebrow: str, title: str, line: str, command: s
     draw.text((left, 64), eyebrow, font=inter(26, "SemiBold"), fill=SIGNAL)
     # Headings are set in capitals in the app; the card follows.
     draw.text((left, 100), title.upper(), font=display(84), fill=FOREGROUND)
-    body = inter(32, "Regular")
+    body = inter(30, "Regular")
     for i, text in enumerate(line.split("\n")):
         draw.text((left, 206 + i * 42), text, font=body, fill=MUTED)
 

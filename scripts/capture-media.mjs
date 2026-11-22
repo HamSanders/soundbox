@@ -182,6 +182,12 @@ function startVite(port) {
 async function settle(page, ms = 1200) {
   await page.waitForLoadState("networkidle");
   await page.evaluate(() => document.fonts.ready);
+  // The mock renders every seed sound's audio before it answers the first
+  // list, which on a cold start outlasts any sleep worth having. A loading
+  // placeholder still on the page means the shot is not ready.
+  await page.waitForFunction(() => !document.querySelector('[data-slot="skeleton"]'), null, {
+    timeout: 60_000,
+  });
   await page.waitForTimeout(ms);
 }
 

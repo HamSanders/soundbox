@@ -114,7 +114,7 @@ export function VoiceCallPage() {
         <Button variant="outline" size="icon-lg" aria-label="Smaller text" onClick={() => setTextScale(scale - 0.1)}><AArrowDown /></Button>
         <Button variant="outline" size="icon-lg" aria-label="Bigger text" onClick={() => setTextScale(scale + 0.1)}><AArrowUp /></Button>
         {liveCall ? <VoicePicker value={voice || character?.voice_id || session?.grant.voice_id || ""} onChange={setVoice} /> : null}
-        <Button variant="destructive" size="lg" disabled={!liveCall} onClick={call.hangUp} data-testid="end-button"><PhoneOff /> End</Button>
+        <Button variant="destructive" size="lg" disabled={!liveCall} onClick={() => call.hangUp()} data-testid="end-button"><PhoneOff /> End</Button>
       </footer>
 
       {typing && liveCall ? (

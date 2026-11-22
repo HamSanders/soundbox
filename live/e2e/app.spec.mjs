@@ -27,24 +27,46 @@ test("Calls is in the app's navigation, with Santa built in and both workers up"
   await expect(page.getByTestId("character-card").first()).toHaveAttribute("data-id", "santa");
 });
 
-test("video call with Santa: the live face, his persona, the call log, end", async ({ page }) => {
+/** Ring, pick up, and the character says hello first (FaceTime-style, after Jingle Line). */
+async function placeVideoCall(page) {
+  await page.getByTestId("call-button").click();
+  await expect(page.getByTestId("ringing")).toBeVisible();
+  await expect(page.locator("[data-phase='live']")).toBeVisible({ timeout: 15_000 });
+  // The character answers the "Hello?" the app sends when it picks up.
+  await page.getByRole("button", { name: "Chat", exact: true }).click();
+  const chat = page.getByTestId("call-chat");
+  await expect(chat.locator('[data-kind="you"]').first()).toHaveText("Hello?");
+  await expect(chat.locator('[data-kind="bot"]').first()).toContainText("You said Hello?", { timeout: 10_000 });
+  return chat;
+}
+async function chatTyped(page, text) {
+  await page.getByLabel("Message").fill(text);
+  await page.getByRole("button", { name: "Send" }).click();
+}
+
+test("video call with Santa: ringing, pick up, full-bleed face, chat, hang up", async ({ page }) => {
   await page.goto("/#/calls");
   await page.getByRole("link", { name: "Call Santa", exact: true }).click();
   await expect(page).toHaveURL(/#\/calls\/video\/santa/);
-  await page.getByTestId("call-button").click();
-  await expect(page.getByTestId("call-state")).toContainText("your turn", { timeout: 15_000 });
+  const chat = await placeVideoCall(page);
+  await chatTyped(page, "hi Santa");
+  await expect(chat.locator('[data-kind="bot"]').nth(1)).toContainText("Ho ho ho", { timeout: 10_000 });
+  await page.getByRole("button", { name: "Video", exact: true }).click();
   await expect(page.getByTestId("face-canvas")).not.toHaveClass(/opacity-0/, { timeout: 10_000 });
-  await page.getByRole("button", { name: "Log" }).click();
-  await talkTyped(page, "hi Santa");
-  const log = page.getByTestId("call-log");
-  await expect(log.locator('[data-kind="you"]').first()).toHaveText("hi Santa");
-  await expect(log.locator('[data-kind="bot"]').first()).toContainText("Ho ho ho", { timeout: 10_000 });
+  await expect(page.getByTestId("call-frame")).toBeVisible();
   await page.getByTestId("end-button").click();
   const ended = page.getByRole("dialog", { name: "Call ended" });
   await expect(ended.getByRole("button", { name: "Call Santa again" })).toBeVisible();
   await ended.getByRole("button", { name: "Back to start" }).click();
   await expect(page).toHaveURL(/#\/calls$/);
   await expect(page.getByTestId("recent-call").first()).toContainText("Santa");
+});
+
+test("cancel while it rings goes back to the call button", async ({ page }) => {
+  await page.goto("/#/calls/video/santa");
+  await page.getByTestId("call-button").click();
+  await page.getByRole("button", { name: "Cancel call" }).click();
+  await expect(page.getByTestId("call-button")).toBeVisible();
 });
 
 test("Santa's avatar pack: import it, then the call plays pose clips and hands over to the live face", async ({ page }) => {
@@ -57,14 +79,14 @@ test("Santa's avatar pack: import it, then the call plays pose clips and hands o
   await page.getByRole("link", { name: "Video call" }).click();
   await expect(page.locator("[data-pack='1']")).toBeVisible();
   await page.getByTestId("call-button").click();
-  await expect(page.getByTestId("call-state")).toContainText("your turn", { timeout: 15_000 });
+  await expect(page.locator("[data-phase='live']")).toBeVisible({ timeout: 15_000 });
   // On the talk pose with frames flowing, the live face is pasted into the talk still.
   await expect(page.getByTestId("face-canvas")).toHaveAttribute("data-live", "1", { timeout: 15_000 });
   const played = await page.getByTestId("pose-video").evaluateAll((vs) => vs.some((v) => v.currentSrc.includes("/api/characters/santa/pack/clips/")));
   expect(played).toBe(true);
-  await page.getByRole("button", { name: "Log" }).click();
-  await talkTyped(page, "tell me a joke");
-  await expect(page.getByTestId("call-log").locator('[data-kind="bot"]').first()).toContainText("Ho ho ho", { timeout: 10_000 });
+  await page.getByRole("button", { name: "Chat", exact: true }).click();
+  await chatTyped(page, "tell me a joke");
+  await expect(page.getByTestId("call-chat").locator('[data-kind="bot"]').last()).toContainText("tell me a joke", { timeout: 10_000 });
   await page.getByTestId("end-button").click();
   await expect(page.getByRole("dialog", { name: "Call ended" })).toBeVisible();
 });
@@ -96,8 +118,8 @@ test("create your own character, then call them by voice and by video", async ({
   await page.getByRole("dialog", { name: "Call ended" }).getByRole("button", { name: "Back to start" }).click();
 
   await page.getByRole("link", { name: "Video call Rosa" }).click();
-  await page.getByTestId("call-button").click();
-  await expect(page.getByTestId("call-state")).toContainText("your turn", { timeout: 15_000 });
+  await placeVideoCall(page);
+  await page.getByRole("button", { name: "Video", exact: true }).click();
   await expect(page.getByTestId("face-canvas")).not.toHaveClass(/opacity-0/, { timeout: 10_000 });
   await page.getByTestId("end-button").click();
   await expect(page.getByRole("dialog", { name: "Call ended" })).toBeVisible();

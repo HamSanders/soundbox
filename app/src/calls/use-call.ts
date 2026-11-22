@@ -24,7 +24,7 @@ export function useCall(mode: CallMode, handlers: CallHandlers & { persona?: () 
   h.current = handlers;
   const sRef = useRef<CallSession | null>(null);
 
-  const begin = useCallback(async (character?: string | null) => {
+  const begin = useCallback(async (character?: string | null): Promise<boolean> => {
     setError(null);
     setEnded(null);
     setState("starting");
@@ -34,7 +34,7 @@ export function useCall(mode: CallMode, handlers: CallHandlers & { persona?: () 
     } catch (e) {
       setState("error");
       setError(String((e as Error).message ?? e));
-      return;
+      return false;
     }
     let grant;
     try {
@@ -43,7 +43,7 @@ export function useCall(mode: CallMode, handlers: CallHandlers & { persona?: () 
       void ctx.close();
       setState("error");
       setError(e instanceof CallApiError ? e.message : String(e));
-      return;
+      return false;
     }
     const s: CallSession = new CallSession(live, grant, { persona: h.current.persona?.() ?? grant.persona, voiceId: h.current.voiceId?.() || grant.voice_id || undefined }, {
       ...h.current,
@@ -64,12 +64,13 @@ export function useCall(mode: CallMode, handlers: CallHandlers & { persona?: () 
     setSession(s);
     bookCallNo(callNo);
     s.start(ctx);
+    return true;
   }, [live, mode, callNo, qc]);
 
-  const hangUp = useCallback(() => { void sRef.current?.hangUp(); }, []);
+  const hangUp = useCallback((reason?: string) => { void sRef.current?.hangUp(reason); }, []);
 
   /** After "call again": a fresh call number for the next one. */
-  const reset = useCallback(() => { setEnded(null); setState("off"); setSession(null); sRef.current = null; setCallNo(nextCallNo()); }, []);
+  const reset = useCallback(() => { setEnded(null); setError(null); setState("off"); setSession(null); sRef.current = null; setCallNo(nextCallNo()); }, []);
 
   // Leaving the screen ends the call.
   useEffect(() => () => { void sRef.current?.hangUp("left"); }, []);

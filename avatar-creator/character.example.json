@@ -1,0 +1,34 @@
+{
+  "id": "barista",
+  "name": "Rosa the barista",
+  "width": 896,
+  "height": 1120,
+  "fps": 16,
+  "portrait": {
+    "image": null,
+    "prompt": "Photo of a friendly woman in her forties with curly grey-streaked hair, green apron over a cream sweater, sitting behind a wooden cafe counter facing the camera, warm morning light, espresso machine and shelves of cups behind her, 4:5 portrait, natural skin, sharp focus",
+    "seed": 7
+  },
+  "talkPose": "talk",
+  "restPose": "rest",
+  "startPose": "talk",
+  "faceBox": { "x": 192, "y": 96, "size": 512 },
+  "poses": {
+    "talk": { "label": "Facing camera (master; live lip-sync pose)", "edit": null },
+    "lean": { "label": "Leaning in on the counter", "edit": "she leans forward with both forearms resting on the counter, still looking at the camera" },
+    "rest": { "label": "Wiping the counter", "edit": "she looks down and wipes the counter with a cloth in her right hand" },
+    "cup": { "label": "Holding a coffee cup", "edit": "she holds a white coffee cup in both hands at chest height, smiling at the camera" }
+  },
+  "clips": [
+    { "id": "talk_to_lean", "from": "talk", "to": "lean", "kind": "transition", "durationS": 3, "prompt": "she leans forward onto the counter to listen" },
+    { "id": "lean_to_talk", "from": "lean", "to": "talk", "kind": "transition", "durationS": 3, "prompt": "she straightens up and smiles at the camera" },
+    { "id": "talk_to_rest", "from": "talk", "to": "rest", "kind": "transition", "durationS": 3, "prompt": "she picks up a cloth and starts wiping the counter" },
+    { "id": "rest_to_talk", "from": "rest", "to": "talk", "kind": "transition", "durationS": 3, "prompt": "she puts the cloth down and looks back at the camera" },
+    { "id": "talk_to_cup", "from": "talk", "to": "cup", "kind": "transition", "durationS": 3, "prompt": "she picks up a coffee cup with both hands" },
+    { "id": "cup_to_talk", "from": "cup", "to": "talk", "kind": "transition", "durationS": 3, "prompt": "she sets the cup down and looks at the camera" },
+    { "id": "rest_idle", "from": "rest", "to": "rest", "kind": "idle", "durationS": 3, "prompt": "she keeps wiping the counter in slow circles" },
+    { "id": "laugh", "from": "talk", "to": "talk", "kind": "reaction", "tags": ["laugh"], "durationS": 4, "prompt": "she laughs warmly, shoulders shaking, then settles back facing the camera" },
+    { "id": "think", "from": "talk", "to": "talk", "kind": "reaction", "tags": ["thinking"], "durationS": 4, "prompt": "she looks up thoughtfully, taps her chin, then looks back at the camera" },
+    { "id": "sip", "from": "cup", "to": "cup", "kind": "reaction", "tags": ["sip"], "durationS": 3, "prompt": "she takes a slow sip from the cup" }
+  ]
+}

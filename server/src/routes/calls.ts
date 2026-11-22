@@ -1,5 +1,3 @@
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 /**
  * Calls: real-time voice and video calls with characters.
  *
@@ -68,7 +66,8 @@ export function registerCalls(app: FastifyInstance, svc: MirliService, deps: Cal
   // Santa's animated pack ships in the image at MIRLI_SANTA_PACK (or the repo's santa-clips/ in a checkout):
   // import it once, so every new workspace gets the full clip flow, not just his portrait.
   void (async () => {
-    const dir = process.env.MIRLI_SANTA_PACK || resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "santa-clips");
+    const dir = process.env.MIRLI_SANTA_PACK;
+    if (!dir) return;
     try {
       const santa = await store.get("santa");
       if (santa.pack.status !== "ready" && existsSync(join(dir, "manifest.json"))) await packs.importFolder("santa", dir);

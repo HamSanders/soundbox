@@ -48,12 +48,5 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
-    rollupOptions: {
-      // Two pages: the Mirli app, and Mirli Live (real-time calls, src/live).
-      input: {
-        main: path.resolve(__dirname, "index.html"),
-        live: path.resolve(__dirname, "live.html"),
-      },
-    },
   },
 });

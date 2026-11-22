@@ -1,8 +1,9 @@
-// End-to-end tests for Mirli Live against the local back end, with stand-in
-// workers so they run without GPUs: the REAL face server on its fake engine,
-// a fake voice worker that shares the real routing code, the REAL local Call
-// API, and the web app's Vite dev server. All on spare ports, so the live
-// servers (17650-17653, 17680) are never touched.
+// End-to-end tests for Calls in the Mirli app, against the local back end,
+// with stand-in workers so they run without GPUs: the REAL face server on its
+// fake engine, a fake voice worker that shares the real routing code, the
+// REAL Mirli server (server/src/routes/calls.ts) on a scratch data dir, and
+// the app's Vite dev server. All on spare ports: the live servers
+// (17650-17653, 17680) and a running Mirli (17494) are never touched.
 //
 //   cd live && npm run test:e2e
 
@@ -12,20 +13,20 @@ import { fileURLToPath } from "node:url";
 
 import { defineConfig } from "@playwright/test";
 
-import { seedFaces } from "./seed-faces.mjs";
+import { seed } from "./seed.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..", "..");
-export const PORTS = { voice: 17750, face: 17760, facePcm: 17761, api: 17790, web: 5180 };
+export const PORTS = { voice: 17750, face: 17760, facePcm: 17761, mirli: 17795, web: 5180 };
 export const SECRET = "e2e-call-secret";
-export const FACE_HOME = join(tmpdir(), "mirli-live-e2e-face");
+export const FIXTURES = join(tmpdir(), "mirli-calls-e2e");
 const FACE_PY = process.env.FACE_PYTHON || join(homedir(), "mirli-spike-face", "venv", "Scripts", "python.exe");
 const WEB = `http://127.0.0.1:${PORTS.web}`;
-const common = { MIRLI_CALL_SECRET: SECRET, MIRLI_CALL_SECRET_FILE: join(FACE_HOME, "unused-secret") };
+const common = { MIRLI_CALL_SECRET: SECRET, MIRLI_CALL_SECRET_FILE: join(FIXTURES, "unused-secret") };
 
 // Once, in the runner process (test workers load this file too and inherit the flag).
 if (!process.env.MIRLI_E2E_SEEDED) {
-  seedFaces(FACE_PY);
+  seed(FIXTURES, FACE_PY);
   process.env.MIRLI_E2E_SEEDED = "1";
 }
 
@@ -50,32 +51,31 @@ export default defineConfig({
       reuseExistingServer: false,
     },
     {
-      command: `"${FACE_PY}" -u server.py --engine fake --input-rate 48000 --http-port ${PORTS.face} --pcm-port ${PORTS.facePcm} --tap ws://127.0.0.1:${PORTS.voice}/tap --image "${join(FACE_HOME, "seed", "girl.png")}"`,
+      command: `"${FACE_PY}" -u server.py --engine fake --input-rate 48000 --http-port ${PORTS.face} --pcm-port ${PORTS.facePcm} --tap ws://127.0.0.1:${PORTS.voice}/tap --image "${join(FIXTURES, "face", "seed", "girl.png")}"`,
       cwd: join(root, "spikes", "realtime-face"),
       url: `http://127.0.0.1:${PORTS.face}/readyz`,
-      env: { ...common, MIRLI_FACE_HOME: FACE_HOME },
+      env: { ...common, MIRLI_FACE_HOME: join(FIXTURES, "face") },
       reuseExistingServer: false,
       timeout: 60_000,
     },
     {
-      command: "node api/server.mjs",
-      cwd: join(root, "live"),
-      url: `http://127.0.0.1:${PORTS.api}/v1/health`,
+      command: `npx tsx src/cli.ts --port ${PORTS.mirli} --data-dir "${join(FIXTURES, "data")}" --no-ui`,
+      cwd: join(root, "server"),
+      url: `http://127.0.0.1:${PORTS.mirli}/api/calls/history`,
       env: {
         ...common,
-        MIRLI_LIVE_PORT: String(PORTS.api),
-        MIRLI_VOICE_URL: `http://127.0.0.1:${PORTS.voice}`,
-        MIRLI_FACE_URL: `http://127.0.0.1:${PORTS.face}`,
-        MIRLI_ALLOWED_ORIGINS: WEB,
-        MIRLI_HEARTBEAT_S: "2",
+        MIRLI_CALL_VOICE_URL: `http://127.0.0.1:${PORTS.voice}`,
+        MIRLI_CALL_FACE_URL: `http://127.0.0.1:${PORTS.face}`,
+        MIRLI_CALL_HEARTBEAT_S: "2",
       },
       reuseExistingServer: false,
+      timeout: 90_000,
     },
     {
       command: `npx vite --port ${PORTS.web} --strictPort --host 127.0.0.1`,
       cwd: join(root, "app"),
-      url: `${WEB}/live.html`,
-      env: { VITE_LIVE_API: `http://127.0.0.1:${PORTS.api}` },
+      url: WEB,
+      env: { SOUNDBOX_PORT: String(PORTS.mirli) },
       reuseExistingServer: false,
       timeout: 90_000,
     },

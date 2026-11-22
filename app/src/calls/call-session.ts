@@ -11,7 +11,7 @@
  * outside a user gesture suspended, and then nothing is captured.
  */
 
-import { type CallGrant, type LiveClient, wsProtocols } from "./live-client";
+import { type CallGrant, type CallsClient, wsProtocols } from "./live-client";
 
 export type CallState = "starting" | "idle" | "listening" | "thinking" | "speaking" | "error" | "closed";
 
@@ -76,18 +76,19 @@ export class CallSession {
   #beat: number | undefined;
   #ending = false;
   #canvas: HTMLCanvasElement | null = null;
+  #sink: ((frame: ImageBitmap) => void) | null = null;
   #raf = 0;
   #face = { gen: 0, next: 0, frames: [] as Frame[], sources: [] as AudioBufferSourceNode[], speechFrom: Infinity, speechUntil: 0, playing: false, lastStart: 0 };
   #firstChunkAt: number | null = null;
   #lastHeard: number | null = null;
   #reply = "";
 
-  client: LiveClient;
+  client: CallsClient;
   grant: CallGrant;
   opts: { voiceId?: string; persona?: string; worklets?: string };
   on: CallHandlers;
 
-  constructor(client: LiveClient, grant: CallGrant, opts: CallSession["opts"], on: CallHandlers = {}) {
+  constructor(client: CallsClient, grant: CallGrant, opts: CallSession["opts"], on: CallHandlers = {}) {
     this.client = client;
     this.grant = grant;
     this.opts = opts;
@@ -116,6 +117,10 @@ export class CallSession {
 
   /** Where the face's frames are drawn. */
   setCanvas(c: HTMLCanvasElement | null) { this.#canvas = c; }
+  /** Draw frames yourself instead (an avatar pack pastes them into its talk still). */
+  setFrameSink(fn: ((frame: ImageBitmap) => void) | null) { this.#sink = fn; }
+  /** When the face last delivered a frame (performance.now()), for "is the live face up". */
+  lastFrameAt = 0;
 
   sendText(text: string) {
     if (this.#ws?.readyState !== 1) return false;
@@ -207,7 +212,7 @@ export class CallSession {
     const ws = this.#ws!;
     if (this.opts.voiceId) ws.send(JSON.stringify({ type: "voice", id: this.opts.voiceId }));
     if (this.opts.persona) ws.send(JSON.stringify({ type: "persona", text: this.opts.persona }));
-    const base = this.opts.worklets ?? `${import.meta.env.BASE_URL}live/`;
+    const base = this.opts.worklets ?? `${import.meta.env.BASE_URL}calls/`;
     await ctx.audioWorklet.addModule(`${base}capture-worklet.js`);
     await ctx.audioWorklet.addModule(`${base}playback-worklet.js`);
     // No microphone (refused, missing, or a browser that blocks it): the call
@@ -367,8 +372,10 @@ export class CallSession {
     while (f.frames.length && f.frames[0].t <= t) { fr?.bm.close(); fr = f.frames.shift()!; }
     if (fr) {
       const c = this.#canvas;
-      if (c) c.getContext("2d")?.drawImage(fr.bm, 0, 0, c.width, c.height);
+      if (this.#sink) this.#sink(fr.bm);
+      else if (c) c.getContext("2d")?.drawImage(fr.bm, 0, 0, c.width, c.height);
       fr.bm.close();
+      this.lastFrameAt = performance.now();
     }
     const playing = ctx.currentTime >= f.speechFrom && ctx.currentTime < f.speechUntil;
     if (playing !== f.playing) { f.playing = playing; this.#reportPlaying(playing); }

@@ -2,8 +2,8 @@ import { useEffect, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 
-import { clock } from "../lib/prefs";
-import type { EndedInfo } from "../lib/use-call";
+import { clock } from "../prefs";
+import type { EndedInfo } from "../use-call";
 
 const REASONS: Record<string, string> = {
   dropped: "The connection dropped.",

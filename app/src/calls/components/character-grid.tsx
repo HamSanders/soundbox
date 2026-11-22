@@ -3,9 +3,8 @@ import { useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
-import { useLive } from "../live-context";
-import type { Character } from "../lib/live-client";
-import { pad } from "../lib/prefs";
+import { calls, fileToDataUrl, type Character } from "../live-client";
+import { pad } from "../prefs";
 
 /**
  * Portraits as cards, with an upload card at the end. Used on the picker
@@ -19,7 +18,6 @@ export function CharacterGrid({ characters, selected, busyId, onPick, onUploaded
   onUploaded?: (id: string) => void;
   compact?: boolean;
 }) {
-  const live = useLive();
   const file = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -29,8 +27,9 @@ export function CharacterGrid({ characters, selected, busyId, onPick, onUploaded
     setUploading(true);
     setErr(null);
     try {
-      const { id } = await live.uploadCharacter(f);
-      onUploaded?.(id);
+      const name = f.name.replace(/\.[^.]+$/, "").replace(/[^\w ]/g, " ").trim().slice(0, 40) || "My character";
+      const c = await calls.createCharacter({ name, image: await fileToDataUrl(f) });
+      onUploaded?.(c.id);
     } catch (e) {
       setErr("Upload failed: " + (e as Error).message);
     } finally {
@@ -54,14 +53,14 @@ export function CharacterGrid({ characters, selected, busyId, onPick, onUploaded
             )}
           >
             <span className="relative block aspect-square overflow-hidden bg-muted">
-              <img alt="" loading="lazy" src={live.portraitUrl(c.id)} className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+              <img alt="" loading="lazy" src={calls.url(c.portrait_url)} className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
               {busyId === c.id ? (
                 <span className="absolute inset-0 grid place-items-center bg-background/60"><Loader2 className="size-6 animate-spin" /></span>
               ) : null}
             </span>
             <span className="flex items-center gap-2 px-3 py-2 font-log text-xs text-muted-foreground">
               <span className={cn("size-1.5 rounded-full", c.id === selected ? "bg-signal" : "bg-border-strong")} />
-              No. {pad(i + 1)} · <b className="font-normal text-foreground">{c.kind === "upload" ? "Your photo" : c.kind === "sample" ? "Sample" : c.name}</b>
+              No. {pad(i + 1)} · <b className="font-normal text-foreground">{c.name}</b>
             </span>
           </button>
         ))}

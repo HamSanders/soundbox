@@ -5,10 +5,10 @@ import WebSocket from "ws";
 import { sign } from "../api/token.mjs";
 import { PORTS, SECRET } from "./playwright.config.mjs";
 
-const API = `http://127.0.0.1:${PORTS.api}`;
-const ORIGIN = `http://127.0.0.1:${PORTS.web}`;
+// The Mirli server's Call API (server/src/routes/calls.ts).
+const API = `http://127.0.0.1:${PORTS.mirli}/api`;
 const api = (method, path, body) =>
-  fetch(API + path, { method, headers: { Origin: ORIGIN, ...(body ? { "Content-Type": "application/json" } : {}) }, body: body && JSON.stringify(body) });
+  fetch(API + path, { method, headers: { "X-Soundbox": "1", ...(body ? { "Content-Type": "application/json" } : {}) }, body: body && JSON.stringify(body) });
 
 /** Open a socket with the call token as subprotocol; collect what arrives. */
 function connect(url, token) {
@@ -30,35 +30,30 @@ function connect(url, token) {
 const until = async (fn, ms = 8000) => { const t = Date.now(); while (!fn()) { if (Date.now() - t > ms) throw new Error("timed out"); await new Promise((r) => setTimeout(r, 50)); } };
 const speech = (got) => got.chunks.filter((c) => c.kind === "speech" && !c.cont).length;
 
-test.afterEach(async () => {
-  // Leave no call behind for the next test (the local API allows one at a time).
-  const h = await (await api("GET", "/v1/health")).json();
-  expect(h).toBeTruthy();
-});
 
 test("POST /v1/calls returns the contract; DELETE ends it on both workers", async () => {
-  const r = await api("POST", "/v1/calls", { mode: "video", character: "Ben-e2e00002" });
+  const r = await api("POST", "/calls", { mode: "video", character: "santa" });
   expect(r.status).toBe(201);
   const c = await r.json();
   expect(Object.keys(c)).toEqual(expect.arrayContaining(["call_id", "ws_url", "face_ws_url", "token", "expires", "heartbeat_s", "persona"]));
   expect(c.ws_url).toBe(`ws://127.0.0.1:${PORTS.voice}/ws`);
   expect(c.face_ws_url).toBe(`ws://127.0.0.1:${PORTS.face}/ws`);
-  expect(c.persona).toContain("You are Ben");
+  expect(c.persona).toContain("You are Santa Claus");
 
   const voice = connect(c.ws_url, c.token), face = connect(c.face_ws_url, c.token);
   await Promise.all([voice.open, face.open]);
   await until(() => voice.got.json.some((m) => m.type === "hello"));
   expect(voice.got.json.find((m) => m.type === "hello").call).toBe(c.call_id);
 
-  const beat = await (await api("POST", `/v1/calls/${c.call_id}/heartbeat`)).json();
+  const beat = await (await api("POST", `/calls/${c.call_id}/heartbeat`)).json();
   expect(beat.token).toBeTruthy();
 
-  const end = await api("DELETE", `/v1/calls/${c.call_id}`);
+  const end = await api("DELETE", `/calls/${c.call_id}`);
   expect(end.status).toBe(200);
   await until(() => voice.got.close !== null && face.got.close !== null);
   expect(voice.got.close).toBe(4001);
   expect(face.got.close).toBe(4001);
-  expect((await api("DELETE", `/v1/calls/${c.call_id}`)).status).toBe(404);
+  expect((await api("DELETE", `/calls/${c.call_id}`)).status).toBe(404);
 });
 
 test("workers refuse sockets without a valid token", async () => {
@@ -70,18 +65,18 @@ test("workers refuse sockets without a valid token", async () => {
 });
 
 test("one call at a time locally: a second POST is busy until the first ends", async () => {
-  const a = await (await api("POST", "/v1/calls", { mode: "voice" })).json();
-  const b = await api("POST", "/v1/calls", { mode: "voice" });
+  const a = await (await api("POST", "/calls", { mode: "voice" })).json();
+  const b = await api("POST", "/calls", { mode: "voice" });
   expect(b.status).toBe(409);
   expect((await b.json()).error.code).toBe("busy");
-  await api("DELETE", `/v1/calls/${a.call_id}`);
-  const c = await api("POST", "/v1/calls", { mode: "voice" });
+  await api("DELETE", `/calls/${a.call_id}`);
+  const c = await api("POST", "/calls", { mode: "voice" });
   expect(c.status).toBe(201);
-  await api("DELETE", `/v1/calls/${(await c.json()).call_id}`);
+  await api("DELETE", `/calls/${(await c.json()).call_id}`);
 });
 
 test("the face sends a call's frames to that call only: no cross-talk, no doubled audio", async () => {
-  const c = await (await api("POST", "/v1/calls", { mode: "video", character: "Ada-e2e00001" })).json();
+  const c = await (await api("POST", "/calls", { mode: "video", character: "santa" })).json();
   const voiceA = connect(c.ws_url, c.token);
   const faceA1 = connect(c.face_ws_url, c.token);
   await Promise.all([voiceA.open, faceA1.open]);
@@ -120,12 +115,5 @@ test("the face sends a call's frames to that call only: no cross-talk, no double
   expect(faceA1.got.chunks.length).toBe(before); // the replaced socket hears nothing more: one copy of the audio
 
   voiceB.ws.close();
-  await api("DELETE", `/v1/calls/${c.call_id}`);
-});
-
-test("CORS: only our web origin may call the API", async () => {
-  const bad = await fetch(`${API}/v1/health`, { headers: { Origin: "https://evil.example" } });
-  expect(bad.status).toBe(403);
-  const good = await fetch(`${API}/v1/health`, { headers: { Origin: ORIGIN } });
-  expect(good.headers.get("access-control-allow-origin")).toBe(ORIGIN);
+  await api("DELETE", `/calls/${c.call_id}`);
 });

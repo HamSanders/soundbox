@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-import type { CallSession } from "../lib/call-session";
+import type { CallSession } from "../call-session";
 
 const buf = new Uint8Array(1024);
 function peak(an: AnalyserNode | null, div: number) {

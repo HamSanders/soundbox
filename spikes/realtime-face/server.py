@@ -507,13 +507,20 @@ async def upload_handler(request):
     img = cv2.imdecode(np.frombuffer(body, np.uint8), cv2.IMREAD_COLOR)
     if img is None:
         raise web.HTTPBadRequest(text="not an image cv2 can read (png, jpg, webp, bmp)")
-    # Centre-crop to a square and store at 512, as the model will see it.
+    # Centre-crop to a square and store at 512, as the model will see it. X-Crop: "x,y,size" picks the
+    # square instead (an avatar pack's talk-still faceBox, so the live face pastes back exactly there).
     h, w = img.shape[:2]
-    side = min(h, w)
-    y, x = (h - side) // 2, (w - side) // 2
+    crop = request.headers.get("X-Crop", "")
+    try:
+        x, y, side = (int(v) for v in crop.split(",")) if crop else (0, 0, 0)
+    except ValueError:
+        raise web.HTTPBadRequest(text="X-Crop must be x,y,size")
+    if side <= 0 or x < 0 or y < 0 or x + side > w or y + side > h:
+        side = min(h, w)
+        y, x = (h - side) // 2, (w - side) // 2
     img = cv2.resize(img[y:y + side, x:x + side], (512, 512), interpolation=cv2.INTER_AREA)
     name = "".join(c for c in request.headers.get("X-Name", "photo") if c.isalnum())[:24] or "photo"
-    fid = f"{name}-{hashlib.sha1(body).hexdigest()[:8]}"
+    fid = f"{name}-{hashlib.sha1(body + crop.encode()).hexdigest()[:8]}"
     cv2.imwrite(str(FACES / f"{fid}.png"), img)
     return web.json_response({"id": fid})
 

@@ -1,21 +1,21 @@
-import { AArrowDown, AArrowUp, Keyboard, Mic, MicOff, Phone, PhoneOff } from "lucide-react";
+import { AArrowDown, AArrowUp, ArrowLeft, Keyboard, Mic, MicOff, Phone, PhoneOff } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
-import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-import { CallEnded } from "../components/call-ended";
-import { LogLabel, ThemeToggle } from "../components/live-shell";
-import { PenLine } from "../components/pen-line";
-import type { CallState } from "../lib/call-session";
-import { clock, pad, prefs } from "../lib/prefs";
-import { useCall } from "../lib/use-call";
-import { STATE_WORDS, VoicePicker } from "./video-call";
+import type { CallState } from "@/calls/call-session";
+import { CallEnded } from "@/calls/components/call-ended";
+import { LogLabel, STATE_WORDS, VoicePicker } from "@/calls/components/call-bits";
+import { PenLine } from "@/calls/components/pen-line";
+import { calls } from "@/calls/live-client";
+import { clock, pad, prefs } from "@/calls/prefs";
+import { useCharacters } from "@/calls/queries";
+import { useCall } from "@/calls/use-call";
 
 /** The newest words of a reply: a long reply keeps its tail in view. */
-export const tailWords = (text: string, keep = 22) => text.trim().split(/\s+/).filter(Boolean).slice(-keep);
+function tailWords(text: string, keep = 22) { return text.trim().split(/\s+/).filter(Boolean).slice(-keep); }
 
 /**
  * Voice only: one pen stroke across the screen and the reply in big type that
@@ -23,7 +23,12 @@ export const tailWords = (text: string, keep = 22) => text.trim().split(/\s+/).f
  */
 export function VoiceCallPage() {
   const nav = useNavigate();
-  const [voice, setVoiceState] = useState(prefs.get("voice") ?? "");
+  // /calls/voice is Mirli; /calls/voice/:characterId is that character, voice only.
+  const { characterId } = useParams();
+  const { data: chars } = useCharacters();
+  const character = characterId ? chars?.find((c) => c.id === characterId) : undefined;
+  const who = character?.name ?? "Mirli";
+  const [voice, setVoiceState] = useState("");
   const [muted, setMuted] = useState(false);
   const [typing, setTyping] = useState(false);
   const [you, setYou] = useState({ text: "", live: false });
@@ -33,7 +38,7 @@ export function VoiceCallPage() {
   const [typed, setTyped] = useState("");
 
   const call = useCall("voice", {
-    voiceId: () => voice || undefined,
+    voiceId: () => voice || character?.voice_id || undefined,
     partial: (t) => setYou({ text: t, live: true }),
     final: (t) => { setYou((y) => ({ text: t || y.text, live: false })); setReply(""); },
     replyDelta: (d) => setReply((r) => r + d),
@@ -65,16 +70,15 @@ export function VoiceCallPage() {
   useEffect(() => { addEventListener("resize", fit); return () => removeEventListener("resize", fit); }, [fit]);
   const setTextScale = (v: number) => { const s = Math.min(1, Math.max(0.5, +v.toFixed(2))); setScale(s); prefs.set("voice-text", String(s)); };
 
-  function setVoice(id: string) { setVoiceState(id); prefs.set("voice", id); session?.setVoice(id); }
+  function setVoice(id: string) { setVoiceState(id); session?.setVoice(id); }
   const words = tailWords(reply);
 
   return (
-    <div className={cn("relative grid h-svh grid-rows-[auto_1fr_auto] bg-background text-foreground", state === "speaking" && "speaking")} data-state={state}>
-      <header className="flex items-center gap-3 px-5 py-4">
-        <Link to="/" aria-label="Mirli Live home"><BrandMark className="size-5" /></Link>
+    <div className={cn("relative grid min-h-0 flex-1 grid-rows-[auto_1fr_auto]", state === "speaking" && "speaking")} data-state={state}>
+      <header className="flex items-center gap-3 pb-3">
+        <Button asChild variant="ghost" size="icon-sm" aria-label="Back to calls"><Link to="/calls"><ArrowLeft /></Link></Button>
         <LogLabel>call No. {pad(call.callNo, 4)} · voice{liveCall ? ` · ${clock(session!.seconds)}` : ""}</LogLabel>
         <span className="ml-auto font-log text-xs text-muted-foreground" data-testid="call-state">{STATE_WORDS[state] ?? state}</span>
-        <ThemeToggle />
       </header>
 
       <main className="grid min-h-0 grid-rows-[auto_1fr_auto] px-5 sm:px-10">
@@ -86,13 +90,14 @@ export function VoiceCallPage() {
             </p>
           ) : (
             <div className="grid h-full content-center justify-items-start gap-6">
-              <h1 className="font-display text-[clamp(48px,9vw,120px)] leading-[.88] font-extrabold uppercase tracking-wide">Just talk.</h1>
-              <p className="max-w-[46ch] text-lg text-muted-foreground">A voice call with Mirli. No camera, no face: live captions, and you can talk over it any time.</p>
+              <h1 className="font-display text-[clamp(48px,9vw,120px)] leading-[.88] font-extrabold uppercase tracking-wide">{character ? `Call ${who}.` : "Just talk."}</h1>
+              <p className="max-w-[46ch] text-lg text-muted-foreground">{character ? `A voice call with ${who}: no camera, live captions, and you can talk over them any time.` : "A voice call with Mirli. No camera, no face: live captions, and you can talk over it any time."}</p>
               <div className="flex flex-wrap items-center gap-3">
-                <Button size="lg" className="h-12 px-7 text-base" data-testid="call-button" disabled={state === "starting"} onClick={() => void call.begin(null)}>
+                <Button size="lg" className="h-12 px-7 text-base" data-testid="call-button" disabled={state === "starting"} onClick={() => void call.begin(character?.id ?? null)}>
                   <Phone /> {state === "starting" ? "Connecting…" : "Start voice call"}
                 </Button>
-                <VoicePicker value={voice} onChange={setVoice} />
+                <VoicePicker value={voice || character?.voice_id || session?.grant.voice_id || ""} onChange={setVoice} />
+                {character ? <img alt="" src={calls.url(character.portrait_url)} className="size-10 rounded-full border border-border object-cover" /> : null}
               </div>
               {call.error ? <p className="text-sm text-danger" role="alert">{call.error}</p> : null}
             </div>
@@ -108,7 +113,7 @@ export function VoiceCallPage() {
         <Button variant="outline" size="lg" aria-pressed={typing} disabled={!liveCall} onClick={() => setTyping(!typing)}><Keyboard /> Type</Button>
         <Button variant="outline" size="icon-lg" aria-label="Smaller text" onClick={() => setTextScale(scale - 0.1)}><AArrowDown /></Button>
         <Button variant="outline" size="icon-lg" aria-label="Bigger text" onClick={() => setTextScale(scale + 0.1)}><AArrowUp /></Button>
-        {liveCall ? <VoicePicker value={voice} onChange={setVoice} /> : null}
+        {liveCall ? <VoicePicker value={voice || character?.voice_id || session?.grant.voice_id || ""} onChange={setVoice} /> : null}
         <Button variant="destructive" size="lg" disabled={!liveCall} onClick={call.hangUp} data-testid="end-button"><PhoneOff /> End</Button>
       </footer>
 
@@ -129,9 +134,9 @@ export function VoiceCallPage() {
       ) : null}
 
       {call.ended ? (
-        <CallEnded who="Mirli" info={call.ended}
+        <CallEnded who={who} photo={character ? calls.url(character.portrait_url) : null} info={call.ended}
           onAgain={() => { call.reset(); setReply(""); setYou({ text: "", live: false }); }}
-          onHome={() => nav("/")} />
+          onHome={() => nav("/calls")} />
       ) : null}
     </div>
   );

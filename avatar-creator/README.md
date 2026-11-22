@@ -72,3 +72,18 @@ python avatar-creator/build_avatar.py avatar-creator/character.example.json --se
 | wan_2.1_vae | vae | 0.25 | Apache-2.0 |
 
 With an uploaded portrait, Z-Image can be dropped (−20.6 GB).
+
+## Proof render on RunPod (2026-11-21)
+
+`proof/` is the example spec rendered end to end on one RunPod L40S (ComfyUI 0.46.0), with no changes to the
+scripts. The pod was ready 260 s after creation, with all weights pulled.
+
+- Portrait: 5.8 s. Pose stills: about 6 s each.
+- Clips: about 100 s per 3 s clip, about 156 s per 4 s clip (4-step).
+- Seams: 1.7–4.5/255 at both ends, all passing.
+- Identity and set hold across everything (`stills_sheet.jpg`, `clips_sheet.jpg`).
+
+Known faults:
+- The `lean` edit moves the camera.
+- The cup pops into `talk_to_cup`.
+- `think` reads as a yawn.

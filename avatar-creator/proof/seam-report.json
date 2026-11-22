@@ -1,0 +1,72 @@
+{
+ "talk_to_lean": {
+  "frames": 49,
+  "firstMAD": 1.92,
+  "lastMAD": 3.31,
+  "seamOK": true,
+  "seconds": 106.0
+ },
+ "lean_to_talk": {
+  "frames": 49,
+  "firstMAD": 1.84,
+  "lastMAD": 3.77,
+  "seamOK": true,
+  "seconds": 100.7
+ },
+ "talk_to_rest": {
+  "frames": 49,
+  "firstMAD": 1.98,
+  "lastMAD": 3.9,
+  "seamOK": true,
+  "seconds": 103.9
+ },
+ "rest_to_talk": {
+  "frames": 49,
+  "firstMAD": 1.86,
+  "lastMAD": 4.49,
+  "seamOK": true,
+  "seconds": 100.2
+ },
+ "talk_to_cup": {
+  "frames": 49,
+  "firstMAD": 1.94,
+  "lastMAD": 3.25,
+  "seamOK": true,
+  "seconds": 100.9
+ },
+ "cup_to_talk": {
+  "frames": 49,
+  "firstMAD": 1.74,
+  "lastMAD": 3.67,
+  "seamOK": true,
+  "seconds": 102.1
+ },
+ "rest_idle": {
+  "frames": 49,
+  "firstMAD": 1.77,
+  "lastMAD": 3.64,
+  "seamOK": true,
+  "seconds": 100.1
+ },
+ "laugh": {
+  "frames": 65,
+  "firstMAD": 1.88,
+  "lastMAD": 3.2,
+  "seamOK": true,
+  "seconds": 157.1
+ },
+ "think": {
+  "frames": 65,
+  "firstMAD": 1.89,
+  "lastMAD": 3.37,
+  "seamOK": true,
+  "seconds": 155.2
+ },
+ "sip": {
+  "frames": 49,
+  "firstMAD": 1.7,
+  "lastMAD": 2.96,
+  "seamOK": true,
+  "seconds": 102.9
+ }
+}

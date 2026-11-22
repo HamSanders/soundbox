@@ -1,0 +1,145 @@
+{
+ "version": 1,
+ "id": "barista",
+ "name": "Rosa the barista",
+ "talkPose": "talk",
+ "restPose": "rest",
+ "startPose": "talk",
+ "width": 896,
+ "height": 1120,
+ "fps": 16,
+ "poses": {
+  "talk": {
+   "label": "Facing camera (master; live lip-sync pose)",
+   "still": "stills/talk.png",
+   "faceBox": {
+    "x": 192,
+    "y": 96,
+    "size": 512
+   }
+  },
+  "lean": {
+   "label": "Leaning in on the counter",
+   "still": "stills/lean.png"
+  },
+  "rest": {
+   "label": "Wiping the counter",
+   "still": "stills/rest.png"
+  },
+  "cup": {
+   "label": "Holding a coffee cup",
+   "still": "stills/cup.png"
+  }
+ },
+ "clips": [
+  {
+   "id": "talk_to_lean",
+   "from": "talk",
+   "to": "lean",
+   "kind": "transition",
+   "src": "clips/talk_to_lean.mp4",
+   "durationS": 3,
+   "weight": 1,
+   "prompt": "she leans forward onto the counter to listen"
+  },
+  {
+   "id": "lean_to_talk",
+   "from": "lean",
+   "to": "talk",
+   "kind": "transition",
+   "src": "clips/lean_to_talk.mp4",
+   "durationS": 3,
+   "weight": 1,
+   "prompt": "she straightens up and smiles at the camera"
+  },
+  {
+   "id": "talk_to_rest",
+   "from": "talk",
+   "to": "rest",
+   "kind": "transition",
+   "src": "clips/talk_to_rest.mp4",
+   "durationS": 3,
+   "weight": 1,
+   "prompt": "she picks up a cloth and starts wiping the counter"
+  },
+  {
+   "id": "rest_to_talk",
+   "from": "rest",
+   "to": "talk",
+   "kind": "transition",
+   "src": "clips/rest_to_talk.mp4",
+   "durationS": 3,
+   "weight": 1,
+   "prompt": "she puts the cloth down and looks back at the camera"
+  },
+  {
+   "id": "talk_to_cup",
+   "from": "talk",
+   "to": "cup",
+   "kind": "transition",
+   "src": "clips/talk_to_cup.mp4",
+   "durationS": 3,
+   "weight": 1,
+   "prompt": "she picks up a coffee cup with both hands"
+  },
+  {
+   "id": "cup_to_talk",
+   "from": "cup",
+   "to": "talk",
+   "kind": "transition",
+   "src": "clips/cup_to_talk.mp4",
+   "durationS": 3,
+   "weight": 1,
+   "prompt": "she sets the cup down and looks at the camera"
+  },
+  {
+   "id": "rest_idle",
+   "from": "rest",
+   "to": "rest",
+   "kind": "idle",
+   "src": "clips/rest_idle.mp4",
+   "durationS": 3,
+   "weight": 1,
+   "prompt": "she keeps wiping the counter in slow circles"
+  },
+  {
+   "id": "laugh",
+   "from": "talk",
+   "to": "talk",
+   "kind": "reaction",
+   "src": "clips/laugh.mp4",
+   "durationS": 4,
+   "weight": 1,
+   "tags": [
+    "laugh"
+   ],
+   "prompt": "she laughs warmly, shoulders shaking, then settles back facing the camera"
+  },
+  {
+   "id": "think",
+   "from": "talk",
+   "to": "talk",
+   "kind": "reaction",
+   "src": "clips/think.mp4",
+   "durationS": 4,
+   "weight": 1,
+   "tags": [
+    "thinking"
+   ],
+   "prompt": "she looks up thoughtfully, taps her chin, then looks back at the camera"
+  },
+  {
+   "id": "sip",
+   "from": "cup",
+   "to": "cup",
+   "kind": "reaction",
+   "src": "clips/sip.mp4",
+   "durationS": 3,
+   "weight": 1,
+   "tags": [
+    "sip"
+   ],
+   "prompt": "she takes a slow sip from the cup"
+  }
+ ]
+}

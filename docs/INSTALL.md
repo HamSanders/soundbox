@@ -343,7 +343,7 @@ or `-e MIRLI_API_TOKEN=...` for Docker. The token must be at least 16
 characters; a shorter one stops the server at startup. The banner shows
 `Access token -> required` when one is in force.
 
-With a token set, every request to `/api/*`, `/mcp`, `/files/*` and
+With a token set, every request to `/api/*`, `/v1/*`, `/mcp`, `/files/*` and
 `/artwork/*` needs it, or the server answers **401**:
 
 - **The web UI** shows a sign-in screen. Paste the token once and the browser
@@ -599,7 +599,7 @@ name, as the table shows.
 | `MIRLI_LLAMA_SERVER_BACKEND` | server | Same, for the `llama-server` download. |
 | `MIRLI_SD_SERVER_BACKEND` | server | Same, for the `sd-server` download. |
 | `MIRLI_ALLOW_UNVERIFIED_BINARIES` | server | `1` installs an engine archive that no published SHA-256 covers. Off by default; a checksum *mismatch* is refused regardless. |
-| `MIRLI_API_TOKEN` | server, stdio MCP bridge, CLI | An access token of at least 16 characters. Set on the server, every `/api/*`, `/mcp`, `/files` and `/artwork` request needs it as `Authorization: Bearer <token>` or a session cookie from the UI's sign-in screen; `GET /api/health` stays open. Set for the stdio bridge, `soundbox ps` or `soundbox enhance`, it is sent to the server. See [Access token](#access-token). |
+| `MIRLI_API_TOKEN` | server, stdio MCP bridge, CLI | An access token of at least 16 characters. Set on the server, every `/api/*`, `/v1/*`, `/mcp`, `/files` and `/artwork` request needs it as `Authorization: Bearer <token>` or a session cookie from the UI's sign-in screen; `GET /api/health` stays open. Set for the stdio bridge, `soundbox ps` or `soundbox enhance`, it is sent to the server. See [Access token](#access-token). |
 | `MIRLI_ALLOWED_HOSTS` | server, Vite | Comma-separated `host` (any port) or `host:port` (that port only). Adds `Host` values the server accepts (UI, `/api/*` and `/mcp`) and trusted browser origins (CORS and the MCP `Origin` check); under `npm run dev` also Vite's `server.allowedHosts`, which reads it only as `SOUNDBOX_ALLOWED_HOSTS`. See [Reverse proxy or another machine](#reverse-proxy-or-another-machine) and [SECURITY.md](https://github.com/HamSanders/soundbox/blob/main/SECURITY.md). |
 | `SOUNDBOX_DEV_HOST` | `npm run dev`, Vite | Address the Vite dev server listens on (`0.0.0.0`, a LAN IP). Default localhost. The server stays on `127.0.0.1`. No authentication, so open it up only on a network you trust or behind a proxy that has some. |
 | `MIRLI_SANDBOXED` | server | `1` for a server whose users don't own the machine: nothing in the UI touches the host. See [Running Mirli for someone else](#running-mirli-for-someone-else). |

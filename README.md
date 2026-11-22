@@ -34,7 +34,7 @@ Environment variables are `MIRLI_*`, and the old `SOUNDBOX_*` names still work
 | Make | Arrange | Connect |
 |---|---|---|
 | Sound effects and ambience from a description | A multi-track timeline with effects, MIDI and mixdown | An MCP server with 24 tools for Claude Code and Cursor |
-| Instrumentals, or songs from a lyric sheet | Cast saved voices onto the lines of a script | A local HTTP API on port 17494 |
+| Instrumentals, or songs from a lyric sheet | Cast saved voices onto the lines of a script | A local HTTP API on port 17494, with OpenAI-compatible speech routes |
 | Speech, voice cloning and voice conversion | Extend, cover, repaint, split into stems | Three agent skills, including a full sound pass |
 
 Four models are verified end to end and on by default; 61 more can be switched
@@ -229,6 +229,11 @@ curl -X POST http://127.0.0.1:17494/api/generate \
 
 Long jobs return an id with a server-sent event stream. Every route is in
 [docs/API.md](docs/API.md).
+
+Anything with an OpenAI base URL setting can use Mirli for speech: point it at
+`http://127.0.0.1:17494/v1` for `/v1/audio/speech` and
+`/v1/audio/transcriptions`. See
+[OpenAI-compatible routes](docs/API.md#openai-compatible-routes).
 
 </details>
 

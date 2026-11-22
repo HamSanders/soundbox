@@ -47,6 +47,11 @@
       }
       body[data-stage="error"] .mark { color: var(--muted); }
       .mark .drop { stroke: var(--signal); stroke-width: 9; stroke-linecap: round; }
+      /* The moving ground (ambient-field.js, the same one the app draws), so
+         the launch hands over to the app without the background changing.
+         Where WebGL is missing the glow below stands in for it. */
+      #ambient { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+      body.ambient::before { display: none; }
       /* A slow ambient glow from the window's edges while we work. It fades
          once the app is ready, and holds still for reduced motion. */
       body::before {
@@ -87,6 +92,7 @@
     </style>
   </head>
   <body data-stage="starting">
+    <canvas id="ambient" aria-hidden="true"></canvas>
     <div class="wrap">
       <div class="mark" aria-hidden="true">
         <svg viewBox="-4 -4 230 135">
@@ -100,6 +106,27 @@
     </div>
     <p class="tip" id="tip"></p>
 
+    <script type="module">
+      // The ground: the same field and colours as the app (app/src/index.css,
+      // --ambient-*). There is no audio here; it only follows the pointer.
+      import { createAmbientField } from "./ambient-field.js";
+      const darkScheme = matchMedia("(prefers-color-scheme: dark)");
+      const ambientPalette = () => darkScheme.matches
+        ? { bg: "#181817", c1: "#f39a1a", c2: "#8a3f16", c3: "#24323f" }
+        : { bg: "#f1ece0", c1: "#f5b23a", c2: "#e2a184", c3: "#b8c3c6" };
+      const ambientStrength = () => (darkScheme.matches ? 0.34 : 0.42);
+      const field = createAmbientField(document.getElementById("ambient"), {
+        palette: ambientPalette(),
+        strength: ambientStrength(),
+      });
+      if (field) {
+        document.body.classList.add("ambient");
+        darkScheme.addEventListener("change", () => {
+          field.setPalette(ambientPalette());
+          field.setStrength(ambientStrength());
+        });
+      }
+    </script>
     <script type="module">
       const { listen } = window.__TAURI__.event;
       const statusEl = document.getElementById("status");

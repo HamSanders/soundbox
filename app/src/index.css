@@ -149,6 +149,14 @@
     --sidebar-accent-foreground: #14130f;
     --sidebar-border: #d9d2c0;
     --sidebar-ring: #14130f;
+    /* The moving ground behind the panels (components/ambient-background).
+       `ground` matches --sidebar so a browser without WebGL sees no change;
+       1 is the bright pool (the beak), 2 and 3 are the warm and cool ones. */
+    --ambient-ground: #e9e3d4;
+    --ambient-1: #f5b23a;
+    --ambient-2: #e2a184;
+    --ambient-3: #b8c3c6;
+    --ambient-strength: 0.42;
 }
 
 .dark {
@@ -195,6 +203,11 @@
     --sidebar-accent-foreground: #f1ece0;
     --sidebar-border: #2b2b28;
     --sidebar-ring: #f1ece0;
+    --ambient-ground: #141413;
+    --ambient-1: #f39a1a;
+    --ambient-2: #8a3f16;
+    --ambient-3: #24323f;
+    --ambient-strength: 0.34;
 }
 
 @layer base {

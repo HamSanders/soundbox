@@ -1,3 +1,5 @@
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 /**
  * Calls: real-time voice and video calls with characters.
  *
@@ -63,6 +65,15 @@ export function registerCalls(app: FastifyInstance, svc: MirliService, deps: Cal
   const hb = deps.heartbeatS ?? Number(process.env.MIRLI_CALL_HEARTBEAT_S || 10);
   const registry = deps.registry ?? new CallRegistry({ heartbeatTimeoutS: hb * 3 });
   const packs = deps.packs ?? new PackRenderer(store, packSettingsFromEnv());
+  // Santa's animated pack ships in the image at MIRLI_SANTA_PACK (or the repo's santa-clips/ in a checkout):
+  // import it once, so every new workspace gets the full clip flow, not just his portrait.
+  void (async () => {
+    const dir = process.env.MIRLI_SANTA_PACK || resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "santa-clips");
+    try {
+      const santa = await store.get("santa");
+      if (santa.pack.status !== "ready" && existsSync(join(dir, "manifest.json"))) await packs.importFolder("santa", dir);
+    } catch (e) { console.error("santa pack import", e); }
+  })();
   const cloud = new CloudPackRenderer();
   const ws = (u: string) => u.replace(/^http/, "ws");
   // Local GPU or Mirli Cloud: the app's client and these routes are the same either way.

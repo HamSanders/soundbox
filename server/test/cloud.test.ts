@@ -68,6 +68,15 @@ const CHANGER: CloudModelInfo = {
   reference: { min_s: 3, max_s: 40, required: true },
 };
 
+const STEMS: CloudModelInfo = {
+  ...SFX,
+  id: "cloud:test-stems",
+  name: "Test Stems",
+  task: "separate",
+  category: "stems",
+  price: { unit: "minute", credits_per_unit: 2, min_credits: 2 },
+};
+
 /** Enough of the gateway to drive the client: state in closures, fetch out. */
 function fakeGateway() {
   const g = {
@@ -84,6 +93,8 @@ function fakeGateway() {
     revoked: false,
     uploads: [] as { type: string | null; seconds: number }[],
     catalog: [SFX] as CloudModelInfo[],
+    /** Stem names the next job returns; empty: one plain output. */
+    stems: [] as string[],
     modelReads: 0,
   };
   const json = (body: unknown, status = 200) => Response.json(body, { status });
@@ -140,7 +151,12 @@ function fakeGateway() {
       message: null,
       quoted: g.quote,
       charged: state === "succeeded" ? g.quote : null,
-      outputs: state === "succeeded" ? [{ url: "https://cdn.test/out.wav", mime: "audio/wav", stem: null }] : [],
+      outputs:
+        state !== "succeeded"
+          ? []
+          : g.stems.length
+            ? g.stems.map((stem) => ({ url: `https://cdn.test/${stem}.wav`, mime: "audio/wav", stem }))
+            : [{ url: "https://cdn.test/out.wav", mime: "audio/wav", stem: null }],
       error: null,
       ...extra,
     });
@@ -388,5 +404,16 @@ describe("Mirli Cloud voices", () => {
       consent: "own_voice_or_permission",
       params: { reference_upload: expect.any(String), source_upload: expect.any(String), voice_label: "My voice" },
     });
+  });
+
+  it("splits stems: the recording goes up, then a separate job, and every stem comes back by name", async () => {
+    const { g, cloud } = await signedIn();
+    g.stems = ["vocals", "instrumental"];
+    const model = new CloudModel(STEMS, cloud, async () => {});
+    const stems = await model.separate(await clip(30));
+    expect(stems.map((s) => s.stemName)).toEqual(["vocals", "instrumental"]);
+    expect(g.uploads.map((u) => Math.round(u.seconds))).toEqual([30]);
+    expect(g.created[0]!.body).toMatchObject({ task: "separate", params: { source_upload: expect.any(String) } });
+    expect(g.created[0]!.body.consent).toBeUndefined();
   });
 });

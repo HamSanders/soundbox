@@ -48,6 +48,11 @@ export const cloudModel = z.object({
   reference: z.object({ min_s: z.number().nonnegative(), max_s: z.number().positive(), required: z.boolean() }).nullish(),
   /** Languages `params.language` may name, when the model takes one. */
   languages: z.array(z.string()).optional(),
+  /**
+   * The model reads a written description of the voice (voice design): the
+   * app sends it as `params.prompt` on a "speak" job. Unset: no description.
+   */
+  voice_description: z.boolean().optional(),
 });
 export type CloudModel = z.infer<typeof cloudModel>;
 

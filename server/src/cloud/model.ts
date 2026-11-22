@@ -87,19 +87,34 @@ export class CloudModel implements GenerationModel {
       hf_repo: null,
       gated: false,
       family: "cloud",
-      params: m.languages?.length
-        ? [
-            {
-              name: "language",
-              type: "choice",
-              label: "Language",
-              info: "The language of the text.",
-              group: "voice",
-              default: m.languages[0]!,
-              choices: [...m.languages],
-            },
-          ]
-        : [],
+      params: [
+        ...(m.languages?.length
+          ? [
+              {
+                name: "language",
+                type: "choice" as const,
+                label: "Language",
+                info: "The language of the text.",
+                group: "voice" as const,
+                default: m.languages[0]!,
+                choices: [...m.languages],
+              },
+            ]
+          : []),
+        ...(m.voice_description
+          ? [
+              {
+                name: "instruct",
+                type: "text" as const,
+                label: "Voice description",
+                info: "Describe the voice: age, accent, tone, pace. Empty uses the model's default voice.",
+                placeholder: "A warm adult narrator, calm and unhurried",
+                group: "voice" as const,
+                default: "",
+              },
+            ]
+          : []),
+      ],
       task: speech ? "tts" : vc ? "vc" : m.task === "separate" ? "sep" : "gen",
       voice_ids: [...m.voice_ids],
       requires_voice_reference: Boolean(m.reference?.required),
@@ -168,6 +183,16 @@ export class CloudModel implements GenerationModel {
     progress?: GenerateOptions["progress"],
     clips?: { reference?: string | null; source?: string | null; voice?: VoiceRefInfo | null },
   ): Promise<RenderedAudio> {
+    return (await this.runAll(task, params, progress, clips))[0]!.audio;
+  }
+
+  /** One cloud job, every output it sent (a stem split sends one per stem). */
+  private async runAll(
+    task: Task,
+    params: JobParams,
+    progress?: GenerateOptions["progress"],
+    clips?: { reference?: string | null; source?: string | null; voice?: VoiceRefInfo | null },
+  ): Promise<{ stem: string | null; audio: RenderedAudio }[]> {
     const client = this.ctx.client();
     if (!client) throw new ModelError(`Sign in to Mirli Cloud in Settings to use ${this.info.name}.`);
     const caps = this.ctx.caps();
@@ -241,14 +266,16 @@ export class CloudModel implements GenerationModel {
       if (job.state !== "succeeded") {
         throw new ModelError(job.error ?? `The Mirli Cloud render ${job.state}. Nothing was charged.`);
       }
-      const out = job.outputs[0];
-      if (!out) throw new ModelError("Mirli Cloud finished but sent no audio. Nothing was charged for an empty result.");
-      progress?.(0.93, "Downloading the result");
-      const file = await client.download(out.url);
-      const audio = await decodeAudio(file.bytes, out.mime ?? file.contentType, 24_000);
+      if (!job.outputs.length) throw new ModelError("Mirli Cloud finished but sent no audio. Nothing was charged for an empty result.");
+      progress?.(0.93, job.outputs.length > 1 ? `Downloading ${job.outputs.length} files` : "Downloading the result");
+      const results: { stem: string | null; audio: RenderedAudio }[] = [];
+      for (const out of job.outputs) {
+        const file = await client.download(out.url);
+        results.push({ stem: out.stem ?? null, audio: await decodeAudio(file.bytes, out.mime ?? file.contentType, 24_000) });
+      }
       this.error = null;
       this.ctx.onSpend?.();
-      return audio;
+      return results;
     } catch (e) {
       if (e instanceof CloudError) {
         if (e.code === "unauthorized") throw new ModelError("Mirli Cloud signed this device out. Sign in again in Settings.");
@@ -286,9 +313,16 @@ export class CloudModel implements GenerationModel {
     }
     const voice = ref ? null : options.voiceId || this.info.voice_ids[0] || null;
     const language = options.requestOptions?.language ?? options.loadOptions?.language ?? null;
+    const description = this.info.voice_description ? options.requestOptions?.instruct?.trim().slice(0, 500) || null : null;
     return this.run(
       "speak",
-      { text, ...(voice ? { voice } : {}), ...(language ? { language } : {}), ...(this.info.supports.seed && options.seed ? { seed: options.seed } : {}) },
+      {
+        text,
+        ...(voice ? { voice } : {}),
+        ...(language ? { language } : {}),
+        ...(description ? { prompt: description } : {}),
+        ...(this.info.supports.seed && options.seed ? { seed: options.seed } : {}),
+      },
       options.progress,
       { reference: ref, voice: options.voiceRef ?? null },
     );
@@ -307,7 +341,12 @@ export class CloudModel implements GenerationModel {
     });
   }
 
-  async separate(): Promise<{ stemName: string; audio: RenderedAudio }[]> {
-    throw new ModelError(`${this.info.name} cannot split stems yet.`);
+  async separate(
+    sourceWavPath: string,
+    options: { progress?: GenerateOptions["progress"] } = {},
+  ): Promise<{ stemName: string; audio: RenderedAudio }[]> {
+    if (this.info.task !== "separate") throw new ModelError(`${this.info.name} cannot split stems.`);
+    const outs = await this.runAll("separate", {}, options.progress, { source: sourceWavPath });
+    return outs.map((o, i) => ({ stemName: o.stem ?? `stem${i + 1}`, audio: o.audio }));
   }
 }

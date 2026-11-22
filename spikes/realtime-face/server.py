@@ -76,6 +76,8 @@ ap.add_argument("--no-idle", action="store_true", help="do not generate silent '
 ap.add_argument("--max-lead", type=float, default=3.0, help="stop generating when this many seconds are already queued for playback")
 ap.add_argument("--compile", action="store_true")
 ap.add_argument("--jpeg-quality", type=int, default=int(os.environ.get("FACE_JPEG", 92)))
+ap.add_argument("--out-size", type=int, default=int(os.environ.get("FACE_OUT_SIZE", 0)),
+                help="downscale frames to this many pixels square before JPEG (0 = as generated); bandwidth for remote callers")
 ap.add_argument("--log", default=None, help="append one JSON line per chunk and per browser report")
 args = ap.parse_args()
 
@@ -122,6 +124,7 @@ in_utterance = False
 flush_gen = 0                           # bumped by /flush; a step started before the bump is discarded
 play_head = 0.0                         # wall-clock time at which everything sent so far has finished playing
 clients = set()
+engine_ready = False
 loop = None
 log_f = open(args.log, "a") if args.log else None
 stats = {"chunks": 0, "speech_chunks": 0, "idle_chunks": 0, "step_ms": [], "first_frame_ms": [], "vram_mib": [],
@@ -204,6 +207,8 @@ def engine_thread():
     for _ in range(2):  # warm-up: the first step is ~1.5 s slower (cuDNN autotune, allocator)
         eng.step(np.zeros(E.CHUNK_SAMPLES, dtype=np.float32))
     eng.reset()
+    global engine_ready
+    engine_ready = True  # GET /stats reports it; the call pod's /readyz waits on it
     print(f"engine: {ENGINE}", flush=True)
     print(f"ready: model loaded in {eng.load_s:.1f}s, http://127.0.0.1:{args.http_port}/  pcm tcp :{args.pcm_port} "
           f"({args.input_rate} Hz s16le mono)", flush=True)
@@ -242,6 +247,8 @@ def engine_thread():
             # that belong to the same chunk, starting at frame index `start_i`.
             global hold, play_head
             nonlocal chunk
+            if args.out_size:
+                frames = [cv2.resize(f, (args.out_size, args.out_size), interpolation=cv2.INTER_AREA) for f in frames]
             jpegs = [cv2.imencode(".jpg", cv2.cvtColor(f, cv2.COLOR_RGB2BGR), enc)[1].tobytes() for f in frames]
             if gen != flush_gen:
                 return False  # barge-in happened while this was generating
@@ -353,7 +360,7 @@ async def stats_handler(_request):
     s = stats["step_ms"]
     v = stats["vram_mib"]
     return web.json_response({
-        "engine": ENGINE, "chunks": stats["chunks"], "speech_chunks": stats["speech_chunks"], "idle_chunks": stats["idle_chunks"],
+        "engine": ENGINE, "ready": engine_ready, "chunks": stats["chunks"], "speech_chunks": stats["speech_chunks"], "idle_chunks": stats["idle_chunks"],
         "step_ms_median": float(np.median(s)) if s else None,
         "gen_fps": E.CHUNK_FRAMES / (float(np.median(s)) / 1000) if s else None,
         "audio_to_send_ms": stats["first_frame_ms"][-20:],

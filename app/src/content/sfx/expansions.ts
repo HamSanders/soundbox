@@ -17,6 +17,13 @@
  * asked to fill four seconds comes back with three and a half seconds of the
  * model inventing room tone, and an ambience bed asked for two seconds comes
  * back unusable. Set it to the length the sound actually is.
+ *
+ * A fifth argument pins the seed. The few-step SFX model answers a synth
+ * prompt with either a clean tone, a low hum or a wash of hiss, and which one
+ * depends on the seed; the pinned ones were picked from 8-24 takes with
+ * scripts/check-sfx-noise.py and a look at the spectrogram. Prompts asking
+ * for a "run of N notes" come out clean far more often than ones asking for a
+ * single "ping" or "chirp", which is why several of these are worded that way.
  */
 
 import type { SfxSample } from "./types";
@@ -24,9 +31,10 @@ import type { SfxSample } from "./types";
 /** Every clip in this pass renders on the current local SFX model. */
 const MODEL = "audiocpp-stable-audio-3-sfx";
 
-function s(slug: string, title: string, prompt: string, durationS: number): SfxSample {
-  return { slug, title, prompt, source: "model", model: MODEL, durationS };
+function s(slug: string, title: string, prompt: string, durationS: number, seed?: number): SfxSample {
+  return { slug, title, prompt, source: "model", model: MODEL, durationS, ...(seed !== undefined && { seed }) };
 }
+
 
 export const EXTRA_SAMPLES: Record<string, SfxSample[]> = {
   /* ------------------------------------------------------------- Games */
@@ -41,16 +49,16 @@ export const EXTRA_SAMPLES: Record<string, SfxSample[]> = {
     s("8bit-footstep", "Pixel footstep", "8-bit footstep tick, very short filtered noise burst, low pitched, 60 ms, dry", 1),
     s("8bit-boss-roar", "Boss roar", "8-bit boss roar, low square wave growl with noise-channel rasp layered on top, slow downward pitch bend, dry", 2),
     s("8bit-heartbeat-low-hp", "Low HP heartbeat", "8-bit low health warning, repeating two-note low square wave pulse like a heartbeat, urgent, dry, loopable", 3),
-    s("8bit-save-chime", "Save confirmed", "8-bit save confirmed chime, three ascending pure square wave tones, clean and bright, dry", 1.5),
+    s("8bit-save-chime", "Save confirmed", "8-bit save confirmed jingle, rapid ascending square wave run of six notes, bright, dry", 2, 889280131),
   ],
 
   "retro-game": [
     s("retro-pause", "Pause toggle", "retro arcade pause sound, single descending two-tone chirp, pulse wave, dry", 1),
     s("retro-extra-life", "Extra life", "retro arcade extra life jingle, rapid ascending square wave run of six notes, bright, dry", 2),
-    s("retro-insert-coin", "Insert coin", "arcade cabinet coin insert, mechanical coin drop into metal slot followed by a bright electronic accept chirp", 2),
+    s("retro-insert-coin", "Insert coin", "retro arcade insert coin sound, rapid ascending square wave run of four notes, bright, dry", 1.5, 424660679),
     s("retro-high-score", "High score entry", "retro arcade high score entry sound, cheerful looping four-note pulse wave motif, bright major key, dry", 3),
     s("retro-enemy-spawn", "Enemy spawn", "retro arcade enemy spawn alert, short descending noise sweep with a square wave tail, dry", 1.5),
-    s("retro-shield-hit", "Shield hit", "retro arcade shield deflect, short metallic square wave ping with a fast pitch bend upward, dry", 1),
+    s("retro-shield-hit", "Shield hit", "retro arcade shield deflect, rapid ascending square wave run of three notes, bright, dry", 1, 228152900),
     s("retro-warp-zone", "Warp zone", "retro arcade warp zone, long rising pitch sweep of stacked pulse waves resolving into a bright sustained tone, dry", 3),
     s("retro-attract-loop", "Attract mode loop", "retro arcade attract mode background loop, bouncy square wave melody over a simple pulse bass, upbeat major key, 140 BPM, seamless loop", 10),
     s("retro-continue-countdown", "Continue countdown", "retro arcade continue countdown, single urgent low square wave beep repeated at one second intervals, dry", 5),
@@ -76,10 +84,10 @@ export const EXTRA_SAMPLES: Record<string, SfxSample[]> = {
     s("coin-single-spin", "Coin spin to rest", "single metal coin spinning on a wooden table, accelerating rattle as it settles flat, close mic", 4),
     s("coin-slot-machine-payout", "Slot payout", "casino slot machine payout, cascade of coins pouring into a metal tray, dense and continuous", 5),
     s("coin-stack-clink", "Stacking coins", "stacking metal coins one at a time on a hard wooden surface, six distinct clinks, close mic, dry", 3),
-    s("coin-magic-pickup", "Magic coin pickup", "magical coin pickup, bright bell-like ping with a shimmering upward tail, dry with a short sparkle", 1.5),
+    s("coin-magic-pickup", "Magic coin pickup", "magical coin pickup, bright bell-like ping with a shimmering upward tail, dry with a short sparkle", 1.5, 1435780862),
     s("coin-heavy-gold-thud", "Heavy gold thud", "heavy gold coin dropped onto a stone slab, dull metallic thud with a short ring, cellar reverb", 2),
     s("coin-rapid-collect-run", "Rapid collect run", "rapid sequence of twelve bright coin pickup chimes ascending slightly in pitch, arcade style, dry", 3),
-    s("coin-arcade-token-eat", "Token accepted", "arcade cabinet swallowing a token, mechanical clunk followed by a short electronic accept beep", 1.5),
+    s("coin-arcade-token-eat", "Token accepted", "arcade token accepted, rapid two-note ascending square wave beep, bright, dry", 1.5, 974091809),
     s("coin-toss-catch", "Coin toss and catch", "metal coin flipped into the air, spinning ring, then caught in a palm with a soft slap", 2),
   ],
 
@@ -378,7 +386,7 @@ export const EXTRA_SAMPLES: Record<string, SfxSample[]> = {
   ui: [
     s("ui-swipe-tick", "Swipe tick", "very short UI swipe tick, thin filtered click with a tiny airy tail, 60 ms, completely dry", 1),
     s("ui-keyboard-tap", "Keyboard tap", "single soft mechanical keyboard key tap, muted thock, close mic, completely dry", 1),
-    s("ui-success-chime-warm", "Success chime", "warm two-note success chime, clean sine bells rising a fifth, short sustain, dry", 1.5),
+    s("ui-success-chime-warm", "Success chime", "warm two-note success chime, clean sine bells rising a fifth, short sustain, dry", 1.5, 1268007979),
     s("ui-delete-whoosh", "Delete", "UI delete sound, short descending filtered sweep into a soft crumple, dry and synthetic", 1.5),
     s("ui-loading-pulse-loop", "Loading pulse", "UI loading indicator, soft repeating pulse tone every half second, clean and unobtrusive, seamless loop", 4),
     s("ui-scan-progress-sweep", "Progress sweep", "UI progress sweep, thin rising filtered tone completing with a clean confirming tick, dry", 2),
@@ -389,7 +397,7 @@ export const EXTRA_SAMPLES: Record<string, SfxSample[]> = {
   ],
 
   notification: [
-    s("notif-ios-style-ping", "Bright ping", "single bright notification ping, clean bell tone with a short shimmering decay, dry", 1.5),
+    s("notif-ios-style-ping", "Bright ping", "single bright notification ping, clean bell tone with a short shimmering decay, dry", 1.5, 231752683),
     s("notif-marimba-triple", "Marimba triple", "three-note marimba notification, warm wooden mallet tones ascending, close and dry", 2),
     s("notif-phone-vibrate", "Phone vibrate", "phone vibrating on a wooden desk, buzzing rattle in two short bursts, close mic", 3),
     s("notif-doorbell-app", "App doorbell", "digital doorbell notification, friendly descending two-tone chime with a soft synthetic pad, clean", 2),

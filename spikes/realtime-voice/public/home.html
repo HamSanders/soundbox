@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mirli Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800&family=Courier+Prime:wght@400;700&family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap">
+<style>
+/* A quiet product page: small type, a spec sheet, two ways in. Mirli's
+   palette and faces; the yellow dot only marks what is live. */
+:root {
+  --paper: #181817; --sheet: #20201e; --ink: #f1ece0; --pencil: #a9a797; --rule: #33332f; --rule-strong: #57564f; --well: #121211;
+  --beak: #f2a40c; --ok: #6fcf9f;
+  --title: "Big Shoulders Display", "Arial Narrow", Inter, sans-serif;
+  --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Courier Prime", "Courier New", ui-monospace, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --paper: #f1ece0; --sheet: #faf6ec; --ink: #14130f; --pencil: #66625a; --rule: #d9d2c0; --rule-strong: #b9b2a2; --well: #e7e0d0; --ok: #1f6b4a; color-scheme: light; } }
+:root[data-theme="light"] { --paper: #f1ece0; --sheet: #faf6ec; --ink: #14130f; --pencil: #66625a; --rule: #d9d2c0; --rule-strong: #b9b2a2; --well: #e7e0d0; --ok: #1f6b4a; color-scheme: light; }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+.mono { font-family: var(--mono); }
+.dim { color: var(--pencil); }
+.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--beak); }
+
+header { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--paper) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--rule); }
+header .wrap { height: 56px; display: flex; align-items: center; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 9px; text-decoration: none; }
+.brand svg { width: 28px; height: auto; }
+.brand b { font: 800 19px/1 var(--title); letter-spacing: .01em; }
+.brand span { font: 12.5px var(--mono); color: var(--pencil); }
+header nav { margin-left: auto; display: flex; gap: 4px; }
+header nav a { text-decoration: none; font-size: 14px; color: var(--pencil); padding: 6px 10px; border-radius: 8px; }
+header nav a:hover { color: var(--ink); background: var(--sheet); }
+@media (max-width: 560px) { header nav a.hide-sm { display: none; } }
+
+/* Hero: a sentence and two buttons, beside a live-looking call card. */
+.hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 48px; align-items: center; padding-block: 72px 56px; }
+@media (max-width: 860px) { .hero { grid-template-columns: minmax(0, 1fr); gap: 36px; padding-block: 40px 32px; } }
+.status { display: inline-flex; align-items: center; gap: 8px; font: 12.5px var(--mono); color: var(--pencil); border: 1px solid var(--rule); border-radius: 999px; padding: 4px 11px; }
+.status i { width: 7px; height: 7px; border-radius: 50%; background: var(--rule-strong); }
+.status.up i { background: var(--ok); }
+h1 { margin: 18px 0 14px; font: 600 clamp(30px, 4.4vw, 46px)/1.12 var(--sans); letter-spacing: -0.022em; text-wrap: balance; }
+.lede { margin: 0; max-width: 46ch; font-size: clamp(16px, 1.6vw, 18px); color: var(--pencil); }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; height: 46px; padding: 0 20px; border-radius: 10px; font-weight: 600; font-size: 15px; text-decoration: none; border: 1px solid var(--rule-strong); }
+.btn.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.btn:hover { opacity: .9; }
+.btn svg { width: 17px; height: 17px; }
+@media (max-width: 480px) { .actions .btn { flex: 1 1 100%; } }
+
+.callcard { border: 1px solid var(--rule); border-radius: 14px; background: var(--sheet); padding: 10px; }
+.callcard .vid { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: var(--well); }
+.callcard .vid img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity .6s; }
+.callcard .vid .tag { position: absolute; left: 10px; bottom: 10px; display: flex; align-items: center; gap: 7px; padding: 4px 10px; border-radius: 999px;
+                      background: rgb(20 19 15 / .65); color: #f1ece0; font: 12.5px var(--mono); }
+.callcard .vid .cap { position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%); width: 88%; text-align: center; }
+.callcard .vid .cap span { background: rgb(20 19 15 / .72); color: #f1ece0; padding: 3px 8px; border-radius: 4px; font-size: 14px; line-height: 1.7; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.callcard .bar { display: flex; align-items: center; gap: 10px; padding: 10px 4px 2px; font: 12.5px var(--mono); color: var(--pencil); }
+.callcard .bar .grow { flex: 1; }
+.callcard .wave { height: 22px; flex: 1; }
+
+/* Spec strip */
+.specs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.specs div { padding: 18px 16px 18px 0; }
+.specs div + div { padding-left: 16px; border-left: 1px solid var(--rule); }
+.specs b { display: block; font: 600 24px/1.1 var(--sans); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.specs span { font-size: 13px; color: var(--pencil); }
+@media (max-width: 720px) { .specs { grid-template-columns: repeat(2, minmax(0, 1fr)); } .specs div:nth-child(3) { border-left: 0; padding-left: 0; } .specs div:nth-child(n+3) { border-top: 1px solid var(--rule); } }
+
+section { padding-block: 56px 8px; }
+section h2 { margin: 0 0 6px; font: 600 20px/1.3 var(--sans); letter-spacing: -0.01em; }
+section .sub { margin: 0 0 22px; color: var(--pencil); max-width: 60ch; }
+
+/* Modes */
+.modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 720px) { .modes { grid-template-columns: minmax(0, 1fr); } }
+.mode { display: grid; gap: 10px; padding: 20px; border: 1px solid var(--rule); border-radius: 12px; background: var(--sheet); text-decoration: none; transition: border-color .15s; }
+.mode:hover { border-color: var(--rule-strong); }
+.mode .k { font: 12.5px var(--mono); color: var(--pencil); }
+.mode b { font-size: 17px; }
+.mode p { margin: 0; color: var(--pencil); font-size: 14.5px; }
+.mode .go { font-size: 14px; font-weight: 600; }
+
+/* Pipeline */
+.pipe { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0; border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; }
+.pipe li { padding: 16px 14px; border-left: 1px solid var(--rule); background: var(--sheet); min-width: 0; }
+.pipe li:first-child { border-left: 0; }
+.pipe .n { font: 12px var(--mono); color: var(--pencil); }
+.pipe b { display: block; margin: 6px 0 2px; font-size: 14.5px; }
+.pipe span { display: block; font-size: 13px; color: var(--pencil); overflow-wrap: anywhere; }
+@media (max-width: 860px) { .pipe { grid-template-columns: minmax(0, 1fr); } .pipe li { border-left: 0; border-top: 1px solid var(--rule); display: grid; grid-template-columns: 26px 110px minmax(0, 1fr); gap: 8px; align-items: baseline; } .pipe li:first-child { border-top: 0; } .pipe b { margin: 0; } }
+
+/* Faces */
+.faces { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
+.faces a { flex: none; width: 96px; text-decoration: none; display: grid; gap: 6px; }
+.faces img { width: 96px; height: 96px; border-radius: 10px; object-fit: cover; border: 1px solid var(--rule); }
+.faces span { font: 12.5px var(--mono); color: var(--pencil); }
+
+/* Stack table */
+.tbl { overflow-x: auto; border: 1px solid var(--rule); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+th { font: 400 12.5px var(--mono); color: var(--pencil); background: var(--sheet); }
+td.mono { font-size: 13px; }
+
+footer { margin-top: 64px; padding-block: 22px 40px; border-top: 1px solid var(--rule); font: 12.5px var(--mono); color: var(--pencil); display: flex; flex-wrap: wrap; gap: 8px 18px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="brand" href="./"><svg id="mark" viewBox="-8 -8 236 144" aria-hidden="true"></svg><b>MIRLI</b><span>live</span></a>
+    <nav><a class="hide-sm" href="#how">How it works</a><a class="hide-sm" href="#stack">Stack</a><a href="index.html">Open app</a></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <div>
+      <span class="status" id="status"><i></i><span id="statusTxt">checking this machine…</span></span>
+      <h1>Real-time voice and video calls with AI characters, running on your own GPU.</h1>
+      <p class="lede">Speech in, a cloned voice and a talking face out, in about half a second. Interrupt any time. Nothing leaves your machine.</p>
+      <div class="actions">
+        <a class="btn primary" href="index.html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1.5" y="3.5" width="9" height="9" rx="2"/><path d="M10.5 7l4-2.5v7l-4-2.5"/></svg>Start a video call</a>
+        <a class="btn" href="voice.html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="5.5" y="1.5" width="5" height="8.5" rx="2.5"/><path d="M3 8a5 5 0 0 0 10 0M8 13v2"/></svg>Voice only</a>
+      </div>
+    </div>
+
+    <div class="callcard" aria-hidden="true">
+      <div class="vid">
+        <img id="demoA" alt=""><img id="demoB" alt="" style="opacity:0">
+        <div class="cap"><span id="demoCap">Hey, good to see you. What are you working on?</span></div>
+        <div class="tag"><span class="dot"></span><span id="demoName">Sofia</span></div>
+      </div>
+      <div class="bar"><span id="demoClock">0:42</span><svg class="wave" viewBox="0 0 200 22" preserveAspectRatio="none"><path id="demoWave" d="M0 11 L200 11" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span>0.48 s</span></div>
+    </div>
+  </div>
+
+  <div class="specs">
+    <div><b>≈ 0.5 s</b><span>end of speech → first audio</span></div>
+    <div><b>25 fps</b><span>talking face, lip-synced</span></div>
+    <div><b>16 GB</b><span>one consumer GPU runs it</span></div>
+    <div><b>0</b><span>bytes sent to a cloud</span></div>
+  </div>
+
+  <section>
+    <h2>Two ways to call</h2>
+    <p class="sub">Same voices, same brain. Pick whether you want a face.</p>
+    <div class="modes">
+      <a class="mode" href="index.html">
+        <span class="k">video</span>
+        <b>Face to face</b>
+        <p>Pick a face or upload any photo. It talks, blinks and lip-syncs to the voice. Switch faces or the face model mid-call.</p>
+        <span class="go">Start a video call →</span>
+      </a>
+      <a class="mode" href="voice.html">
+        <span class="k">voice</span>
+        <b>Just talk</b>
+        <p>No camera, no face. A full-screen call with live captions, lighter on the GPU and a little faster to answer.</p>
+        <span class="go">Start a voice call →</span>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <h2>Faces</h2>
+    <p class="sub">Any portrait works. These are on this machine now.</p>
+    <div class="faces" id="faces"><span class="dim">Start the face server to see them.</span></div>
+  </section>
+
+  <section id="how">
+    <h2>How a turn works</h2>
+    <p class="sub">Each stage streams into the next, so the reply starts before the sentence is finished.</p>
+    <ol class="pipe">
+      <li><span class="n">01</span><b>Listen</b><span>Browser mic, 32 ms frames over a WebSocket</span></li>
+      <li><span class="n">02</span><b>Detect</b><span>Silero VAD; starts a reply after 160 ms of quiet</span></li>
+      <li><span class="n">03</span><b>Transcribe</b><span>Nemotron ASR 0.6B, ~20 ms per utterance</span></li>
+      <li><span class="n">04</span><b>Think</b><span>Qwen3 4B, a persona per face, streamed tokens</span></li>
+      <li><span class="n">05</span><b>Speak</b><span>VoxCPM2 in your cloned voice, 160 ms chunks</span></li>
+      <li><span class="n">06</span><b>Show</b><span>Talking face from one photo, audio and frames on one clock</span></li>
+    </ol>
+  </section>
+
+  <section id="stack">
+    <h2>Stack</h2>
+    <p class="sub">Measured on an RTX 5080 (16 GB) with the LLM on a second PC (GTX 1070).</p>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Stage</th><th>Model</th><th>Runs on</th><th>VRAM</th><th>Time</th></tr></thead>
+        <tbody>
+          <tr><td>Voice activity</td><td class="mono">Silero VAD</td><td>CPU</td><td>–</td><td class="mono">&lt; 1 ms / frame</td></tr>
+          <tr><td>Speech to text</td><td class="mono">Nemotron 3.5 ASR 0.6B</td><td>GPU</td><td class="mono">1.2 GB</td><td class="mono">~20 ms</td></tr>
+          <tr><td>Language model</td><td class="mono">Qwen3 4B Instruct</td><td>2nd GPU</td><td class="mono">3.7 GB</td><td class="mono">~0.3 s to first word</td></tr>
+          <tr><td>Text to speech</td><td class="mono">VoxCPM2 via audio.cpp</td><td>GPU</td><td class="mono">4.6 GB</td><td class="mono">~0.2 s to first audio</td></tr>
+          <tr><td>Face</td><td class="mono">FlashHead Lite or Ditto</td><td>GPU</td><td class="mono">4.3–6.4 GB</td><td class="mono">0.4–1 s behind voice</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <span>Mirli · a research spike, not a product yet</span>
+    <span>runs on 127.0.0.1</span>
+    <a href="index.html">video</a><a href="voice.html">voice</a>
+  </footer>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const M = "M0 107.5C1.8 106.9 6.7 105.9 11 104C15.3 102.1 21.1 99.3 26 96C30.9 92.7 36.2 88 40.5 84C44.8 80 48.1 76 51.5 72C54.9 68 58.3 63.3 61 60C63.7 56.7 65.7 54 67.5 52C69.3 50 70.2 50 72 48C73.8 46 75.8 42.1 78 40C80.2 37.9 82.5 36.8 85 35.5C87.5 34.2 90.6 31.9 93 32C95.4 32.1 97.6 34 99.5 36C101.4 38 103.2 41 104.5 44C105.8 47 106.6 50 107.5 54C108.4 58 109.2 63.7 110 68C110.8 72.3 111.3 76 112 80C112.7 84 113.2 88.3 114 92C114.8 95.7 115.5 98.8 116.5 102C117.5 105.2 118.6 108.6 120 111C121.4 113.4 123.5 116.3 125 116.5C126.5 116.7 127.8 114.2 129 112C130.2 109.8 131.1 106.3 132 103C132.9 99.7 133.8 95.3 134.5 92C135.2 88.7 135.8 86.3 136.5 83C137.2 79.7 138.2 75.8 139 72C139.8 68.2 140.3 63.3 141 60C141.7 56.7 142.2 55 143 52C143.8 49 144.4 45.3 145.5 42C146.6 38.7 148.1 34.8 149.5 32C150.9 29.2 152.4 26.9 154 25.5C155.6 24.1 157.2 23.2 159 23.5C160.8 23.8 163.1 25.4 164.5 27.5C165.9 29.6 166.7 31.9 167.5 36C168.3 40.1 168.9 47.3 169.5 52C170.1 56.7 170.5 59.3 171 64C171.5 68.7 172 75.3 172.5 80C173 84.7 173.3 88 174 92C174.7 96 175.6 100.3 176.5 104C177.4 107.7 178.2 111 179.5 114C180.8 117 181.8 119.8 184 122C186.2 124.2 189.8 127.2 192.5 127.5C195.2 127.8 197.6 125.6 200 124C202.4 122.4 204.9 120.5 207 118C209.1 115.5 210.8 112.3 212.5 109C214.2 105.7 215.9 102 217 98C218.1 94 218.9 89.3 219.3 85C219.7 80.7 219.6 76.2 219.2 72C218.8 67.8 218 63.2 217 60C216 56.8 214.2 53.4 213 52.5C211.8 51.6 210.7 52.4 210 54.5C209.3 56.6 209.2 60.8 209 65C208.8 69.2 209.2 75.8 209 80C208.8 84.2 208.2 87 207.5 90C206.8 93 205.8 96.2 204.5 98C203.2 99.8 201.5 101.2 200 101C198.5 100.8 196.8 98.8 195.5 96.5C194.2 94.2 193.4 90.6 192.5 87C191.6 83.4 190.8 79.3 190 75C189.2 70.7 188.7 66.2 188 61C187.3 55.8 186.7 49.2 186 44C185.3 38.8 184.8 34.7 184 30C183.2 25.3 182.5 19.8 181.5 16C180.5 12.2 179.4 9.4 178 7C176.6 4.6 174.8 2.7 173 1.5C171.2 0.3 169.5 -0.1 167.5 0C165.5 0.1 163.2 0.7 161 2C158.8 3.3 156.4 5.7 154.5 8C152.6 10.3 151 13.3 149.5 16C148 18.7 146.8 21.2 145.5 24C144.2 26.8 143 30 142 33C141 36 140.2 38.8 139.5 42C138.8 45.2 138.2 48.3 137.5 52C136.8 55.7 136.2 60.3 135.5 64C134.8 67.7 134.2 71.2 133.5 74C132.8 76.8 131.8 80.2 131 80.5C130.2 80.8 129.2 78.6 128.5 76C127.8 73.4 127.2 68.7 126.5 65C125.8 61.3 125.2 57.7 124.5 54C123.8 50.3 122.8 46.7 122 43C121.2 39.3 120.4 35.8 119.5 32C118.6 28.2 117.5 23.7 116.5 20C115.5 16.3 114.8 12.8 113.5 10C112.2 7.2 110.7 4.7 109 3C107.3 1.3 105.4 0.1 103.5 0C101.6 -0.1 99.4 1.2 97.5 2.5C95.6 3.8 93.7 6.1 92 8C90.3 9.9 88.9 11.7 87.5 14C86.1 16.3 84.8 19.3 83.5 22C82.2 24.7 81 27.5 80 30C79 32.5 78.3 34.7 77.5 37C76.7 39.3 75.8 41.3 75 44C74.2 46.7 73.2 49.8 72.5 53C71.8 56.2 71.2 59.8 70.5 63C69.8 66.2 69.2 68.3 68.5 72C67.8 75.7 67.1 81 66.5 85C65.9 89 65.5 92.2 65 96C64.5 99.8 63.8 104.3 63.5 108C63.2 111.7 63.1 115.2 63 118C62.9 120.8 62.8 123.4 62.8 124.5";
+$("mark").innerHTML = `<path d="${M}" fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>`;
+try { const t = localStorage.getItem("mirli-call-theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+
+// Is the call server up on this machine? Say so plainly.
+fetch("voices").then((r) => { if (!r.ok) throw 0; $("status").classList.add("up"); $("statusTxt").textContent = "running on this machine"; })
+  .catch(() => { $("statusTxt").textContent = "call server not running"; });
+
+// Faces from the face server, if it's up; the demo card cycles through them.
+const FACE = "http://127.0.0.1:17660";
+const nice = (f) => /^image\d+|^[0-9a-f]{6,}$|^photo$/i.test(f.name) || f.id === "girl" ? null : f.id === "0fea11caf8194e3d86b337b9-56ea891b" ? "Santa" : f.name[0].toUpperCase() + f.name.slice(1);
+const LINES = ["Hey, good to see you. What are you working on?", "Ho ho ho! Who do I have the pleasure of talking to?", "Honestly? Pasta. Fifteen minutes and you're done.", "Wait, say that again, I want to get it right.", "Ha, fair. So what happened next?"];
+fetch(FACE + "/faces").then((r) => r.json()).then((d) => {
+  const list = d.faces.map((f) => ({ ...f, label: nice(f) })).filter((f) => f.label);
+  if (!list.length) return;
+  $("faces").innerHTML = list.map((f) => `<a href="index.html" title="Call ${f.label}"><img alt="" loading="lazy" src="${FACE}/faces/${encodeURIComponent(f.id)}"><span>${f.label}</span></a>`).join("");
+  let i = 0, front = "demoA";
+  const show = () => {
+    const f = list[i % list.length], back = front === "demoA" ? "demoB" : "demoA";
+    $(back).src = `${FACE}/faces/${encodeURIComponent(f.id)}`;
+    $(back).onload = () => { $(back).style.opacity = 1; $(front).style.opacity = 0; front = back; };
+    $("demoName").textContent = f.label;
+    $("demoCap").textContent = f.label === "Santa" ? LINES[1] : LINES[(i * 3 + 2) % LINES.length === 1 ? 0 : (i * 3 + 2) % LINES.length];
+    i++;
+  };
+  show(); setInterval(show, 4200);
+}).catch(() => { $("demoA").style.background = "var(--well)"; });
+
+// A small moving voice line on the demo card.
+let ph = 0;
+(function wave() {
+  requestAnimationFrame(wave);
+  ph += 0.08;
+  let d = "M0 11";
+  for (let x = 0; x <= 200; x += 4) {
+    const env = Math.sin((x / 200) * Math.PI);
+    d += ` L${x} ${(11 + env * 7 * Math.sin(x * 0.12 + ph) * (0.5 + 0.5 * Math.sin(ph * 0.7))).toFixed(1)}`;
+  }
+  $("demoWave").setAttribute("d", d);
+})();
+</script>
+</body>
+</html>

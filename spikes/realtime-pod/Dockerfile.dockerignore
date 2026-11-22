@@ -1,0 +1,14 @@
+# Build context is spikes/: send only what the Dockerfile copies.
+**
+!realtime-voice/package.json
+!realtime-voice/package-lock.json
+!realtime-voice/server.mjs
+!realtime-voice/setup.mjs
+!realtime-voice/lib/
+!realtime-voice/public/
+!realtime-face/server.py
+!realtime-face/musetalk_engine.py
+!realtime-face/web/
+!realtime-pod/faces/
+!realtime-pod/pod.mjs
+!realtime-pod/entrypoint.sh

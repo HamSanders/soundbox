@@ -1,0 +1,21 @@
+{
+ "tag": "measured",
+ "mode": "online",
+ "frames": 310,
+ "audio_s": 12.0,
+ "setup_s": 0.19,
+ "total_s": 21.55,
+ "fps_overall": 14.4,
+ "fps_steady": 26.2,
+ "first_frame_s": 1.312,
+ "torch_peak_gb": 1.51,
+ "torch_reserved_gb": 1.69,
+ "frame_lateness_s": {
+  "min": 1.312,
+  "median": 5.722,
+  "max": 9.379
+ },
+ "vram_before_mib": 8438,
+ "vram_peak_mib": 13052,
+ "vram_delta_gb": 4.51
+}

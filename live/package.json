@@ -1,0 +1,15 @@
+{
+  "name": "mirli-live",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Calls in Mirli: the shared call-token module and the end-to-end tests (see README.md).",
+  "scripts": {
+    "test": "node --test api/test/*.test.mjs",
+    "test:e2e": "playwright test -c e2e/playwright.config.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1",
+    "ws": "^8.18.0"
+  }
+}

@@ -1,0 +1,54 @@
+synthesising user utterances...
+turn 1: "Hi there, how are you doing today?" | transcript 461 | token 489 | audio 745 (client-side 778) ms | "I'm doing well, thanks for asking! How about you?"
+turn 2: "Should I cook for dinner tonight?" | transcript 457 | token 483 | audio 777 (client-side 809) ms | "It depends on what you're comfortable with. If you're tired,"
+turn 3: "Tell me something interesting about the ocean." | transcript 538 | token 574 | audio 870 (client-side 901) ms | "The ocean is vast and full of life. It covers most of the Ea"
+turn 4: "I had a really long day at work." | transcript 447 | token 479 | audio 721 (client-side 621) ms | "That must have been tiring. Take care, and maybe enjoy a cup"
+turn 5: "Can you recommend a good book to read?" | transcript 442 | token 480 | audio 780 (client-side 781) ms | "I’d recommend "The Alchemist" by Paulo Coelho. It's a beauti"
+turn 6: "What's the weather usually like in spring?" | transcript 446 | token 477 | audio 705 (client-side 706) ms | "Spring is usually warm and pleasant, with flowers blooming a"
+turn 7: "Hi there, how are you doing today?" | transcript 437 | token 475 | audio 726 (client-side 727) ms | "I'm doing well, thanks for asking! How about you?"
+turn 8: "Should I cook for dinner tonight?" | transcript 440 | token 471 | audio 725 (client-side 694) ms | "It depends on what you're comfortable with. If you're tired,"
+turn 9: "Tell me something interesting about the ocean." | transcript 444 | token 483 | audio 844 (client-side 875) ms | "The ocean is vast and full of life. It covers most of the Ea"
+turn 10: "I had a really long day at work." | transcript 433 | token 464 | audio 682 (client-side 590) ms | "That must have been tiring. Take care, and maybe enjoy a cup"
+turn 11: "Can you recommend a good book to read?" | transcript 442 | token 476 | audio 745 (client-side 745) ms | "I’d recommend "The Alchemist" by Paulo Coelho. It's a beauti"
+turn 12: "What's the weather usually like in spring?" | transcript 461 | token 516 | audio 739 (client-side 741) ms | "Spring is usually warm and pleasant, with flowers blooming a"
+turn 13: "Hi there, how are you doing today?" | transcript 444 | token 474 | audio 743 (client-side 744) ms | "I'm doing well, thanks for asking! How about you?"
+turn 14: "Should I cook for dinner tonight?" | transcript 430 | token 460 | audio 762 (client-side 731) ms | "It depends on what you're comfortable with. If you're tired,"
+turn 15: "Tell me something interesting about the ocean." | transcript 724 | token 766 | audio 1264 (client-side 1311) ms | "The ocean is vast and full of life. It covers most of the Ea"
+turn 16: "I had a really long day at work." | transcript 445 | token 482 | audio 740 (client-side 647) ms | "That must have been tiring. Take care, and maybe enjoy a cup"
+turn 17: "Can you recommend a good book to read?" | transcript 443 | token 477 | audio 784 (client-side 785) ms | "I’d recommend "The Alchemist" by Paulo Coelho. It's a beauti"
+turn 18: "What's the weather usually like in spring?" | transcript 446 | token 487 | audio 747 (client-side 749) ms | "Spring is usually warm and pleasant, with flowers blooming a"
+barge-in: {
+ "interrupted_while": "still generating audio",
+ "speech_start_to_flush_ms": 559,
+ "audio_arrived_within_250ms_after_flush": false,
+ "interrupted_turn": {
+  "turn": 19,
+  "barged_in": true,
+  "reply_chars": 723
+ },
+ "next_turn": {
+  "user": "Right I have another question.",
+  "eos_to_first_audio_ms": 706,
+  "reply": "What's on your mind? Let me hear it!"
+ }
+}
+┌──────────────────────────────────┬────┬──────┬────────┬───────┬───────┬────────┐
+│ (index)                          │ n  │ min  │ median │ p90   │ max   │ Values │
+├──────────────────────────────────┼────┼──────┼────────┼───────┼───────┼────────┤
+│ speech_start_to_first_partial_ms │ 18 │ 508  │ 557    │ 646   │ 681   │        │
+│ endpoint_wait_ms                 │ 18 │ 404  │ 419    │ 423   │ 427   │        │
+│ eos_to_transcript_ms             │ 18 │ 430  │ 445    │ 538   │ 724   │        │
+│ eos_to_first_token_ms            │ 18 │ 460  │ 480    │ 574   │ 766   │        │
+│ eos_to_first_audio_ms            │ 18 │ 682  │ 745    │ 870   │ 1264  │        │
+│ client_eos_to_first_audio_ms     │ 18 │ 590  │ 745    │ 901   │ 1311  │        │
+│ eos_to_reply_start_ms            │ 18 │ 404  │ 419    │ 423   │ 427   │        │
+│ stt_ms                           │ 18 │ 18   │ 24     │ 119   │ 302   │        │
+│ stt_model_wall_ms                │ 18 │ 15   │ 21     │ 114   │ 294   │        │
+│ transcript_to_first_token_ms     │ 18 │ 26   │ 34     │ 43    │ 55    │        │
+│ first_token_to_first_piece_ms    │ 18 │ 31   │ 61     │ 91    │ 95    │        │
+│ tts_request_to_first_audio_ms    │ 18 │ 175  │ 208    │ 290   │ 412   │        │
+│ audio_ready_before_endpoint_ms   │ 18 │ -842 │ -326   │ -281  │ -266  │        │
+│ endpoint_to_confirm_ms           │    │      │        │       │       │ null   │
+│ vram_peak_mib                    │ 18 │ 9832 │ 9966   │ 10079 │ 10083 │        │
+└──────────────────────────────────┴────┴──────┴────────┴───────┴───────┴────────┘
+wrote runs/bench-no-speculation.json

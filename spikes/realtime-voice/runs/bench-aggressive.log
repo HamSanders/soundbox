@@ -1,0 +1,54 @@
+synthesising user utterances...
+turn 1: "Hi there, how are you doing today?" | transcript 160 | token 183 | audio 386 (client-side 419) ms | "I'm doing well, thanks! How about you?"
+turn 2: "Should I cook for dinner tonight?" | transcript 183 | token 206 | audio 476 (client-side 508) ms | "It depends on what you want to eat. Let me know what you're "
+turn 3: "Tell me something interesting about the ocean." | transcript 199 | token 282 | audio 570 (client-side 603) ms | "The ocean is huge and covers most of the Earth. It has waves"
+turn 4: "I had a really long day at work." | transcript 147 | token 173 | audio 420 (client-side 328) ms | "That must be tiring. Take care, and rest when you can."
+turn 5: "Can you recommend a good book to read?" | transcript 161 | token 209 | audio 471 (client-side 472) ms | "I recommend "The Alchemist" by Paulo Coelho. It's a great st"
+turn 6: "What's the weather usually like in spring?" | transcript 175 | token 240 | audio 541 (client-side 542) ms | "It's usually warm and pleasant in spring. The weather often "
+turn 7: "Hi there, how are you doing today?" | transcript 171 | token 240 | audio 563 (client-side 564) ms | "I'm doing well, thanks! How about you?"
+turn 8: "Should I cook for dinner tonight?" | transcript 160 | token 183 | audio 382 (client-side 352) ms | "It depends on what you want to eat. Let me know what you're "
+turn 9: "Tell me something interesting about the ocean." | transcript 173 | token 246 | audio 530 (client-side 563) ms | "The ocean is vast and full of life. It has deep trenches, co"
+turn 10: "I had a really long day at work." | transcript 169 | token 237 | audio 481 (client-side 388) ms | "That must be tiring. Take care, and rest when you can."
+turn 11: "Can you recommend a good book to read?" | transcript 146 | token 175 | audio 437 (client-side 438) ms | "I recommend "The Alchemist" by Paulo Coelho. It's a great st"
+turn 12: "What's the weather usually like in spring?" | transcript 130 | token 158 | audio 393 (client-side 394) ms | "It's usually warm and pleasant in spring. The weather often "
+turn 13: "Hi there, how are you doing today?" | transcript 178 | token 240 | audio 437 (client-side 438) ms | "I'm doing well, thanks! How about you?"
+turn 14: "Should I cook for dinner tonight?" | transcript 144 | token 172 | audio 385 (client-side 354) ms | "It depends on what you want to eat. Let me know what you're "
+turn 15: "Tell me something interesting about the ocean." | transcript 184 | token 276 | audio 526 (client-side 558) ms | "The ocean is full of amazing things! It has underwater mount"
+turn 16: "I had a really long day at work." | transcript 170 | token 243 | audio 551 (client-side 459) ms | "That must be tiring. Take care, and rest when you can."
+turn 17: "Can you recommend a good book to read?" | transcript 143 | token 173 | audio 399 (client-side 400) ms | "I recommend "The Alchemist" by Paulo Coelho. It's a great st"
+turn 18: "What's the weather usually like in spring?" | transcript 199 | token 233 | audio 521 (client-side 522) ms | "It's usually warm and pleasant in spring. The weather often "
+barge-in: {
+ "interrupted_while": "still generating audio",
+ "speech_start_to_flush_ms": 544,
+ "audio_arrived_within_250ms_after_flush": false,
+ "interrupted_turn": {
+  "turn": 19,
+  "barged_in": true,
+  "reply_chars": 717
+ },
+ "next_turn": {
+  "user": "Right stop I have another question.",
+  "eos_to_first_audio_ms": 465,
+  "reply": "Okay, let's see what you want to ask. You just said \"Right stop I have another question.\" Maybe you're done with the conversation or want to switch topics. Let me know what you're curious about!"
+ }
+}
+┌──────────────────────────────────┬────┬──────┬────────┬───────┬───────┐
+│ (index)                          │ n  │ min  │ median │ p90   │ max   │
+├──────────────────────────────────┼────┼──────┼────────┼───────┼───────┤
+│ speech_start_to_first_partial_ms │ 18 │ 499  │ 530    │ 600   │ 608   │
+│ endpoint_wait_ms                 │ 18 │ 310  │ 326    │ 328   │ 328   │
+│ eos_to_transcript_ms             │ 18 │ 130  │ 170    │ 199   │ 199   │
+│ eos_to_first_token_ms            │ 18 │ 158  │ 233    │ 276   │ 282   │
+│ eos_to_first_audio_ms            │ 18 │ 382  │ 476    │ 563   │ 570   │
+│ client_eos_to_first_audio_ms     │ 18 │ 328  │ 459    │ 564   │ 603   │
+│ eos_to_reply_start_ms            │ 18 │ 107  │ 124    │ 140   │ 142   │
+│ stt_ms                           │ 18 │ 19   │ 45     │ 59    │ 75    │
+│ stt_model_wall_ms                │ 18 │ 17   │ 42     │ 56    │ 72    │
+│ transcript_to_first_token_ms     │ 18 │ 22   │ 48     │ 83    │ 91    │
+│ first_token_to_first_piece_ms    │ 18 │ 26   │ 75     │ 151   │ 154   │
+│ tts_request_to_first_audio_ms    │ 18 │ 151  │ 169    │ 216   │ 229   │
+│ audio_ready_before_endpoint_ms   │ 18 │ -253 │ -143   │ -54   │ -44   │
+│ endpoint_to_confirm_ms           │ 18 │ 25   │ 66     │ 114   │ 139   │
+│ vram_peak_mib                    │ 18 │ 9886 │ 9976   │ 10004 │ 10006 │
+└──────────────────────────────────┴────┴──────┴────────┴───────┴───────┘
+wrote runs/bench-aggressive.json

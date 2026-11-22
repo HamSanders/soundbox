@@ -80,6 +80,8 @@ COPY --from=build /src/server/web ./server/web
 COPY server/package.json ./server/package.json
 COPY server/skills ./server/skills
 COPY LICENSE ./
+COPY santa-clips ./santa-clips
+ENV MIRLI_SANTA_PACK=/opt/soundbox/santa-clips
 
 # `soundbox pull …`, `soundbox list` and friends from `docker exec`.
 RUN printf '#!/bin/sh\nexec node /opt/soundbox/server/dist/cli.js "$@"\n' > /usr/local/bin/soundbox \

@@ -77,9 +77,14 @@ narrator plus a voice per character) in the book's settings.
   suggest a voice for each character, which you can preview on that
   character's own lines. Assign voices on the **Cast** tab. Changing a
   character's voice changes all of their lines.
-- **Per paragraph.** Any paragraph can be given to a character or read on a
-  different model, and has its own delivery controls (the same ones the
-  studio offers for that model family).
+- **Models come with voices.** Each voice reads on the model it was made on,
+  shown next to it in the pickers ("Brit · Chatterbox"), because a cloned
+  voice read on another model stops sounding like itself. There's no
+  book-wide model to pick.
+- **Per paragraph.** Any paragraph can be given to a character, and has its
+  own delivery controls (the same ones the studio offers for that model
+  family). Under **Advanced** it can be read on a different model, for a
+  line the voice's model gets wrong.
 
 ## Pronounce
 

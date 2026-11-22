@@ -44,10 +44,10 @@ import type { PacingSettings } from "@/lib/audiobook-types";
 import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-import { useTts } from "./use-tts";
+import { useTts, voiceModelName } from "./use-tts";
+import { VoiceLabel } from "./voice-label";
 import { VersionsDialog } from "./versions-dialog";
 
-const AUTO = "__auto__";
 const NONE = "__none__";
 
 const PACING_FIELDS: { key: keyof PacingSettings; label: string; hint: string; max: number }[] = [
@@ -208,30 +208,15 @@ function BookHeaderView({
           value={settings.narrator_voice_id ?? NONE}
           onValueChange={(v) => setSettings({ narrator_voice_id: v === NONE ? null : v })}
         >
-          <SelectTrigger size="sm" className="w-40" aria-label="Narrator voice">
+          <SelectTrigger size="sm" className="w-56" aria-label="Narrator voice">
             <SelectValue placeholder="Narrator voice" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={NONE}>No narrator voice</SelectItem>
+            {/* The model comes with the voice: a voice reads on the model it was made on. */}
             {tts.allVoices.map((v) => (
               <SelectItem key={v.id} value={v.id}>
-                {v.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={settings.model_id ?? AUTO}
-          onValueChange={(v) => setSettings({ model_id: v === AUTO ? null : v })}
-        >
-          <SelectTrigger size="sm" className="w-40" aria-label="Model">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={AUTO}>Model: each voice's own</SelectItem>
-            {tts.models.map((m) => (
-              <SelectItem key={m.id} value={m.id}>
-                {m.name}
+                <VoiceLabel name={v.name} model={voiceModelName(v, tts.allModels)} />
               </SelectItem>
             ))}
           </SelectContent>

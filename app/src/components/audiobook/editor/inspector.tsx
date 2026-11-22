@@ -43,7 +43,7 @@ import { StatusBadge } from "./paragraph-row";
 import type { BookOps } from "./use-book-ops";
 import { resolveModel, useTts } from "./use-tts";
 
-const BOOK_DEFAULT = "__book__";
+const VOICE_MODEL = "__voice__";
 const NARRATOR = "__narrator__";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -123,37 +123,45 @@ function ParagraphInspector({
         </Select>
         <p className="text-muted-foreground text-xs">
           Voice: {voice?.name ?? "none set"}
+          {modelId ? ` · reads on ${model?.name ?? `${modelId}, which is not installed`}` : " · no text-to-speech model is installed"}
           {book.settings.cast_mode === "single" && character ? " (single cast: narrator's voice)" : ""}
         </p>
       </Field>
 
-      <Field label="Model">
-        <Select
-          value={paragraph.model_id ?? BOOK_DEFAULT}
-          onValueChange={(v) =>
-            update.mutate({ id: paragraph.id, patch: { model_id: v === BOOK_DEFAULT ? null : v } })
-          }
-        >
-          <SelectTrigger size="sm" className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={BOOK_DEFAULT}>Book default</SelectItem>
-            {tts.models.map((m) => (
-              <SelectItem key={m.id} value={m.id}>
-                {m.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="text-muted-foreground text-xs">
-          {!modelId
-            ? "No text-to-speech model is installed."
-            : model
-              ? `Reads on ${model.name}.`
-              : `Reads on ${modelId}, which is not installed.`}
-        </p>
-      </Field>
+      {/* A voice reads on the model it was made on; overriding that is rare,
+          so it sits under Advanced. */}
+      <details className="group" open={paragraph.model_id ? true : undefined}>
+        <summary className="text-muted-foreground hover:text-foreground cursor-pointer text-xs select-none">
+          Advanced{paragraph.model_id ? " · model overridden" : ""}
+        </summary>
+        <div className="mt-2">
+          <Field label="Model for this paragraph">
+            <Select
+              value={paragraph.model_id ?? VOICE_MODEL}
+              onValueChange={(v) =>
+                update.mutate({ id: paragraph.id, patch: { model_id: v === VOICE_MODEL ? null : v } })
+              }
+            >
+              <SelectTrigger size="sm" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={VOICE_MODEL}>The voice's own model</SelectItem>
+                {tts.models.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-muted-foreground text-xs">
+              {paragraph.model_id
+                ? "A cloned voice may not sound like itself on another model."
+                : "Change this only for a line the voice's model gets wrong."}
+            </p>
+          </Field>
+        </div>
+      </details>
 
       <div className="space-y-2">
         <label className="flex items-center justify-between gap-2 text-sm">

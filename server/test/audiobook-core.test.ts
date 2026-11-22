@@ -465,6 +465,24 @@ describe("paragraphs", () => {
     expect(cleared.model_id).toBeNull();
   });
 
+  it("reads each voice on the model it was made on, over the book's and a character's", async () => {
+    const narrator = addVoice("own-model-narrator"); // made on "test"
+    const book = await json("POST", "/api/audiobooks", {
+      title: "Voice models",
+      settings: { model_id: "book-model", narrator_voice_id: narrator, cast_mode: "multi" },
+    });
+    const cid = book.chapters[0].id;
+    const p = await json("POST", `/api/audiobooks/${book.id}/chapters/${cid}/paragraphs`, { text: "Hi." });
+    expect(audiobooks(app.soundbox).modelFor(p.id)).toBe("test");
+    // A character's old model setting doesn't beat its voice's model either.
+    const c = await json("POST", `/api/audiobooks/${book.id}/characters`, { name: "Ghost", voice_id: narrator, model_id: "char-model" });
+    await json("PATCH", `/api/audiobooks/${book.id}/paragraphs/${p.id}`, { character_id: c.id });
+    expect(audiobooks(app.soundbox).modelFor(p.id)).toBe("test");
+    // Only the paragraph's own override does.
+    await json("PATCH", `/api/audiobooks/${book.id}/paragraphs/${p.id}`, { model_id: "own-model" });
+    expect(audiobooks(app.soundbox).modelFor(p.id)).toBe("own-model");
+  });
+
   it("adds and deletes paragraphs", async () => {
     const book = await json("POST", "/api/audiobooks", { title: "Add" });
     const cid = book.chapters[0].id;

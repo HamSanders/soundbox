@@ -120,13 +120,17 @@ export class RenderService {
     const ready = models.filter((m) => m.task === "tts" && (m.status === "loaded" || m.status === "installed"));
     const isReady = (id: string | null | undefined) => Boolean(id && ready.some((m) => m.id === id));
 
+    // The voice decides: a voice is made on a model, and read on another it
+    // stops sounding like itself. Only a paragraph's own override beats it;
+    // the older character and book settings are fallbacks for a voice whose
+    // model isn't installed (or that has none).
     if (p.model_id) return { model: p.model_id, voice_id: voiceId, source: "paragraph", notes };
-    if (book?.settings.cast_mode === "multi" && character?.model_id) {
-      return { model: character.model_id, voice_id: voiceId, source: "character", notes };
-    }
     if (voice?.model_id) {
       if (isReady(voice.model_id)) return { model: voice.model_id, voice_id: voiceId, source: "voice", notes };
       notes.push(`${voice.name} was made on ${voice.model_id}, which is not installed.`);
+    }
+    if (book?.settings.cast_mode === "multi" && character?.model_id) {
+      return { model: character.model_id, voice_id: voiceId, source: "character", notes };
     }
     if (book?.settings.model_id) return { model: book.settings.model_id, voice_id: voiceId, source: "book", notes };
     if (!ready.length) throw new ModelError("No text-to-speech model is installed. Download one from the Models page.");
@@ -511,20 +515,23 @@ export class RenderService {
     const parts = this.scopeSegments(bookId, scope);
     const wanted = new Set(parts.flatMap((p) => p.ids));
     const paragraphs: EstimateParagraph[] = [];
-    let fallbackModel: string | null = null;
+    // Each line is estimated on the model it will actually be read on; one
+    // lookup per distinct override / voice / character.
+    const chosen = new Map<string, string | null>();
     for (const part of parts) {
       for (const p of this.book.getParagraphs(part.chapter_id) ?? []) {
         if (!wanted.has(p.id)) continue;
-        let model: string | null = p.model_id ?? book.settings.model_id ?? null;
+        let model: string | null = p.model_id ?? null;
         if (!model && p.kind === "line") {
-          if (fallbackModel === null) {
+          const key = `${p.voice_id ?? ""}|${p.character_id ?? ""}`;
+          if (!chosen.has(key)) {
             try {
-              fallbackModel = (await this.chooseVoice(p, bookId)).model;
+              chosen.set(key, (await this.chooseVoice(p, bookId)).model);
             } catch {
-              fallbackModel = "";
+              chosen.set(key, null);
             }
           }
-          model = fallbackModel || null;
+          model = chosen.get(key) ?? null;
         }
         paragraphs.push({
           chapter_id: part.chapter_id,

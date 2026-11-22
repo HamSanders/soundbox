@@ -50,7 +50,7 @@
  *   mergeWithNext(segmentId, joiner?): { paragraph, removed_id, split_at }
  *   reorderParagraphs(chapterId, ids): Paragraph[] | null
  *   updateParagraph(segmentId, { text?, character_id?, locked?, is_heading?, model_id? }): Paragraph | null
- *   modelFor(segmentId): string | null        paragraph override, else character's, else book's
+ *   modelFor(segmentId): string | null        paragraph override, else the voice's own model, else character's, else book's
  *   deleteParagraph(segmentId): boolean
  *   setParagraphCharacter(segmentIds | segmentId, characterId | null): number
  *   markStale(segmentIds): number             e.g. a pronunciation rule changed
@@ -1408,13 +1408,17 @@ export class AudiobookService {
   }
 
   /** The model a paragraph should be generated on: its own override, else
-   *  its character's (multi cast), else the book's. Null = caller picks
-   *  (usually the voice's own model). */
+   *  the model its voice was made on, else (for a voice with no model) its
+   *  character's in a multi cast, else the book's. Null = caller picks.
+   *  Doesn't check what's installed; `RenderService.chooseVoice` does. */
   modelFor(segmentId: string): string | null {
     const p = this.getParagraph(segmentId);
     const chapter = this.store.chapterForParagraph(segmentId);
     if (!p || !chapter) return null;
     if (p.model_id) return p.model_id;
+    const voiceId = p.voice_id ?? this.voiceFor(chapter.book_id, p.character_id);
+    const voiceModel = voiceId ? (this.svc.db.getVoice(voiceId)?.model_id ?? null) : null;
+    if (voiceModel) return voiceModel;
     const book = this.store.getBook(chapter.book_id)!;
     const character = p.character_id ? this.store.getCharacter(p.character_id) : null;
     if (book.settings.cast_mode === "multi" && character?.model_id) return character.model_id;

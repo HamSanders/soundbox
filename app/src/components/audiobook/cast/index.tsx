@@ -21,7 +21,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { CastDot } from "@/components/audiobook/editor/character-chip";
-import { useTts } from "@/components/audiobook/editor/use-tts";
+import { useTts, voiceModelName } from "@/components/audiobook/editor/use-tts";
+import { VoiceLabel } from "@/components/audiobook/editor/voice-label";
 import { useClipPlayer } from "@/components/audiobook/render/use-clip";
 import { voiceApi } from "@/components/audiobook/render/voice-api";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,7 @@ const NONE = "__none__";
 export function CastPanel({ bookId }: { bookId: string }) {
   const book = useBook(bookId);
   const qc = useQueryClient();
-  const { voices, allVoices } = useTts();
+  const { voices, allVoices, allModels } = useTts();
   const player = useClipPlayer();
   const updateBook = useUpdateBook(bookId);
   const [split, setSplit] = useState(false);
@@ -131,9 +132,8 @@ export function CastPanel({ bookId }: { bookId: string }) {
           <SelectItem value={value}>{voiceName(value) ?? "Voice not installed"}</SelectItem>
         ) : null}
         {voices.map((v) => (
-          <SelectItem key={v.id} value={v.id}>
-            {v.name}
-            {v.notes ? <span className="text-muted-foreground ml-1 text-xs">{v.notes.slice(0, 40)}</span> : null}
+          <SelectItem key={v.id} value={v.id} title={v.notes ?? undefined}>
+            <VoiceLabel name={v.name} model={voiceModelName(v, allModels)} />
           </SelectItem>
         ))}
       </SelectContent>

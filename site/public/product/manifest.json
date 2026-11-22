@@ -1,7 +1,7 @@
 {
   "generated_by": "scripts/capture-media.mjs",
   "captured_on": "2026-11-22",
-  "commit": "d6138c3de5581c50330ccbeedbba343259691896",
+  "commit": "fc964621b42242a085dd768477cb1a4bab40982a",
   "uncommitted_changes": false,
   "backend": "in-browser mock (VITE_MOCK=1) with the demo fixture, app/src/lib/mock-demo.ts",
   "viewport": {

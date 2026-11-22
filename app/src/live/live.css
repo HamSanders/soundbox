@@ -1,0 +1,5 @@
+/* Mirli Live additions to the app's design system (index.css). */
+@keyframes live-ticker {
+  to { transform: translateX(-50%); }
+}
+html, body { background: var(--background); }

@@ -1,0 +1,16 @@
+{
+  "name": "mirli-live",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Mirli Live: the local Call API and the end-to-end tests for the call web app (app/live.html).",
+  "scripts": {
+    "api": "node api/server.mjs",
+    "test": "node --test api/test/*.test.mjs",
+    "test:e2e": "playwright test -c e2e/playwright.config.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1",
+    "ws": "^8.18.0"
+  }
+}

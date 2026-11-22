@@ -13,6 +13,7 @@ import { startAudiocpp, startLlm, stopEngines } from "./lib/engines.mjs";
 import { GpuMeter } from "./lib/gpu.mjs";
 import { chat } from "./lib/llm.mjs";
 import { transcribe } from "./lib/stt.mjs";
+import { AuthError, CallGate, CallRoutes } from "./lib/calls.mjs";
 import { PcmTap } from "./lib/tap.mjs";
 import { probeSampleRate, speak } from "./lib/tts.mjs";
 import { Vad } from "./lib/vad.mjs";
@@ -69,13 +70,36 @@ function logTurn(rec) {
   );
 }
 
+// Per-call routing and auth (lib/calls.mjs). Without a call secret this behaves
+// as the spike always did: any page may connect, each socket is its own call.
+const gate = new CallGate();
+const routes = new CallRoutes(tap);
+console.log(gate.secured ? `call auth on; origins: ${gate.origins.join(", ") || "any"}` : "call auth OFF (no call secret): any page may connect");
+
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8" };
 const server = http.createServer((req, res) => {
   const path = new URL(req.url, "http://x").pathname;
-  if (path === "/tts.pcm") return tap.addHttp(res);
+  const cors = gate.cors(req);
+  if (req.method === "OPTIONS") return res.writeHead(204, { ...cors, "Access-Control-Allow-Methods": "GET, POST, OPTIONS" }).end();
+  if (path === "/readyz") {
+    return res.writeHead(200, { "Content-Type": "application/json", ...cors }).end(JSON.stringify({ ready: true, busy: routes.calls.length > 0, calls: routes.calls.length, auth: gate.secured }));
+  }
+  const endM = path.match(/^\/internal\/calls\/([\w-]+)\/end$/);
+  if (endM && req.method === "POST") {
+    try {
+      const who = gate.check(req, "admin");
+      if (!who.admin) throw new AuthError(403, "admin token required");
+    } catch (e) { return res.writeHead(e.status ?? 401).end(e.message); }
+    const had = routes.end(endM[1]);
+    return res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ ended: had }));
+  }
+  if (path === "/tts.pcm") {
+    if (gate.secured) return res.writeHead(403).end("the HTTP tap is off while call auth is on; use ws /tap?call=<id>");
+    return tap.addHttp(res);
+  }
   if (path === "/voices") {
     return listVoices().then(
-      (v) => res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(v.map(({ id, name, model }) => ({ id, name, model })))),
+      (v) => res.writeHead(200, { "Content-Type": "application/json", ...cors }).end(JSON.stringify(v.map(({ id, name, model }) => ({ id, name, model })))),
       (e) => res.writeHead(500).end(String(e.message)),
     );
   }
@@ -93,17 +117,35 @@ const server = http.createServer((req, res) => {
   }
 });
 
-const wss = new WebSocketServer({ noServer: true });
+const wss = new WebSocketServer({ noServer: true, handleProtocols: CallGate.pickProtocol });
 server.on("upgrade", (req, socket, head) => {
-  const path = new URL(req.url, "http://x").pathname;
+  const url = new URL(req.url, "http://x");
+  const path = url.pathname;
   if (path !== "/ws" && path !== "/tap") return socket.destroy();
-  wss.handleUpgrade(req, socket, head, (ws) => (path === "/tap" ? tap.addWs(ws) : converse(ws)));
+  let who;
+  try {
+    who = gate.check(req, path === "/tap" ? "tap" : "voice");
+  } catch (e) {
+    socket.end(`HTTP/1.1 ${e.status ?? 401} ${e.status === 403 ? "Forbidden" : "Unauthorized"}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`);
+    return;
+  }
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    if (path === "/tap") {
+      // /tap?call=<id>: one call's speech (what the face worker follows). Bare /tap: everything.
+      const call = url.searchParams.get("call") ?? (gate.secured && !who.admin ? who.call : null);
+      if (call) return routes.subscribe(call, ws);
+      if (gate.secured && !who.admin) return ws.close(4003, "admin token required for the server-wide tap");
+      return tap.addWs(ws);
+    }
+    converse(ws, who.call);
+  });
 });
 
-async function converse(ws) {
+async function converse(ws, call) {
+  routes.attach(call, ws);
   const send = (msg) => ws.readyState === 1 && ws.send(JSON.stringify(msg));
   const sendPcm = (buf) => ws.readyState === 1 && ws.send(buf, { binary: true });
-  const convo = new Conversation({ tts, stt, llm, gpu, tap, log: logTurn, voices: listVoices }, send, sendPcm);
+  const convo = new Conversation({ tts, stt, llm, gpu, tap: routes.tap(call), log: logTurn, voices: listVoices }, send, sendPcm);
   await convo.init();
   ws.on("message", (data, isBinary) => {
     if (isBinary) return convo.onMic(data);
@@ -112,7 +154,7 @@ async function converse(ws) {
     } catch {}
   });
   ws.on("close", () => convo.close());
-  send({ type: "hello", mic_rate: 16000, tts: tap.format, vad: config.vad, vram });
+  send({ type: "hello", call, mic_rate: 16000, tts: tap.format, vad: config.vad, vram });
 }
 
 server.listen(config.port, "127.0.0.1", () => {

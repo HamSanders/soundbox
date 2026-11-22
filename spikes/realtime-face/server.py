@@ -31,6 +31,10 @@ import importlib.util
 import socket
 import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from call_router import Busy, CallRouter  # noqa: E402
+import call_token  # noqa: E402
+
 SPIKES = Path(__file__).resolve().parent.parent
 ENGINES = {
     # name: (engine.py, python of its venv, what to call it in the page)
@@ -46,6 +50,8 @@ ENGINES = {
     "pro": (SPIKES / "realtime-face" / "engine.py",
             Path(os.environ.get("MIRLI_FACE_HOME", Path.home() / "mirli-spike-face")) / "venv" / "Scripts" / "python.exe",
             "FlashHead Pro"),
+    # No model: draws the portrait with a level bar. For tests and machines without the weights.
+    "fake": (SPIKES / "realtime-face" / "fake_engine.py", Path(sys.executable), "Test pattern"),
 }
 ENGINES["lite"] = ENGINES["flashhead"]  # older name, still used by run scripts
 _pre = argparse.ArgumentParser(add_help=False)
@@ -123,7 +129,11 @@ utter_t0 = None                         # arrival time of the first sample of an
 in_utterance = False
 flush_gen = 0                           # bumped by /flush; a step started before the bump is discarded
 play_head = 0.0                         # wall-clock time at which everything sent so far has finished playing
-clients = set()
+router = CallRouter()   # which socket gets the frames: the active call's only (call_router.py)
+SECRET = call_token.local_secret()   # None = auth off (old spike pages)
+ORIGINS = call_token.allowed_origins()
+tap_call = None         # the call whose speech the tap follows; None = the server-wide tap
+tap_changed = None      # asyncio.Event, set when tap_call changes
 engine_ready = False
 loop = None
 log_f = open(args.log, "a") if args.log else None
@@ -160,12 +170,13 @@ def flush():
 
 
 def broadcast(msg):
+    """Send to the active call's socket only (the name is kept from the spike, where it really did broadcast)."""
     async def _send():
-        for ws in list(clients):
+        for ws in router.targets():
             try:
                 await (ws.send_bytes(msg) if isinstance(msg, bytes) else ws.send_str(msg))
             except Exception:
-                clients.discard(ws)
+                pass
     if loop:
         asyncio.run_coroutine_threadsafe(_send(), loop)
 
@@ -189,7 +200,7 @@ def take_chunk():
                 pcm_in = np.zeros(0, dtype=np.int16)
                 t0, utter_t0 = utter_t0, None
                 return chunk, "speech", t0
-        if not args.no_idle and clients and len(pcm_in) == 0 and queued < IDLE_LEAD_S:
+        if not args.no_idle and router.busy and len(pcm_in) == 0 and queued < IDLE_LEAD_S:
             return np.zeros(IN_CHUNK, dtype=np.int16), "idle", None
     return None
 
@@ -314,12 +325,32 @@ async def pcm_client(reader, writer):
         writer.close()
 
 
-async def tap_client(url):
-    """Subscribe to the voice spike's tap: binary = PCM, text = JSON events (flush = barge-in)."""
+def tap_url(base, call):
+    """The voice worker's tap for one call (?call=<id>), or the server-wide tap when call is None."""
+    if call is None:
+        return base
+    return base + ("&" if "?" in base else "?") + "call=" + call
+
+
+async def tap_client(base):
+    """Subscribe to the voice worker's tap: binary = PCM, text = JSON events (flush = barge-in).
+    Follows the active call: when it changes, reconnect to that call's tap so only its speech is lip-synced."""
     while True:
+        call = tap_call
+        if SECRET and call is None:
+            await tap_changed.wait()   # with auth on there is no server-wide tap to follow; wait for a call
+            tap_changed.clear()
+            continue
+        url = tap_url(base, call)
+        headers = {}
+        if SECRET:
+            headers["Authorization"] = "Bearer " + call_token.sign({"call": call or "face", "aud": ["tap"]}, SECRET, 60)
+        tap_changed.clear()
+        watcher = None
         try:
-            async with ClientSession() as s, s.ws_connect(url, max_msg_size=0) as ws:
+            async with ClientSession() as s, s.ws_connect(url, max_msg_size=0, headers=headers) as ws:
                 print("tap connected:", url, flush=True)
+                watcher = asyncio.create_task(_close_on_change(ws, call))
                 async for m in ws:
                     if m.type == WSMsgType.BINARY:
                         feed(np.frombuffer(m.data[: len(m.data) // 2 * 2], dtype="<i2"))
@@ -331,13 +362,74 @@ async def tap_client(url):
                             print(f"WARNING: tap is {ev.get('sample_rate')} Hz but --input-rate is {args.input_rate}", flush=True)
         except Exception as e:
             print("tap:", e, flush=True)
-        await asyncio.sleep(2)
+        if watcher:
+            watcher.cancel()
+        if tap_call == call:
+            await asyncio.sleep(2)
+
+
+async def _close_on_change(ws, call):
+    while tap_call == call:
+        await tap_changed.wait()
+        tap_changed.clear()
+    await ws.close()
+
+
+def follow_call(call):
+    """Point the tap at this call (None = the server-wide tap)."""
+    global tap_call
+    if tap_call != call:
+        tap_call = call
+        if tap_changed is not None:
+            tap_changed.set()
+
+
+def _who(request, aud):
+    """(call, admin) for a request, or raises an HTTP error. Without a secret: legacy, call from ?call= or None."""
+    origin = request.headers.get("Origin")
+    if ORIGINS and origin and origin not in ORIGINS:
+        raise web.HTTPForbidden(text="origin not allowed")
+    if not SECRET:
+        return request.query.get("call"), True
+    tok = call_token.token_from_headers(request.headers)
+    if not tok:
+        raise web.HTTPUnauthorized(text="token required")
+    try:
+        p = call_token.verify(tok, SECRET, aud=aud)
+    except call_token.TokenError as e:
+        raise web.HTTPUnauthorized(text=str(e))
+    auds = p["aud"] if isinstance(p["aud"], list) else [p["aud"]]
+    return p["call"], "admin" in auds
+
+
+def require(request, aud="face"):
+    if SECRET:
+        _who(request, aud)
+
+
+_anon = 0
 
 
 async def ws_handler(request):
-    ws = web.WebSocketResponse(max_msg_size=0)
+    global _anon
+    call, _ = _who(request, "face")
+    explicit = call is not None   # a real call id (token, or ?call= on an open server): follow its own tap
+    if call is None:
+        _anon += 1
+        call = f"anon-{_anon}"
+    ws = web.WebSocketResponse(max_msg_size=0, protocols=(call_token.WS_PROTOCOL,))
     await ws.prepare(request)
-    clients.add(ws)
+    try:
+        replaced, switched = router.attach(call, ws)
+    except Busy:
+        # Close codes 4000-4999 are ours: 4409 = this face is serving another call.
+        await ws.close(code=4409, message=b"busy: this face is on another call")
+        return ws
+    if replaced is not None:
+        await replaced.close(code=4000, message=b"replaced by a newer connection for this call")
+    if switched:
+        flush()  # nothing the previous call queued may reach this one
+        follow_call(call if explicit else None)
     wake.set()
     try:
         async for m in ws:
@@ -347,11 +439,32 @@ async def ws_handler(request):
                 stats["browser"] = (stats["browser"] + [rep])[-3600:]
                 log(rep)
     finally:
-        clients.discard(ws)
+        if router.detach(call, ws):
+            flush()
+            follow_call(None)
     return ws
 
 
-async def flush_handler(_request):
+async def end_handler(request):
+    """POST /internal/calls/{id}/end (admin token): the Call API hung up this call."""
+    _, admin = _who(request, "admin")
+    if not admin:
+        raise web.HTTPForbidden(text="admin token required")
+    call = request.match_info["id"]
+    ws = router.end(call)
+    if ws is not None:
+        flush()
+        follow_call(None)
+        await ws.close(code=4001, message=b"call ended")
+    return web.json_response({"ended": ws is not None})
+
+
+async def readyz_handler(_request):
+    return web.json_response({"ready": engine_ready, "busy": router.busy, "engine": ENGINE, "auth": bool(SECRET)})
+
+
+async def flush_handler(request):
+    require(request)
     flush()
     return web.json_response({"ok": True})
 
@@ -387,6 +500,7 @@ async def face_image_handler(request):
 
 
 async def upload_handler(request):
+    require(request)
     body = await request.read()
     if not body or len(body) > MAX_UPLOAD:
         raise web.HTTPBadRequest(text="send one image, up to 15 MB")
@@ -407,6 +521,7 @@ async def upload_handler(request):
 async def face_handler(request):
     global pending_face
     if request.method == "POST":
+        require(request)
         fid = (await request.json()).get("id", "")
         if not (FACES / f"{fid}.png").exists() or "/" in fid or "\\" in fid:
             raise web.HTTPNotFound(text="no such face")
@@ -418,12 +533,21 @@ async def face_handler(request):
 @web.middleware
 async def cors(request, handler):
     # The call page is served by the voice server on another port.
+    origin = request.headers.get("Origin")
     if request.method == "OPTIONS":
         resp = web.Response()
     else:
-        resp = await handler(request)
-    resp.headers["Access-Control-Allow-Origin"] = "*"
-    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Name"
+        try:
+            resp = await handler(request)
+        except web.HTTPException as e:
+            resp = e
+    if ORIGINS:
+        if origin in ORIGINS:
+            resp.headers["Access-Control-Allow-Origin"] = origin
+            resp.headers["Vary"] = "Origin"
+    else:
+        resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Name, Authorization"
     resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     return resp
 
@@ -451,6 +575,7 @@ async def engine_handler(request):
             "available": [{"id": k, "name": v[2], "installed": v[1].exists() and v[0].exists()} for k, v in ENGINES.items()]}
     if request.method == "GET":
         return web.json_response(info)
+    require(request, "admin")
     name = (await request.json()).get("name", "")
     if name not in ENGINES:
         raise web.HTTPBadRequest(text="unknown engine")
@@ -483,6 +608,8 @@ async def main():
                 break
             await asyncio.sleep(0.2)
     loop = asyncio.get_running_loop()
+    global tap_changed
+    tap_changed = asyncio.Event()
     threading.Thread(target=vram_thread, daemon=True).start()
     threading.Thread(target=engine_thread, daemon=True).start()
     await asyncio.start_server(pcm_client, "127.0.0.1", args.pcm_port)
@@ -494,6 +621,7 @@ async def main():
                     web.post("/faces", upload_handler), web.get("/faces/{id}", face_image_handler),
                     web.get("/face", face_handler), web.post("/face", face_handler),
                     web.get("/engine", engine_handler), web.post("/engine", engine_handler),
+                    web.get("/readyz", readyz_handler), web.post("/internal/calls/{id}/end", end_handler),
                     web.options("/{tail:.*}", lambda r: web.Response())])
     runner = web.AppRunner(app)
     await runner.setup()

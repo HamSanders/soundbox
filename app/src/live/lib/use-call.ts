@@ -1,0 +1,84 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import { useLive } from "../live-context";
+import { CallSession, type CallHandlers, type CallState } from "./call-session";
+import { LiveApiError, type CallMode } from "./live-client";
+import { bookCallNo, nextCallNo } from "./prefs";
+
+export interface EndedInfo { seconds: number; replies: number; last: string; reason: string }
+
+/**
+ * Starting, running and ending one call from a React screen. `begin` must be
+ * called from a click: it makes the AudioContext before asking the Call API
+ * for a call, because Chrome won't let audio start after an await otherwise.
+ */
+export function useCall(mode: CallMode, handlers: CallHandlers & { persona?: () => string | undefined; voiceId?: () => string | undefined }) {
+  const live = useLive();
+  const [session, setSession] = useState<CallSession | null>(null);
+  const [state, setState] = useState<CallState | "off">("off");
+  const [error, setError] = useState<string | null>(null);
+  const [ended, setEnded] = useState<EndedInfo | null>(null);
+  const [callNo, setCallNo] = useState(nextCallNo);
+  const h = useRef(handlers);
+  h.current = handlers;
+  const sRef = useRef<CallSession | null>(null);
+
+  const begin = useCallback(async (character?: string | null) => {
+    setError(null);
+    setEnded(null);
+    setState("starting");
+    let ctx: AudioContext;
+    try {
+      ctx = CallSession.audioContext();
+    } catch (e) {
+      setState("error");
+      setError(String((e as Error).message ?? e));
+      return;
+    }
+    let grant;
+    try {
+      grant = await live.startCall(mode, character);
+    } catch (e) {
+      void ctx.close();
+      setState("error");
+      setError(e instanceof LiveApiError ? e.message : String(e));
+      return;
+    }
+    const s: CallSession = new CallSession(live, grant, { persona: h.current.persona?.() ?? grant.persona, voiceId: h.current.voiceId?.() }, {
+      ...h.current,
+      state: (st) => { setState(st); h.current.state?.(st); },
+      note: (t, err) => { if (err && !s.startedAt) setError(t); h.current.note?.(t, err); },
+      ended: (reason) => {
+        setEnded({ seconds: s.seconds, replies: s.replies, last: s.lastReply, reason });
+        h.current.ended?.(reason);
+      },
+    });
+    // Forward every handler at call time, so screens can change them between renders.
+    for (const k of ["partial", "final", "replyDelta", "flush", "turn", "video", "info"] as const) {
+      s.on[k] = ((...a: unknown[]) => (h.current[k] as ((...x: unknown[]) => void) | undefined)?.(...a)) as never;
+    }
+    sRef.current = s;
+    setSession(s);
+    bookCallNo(callNo);
+    s.start(ctx);
+  }, [live, mode, callNo]);
+
+  const hangUp = useCallback(() => { void sRef.current?.hangUp(); }, []);
+
+  /** After "call again": a fresh call number for the next one. */
+  const reset = useCallback(() => { setEnded(null); setState("off"); setSession(null); sRef.current = null; setCallNo(nextCallNo()); }, []);
+
+  // Leaving the screen ends the call.
+  useEffect(() => () => { void sRef.current?.hangUp("left"); }, []);
+  // Closing the tab: tell the API (keepalive survives the unload).
+  useEffect(() => {
+    const bye = () => {
+      const s = sRef.current;
+      if (s && s.startedAt) fetch(`${live.baseUrl}/v1/calls/${s.callId}`, { method: "DELETE", keepalive: true }).catch(() => {});
+    };
+    addEventListener("pagehide", bye);
+    return () => removeEventListener("pagehide", bye);
+  }, [live]);
+
+  return { session, state, error, ended, begin, hangUp, reset, callNo };
+}

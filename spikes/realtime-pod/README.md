@@ -26,6 +26,7 @@ default. The Dockerfile only installs MuseTalk.
 | `Dockerfile.dockerignore` | Sends only what the Dockerfile copies (the build context would otherwise include `node_modules`, run logs and results). |
 | `entrypoint.sh` | Starts the voice server, the face server and `pod.mjs`. If one of them exits, the container exits so the provider restarts it. |
 | `pod.mjs` | The front door: proxy, one call at a time, busy/free state, health, readiness, call tokens and a record of each call. Standard library only. |
+| `remote-call.mjs` | A headless caller for a running pod (local or through the proxy): real-time mic frames, turn latency, bandwidth, socket closes. |
 | `smoke.mjs` | 29 checks of `pod.mjs` against stub engines. No GPU needed: `node smoke.mjs` (after `npm ci` in `../realtime-voice`). |
 | `start.sh` | Sets up a stock RunPod PyTorch pod and starts the call (see above). |
 | `build.sh` | Copies the portraits into `faces/` (gitignored) and builds the image. For CI, not the dev PC. |
@@ -68,7 +69,7 @@ Leaving `POD_SECRET` unset is dev mode: every request is let in, and the log say
 
 ## Endpoints on :8080
 
-States: `starting` (engines loading) → `free` → `reserved` (router claimed it) → `busy` (caller's `/ws` is
+States: `failed` (CUDA unusable on this host: terminate the pod), `starting` (engines loading) → `free` → `reserved` (router claimed it) → `busy` (caller's `/ws` is
 open, including the reconnect grace) → `free`. `draining` = finish the current call, then take no more.
 
 | Path | Who | Returns |
@@ -78,6 +79,7 @@ open, including the reconnect grace) → `free`. `draining` = finish the current
 | `GET /state` | router (admin token) | The same plus engine detail (VRAM, face fps), `calls_served`, `last_call`, `pod_id`. |
 | `POST /claim {call_id}` | router (admin token) | Reserves a free pod for that call. A retry with the same id returns 200; any other claim gets 409. |
 | `POST /release {call_id?, reason?}` | router (admin token) | Ends the call now (closes the sockets, flushes the face) and returns the call record. |
+| `GET /logs?name=voice\|face\|pod\|start&n=200` | router (admin token) | Tail of a process log, so a failing pod can be read without SSH. |
 | `POST /drain {draining: true\|false}` | router (admin token) | Stops new callers before the router stops the pod. |
 | `GET /?t=<token>` | caller | The call page. Sets an HttpOnly cookie, so the page's own requests and WebSockets carry the token. |
 | `WS /ws` | caller | The conversation (mic in, TTS out, events). One per call. |

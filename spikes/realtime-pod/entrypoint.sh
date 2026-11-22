@@ -13,34 +13,38 @@ pids=()
 t0=$(date +%s)
 stamp() { echo "[$(( $(date +%s) - t0 ))s] $*"; }
 
-# The voice server checks the LLM once at start-up and exits if it can't reach it, which restarts the whole
-# container. Wait for the LLM instead (it may be a pod that is still booting), up to LLM_WAIT_S.
+# Logs: each process writes to /tmp/logs/<name>.log (and the container log); pod.mjs serves them on
+# GET /logs?name=voice|face|pod|start with the admin token, so a failing pod can be read without SSH.
+mkdir -p /tmp/logs
+run() { local name=$1; shift; ( "$@" ) > >(tee -a "/tmp/logs/$name.log") 2>&1 & pids+=($!); }
+
+# The front door first, so /healthz and /logs answer while everything else starts.
+run pod bash -c 'cd /app/realtime-pod && exec node pod.mjs'
+
+# The voice server checks the LLM once at start-up and exits if it can't reach it. Wait for the LLM instead
+# (it may be a pod that is still booting), up to LLM_WAIT_S.
 for i in $(seq 1 "${LLM_WAIT_S:-900}"); do
   code=$(curl -s -m 5 -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${LLM_API_KEY:-}" "${LLM_BASE_URL%/}/models" || true)
   [ "$code" = "200" ] && break
-  [ $((i % 30)) = 1 ] && stamp "waiting for the LLM at $LLM_BASE_URL (HTTP $code)"
+  [ $((i % 30)) = 1 ] && stamp "waiting for the LLM at $LLM_BASE_URL (HTTP $code)" | tee -a /tmp/logs/pod.log
   sleep 1
 done
 
-# Voice first: the face server subscribes to its PCM tap and retries every 2 s until it is up.
-(cd /app/realtime-voice && exec node server.mjs) &
-pids+=($!)
-stamp "voice server pid ${pids[-1]}"
-
+# Voice next: the face server subscribes to its PCM tap and retries every 2 s until it is up.
+run voice bash -c 'cd /app/realtime-voice && exec node server.mjs'
 if [ "${FACE:-1}" != "0" ]; then
-  (cd /app/realtime-face && exec python3 server.py --engine musetalk --input-rate 48000 \
-     --tap ws://127.0.0.1:17650/tap --image "$FACE_IMAGE" ${FACE_ARGS:-}) &
-  pids+=($!)
-  stamp "face server pid ${pids[-1]} (MuseTalk, portrait $FACE_IMAGE)"
+  run face bash -c "cd /app/realtime-face && exec python3 server.py --engine musetalk --input-rate 48000 --tap ws://127.0.0.1:17650/tap --image '$FACE_IMAGE' ${FACE_ARGS:-}"
 fi
-
-(cd /app/realtime-pod && exec node pod.mjs) &
-pids+=($!)
+stamp "started: ${pids[*]}"
 
 trap 'kill "${pids[@]}" 2>/dev/null; wait; exit 0' TERM INT
-wait -n "${pids[@]}"
-code=$?
-stamp "a process exited ($code); stopping the pod"
-kill "${pids[@]}" 2>/dev/null
-wait
-exit "${code:-1}"
+# By default a dead engine leaves the pod up (readyz stays 503, logs stay readable) instead of restarting
+# the container, which would re-run the whole setup. POD_EXIT_ON_FAIL=1 restores exit-and-restart.
+while true; do
+  wait -n "${pids[@]}"
+  code=$?
+  stamp "a process exited ($code)" | tee -a /tmp/logs/pod.log
+  if [ "${POD_EXIT_ON_FAIL:-0}" = "1" ]; then kill "${pids[@]}" 2>/dev/null; wait; exit "$code"; fi
+  alive=(); for p in "${pids[@]}"; do kill -0 "$p" 2>/dev/null && alive+=("$p"); done; pids=("${alive[@]}")
+  [ ${#pids[@]} -eq 0 ] && exit "$code"
+done

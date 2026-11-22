@@ -8,7 +8,7 @@
 // No dependencies beyond Node's standard library. See README.md for the endpoint reference.
 
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { appendFileSync, existsSync, readdirSync, rmSync } from "node:fs";
+import { appendFileSync, existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import http from "node:http";
 import net from "node:net";
@@ -257,6 +257,14 @@ const server = http.createServer(async (req, res) => {
   if (p === "/state") {
     if (!isAdmin(req)) return json(res, 401, { error: "admin token required" });
     return json(res, 200, { ...publicState(), engines: pod.engines, draining: pod.draining, calls_served: pod.calls, last_call: pod.lastCall, pod_id: env.RUNPOD_POD_ID ?? null });
+  }
+  if (p === "/logs") {
+    if (!isAdmin(req)) return json(res, 401, { error: "admin token required" });
+    const name = url.searchParams.get("name") ?? "voice";
+    const file = name === "start" ? "/workspace/start.log" : `/tmp/logs/${name}.log`;
+    if (!/^(voice|face|pod|start)$/.test(name) || !existsSync(file)) return json(res, 404, { error: "no such log" });
+    const lines = readFileSync(file, "utf8").split("\n");
+    return res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }).end(lines.slice(-Number(url.searchParams.get("n") ?? 200)).join("\n"));
   }
   if (p === "/claim" && req.method === "POST") {
     if (!isAdmin(req)) return json(res, 401, { error: "admin token required" });

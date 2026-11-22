@@ -54,6 +54,15 @@ jobs:
       - run: npm run build
       - run: npm run site:build
 
+  # The scripts workflows run (.github/scripts) have their own tests, on the
+  # runner's own Node, since that is what runs them.
+  workflow-scripts:
+    name: Workflow scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: node --test .github/scripts/scam-guard.test.mjs
+
   docker-slim:
     name: Docker (Dockerfile.slim)
     runs-on: ubuntu-latest

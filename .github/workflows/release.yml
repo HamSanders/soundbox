@@ -113,14 +113,23 @@ jobs:
             echo "SIGNED_ARGS=--config src-tauri/tauri.signed.conf.json" >> "$GITHUB_ENV"
           fi
 
-      # The release notes are the tag's section of CHANGELOG.md. A tag made by
-      # hand with no section of its own (an -rc, say) falls back to a link.
+      # The release notes are the tag's section of CHANGELOG.md. A tag with no
+      # notes stops here, before anything is built: a release that only links
+      # to the changelog tells nobody what changed. A pre-release tag
+      # (v0.7.0-beta.1) has no section of its own and takes Unreleased.
       - name: Release notes from the changelog
         if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         run: |
-          notes=$(node scripts/version.mjs notes "${GITHUB_REF_NAME#v}" 2>/dev/null) ||
-            notes="See [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/main/CHANGELOG.md) for what changed."
+          version="${GITHUB_REF_NAME#v}"
+          case "$version" in
+            *-*) section=Unreleased ;;
+            *) section="$version" ;;
+          esac
+          if ! notes=$(node scripts/version.mjs notes "$section") || [ -z "$notes" ]; then
+            echo "::error title=No release notes::CHANGELOG.md has nothing under ## [$section]. Write the notes there, then tag again (docs/RELEASING.md)."
+            exit 1
+          fi
           { echo "RELEASE_NOTES<<__NOTES__"; echo "$notes"; echo "__NOTES__"; } >> "$GITHUB_ENV"
 
       # Updater bundles and latest.json, made only when the updater key is
@@ -165,3 +174,42 @@ jobs:
             src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
             src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
           if-no-files-found: error
+
+  # SHA256SUMS.txt for the installers, attached to the same draft once every
+  # target has uploaded. It lists the files people download and run (.exe,
+  # .dmg, .AppImage, .deb), not the updater's bundles: those are verified by
+  # their .sig files against the key in the app, and latest.json is left
+  # exactly as tauri-action wrote it. docs/DESKTOP.md shows how to check a
+  # download against the list.
+  checksums:
+    name: Checksums
+    needs: desktop
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Hash the installers and attach SHA256SUMS.txt
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          mkdir installers
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir installers             --pattern '*.exe' --pattern '*.dmg' --pattern '*.AppImage' --pattern '*.deb'
+          cd installers
+          for ext in exe dmg AppImage deb; do
+            if ! ls ./*."$ext" >/dev/null 2>&1; then
+              echo "::error title=Installer missing::The release for $TAG has no .$ext file, so the checksum list would be incomplete."
+              exit 1
+            fi
+          done
+          sha256sum -- * > ../SHA256SUMS.txt
+          cd ..
+          cat SHA256SUMS.txt
+          gh release upload "$TAG" SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
+          {
+            echo "### SHA256SUMS.txt for $TAG"
+            echo '```'
+            cat SHA256SUMS.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

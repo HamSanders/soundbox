@@ -9,6 +9,7 @@ to follow [Semantic Versioning](https://semver.org/).
 ### Added
 - **Sandboxed mode for shared servers.** `MIRLI_SANDBOXED=1` runs Mirli for people who don't own the machine: folder browsing, profile folders, downloads, local models, custom endpoints, the update check, the server log and agent skill installs are off, and settings that name a path, an engine or a URL are locked. The guards match the route the server resolved, so an encoded path can't slip past them. `MIRLI_DISABLE` turns off single capabilities, and `GET /api/capabilities` reports what the server allows. See `docs/INSTALL.md`.
 - **Exit when idle.** `MIRLI_IDLE_EXIT_MINUTES` stops the server after that long with no requests, none still being answered and no jobs, for hosts that scale to zero. It shuts down the same way Ctrl+C does.
+- **Checksums for the installers.** Each release now carries `SHA256SUMS.txt`, the SHA-256 of every installer, so you can check a download is the file the release built. `docs/DESKTOP.md` shows how on Windows, macOS and Linux.
 - **A slim Docker image without audio.cpp** (`Dockerfile.slim`), for a server that only uses custom endpoints or other remote models; local models are off in it. CI builds it and checks that it starts. See `docs/INSTALL.md`.
 
 ### Changed

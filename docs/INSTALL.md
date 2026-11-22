@@ -575,6 +575,7 @@ name, as the table shows.
 | `SOUNDBOX_NODE` | desktop shell | Node interpreter to run the built server with, if `node` is not on `PATH`. |
 | `SOUNDBOX_PROJECT_ROOT` | desktop shell | Path to the checkout, if the shell cannot find it from its own location. |
 | `VITE_MOCK` | app build | `1` runs the UI against the in-browser fake backend (`npm run dev:mock` sets it). |
+| `VITE_MOCK_FIXTURE` | app build | With `VITE_MOCK=1`, `demo` starts the fake backend from the demo library the screenshots are taken from (`npm run capture:media` sets it). |
 | `VITE_REPO_URL` | app build | Repository URL used in the app's links. Default `https://github.com/HamSanders/soundbox`. |
 | `VITE_SITE_ORIGIN` | app and site builds | Absolute origin for canonical URLs and the site's RSS feed. |
 

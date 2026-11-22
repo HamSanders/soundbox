@@ -17,6 +17,19 @@ npm run dev        # server on 17494 + Vite on 5174, stopped together
 `npm run dev:mock` runs the UI against an in-browser fake with no server and no
 GPU. It is enough for almost all frontend work.
 
+The screenshots in the README, on the site and in the press kit
+(`site/public/product/app-*`) are taken by a script, not by hand. If your change
+alters how a page looks, take them again and commit the result:
+
+```bash
+npx playwright install chromium   # once per machine
+npm run capture:media             # every shot, or name some: capture:media -- studio sfx
+```
+
+It runs the app on the mock backend with a demo fixture
+(`app/src/lib/mock-demo.ts`), so it needs no server, GPU or data directory, and
+writes `manifest.json` beside the images with the commit and the date.
+
 Tests and lint:
 
 ```bash

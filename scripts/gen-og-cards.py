@@ -3,11 +3,13 @@
     default.jpg  every page that does not name its own card
     mcp.jpg      /mcp, with the one line that connects an agent
 
-Each is a real product screenshot (site/public/product/) under the name and one
-line of copy, set in Geist from node_modules so the cards match the site. The
-command on the MCP card uses Consolas when it is installed (Windows) and Geist
-otherwise. Re-run after a screenshot or the copy changes:
+Each is a real product screenshot (site/public/product/, taken by
+scripts/capture-media.mjs) under the name and one line of copy, set in the
+site's own faces from node_modules: Big Shoulders Display for the name, Inter
+for the rest. The command on the MCP card uses Consolas when it is installed
+(Windows) and Inter otherwise. Re-run after a screenshot or the copy changes:
 
+    node scripts/capture-media.mjs
     python scripts/gen-og-cards.py
 """
 
@@ -18,27 +20,36 @@ from PIL import Image, ImageDraw, ImageFont
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "site" / "public" / "og"
 PRODUCT = ROOT / "site" / "public" / "product"
-GEIST = ROOT / "node_modules" / "@fontsource-variable" / "geist" / "files" / "geist-latin-wght-normal.woff2"
+FONTS = ROOT / "node_modules" / "@fontsource-variable"
+INTER = FONTS / "inter" / "files" / "inter-latin-wght-normal.woff2"
+DISPLAY = FONTS / "big-shoulders-display" / "files" / "big-shoulders-display-latin-wght-normal.woff2"
 MONO = Path("C:/Windows/Fonts/consola.ttf")
 
 W, H = 1200, 630
-# The dark theme's tokens (app/src/index.css), converted from oklch.
-BACKGROUND = (10, 10, 10)
-CARD = (23, 23, 23)
-FOREGROUND = (250, 250, 250)
-MUTED = (161, 161, 161)
-PRIMARY = (0, 178, 186)
-BORDER = (40, 40, 40)
+# The dark theme's tokens (`.dark` in app/src/index.css): background, card,
+# foreground, muted-foreground, signal and border.
+BACKGROUND = (0x18, 0x18, 0x17)
+CARD = (0x20, 0x20, 0x1E)
+FOREGROUND = (0xF1, 0xEC, 0xE0)
+MUTED = (0xA9, 0xA7, 0x97)
+SIGNAL = (0xF2, 0xA4, 0x0C)
+BORDER = (0x33, 0x33, 0x2F)
 
 
-def geist(size: int, weight: str) -> ImageFont.FreeTypeFont:
-    font = ImageFont.truetype(str(GEIST), size)
+def inter(size: int, weight: str) -> ImageFont.FreeTypeFont:
+    font = ImageFont.truetype(str(INTER), size)
     font.set_variation_by_name(weight)
     return font
 
 
+def display(size: int) -> ImageFont.FreeTypeFont:
+    font = ImageFont.truetype(str(DISPLAY), size)
+    font.set_variation_by_name("ExtraBold")
+    return font
+
+
 def mono(size: int) -> ImageFont.FreeTypeFont:
-    return ImageFont.truetype(str(MONO), size) if MONO.exists() else geist(size, "Regular")
+    return ImageFont.truetype(str(MONO), size) if MONO.exists() else inter(size, "Regular")
 
 
 def rounded(im: Image.Image, radius: int) -> Image.Image:
@@ -65,9 +76,10 @@ def card(screenshot: str | None, eyebrow: str, title: str, line: str, command: s
         im.paste(rounded(shot, 16), (x, y), rounded(shot, 16))
 
     left = 72
-    draw.text((left, 64), eyebrow, font=geist(26, "SemiBold"), fill=PRIMARY)
-    draw.text((left, 102), title, font=geist(76, "SemiBold"), fill=FOREGROUND)
-    body = geist(32, "Regular")
+    draw.text((left, 64), eyebrow, font=inter(26, "SemiBold"), fill=SIGNAL)
+    # Headings are set in capitals in the app; the card follows.
+    draw.text((left, 100), title.upper(), font=display(84), fill=FOREGROUND)
+    body = inter(32, "Regular")
     for i, text in enumerate(line.split("\n")):
         draw.text((left, 206 + i * 42), text, font=body, fill=MUTED)
 
@@ -79,16 +91,16 @@ def card(screenshot: str | None, eyebrow: str, title: str, line: str, command: s
         box_w = round(draw.textlength(command, font=font)) + prompt_w + pad * 2
         top = 340
         draw.rounded_rectangle((left, top, left + box_w, top + 84), 14, fill=CARD, outline=BORDER, width=2)
-        draw.text((left + pad, top + 27), "$", font=font, fill=PRIMARY)
+        draw.text((left + pad, top + 27), "$", font=font, fill=SIGNAL)
         draw.text((left + pad + prompt_w, top + 27), command, font=font, fill=FOREGROUND)
         draw.text(
             (left, top + 112),
             "24 tools · Claude Code, Cursor or any MCP client · no API key",
-            font=geist(24, "Regular"),
+            font=inter(24, "Regular"),
             fill=MUTED,
         )
 
-    draw.text((left, H - 64), "mirli.app", font=geist(22, "Medium"), fill=MUTED)
+    draw.text((left, H - 64), "mirli.app", font=inter(22, "Medium"), fill=MUTED)
     return im
 
 
@@ -96,7 +108,7 @@ def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     cards = {
         "default.jpg": card(
-            "studio.png",
+            "app-studio.webp",
             "Open source · MIT",
             "Mirli",
             "Sound effects, music and voices,\ngenerated on your own machine.",

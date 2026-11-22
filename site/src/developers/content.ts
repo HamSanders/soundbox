@@ -320,7 +320,7 @@ export const API_RULES: string[] = [
   "Base URL `http://127.0.0.1:17494`, JSON in and out.",
   "The `Host` header must be `localhost`, `127.0.0.1` or `[::1]` (or a name in `MIRLI_ALLOWED_HOSTS`); anything else is `403`. This blocks DNS rebinding.",
   "`POST`, `PUT`, `PATCH` and `DELETE` under `/api/` need `Content-Type: application/json` (or a raw audio type on uploads) or an `X-Soundbox` header, or they get `403`.",
-  "With `MIRLI_API_TOKEN` set, `/api/*`, `/mcp`, `/files` and `/artwork` need `Authorization: Bearer <token>`; `GET /api/health` stays open.",
+  "With `MIRLI_API_TOKEN` set, `/api/*`, `/v1/*`, `/mcp`, `/files` and `/artwork` need `Authorization: Bearer <token>`; `GET /api/health` stays open.",
 ];
 
 export const LIMITS: { label: string; value: string }[] = [

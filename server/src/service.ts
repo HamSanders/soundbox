@@ -1468,6 +1468,9 @@ export class MirliService {
   } {
     const requestOptions = { ...options };
     if (!voiceId) return { refPath: null, builtinId: null, requestOptions };
+    if (voiceId.startsWith(BUILTIN_VOICE_PREFIX)) {
+      return { refPath: null, builtinId: voiceId.slice(BUILTIN_VOICE_PREFIX.length), requestOptions };
+    }
     const voice = this.db.getVoice(voiceId);
     if (voice === null) throw new ModelError(`Voice '${voiceId}' not found.`);
     if (voice.kind === "builtin") {
@@ -1609,6 +1612,18 @@ export class MirliService {
     await unlinkQuiet(join(this.config.paths.sounds, filename));
     await unlinkQuiet(join(this.config.paths.cache, `${stem}.mp3`));
     return true;
+  }
+
+  /**
+   * Delete a sound that was only made to be sent to a caller, and the session
+   * the job opened for it when nothing else is in it. For routes that render
+   * for another program and should leave the library as they found it.
+   */
+  async discardSound(soundId: string): Promise<boolean> {
+    const sessionId = this.db.getSound(soundId)?.session_id ?? null;
+    const deleted = await this.deleteSound(soundId);
+    if (deleted && sessionId) this.db.deleteIfEmpty(sessionId);
+    return deleted;
   }
 
   listTags(): TagCount[] {
@@ -2698,7 +2713,7 @@ export class MirliService {
     // the same saved voice gets that voice stamped on it, a mixed dialogue
     // (or a model-default read) gets nothing.
     const lineVoices = new Set(req.lines.map((l) => l.voice_id ?? null));
-    const soleVoice = lineVoices.size === 1 ? [...lineVoices][0]! : null;
+    const soleVoice = lineVoices.size === 1 ? savedVoiceId([...lineVoices][0]!) : null;
 
     const sound: Sound = {
       id: soundId,
@@ -2815,7 +2830,7 @@ export class MirliService {
           steps: info.supports.steps ? req.steps ?? null : null,
           cfg: info.supports.cfg ? req.cfg ?? null : null,
           projectId: req.project_id ?? null,
-          voiceId: req.voice_id ?? null,
+          voiceId: savedVoiceId(req.voice_id),
           trim: false,
           // What was heard is what's kept: normalising afterwards would make
           // the saved file louder or quieter than the stream that played.
@@ -3798,6 +3813,21 @@ async function unlinkQuiet(path: string): Promise<void> {
   } catch {
     /* already gone */
   }
+}
+
+/**
+ * A model's own built-in voice named directly, without a saved Voice for it:
+ * `builtin:<name>` in a `voice_id`, where the name is one of the model's
+ * `voice_ids`. Saved voices have UUID ids, so the two cannot collide. The
+ * OpenAI-compatible routes use it so a client can ask for a model's voice by
+ * name; a sound read this way records no voice, since there is no row to
+ * point at.
+ */
+export const BUILTIN_VOICE_PREFIX = "builtin:";
+
+/** The saved Voice a `voice_id` names, or null for none or a `builtin:` one. */
+function savedVoiceId(voiceId: string | null | undefined): string | null {
+  return voiceId && !voiceId.startsWith(BUILTIN_VOICE_PREFIX) ? voiceId : null;
 }
 
 /** One item of `MirliService.speakStream`. */

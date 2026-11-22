@@ -13,6 +13,15 @@ pids=()
 t0=$(date +%s)
 stamp() { echo "[$(( $(date +%s) - t0 ))s] $*"; }
 
+# The voice server checks the LLM once at start-up and exits if it can't reach it, which restarts the whole
+# container. Wait for the LLM instead (it may be a pod that is still booting), up to LLM_WAIT_S.
+for i in $(seq 1 "${LLM_WAIT_S:-900}"); do
+  code=$(curl -s -m 5 -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${LLM_API_KEY:-}" "${LLM_BASE_URL%/}/models" || true)
+  [ "$code" = "200" ] && break
+  [ $((i % 30)) = 1 ] && stamp "waiting for the LLM at $LLM_BASE_URL (HTTP $code)"
+  sleep 1
+done
+
 # Voice first: the face server subscribes to its PCM tap and retries every 2 s until it is up.
 (cd /app/realtime-voice && exec node server.mjs) &
 pids+=($!)

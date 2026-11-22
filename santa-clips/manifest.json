@@ -1,0 +1,243 @@
+{
+ "version": 1,
+ "talkPose": "talk",
+ "restPose": "rest",
+ "startPose": "talk",
+ "width": 896,
+ "height": 1120,
+ "fps": 16,
+ "notes": "Moves are 5 s (fal/MiniMax H3 minimum; also natural for Wan). Talk-pose idling comes from the live face model fed silence, plus a looped fire patch; talk_idle_* are fallbacks. talk_close is a second angle reached by a hard cut, no clip. Clips without a file are planned.",
+ "poses": {
+  "talk": {
+   "label": "Seated, facing camera (master still; live lip-sync pose)",
+   "still": "stills/talk.png",
+   "faceBox": {
+    "x": 214,
+    "y": 104,
+    "size": 512,
+    "note": "Square crop of stills/talk.png given to the live face model; paste its output back here with a feathered mask"
+   }
+  },
+  "lean": {
+   "label": "Lean-in, hands clasped",
+   "still": "stills/talk_lean.png"
+  },
+  "rest": {
+   "label": "Warming hands by the fire",
+   "still": "stills/fire.png"
+  },
+  "list": {
+   "label": "Reading the Nice list",
+   "still": "stills/list.png"
+  },
+  "cocoa": {
+   "label": "Sipping cocoa",
+   "still": "stills/cocoa.png"
+  }
+ },
+ "clips": [
+  {
+   "id": "talk_idle_a",
+   "from": "talk",
+   "to": "talk",
+   "kind": "idle",
+   "src": "clips/talk_idle_a.mp4",
+   "durationS": 2.5,
+   "weight": 1,
+   "prompt": "breathes, blinks, small smile",
+   "role": "fallback when the face model is not idling"
+  },
+  {
+   "id": "talk_idle_b",
+   "from": "talk",
+   "to": "talk",
+   "kind": "idle",
+   "src": "clips/talk_idle_b.mp4",
+   "durationS": 2.5,
+   "weight": 1,
+   "prompt": "small nod, glances at the fire and back",
+   "role": "fallback"
+  },
+  {
+   "id": "talk_to_list",
+   "from": "talk",
+   "to": "list",
+   "kind": "transition",
+   "src": "clips/talk_to_list.mp4",
+   "durationS": 3
+  },
+  {
+   "id": "list_to_talk",
+   "from": "list",
+   "to": "talk",
+   "kind": "transition",
+   "src": "clips/list_to_talk.mp4",
+   "durationS": 3
+  },
+  {
+   "id": "talk_to_cocoa",
+   "from": "talk",
+   "to": "cocoa",
+   "kind": "transition",
+   "src": "clips/talk_to_cocoa.mp4",
+   "durationS": 5,
+   "prompt": "Santa picks up a mug of cocoa from the side table and takes a sip"
+  },
+  {
+   "id": "cocoa_to_talk",
+   "from": "cocoa",
+   "to": "talk",
+   "kind": "transition",
+   "src": "clips/cocoa_to_talk.mp4",
+   "durationS": 5,
+   "prompt": "Santa puts it down and turns back to the camera, smiling"
+  },
+  {
+   "id": "talk_to_lean",
+   "from": "talk",
+   "to": "lean",
+   "kind": "transition",
+   "src": "clips/talk_to_lean.mp4",
+   "durationS": 5,
+   "prompt": "Santa leans forward with forearms on knees, listening closely"
+  },
+  {
+   "id": "lean_to_talk",
+   "from": "lean",
+   "to": "talk",
+   "kind": "transition",
+   "src": "clips/lean_to_talk.mp4",
+   "durationS": 5,
+   "prompt": "Santa settles back and looks at the camera"
+  },
+  {
+   "id": "talk_to_rest",
+   "from": "talk",
+   "to": "rest",
+   "kind": "transition",
+   "src": "clips/talk_to_rest.mp4",
+   "durationS": 5,
+   "prompt": "Santa turns toward the fire and warms his hands"
+  },
+  {
+   "id": "rest_to_talk",
+   "from": "rest",
+   "to": "talk",
+   "kind": "transition",
+   "src": "clips/rest_to_talk.mp4",
+   "durationS": 5,
+   "prompt": "Santa settles back and looks at the camera"
+  },
+  {
+   "id": "laugh",
+   "from": "talk",
+   "to": "talk",
+   "kind": "reaction",
+   "src": "clips/laugh.mp4",
+   "durationS": 5,
+   "prompt": "Santa laughs heartily, head back, hand on his belly, then settles back smiling",
+   "tags": [
+    "laugh"
+   ]
+  },
+  {
+   "id": "shh",
+   "from": "talk",
+   "to": "talk",
+   "kind": "reaction",
+   "src": "clips/shh.mp4",
+   "durationS": 5,
+   "prompt": "Santa raises a finger to his lips with a knowing smile, then lowers it",
+   "tags": [
+    "shh",
+    "secret"
+   ]
+  },
+  {
+   "id": "think",
+   "from": "talk",
+   "to": "talk",
+   "kind": "reaction",
+   "src": "clips/think.mp4",
+   "durationS": 5,
+   "prompt": "Santa strokes his beard thoughtfully, looks up, then back at the camera",
+   "tags": [
+    "thinking"
+   ]
+  },
+  {
+   "id": "check_list",
+   "from": "list",
+   "to": "list",
+   "kind": "reaction",
+   "src": "clips/check_list.mp4",
+   "durationS": 5,
+   "prompt": "Santa runs a finger down the scroll and nods",
+   "tags": [
+    "check_list"
+   ]
+  },
+  {
+   "id": "sip_cocoa",
+   "from": "cocoa",
+   "to": "cocoa",
+   "kind": "reaction",
+   "src": "clips/sip_cocoa.mp4",
+   "durationS": 5,
+   "prompt": "Santa takes a slow sip and sighs happily",
+   "tags": [
+    "sip_cocoa"
+   ]
+  },
+  {
+   "id": "gag_reindeer",
+   "from": "talk",
+   "to": "talk",
+   "kind": "idle",
+   "src": "clips/gag_reindeer.mp4",
+   "durationS": 5,
+   "prompt": "A reindeer peers in at the window behind Santa, then wanders off",
+   "weight": 0.2,
+   "review": "Reindeer renders inside the room (top right), not at the window; redo with a plain nose and the window named explicitly"
+  }
+ ],
+ "planned": [
+  {
+   "id": "enter_and_sit",
+   "from": "empty",
+   "to": "talk",
+   "kind": "transition",
+   "src": "clips/enter_and_sit.mp4",
+   "durationS": 5,
+   "prompt": "Santa walks in from the right, settles into the armchair and smiles at the camera",
+   "tags": [
+    "hello"
+   ]
+  },
+  {
+   "id": "stand_and_leave",
+   "from": "talk",
+   "to": "empty",
+   "kind": "transition",
+   "src": "clips/stand_and_leave.mp4",
+   "durationS": 5,
+   "prompt": "Santa waves goodbye, rises from the armchair and walks out to the right",
+   "tags": [
+    "goodbye"
+   ]
+  }
+ ],
+ "plannedPoses": {
+  "empty": {
+   "label": "Empty chair (Santa off-screen)",
+   "still": "stills/empty.png",
+   "pending": "still not generated yet (image quota resets 2026-11-21 02:03 UTC)"
+  },
+  "talk_close": {
+   "label": "Second angle: closer on the face, hard cut only",
+   "still": "stills/talk_close.png",
+   "pending": "still not generated yet",
+   "cutOnly": true
+  }
+ }
+}

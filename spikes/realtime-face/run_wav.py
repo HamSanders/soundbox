@@ -3,6 +3,7 @@ import argparse
 import json
 import subprocess
 import time
+from pathlib import Path
 
 import imageio
 import imageio_ffmpeg
@@ -10,15 +11,19 @@ import librosa
 import numpy as np
 import torch
 
-import engine as E
+import sys
+if "musetalk" in sys.argv:
+    import musetalk_engine as E
+else:
+    import engine as E
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--image", default=str(E.UPSTREAM / "examples" / "girl.png"))
-ap.add_argument("--audio", default=str(E.UPSTREAM / "examples" / "podcast_sichuan_16k.wav"))
+ap.add_argument("--image", default=str(Path.home() / "mirli-spike-face" / "upstream" / "SoulX-FlashHead" / "examples" / "girl.png"))
+ap.add_argument("--audio", default=str(Path.home() / "mirli-spike-face" / "upstream" / "SoulX-FlashHead" / "examples" / "podcast_sichuan_16k.wav"))
 ap.add_argument("--out", default="results/wav.mp4")
 ap.add_argument("--seconds", type=float, default=20)
 ap.add_argument("--compile", action="store_true")
-ap.add_argument("--model", default="lite", choices=["lite", "pro"])
+ap.add_argument("--model", default="lite", choices=["lite", "pro", "musetalk"])
 args = ap.parse_args()
 
 eng = E.FaceEngine(compile_model=args.compile, compile_vae=args.compile, model_type=args.model)

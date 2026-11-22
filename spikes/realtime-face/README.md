@@ -4,8 +4,9 @@ One portrait image plus a stream of speech audio in, a live video of that face t
 local browser page with the audio. Isolated from the shipping app: nothing here is imported by `server/`,
 `app/` or `site/`, and the model code, weights and Python environment live outside the repo.
 
-Status (2026-11-19, Windows 11, RTX 5080 16 GB): **works and is real time on its own; does not yet fit
-beside the voice spike's stack; the fast variant is not licensed for shipping.** Details below.
+Status (measured 2026-11-19 and 2026-11-21, Windows 11, RTX 5080 16 GB): **Lite works and is real time on
+its own, but is not licensed for shipping and does not fit beside the voice spike's stack. Pro is
+licence-clean and runs at 6.4 frames/s here, a quarter of real time.** Details below.
 
 ![four frames from the WAV-driven run](results/wav_contact.jpg)
 
@@ -22,11 +23,11 @@ The portrait and speech in these are the upstream repo's own examples (`examples
 | --- | --- |
 | Model picked | SoulX-FlashHead **Lite** (1.3B DiT + LTX-Video 0.9 VAE + wav2vec2) |
 | Real time on the 5080? | Yes. ~60 frames generated per second for a 25 fps stream (2.4x real time) |
-| First audio to first frame | ~0.7 s to the chunk leaving the server, ~0.8 s on screen (TTS-speed audio, idle motion off) |
-| A/V drift | None measurable over 3.5 min: +0.2 ms/min, frames ~11 ms behind the audio clock throughout |
-| VRAM | ~6.4 GB on the card (5.4 GB reserved by torch) |
+| First audio to first frame | ~0.65 s to the chunk leaving the server, ~0.8 s on screen (TTS-speed audio, idle motion off); ~1.3 s on screen with idle motion on |
+| A/V drift | None measurable over 5.5 min: -0.1 ms/min, frames ~10 ms behind the audio clock throughout |
+| VRAM | ~6.1-6.5 GB on the card (5.4 GB reserved by torch) |
 | Fits beside the voice loop? | **Not as measured.** The voice note leaves 4.5-5 GB; this needs ~6.4 GB |
-| Licence for shipping in Mirli | **No for Lite** (its VAE is research-only). Pro is Apache-2.0 throughout but upstream claims only 10.8 FPS on a 4090; not measured here |
+| Licence for shipping in Mirli | **No for Lite** (its VAE is research-only). Pro is Apache-2.0 throughout but measured **6.4 frames/s** here (needs 25) with 7.2 GB reserved |
 
 ## Candidates
 
@@ -70,7 +71,8 @@ Sources:
   (Later LTX-Video VAEs, 0.9.6 onward, are under a different licence that allows commercial use, but Lite
   was trained against the 0.9 VAE; swapping is not a drop-in.)
 - **Pro weights**: DiT, Wan 2.1 VAE and wav2vec2 are all Apache-2.0, so "the whole workflow is under
-  Apache-2.0". That is the shippable path, and by upstream's own numbers it is roughly 9x slower than Lite.
+  Apache-2.0". That is the shippable path, and it is not real time on this card: 4.36 s to generate each
+  1.12 s step (see Measured).
 - The example portrait and audio used for the clip come from the Apache-2.0 repo; their own provenance is
   not stated there.
 
@@ -82,18 +84,20 @@ tab is. `torch.compile`, flash-attn and SageAttention were all **off** (plain Py
 
 | | Value | Run |
 | --- | --- | --- |
-| Generation speed | 391-423 ms per 24-frame step, median **57-61 frames/s** (p95 step 447-489 ms) | all runs |
-| Displayed frame rate | 25.0 fps, 0 frames skipped of 5174 | 3.5 min continuous |
-| First audio byte to first chunk sent | **676 ms** median (627-905), audio arriving at 4x real time | idle motion off, 3 utterances |
-| First audio byte to first frame on screen | **829 ms** median (777-1076) | same |
+| Generation speed | 391-423 ms per 24-frame step, median **57-61 frames/s** (p95 step 447-540 ms) | all runs |
+| Displayed frame rate | 25.0 fps; 0 frames skipped of 5174, and 4 of 8375 | 3.5 min continuous; 5.5 min conversation |
+| First audio byte to first chunk sent | **637 ms** median (634-1037), audio arriving at 4x real time | idle motion off, 8 utterances |
+| First audio byte to first frame on screen | **776 ms** median (765-1205) | same |
 | Same, audio arriving at 1x real time | 1237 ms sent, 1391 ms on screen | 3.5 min continuous, 3 utterances |
-| Same, idle motion on, 4x audio | 676 ms sent, 1479 ms on screen (1163-1796) | 52 s run, 4 utterances; summary file not kept |
-| A/V drift | frame lateness against the audio clock 10.5 ms in the first 30 s, 12.7 ms in the last 30 s, slope **+0.22 ms/min**, worst single frame 21 ms | 3.5 min continuous |
-| Audio underruns | 4 in 3.5 min at 1x pacing (the sender leaves a 0.5 s hole between its 60 s utterances) | 3.5 min continuous |
-| Peak VRAM, whole card | **+6.4 to +6.5 GB** over the reading before start (1.55 -> 7.93 GB; 1.73 -> 8.24 GB) | nvidia-smi, 1 s samples |
+| Same, idle motion on, 4x audio | 673 ms sent (621-1042), **1291 ms** on screen (845-1739) | 5.5 min conversation, 28 utterances |
+| A/V drift | frame lateness against the audio clock 10.5 ms in the first 30 s, 10.0 ms in the last 30 s, slope **-0.10 ms/min**, worst single frame 39 ms | 5.5 min conversation |
+| A/V drift, continuous speech | 10.5 ms first 30 s, 12.7 ms last 30 s, slope +0.22 ms/min, worst frame 21 ms | 3.5 min continuous |
+| Audio underruns | 2 in 5.5 min of conversation; 4 in 3.5 min at 1x pacing (the sender leaves a 0.5 s hole between its 60 s utterances); 7 in 1 min with idle motion off, where every utterance starts from an empty queue | |
+| Peak VRAM, whole card | **+6.1 to +6.5 GB** over the reading before start (1.66 -> 7.77 GB; 1.55 -> 7.93 GB; 1.73 -> 8.24 GB) | nvidia-smi, 1 s samples |
 | Peak VRAM, torch | 4.98 GB allocated, 5.39 GB reserved | WAV run |
 | Model load | 6-10 s warm, 20 s once when the disk cache was cold | |
-| JPEG encode | 34-40 ms per 24 frames | |
+| JPEG encode | 28-40 ms per 24 frames | |
+| **Pro variant** | 4364 ms per 28-frame step = **6.4 frames/s**, 6.05 GB allocated, 7.21 GB reserved | WAV run, 20 s |
 
 How to read these:
 
@@ -107,8 +111,13 @@ How to read these:
   of the model itself was only judged by eye on the clip.
 - **VRAM.** Whole-card deltas include headless Chrome and anything else that moved, and Windows gives no
   per-process figure. The torch numbers are the model alone.
-- The planned 5-minute conversation run (8 s utterances, 3 s pauses) has **no result**: see the next
-  section.
+- The 5.5-minute conversation run's whole-card VRAM reading is unusable: other programs loaded and
+  unloaded 4-8 GB on the card during it (the card swung between 7 and 15.4 GB). Its timing numbers stand,
+  though its slower p95 step (540 ms) is probably that contention.
+- `--tap` was exercised against `fake_tap.py`, a stand-in written from the voice spike's note: the face
+  connected, took 48 kHz PCM in 160 ms frames at 4x real time, and showed 25 fps with no underruns; first
+  frames left the server 654-894 ms after the first audio. The stand-in also sent `flush`, but whether
+  the barge-in visibly cut the video was not checked, and the real voice server was never connected.
 
 ## What blocked or surprised
 
@@ -121,8 +130,8 @@ How to read these:
 2. **The machine ran out of committed memory, which is why some runs are missing.** By the end the
    system was at 123-126 GB committed of a 127 GB limit (72 `claude` processes 32 GB, 142 `node` 25 GB,
    three `audiocpp_server` 25 GB), and `import torch` failed with "The paging file is too small". That is
-   this workstation's load on the day, not the model, but it stopped: the 5-minute conversation run, the
-   Pro measurement (weights are downloaded), and the test of `--tap` against `fake_tap.py`.
+   this workstation's load on the day, not the model. The runs it stopped were done on 2026-11-21 after
+   the other model servers were shut down.
 3. **Upstream's loader crashes when memory is tight.** It reads the 6.1 GB fp32 checkpoint into RAM
    before casting to bf16; here that was an access violation inside safetensors with no Python error.
    `convert_bf16.py` rewrites the checkpoint as bf16 once (3 GB) and `engine.py` loads it straight to the
@@ -139,18 +148,9 @@ How to read these:
 7. **Hidden tabs lie.** In a hidden browser pane the page drew 1-5 fps and skipped the rest while audio
    played normally. Measure in a visible or headless browser.
 
-To finish the missing runs once the GPU and memory are free (nothing else to install):
-
-```bash
-./measure.sh conv_16k_5min 16000 --speed 4 --utterance-s 8 --gap-s 3 --total-s 300   # 5-minute conversation
-$PY convert_bf16.py pro && $PY run_wav.py --model pro --out results/pro.mp4          # Pro speed and VRAM
-$PY fake_tap.py --port 17651 --flush-after 1 &                                       # then:
-$PY server.py --input-rate 48000 --tap ws://127.0.0.1:17651/tap
-```
-
 Not done: WebRTC (WebSocket + JPEG was quicker and is fine on localhost), a live run against the voice
-spike's server (it was not listening on 17650 when checked; `--tap` is written from its hand-over note
-and untested), barge-in beyond a manual `/flush`, English audio, a second candidate.
+spike's server (`--tap` has only met the stand-in), a check that barge-in visibly cuts the video, English
+audio, a second candidate (MuseTalk).
 
 ## Run it
 
@@ -196,7 +196,7 @@ utterance and the last partial step is padded with silence.
   rate it arrived.
 - For the voice spike (48 kHz, 7680-sample chunks): `server.py --input-rate 48000`, then either write its
   PCM to the socket, or let the face pull it with `--tap ws://127.0.0.1:17650/tap`, which also turns the
-  tap's `flush` event into a barge-in. `--tap` is untested.
+  tap's `flush` event into a barge-in. Tested only against `fake_tap.py`.
 - Audio may arrive faster than real time. The server generates at most `--max-lead` (3 s) ahead of
   playback, so a barge-in throws little away.
 - `POST http://127.0.0.1:17660/flush` drops everything queued in the server and the browser.
@@ -211,7 +211,7 @@ JPEGs. The page plays the PCM through Web Audio and draws each frame when the au
 - `engine.py`: wrapper around upstream's pipeline; `step(pcm) -> frames`
 - `server.py`, `web/index.html`: PCM socket in, WebSocket + page out
 - `run_wav.py`: offline WAV to MP4; `convert_bf16.py`: one-off checkpoint conversion
-- `send_pcm.py`: test sender; `fake_tap.py`: stand-in for the voice spike's tap (untested)
+- `send_pcm.py`: test sender; `fake_tap.py`: stand-in for the voice spike's tap
 - `measure.sh`, `restart.sh`, `analyze.py`: measurement harness (Git Bash)
 - `shims/`: empty stand-ins for `xfuser` and `mediapipe`
 - `results/`: clip, screenshots, run summaries

@@ -77,6 +77,23 @@ mkdir -p /opt/faces $W/faces
 if [ -n "${FACES_URL:-}" ] && [ -z "$(ls $W/faces/*.png 2>/dev/null)" ]; then curl -fsSL "$FACES_URL" | tar -xz -C $W/faces; fi
 cp $W/faces/*.png /opt/faces/ 2>/dev/null || true
 
+# One portrait inline (base64 JPEG/PNG in FACE_B64, named FACE_NAME) for a test pod without a FACES_URL.
+if [ -n "${FACE_B64:-}" ]; then
+  echo "$FACE_B64" | base64 -d > /tmp/face_in && python3 -c "import cv2,sys; cv2.imwrite(sys.argv[2], cv2.imread(sys.argv[1]))" /tmp/face_in "/opt/faces/${FACE_NAME:-face}.png"
+fi
+
+# No hosted LLM key? LOCAL_LLM=ollama runs a small model in the pod (OpenAI-compatible on :11434).
+# A test convenience: it costs ~2-3 GB of VRAM and is not the production setup.
+if [ "${LOCAL_LLM:-}" = "ollama" ]; then
+  stamp "ollama"
+  command -v ollama >/dev/null || curl -fsSL https://ollama.com/install.sh | sh >/dev/null
+  export OLLAMA_MODELS=$W/ollama OLLAMA_KEEP_ALIVE=-1
+  (ollama serve > /tmp/ollama.log 2>&1 &)
+  for i in $(seq 1 60); do curl -fs http://127.0.0.1:11434/api/tags >/dev/null && break; sleep 1; done
+  ollama pull "${LOCAL_LLM_MODEL:-qwen2.5:3b}" >/dev/null
+  export LLM_BASE_URL=http://127.0.0.1:11434/v1 LLM_MODEL="${LOCAL_LLM_MODEL:-qwen2.5:3b}" LLM_API_KEY=ollama
+fi
+
 # Same layout and env as the Dockerfile, so entrypoint.sh runs unchanged.
 mkdir -p /app && for d in realtime-voice realtime-face realtime-pod; do ln -sfn $S/$d /app/$d; done
 export LD_LIBRARY_PATH=/opt/audiocpp SPIKE_AUDIOCPP_SERVER=/opt/audiocpp/audiocpp_server MIRLI_AUDIOCPP_BACKEND=cuda \

@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CloudClient } from "../src/cloud/client.js";
 import type { CloudModel as CloudModelInfo } from "../src/cloud/contract.js";
-import { CloudModel } from "../src/cloud/model.js";
+import { CloudModel, TRANSCRIBER } from "../src/cloud/model.js";
 import { CloudService } from "../src/cloud/service.js";
 import { Config } from "../src/config.js";
 import { ModelError } from "../src/errors.js";
@@ -95,6 +95,8 @@ function fakeGateway() {
     catalog: [SFX] as CloudModelInfo[],
     /** Stem names the next job returns; empty: one plain output. */
     stems: [] as string[],
+    purposes: [] as (string | null)[],
+    uploadPolls: 0,
     modelReads: 0,
   };
   const json = (body: unknown, status = 200) => Response.json(body, { status });
@@ -136,7 +138,13 @@ function fakeGateway() {
       return json({ email: "me@example.com", balance: g.balance, held: 0, spent_today: g.spentToday, first_paid: true });
     }
     if (method === "POST" && url.pathname === "/v1/quote") return json({ credits: g.quote, units: 1, price_version: 1 });
+    if (method === "GET" && url.pathname.startsWith("/v1/uploads/")) {
+      g.uploadPolls += 1;
+      const id = url.pathname.split("/").pop()!;
+      return json({ upload_id: id, expires_at: "2030-01-01T00:00:00Z", duration_s: 8, transcript: g.uploadPolls > 1 ? "hello from the clip" : null, transcript_language: "en" });
+    }
     if (method === "POST" && url.pathname === "/v1/uploads") {
+      g.purposes.push(url.searchParams.get("purpose"));
       const bytes = Buffer.from(init!.body as Uint8Array);
       const w = new WaveFile(bytes);
       const seconds = (w.data as { samples: Uint8Array }).samples.length / (w.fmt as { byteRate: number }).byteRate;
@@ -314,7 +322,8 @@ describe("Mirli Cloud models", () => {
     const cloud = new CloudService(config, models, gw.fetchImpl, true);
     await cloud.refresh();
     const ids = async () => (await models.listInfo()).filter((m) => m.provider === "cloud").map((m) => m.id);
-    expect(await ids()).toEqual(["cloud:test-sfx"]);
+    // The voice-clip transcriber rides along with any catalog.
+    expect(await ids()).toEqual(["cloud:test-sfx", "cloud:transcribe"]);
 
     gw.g.catalog = [SFX, CLONE];
     // Fresh: a picker opening within the minute doesn't ask the gateway again.
@@ -426,5 +435,15 @@ describe("Mirli Cloud voices", () => {
     const out = await model.separate(await clip(12));
     expect(out.map((o) => o.stemName)).toEqual(["cleaned"]);
     expect(g.created[0]!.body).toMatchObject({ model: "cloud:test-clean", task: "separate" });
+  });
+
+  it("transcribes a voice clip through the gateway when there's no local model", async () => {
+    const { g, cloud } = await signedIn();
+    const model = new CloudModel(TRANSCRIBER, cloud, async () => {});
+    expect(model.describe()).toMatchObject({ task: "asr", price: null });
+    const out = await model.transcribe!(await clip(8));
+    expect(out).toEqual({ text: "hello from the clip", language: "en" });
+    expect(g.purposes).toEqual(["voice"]);
+    expect(g.uploadPolls).toBe(2);
   });
 });

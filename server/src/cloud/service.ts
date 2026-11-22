@@ -25,7 +25,7 @@ import { getLogger } from "../logging.js";
 import type { ModelManager } from "../models/manager.js";
 import { CloudClient, CloudError, type FetchFn } from "./client.js";
 import type { CloudModel as CloudModelInfo, PackId } from "./contract.js";
-import type { CloudCaps, CloudContext } from "./model.js";
+import { type CloudCaps, type CloudContext, TRANSCRIBER } from "./model.js";
 
 const log = getLogger("mirli.cloud");
 
@@ -156,7 +156,7 @@ export class CloudService implements CloudContext {
     // (or on the first call, which registers even an empty catalog).
     if (!this.registered || JSON.stringify(this.catalog) !== before) {
       this.registered = true;
-      await this.models.setCloudModels(this.catalog, this);
+      await this.models.setCloudModels(this.offered(), this);
     }
   }
 
@@ -173,7 +173,12 @@ export class CloudService implements CloudContext {
   async reload(): Promise<void> {
     this.cancelPoll();
     this.signIn = { state: "idle" };
-    await this.models.setCloudModels(this.catalog, this);
+    await this.models.setCloudModels(this.offered(), this);
+  }
+
+  /** The catalog plus the voice-clip transcriber, which the gateway serves outside it. */
+  private offered() {
+    return this.catalog.length ? [...this.catalog, TRANSCRIBER] : this.catalog;
   }
 
   async status(): Promise<CloudStatus> {
@@ -280,7 +285,7 @@ export class CloudService implements CloudContext {
 
   private async forget(): Promise<void> {
     this.config.updateSettings({ cloud_token: "" });
-    await this.models.setCloudModels(this.catalog, this);
+    await this.models.setCloudModels(this.offered(), this);
   }
 
   /* -------------------------------------------------------------- buying */

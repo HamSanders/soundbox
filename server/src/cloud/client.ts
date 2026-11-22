@@ -116,11 +116,19 @@ export class CloudClient {
     );
   }
 
-  /** Send a WAV clip (a voice reference, or a recording to re-voice). */
-  async upload(wav: Buffer) {
+  /** The words in an upload, once the gateway has transcribed it. */
+  getUpload(id: string) {
+    return this.call(uploadResponse, "GET", `/v1/uploads/${encodeURIComponent(id)}`);
+  }
+
+  /**
+   * Send a WAV clip (a voice reference, or a recording to re-voice). With
+   * purpose "voice" the gateway also transcribes it (a clip of 40 s or less).
+   */
+  async upload(wav: Buffer, purpose: "voice" | null = null) {
     let res: Response;
     try {
-      res = await this.fetchImpl(`${this.baseUrl}/v1/uploads`, {
+      res = await this.fetchImpl(`${this.baseUrl}/v1/uploads${purpose ? `?purpose=${purpose}` : ""}`, {
         method: "POST",
         headers: {
           accept: "application/json",

@@ -20,6 +20,29 @@ import { DEFAULT_SUPPORTS, type ModelInfo } from "../schemas.js";
 import { CloudClient, CloudError } from "./client.js";
 import type { CloudModel as CloudModelInfo, JobParams, Task } from "./contract.js";
 
+/**
+ * The voice-clip transcriber Mirli Cloud offers a signed-in app: the gateway
+ * transcribes a clip uploaded with purpose=voice on its own GPUs (Qwen3-ASR),
+ * so the hosted studio, which has no local models, can still fill in a
+ * voice's transcript. Not in the gateway's catalog; free.
+ */
+export const TRANSCRIBER: CloudModelInfo = {
+  id: "cloud:transcribe",
+  name: "Voice clip transcription",
+  upstream_label: "Qwen3-ASR on Mirli's GPUs",
+  description: "Fills in the words spoken in a voice clip (up to 40 seconds).",
+  task: "transcribe" as unknown as CloudModelInfo["task"],
+  category: "voice",
+  price: { unit: "render", credits_per_unit: 1, min_credits: 1 },
+  supports: { lyrics: false, seed: false, negative_prompt: false, voice_reference: false },
+  max_duration_s: 40,
+  default_duration_s: 10,
+  voice_ids: [],
+  license_note: "Apache-2.0 weights.",
+  watermark: false,
+};
+const TRANSCRIBE_WAIT_MS = 90_000;
+
 export interface CloudCaps {
   /** Most credits one render may cost. */
   perCall: number;
@@ -76,6 +99,7 @@ export class CloudModel implements GenerationModel {
     const m = this.info;
     const speech = m.task === "speak";
     const vc = m.task === "convert";
+    const asr = (m.task as string) === "transcribe";
     return {
       id: m.id,
       // The same open model may also be installed locally; the picker must
@@ -115,7 +139,7 @@ export class CloudModel implements GenerationModel {
             ]
           : []),
       ],
-      task: speech ? "tts" : vc ? "vc" : m.task === "separate" ? "sep" : "gen",
+      task: asr ? "asr" : speech ? "tts" : vc ? "vc" : m.task === "separate" ? "sep" : "gen",
       ...(m.task === "separate" ? { sep_kind: m.cleanup ? ("cleanup" as const) : ("stems" as const) } : {}),
       voice_ids: [...m.voice_ids],
       requires_voice_reference: Boolean(m.reference?.required),
@@ -141,7 +165,7 @@ export class CloudModel implements GenerationModel {
       installed_deps: true,
       auto_installable: false,
       provider: "cloud",
-      price: { ...m.price },
+      price: asr ? null : { ...m.price },
     };
   }
 
@@ -340,6 +364,40 @@ export class CloudModel implements GenerationModel {
       source: sourceWavPath,
       voice: options.voiceRef ?? null,
     });
+  }
+
+  /**
+   * The words in a voice clip, worked out by the gateway (see TRANSCRIBER).
+   * The clip goes up with purpose=voice, cut to 40 s, and the transcript is
+   * read back once it is ready.
+   */
+  async transcribe(
+    wavPath: string,
+    options: { language?: string | null; progress?: GenerateOptions["progress"] } = {},
+  ): Promise<{ text: string; language: string | null }> {
+    if ((this.info.task as string) !== "transcribe") throw new ModelError(`${this.info.name} does not transcribe speech.`);
+    const client = this.ctx.client();
+    if (!client) throw new ModelError("Sign in to Mirli Cloud in Settings to transcribe voice clips.");
+    try {
+      options.progress?.(0.05, "Uploading the clip");
+      const clip = await clipForUpload(wavPath, this.info.max_duration_s);
+      let up = await client.upload(clip.wav, "voice");
+      const until = Date.now() + TRANSCRIBE_WAIT_MS;
+      options.progress?.(0.3, "Transcribing on Mirli Cloud");
+      while (up.transcript == null && Date.now() < until) {
+        await this.sleep(1_500);
+        up = await client.getUpload(up.upload_id);
+      }
+      if (up.transcript == null) throw new ModelError("Mirli Cloud didn't finish transcribing that clip. Try again, or type the words in.");
+      this.error = null;
+      return { text: up.transcript, language: up.transcript_language ?? options.language ?? null };
+    } catch (e) {
+      if (e instanceof CloudError) {
+        if (e.code === "unauthorized") throw new ModelError("Mirli Cloud signed this device out. Sign in again in Settings.");
+        throw new ModelError(e.message);
+      }
+      throw e;
+    }
   }
 
   async separate(

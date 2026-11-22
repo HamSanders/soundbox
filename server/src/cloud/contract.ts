@@ -18,6 +18,12 @@ export const priceUnit = z.enum(["render", "minute", "1k_chars", "10s"]);
 export type PriceUnit = z.infer<typeof priceUnit>;
 
 export const task = z.enum(["generate", "speak", "separate", "convert"]);
+/**
+ * App-side only: the voice-clip transcriber the app adds when signed in
+ * (TRANSCRIBER below). The gateway's catalog never lists it; its words come
+ * from POST /v1/uploads?purpose=voice and GET /v1/uploads/:id.
+ */
+export const appTask = z.enum(["generate", "speak", "separate", "convert", "transcribe"]);
 export type Task = z.infer<typeof task>;
 
 /** One model as the app sees it. Mirrors the parts of the app's ModelInfo it needs. */
@@ -106,6 +112,10 @@ export const uploadResponse = z.object({
   upload_id: z.string().uuid(),
   expires_at: z.string(),
   duration_s: z.number(),
+  /** The words in a voice clip, once the gateway has worked them out (purpose=voice). */
+  transcript: z.string().nullish(),
+  transcript_language: z.string().nullish(),
+  transcript_source: z.string().nullish(),
 });
 
 export const jobState = z.enum(["queued", "running", "succeeded", "failed", "cancelled"]);

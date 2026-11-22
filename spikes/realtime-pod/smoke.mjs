@@ -3,12 +3,12 @@
 // Uses the `ws` package already installed for the voice spike (npm ci in ../realtime-voice first).
 
 import { spawn } from "node:child_process";
-import { createHmac } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import http from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { sign } from "../realtime-voice/lib/call-token.mjs";
 import { WebSocket, WebSocketServer } from "../realtime-voice/node_modules/ws/wrapper.mjs";
 
 const VOICE = 18650, FACE = 18660, POD = 18680, SECRET = "smoke-secret", ADMIN = "smoke-admin";
@@ -32,9 +32,12 @@ function stub(port, routes, onWs) {
   wss.on("connection", onWs);
   return new Promise((r) => s.listen(port, "127.0.0.1", r));
 }
-await stub(VOICE, { "/metrics": () => ["application/json", "{}"], "/index.html": () => ["text/html", "<p>call page</p>"] },
+const ended = [];
+await stub(VOICE, { "/metrics": () => ["application/json", "{}"], "/voices": () => ["application/json", "[]"], "/index.html": () => ["text/html", "<p>call page</p>"],
+  "/internal/calls/call-f/end": () => (ended.push("voice"), ["application/json", "{}"]) },
   (ws) => ws.on("message", (d, bin) => ws.send(d, { binary: bin }))); // echo, like mic in → audio out
-await stub(FACE, { "/stats": () => ["application/json", JSON.stringify({ ready: faceReady, engine: "stub" })], "/flush": () => ["application/json", "{}"] },
+await stub(FACE, { "/stats": () => ["application/json", JSON.stringify({ ready: faceReady, engine: "stub" })], "/flush": () => ["application/json", "{}"],
+  "/internal/calls/call-f/end": () => (ended.push("face"), ["application/json", "{}"]) },
   (ws) => ws.send("frame"));
 
 const pod = spawn(process.execPath, ["pod.mjs"], {
@@ -55,12 +58,11 @@ const get = async (path, opts = {}) => {
   return { status: r.status, body, headers: r.headers };
 };
 const admin = (path, body) => get(path, { method: "POST", headers: { Authorization: `Bearer ${ADMIN}`, "Content-Type": "application/json" }, body: JSON.stringify(body ?? {}) });
-const token = (id, ttl = 600) => {
-  const exp = Math.floor(Date.now() / 1000) + ttl;
-  return `v1.${id}.${exp}.${createHmac("sha256", SECRET).update(`mirli-call:${id}:${exp}`).digest("base64url")}`;
-};
+// The Mirli call token (live/README.md), as the gateway signs it with this pod's secret.
+const token = (id, ttl = 600, aud = ["voice", "face"]) => sign({ call: id, aud }, SECRET, ttl);
+const bearer = (t) => ({ headers: { Authorization: `Bearer ${t}` } });
 const wsOpen = (path, t) => new Promise((resolve) => {
-  const ws = new WebSocket(`ws://127.0.0.1:${POD}${path}${t ? `?t=${t}` : ""}`);
+  const ws = new WebSocket(`ws://127.0.0.1:${POD}${path}`, t ? ["mirli.v1", `bearer.${t}`] : []);
   ws.once("open", () => resolve({ ws, ok: true }));
   ws.once("unexpected-response", (_req, res) => resolve({ ok: false, status: res.statusCode }));
   ws.once("error", () => resolve({ ok: false }));
@@ -80,21 +82,20 @@ await sleep(1500);
 let r = await get("/readyz");
 check("readyz 200 when free", r.status === 200 && r.body.state === "free", JSON.stringify(r.body));
 check("/state needs the admin token", (await get("/state")).status === 401);
-check("page refused without a token", (await get("/")).status === 401);
-check("bad token refused", (await get("/?t=v1.x.9999999999.AAAA")).status === 401);
-check("expired token refused", (await get(`/?t=${token("old", -10)}`)).status === 401);
+check("API refused without a token", (await get("/voices")).status === 401);
+check("bad token refused", (await get("/voices", bearer("x.y"))).status === 401);
+check("expired token refused", (await get("/voices", bearer(token("old", -10)))).status === 401);
+check("token from another secret refused", (await get("/voices", bearer(sign({ call: "x", aud: ["voice"] }, "other", 60)))).status === 401);
 
 r = await admin("/claim", { call_id: "call-a" });
 check("claim free pod", r.status === 200 && r.body.state === "reserved");
 check("claim is idempotent", (await admin("/claim", { call_id: "call-a" })).status === 200);
 check("second claim refused", (await admin("/claim", { call_id: "call-b" })).status === 409);
 check("readyz 503 when reserved", (await get("/readyz")).status === 503);
-check("other call's token refused", (await get(`/?t=${token("call-b")}`)).status === 409);
+check("other call's token refused", (await get("/voices", bearer(token("call-b")))).status === 409);
 
-r = await get(`/?t=${token("call-a")}`);
-check("caller gets the page and a cookie", r.status === 200 && /call page/.test(r.body) && /mirli_call=/.test(r.headers.get("set-cookie") ?? ""));
-const cookie = (r.headers.get("set-cookie") ?? "").split(";")[0];
-check("cookie alone is enough afterwards", (await get("/index.html", { headers: { cookie } })).status === 200);
+check("caller reads the voices", (await get("/voices", bearer(token("call-a")))).status === 200);
+check("no pages: API only", (await get("/index.html", bearer(token("call-a")))).status === 404);
 
 const a = await wsOpen("/ws", token("call-a"));
 check("conversation socket opens", a.ok);
@@ -106,7 +107,9 @@ r = await get("/readyz");
 check("busy while connected", r.status === 503 && r.body.state === "busy", JSON.stringify(r.body));
 const dup = await wsOpen("/ws", token("call-a"));
 check("second conversation socket refused", !dup.ok && dup.status === 409, `status ${dup.status}`);
-check("engine switching not offered", (await get("/facesrv/engine", { method: "POST", headers: { cookie } })).status === 404);
+check("engine switching not offered", (await get("/facesrv/engine", { method: "POST", ...bearer(token("call-a")) })).status === 404);
+const vf = await wsOpen("/facesrv/ws", token("call-a", 600, ["voice"]));
+check("a voice-only token doesn't open the face", !vf.ok && vf.status === 401, `status ${vf.status}`);
 
 await sleep(1200);
 a.ws.close(); f.ws.close();
@@ -124,13 +127,17 @@ r = await admin("/claim", { call_id: "call-c" });
 await sleep(4500);
 check("unused claim expires", (await get("/readyz")).body.state === "free");
 
-const d = await get(`/?t=${token("call-d")}`);
+const d = await get("/voices", bearer(token("call-d")));
 check("direct join binds a free pod", d.status === 200 && (await get("/readyz")).body.state === "reserved");
 r = await admin("/release", { call_id: "call-d", reason: "gateway_ended" });
 check("release frees it", r.body.state === "free" && r.body.last_call?.reason === "gateway_ended");
+await get("/voices", bearer(token("call-f")));
+r = await get("/internal/calls/call-f/end", { method: "POST", ...bearer(token("call-f", 30, ["admin"])) });
+check("gateway hang-up ends the call on both workers", r.status === 200 && r.body.state === "free" && ended.join() === "voice,face", JSON.stringify(ended));
+check("hang-up needs an admin token", (await get("/internal/calls/x/end", { method: "POST", ...bearer(token("x")) })).status === 401);
 await admin("/drain", {});
 check("draining pod is not ready", (await get("/readyz")).body.state === "draining");
-check("draining pod refuses new callers", (await get(`/?t=${token("call-e")}`)).status === 409);
+check("draining pod refuses new callers", (await get("/voices", bearer(token("call-e")))).status === 409);
 
 rmSync(LEDGER, { force: true });
 rmSync(FACE_HOME, { recursive: true, force: true });

@@ -8,6 +8,9 @@ mkdir -p "$SPIKE_DIR" "$MIRLI_FACE_HOME/faces"
 cp -n /opt/faces/*.png "$MIRLI_FACE_HOME/faces/" 2>/dev/null || true
 FACE_IMAGE="${FACE_IMAGE:-$(ls /opt/faces/*.png 2>/dev/null | head -1)}"
 export POD_DEFAULT_FACE="$(basename "$FACE_IMAGE" .png)"  # pod.mjs restores it after each call
+# The workers check the same call tokens as pod.mjs: one secret per pod, set by the gateway at create time.
+export MIRLI_CALL_SECRET="${POD_SECRET:-}" MIRLI_ALLOWED_ORIGINS="${MIRLI_ALLOWED_ORIGINS:-}"
+[ -n "$MIRLI_CALL_SECRET" ] || export MIRLI_CALL_AUTH=off
 
 pids=()
 t0=$(date +%s)

@@ -12,7 +12,7 @@
 // Auth is on when a secret exists (MIRLI_CALL_SECRET, or the file the local
 // Call API writes on first start) and MIRLI_CALL_AUTH is not "off".
 
-import { allowedOrigins, localSecret, originAllowed, tokenFromRequest, verify, WS_PROTOCOL } from "../../../live/api/token.mjs";
+import { allowedOrigins, localSecret, originAllowed, tokenFromRequest, verify, WS_PROTOCOL } from "./call-token.mjs";
 import { PcmTap } from "./tap.mjs";
 
 export class AuthError extends Error {

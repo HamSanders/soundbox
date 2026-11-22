@@ -1,17 +1,23 @@
 // The call pod's front door: the one port RunPod exposes (POD_PORT, default 8080).
 //
-//   browser ──HTTPS/WSS── RunPod proxy ── :8080 pod.mjs ─┬─ /ws, /voices, *.js, *.html → voice server 127.0.0.1:17650
-//                                                        └─ /facesrv/*               → face server  127.0.0.1:17660
+//   app ──HTTPS/WSS── RunPod proxy ── :8080 pod.mjs ─┬─ /ws, /voices  → voice server 127.0.0.1:17650
+//                                                    └─ /facesrv/*    → face server  127.0.0.1:17660
+//
+// API only: no pages. Callers carry the Mirli call token (live/README.md) as the WebSocket subprotocol
+// "bearer.<token>" or an Authorization header; the gateway signs it with this pod's POD_SECRET, which the
+// workers also get (as MIRLI_CALL_SECRET), so they check it a second time.
 //
 // It adds what the spike servers don't have: one call at a time, a busy/free state a router can read,
 // health and readiness, a per-call token, and a record of how long each call was connected.
 // No dependencies beyond Node's standard library. See README.md for the endpoint reference.
 
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { timingSafeEqual } from "node:crypto";
 import { appendFileSync, existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import http from "node:http";
 import net from "node:net";
+
+import { tokenFromRequest, verify } from "../realtime-voice/lib/call-token.mjs";
 
 const env = process.env;
 const PORT = Number(env.POD_PORT ?? 8080);
@@ -106,42 +112,31 @@ setInterval(() => {
 }, 1000).unref();
 
 // ---------- tokens ----------
-// v1.<call_id>.<exp unix s>.<base64url HMAC-SHA256(POD_SECRET, "mirli-call:<call_id>:<exp>")>
-// The gateway mints it (it set POD_SECRET when it created the pod), so the pod never calls home.
-export function signCall(secret, callId, exp) {
-  const mac = createHmac("sha256", secret).update(`mirli-call:${callId}:${exp}`).digest("base64url");
-  return `v1.${callId}.${exp}.${mac}`;
+// The Mirli call token: base64url(payload).base64url(HMAC-SHA256(POD_SECRET, payload)), payload
+// { v: 1, call, aud, iat, exp }. The gateway mints it, so the pod never calls home.
+function verifyCall(token, aud) {
+  if (DEV) return { id: "dev", admin: true };
+  try {
+    const p = verify(token, SECRET, { aud });
+    if (!/^[\w-]{1,64}$/.test(p.call)) return null;
+    return { id: p.call, admin: (Array.isArray(p.aud) ? p.aud : [p.aud]).includes("admin") };
+  } catch {
+    return null;
+  }
 }
 
-function verifyCall(token) {
-  if (DEV) return { id: token?.split(".")[1] || "dev" };
-  const m = /^v1\.([\w-]{1,64})\.(\d{9,11})\.([\w-]{43})$/.exec(token ?? "");
-  if (!m) return null;
-  const [, id, exp] = m;
-  if (Number(exp) * 1000 < now()) return null;
-  const want = Buffer.from(signCall(SECRET, id, exp));
-  const got = Buffer.from(token);
-  return want.length === got.length && timingSafeEqual(want, got) ? { id } : null;
-}
-
+/** The router (POD_ADMIN_TOKEN) or the gateway (a call token with the admin audience). */
 function isAdmin(req) {
   if (DEV && !ADMIN) return true;
   const got = Buffer.from(req.headers.authorization ?? "");
   const want = Buffer.from(`Bearer ${ADMIN}`);
-  return ADMIN && got.length === want.length && timingSafeEqual(got, want);
-}
-
-const COOKIE = "mirli_call";
-function tokenOf(req, url) {
-  const q = url.searchParams.get("t");
-  if (q) return q;
-  const m = new RegExp(`(?:^|;\\s*)${COOKIE}=([^;]+)`).exec(req.headers.cookie ?? "");
-  return m ? decodeURIComponent(m[1]) : null;
+  if (ADMIN && got.length === want.length && timingSafeEqual(got, want)) return true;
+  return !!verifyCall(tokenFromRequest(req), "admin")?.admin;
 }
 
 /** May this request act for a call? Binds a free pod to the token's call (direct join without /claim). */
-function admit(req, url) {
-  const tok = verifyCall(tokenOf(req, url));
+function admit(req, aud) {
+  const tok = verifyCall(tokenFromRequest(req), aud);
   if (!tok) return { ok: false, code: 401, why: "missing or bad call token" };
   const s = state();
   if (s === "starting") return { ok: false, code: 503, why: "engines still loading" };
@@ -158,9 +153,10 @@ function newCall(id) {
 }
 
 // ---------- engine readiness ----------
-function internal(target, method, path, body) {
+function internal(target, method, path, body, extraHeaders = {}) {
   return new Promise((resolve, reject) => {
-    const req = http.request({ ...target, method, path, timeout: 2000, headers: body ? { "Content-Type": "application/json" } : {} }, (res) => {
+    const headers = { ...(body ? { "Content-Type": "application/json" } : {}), ...extraHeaders };
+    const req = http.request({ ...target, method, path, timeout: 2000, headers }, (res) => {
       let data = "";
       res.on("data", (d) => (data += d));
       res.on("end", () => {
@@ -255,7 +251,7 @@ const server = http.createServer(async (req, res) => {
   // Liveness: the process is up. Never depends on the engines, so a slow model load isn't a restart loop.
   if (p === "/healthz") return json(res, 200, { ok: true, uptime_s: Math.round((now() - bootAt) / 1000) });
   // Readiness for a router: 200 only when a new caller can be assigned here right now.
-  if (p === "/readyz") return json(res, state() === "free" ? 200 : 503, publicState());
+  if (p === "/readyz") return json(res, state() === "free" ? 200 : 503, { ...publicState(), busy: !!pod.call });
 
   if (p === "/state") {
     if (!isAdmin(req)) return json(res, 401, { error: "admin token required" });
@@ -284,32 +280,36 @@ const server = http.createServer(async (req, res) => {
     if (pod.call && (!call_id || pod.call.id === call_id)) endCall(reason ?? "released");
     return json(res, 200, { ...publicState(), last_call: pod.lastCall });
   }
+  // The gateway hung up: drop the call on both workers and free the pod.
+  const endM = /^\/internal\/calls\/([\w-]{1,64})\/end$/.exec(p);
+  if (endM && req.method === "POST") {
+    if (!isAdmin(req)) return json(res, 401, { error: "admin token required" });
+    const auth = req.headers.authorization ? { authorization: req.headers.authorization } : {};
+    await Promise.allSettled([internal(VOICE, "POST", p, null, auth), FACE_ON && internal(FACE, "POST", p, null, auth)]);
+    if (pod.call?.id === endM[1]) endCall("ended_by_gateway");
+    return json(res, 200, { ...publicState(), last_call: pod.lastCall });
+  }
   if (p === "/drain" && req.method === "POST") {
     if (!isAdmin(req)) return json(res, 401, { error: "admin token required" });
     pod.draining = (await readBody(req)).draining !== false;
     return json(res, 200, publicState());
   }
 
-  // Everything below is the caller's.
-  const a = admit(req, url);
+  // Everything below is the caller's. Preflights pass straight to the workers, which answer CORS for our origins.
+  const sub = p.startsWith("/facesrv/") ? p.slice("/facesrv".length) : null;
+  if (req.method === "OPTIONS") return proxyHttp(req, res, sub ? FACE : VOICE, (sub ?? p) + url.search);
+  const a = admit(req, sub ? "face" : "voice");
   if (!a.ok) return json(res, a.code, { error: a.why, state: state() });
-  const setCookie = url.searchParams.get("t")
-    ? { "Set-Cookie": `${COOKIE}=${encodeURIComponent(url.searchParams.get("t"))}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${MAX_CALL_S}` }
-    : {};
-
-  if (p.startsWith("/facesrv/")) {
+  if (sub !== null) {
     if (!FACE_ON) return json(res, 404, { error: "no face on this pod" });
-    const sub = p.slice("/facesrv".length);
-    // Only what the call page needs. Engine switching restarts the face server, so it's not offered.
+    // The portrait for this call (upload with X-Crop, then pick it) and what a call screen reads.
+    // Engine switching restarts the face server, so it's not offered.
     const allowed = (req.method === "GET" && /^\/(faces(\/[\w.-]+)?|face|stats|engine)$/.test(sub)) || (req.method === "POST" && /^\/(face|faces|flush)$/.test(sub));
     if (!allowed) return json(res, 404, { error: "not offered on the pod" });
     return proxyHttp(req, res, FACE, sub + url.search);
   }
-  // The voice server's static page and its JSON. "/" is the video call itself (home.html assumes localhost).
-  const path = p === "/" ? "/index.html" : p;
-  if (!/^\/([\w.-]+\.(html|js)|voices|metrics)$/.test(path)) return json(res, 404, { error: "not found" });
-  if (Object.keys(setCookie).length) res.setHeader("Set-Cookie", setCookie["Set-Cookie"]);
-  return proxyHttp(req, res, VOICE, path);
+  if (p !== "/voices") return json(res, 404, { error: "not found" });
+  return proxyHttp(req, res, VOICE, p);
 });
 
 // ---------- WebSockets ----------
@@ -325,7 +325,7 @@ server.on("upgrade", (req, socket, head) => {
   if (p === "/ws") [target, path] = [VOICE, "/ws"];
   else if (p === "/facesrv/ws" && FACE_ON) [target, path] = [FACE, "/ws"];
   else return deny(404, "no such socket");
-  const a = admit(req, url);
+  const a = admit(req, p === "/ws" ? "voice" : "face");
   if (!a.ok) return deny(a.code, a.why);
   const c = a.call;
   // One conversation socket per call: a second tab would talk over the first.

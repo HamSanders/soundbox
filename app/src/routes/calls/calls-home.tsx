@@ -1,6 +1,9 @@
-import { Clapperboard, Mic, Pencil, Phone, Plus, Video } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Clapperboard, Cloud, Cpu, Mic, Pencil, Phone, Plus, Video } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +30,10 @@ export function CallsHomePage() {
             Real-time voice and video calls with characters, on your own GPU. Speech in, a voice and a talking face out, in about half a second. Talk over them any time.
           </p>
         </div>
-        <ServiceLine loading={status.isLoading} voice={voiceUp} face={faceUp ? s!.face!.engine : null} />
+        <div className="grid justify-items-end gap-3">
+          <BackendPicker />
+          <ServiceLine loading={status.isLoading} cloud={s?.mode === "cloud"} voice={voiceUp} face={faceUp ? s!.face!.engine : null} />
+        </div>
       </header>
 
       <section className="grid gap-3 sm:grid-cols-2">
@@ -57,7 +63,7 @@ export function CallsHomePage() {
       <section className="grid gap-3">
         <h2 className="font-medium">Recent calls</h2>
         <p className="text-sm text-muted-foreground">
-          Calls on this machine are free and unlimited{history.data ? ` · ${clock(history.data.used_seconds)} talked since Mirli started` : ""}. Mirli Cloud minutes, for calls without a GPU, are coming.
+          {s?.mode === "cloud" ? "Calls on Mirli Cloud bill per minute." : "Calls on this machine are free and unlimited."}{history.data ? ` ${clock(history.data.used_seconds)} talked since Mirli started.` : ""}
         </p>
         {history.data?.recent_calls.length ? (
           <table className="w-full text-sm">
@@ -79,8 +85,58 @@ export function CallsHomePage() {
   );
 }
 
-function ServiceLine({ loading, voice, face }: { loading: boolean; voice: boolean; face: string | null }) {
+/**
+ * Where calls run. Same screens, same client either way: the Mirli server forwards to Mirli Cloud when it's
+ * picked (server/src/calls/cloud.ts). The device token is written to the server and never read back.
+ */
+function BackendPicker() {
+  const qc = useQueryClient();
+  const b = useQuery({ queryKey: ["calls", "backend"], queryFn: calls.backend, retry: false });
+  const [url, setUrl] = useState<string | null>(null);
+  const [token, setToken] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const save = async (patch: Parameters<typeof calls.setBackend>[0]) => {
+    setErr(null);
+    try {
+      await calls.setBackend(patch);
+      setToken("");
+      await qc.invalidateQueries({ queryKey: ["calls"] });
+    } catch (e) { setErr((e as Error).message); }
+  };
+  const mode = b.data?.mode ?? "local";
+  return (
+    <div className="grid justify-items-end gap-2" data-testid="call-backend">
+      <div className="inline-flex rounded-full border border-border p-0.5 text-sm" role="radiogroup" aria-label="Where calls run">
+        {([["local", "This computer", Cpu], ["cloud", "Mirli Cloud", Cloud]] as const).map(([m, label, Icon]) => (
+          <button key={m} type="button" role="radio" aria-checked={mode === m} onClick={() => void save({ mode: m })}
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 aria-checked:bg-foreground aria-checked:text-background">
+            <Icon className="size-3.5" /> {label}
+          </button>
+        ))}
+      </div>
+      {mode === "cloud" ? (
+        <form className="flex flex-wrap items-center justify-end gap-2" onSubmit={(e) => { e.preventDefault(); void save({ url: url ?? b.data?.url, ...(token ? { token } : {}) }); }}>
+          <Input aria-label="Mirli Cloud address" className="h-8 w-56" value={url ?? b.data?.url ?? ""} onChange={(e) => setUrl(e.target.value)} />
+          <Input aria-label="Mirli Cloud device token" type="password" autoComplete="off" className="h-8 w-48"
+            placeholder={b.data?.signed_in ? "signed in · replace token" : "device token"} value={token} onChange={(e) => setToken(e.target.value)} />
+          <Button type="submit" size="sm" variant="outline">Save</Button>
+        </form>
+      ) : null}
+      {err ? <span className="text-xs text-danger">{err}</span> : null}
+    </div>
+  );
+}
+
+function ServiceLine({ loading, cloud, voice, face }: { loading: boolean; cloud: boolean; voice: boolean; face: string | null }) {
   const dot = (on: boolean) => <span className={cn("size-2 rounded-full", loading ? "bg-muted-foreground/40" : on ? "bg-ok" : "bg-danger")} />;
+  if (cloud) {
+    return (
+      <div className="grid gap-1 font-log text-xs text-muted-foreground" data-testid="call-service">
+        <span className="flex items-center gap-2">{dot(voice)} Mirli Cloud {loading ? "…" : voice ? "reachable, signed in" : "not reachable or not signed in"}</span>
+        <span>calls bill per minute on your Mirli Cloud credits</span>
+      </div>
+    );
+  }
   return (
     <div className="grid gap-1 font-log text-xs text-muted-foreground" data-testid="call-service">
       <span className="flex items-center gap-2">{dot(voice)} voice server {loading ? "…" : voice ? "running" : "not running"}</span>

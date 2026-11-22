@@ -50,8 +50,12 @@ export interface Character {
 
 export interface CallVoice { id: string; name: string; model?: string }
 
+/** Where calls run: this computer's GPU, or Mirli Cloud. The token itself never comes back. */
+export interface CallBackend { mode: "local" | "cloud"; url: string; signed_in: boolean }
+
 export interface CallStatus {
   mode: "local" | "cloud";
+  signed_in?: boolean;
   voice: boolean;
   face: { url: string; engine: string; ready: boolean } | null;
   active_calls: number;
@@ -118,6 +122,8 @@ export function createCallsClient(baseUrl = "/api", opts: { authToken?: () => st
     baseUrl: base,
     url: (path: string) => assetUrl(base, path),
     status: () => req<CallStatus>("GET", "/calls/status"),
+    backend: () => req<CallBackend>("GET", "/calls/backend"),
+    setBackend: (b: { mode?: "local" | "cloud"; url?: string; token?: string }) => req<CallBackend>("PUT", "/calls/backend", b),
     history: () => req<CallHistory>("GET", "/calls/history"),
     voices: () => req<{ voices: CallVoice[] }>("GET", "/calls/voices").then((d) => d.voices),
     faceModels: () => req<FaceModels>("GET", "/calls/face-models"),

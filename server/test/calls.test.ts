@@ -192,3 +192,73 @@ describe("/api/calls and /api/characters", () => {
     expect(m.available.map((x: { id: string }) => x.id)).toEqual(["musetalk"]);
   });
 });
+
+describe("calls on Mirli Cloud (stand-in gateway and pod)", () => {
+  let app: FastifyInstance;
+  let dataDir: string;
+  const seen: { method: string; path: string; auth?: string; crop?: string; body?: any }[] = [];
+  const gw = http.createServer((req, res) => {
+    let raw = "";
+    req.on("data", (d) => (raw += d));
+    req.on("end", () => {
+      const body = req.headers["content-type"]?.includes("json") && raw ? JSON.parse(raw) : undefined;
+      seen.push({ method: req.method!, path: req.url!, auth: req.headers.authorization, crop: req.headers["x-crop"] as string | undefined, body });
+      const port = (gw.address() as AddressInfo).port;
+      const json = (s: number, b: unknown) => res.writeHead(s, { "Content-Type": "application/json" }).end(JSON.stringify(b));
+      if (req.headers.authorization !== "Bearer dev-token" && !req.url!.startsWith("/facesrv") && req.url !== "/v1/health") return json(401, { error: { code: "unauthorized", message: "Sign in" } });
+      if (req.url === "/v1/health") return json(200, { ok: true });
+      if (req.url === "/v1/calls" && req.method === "POST") return json(201, {
+        call_id: "c_cloud1", mode: body.mode, ws_url: `ws://127.0.0.1:${port}/ws`, face_ws_url: body.mode === "video" ? `ws://127.0.0.1:${port}/facesrv/ws` : null,
+        token: "pod-call-token", expires: 0, heartbeat_s: 10, persona: body.persona, voice_id: body.voice_id,
+      });
+      if (req.url === "/v1/calls/c_cloud1/heartbeat") return json(200, { expires: 1, token: "pod-call-token-2", minutes_left_s: 240 });
+      if (req.url === "/v1/calls/c_cloud1" && req.method === "DELETE") return json(200, { minutes: 1, credits: 2 });
+      if (req.url === "/facesrv/faces") return json(200, { id: "santa-x" });
+      if (req.url === "/facesrv/face") return json(200, { current: "santa-x" });
+      json(404, {});
+    });
+  });
+  const h = { "x-soundbox": "1" };
+
+  beforeAll(async () => {
+    await new Promise<void>((r) => gw.listen(0, "127.0.0.1", r));
+    dataDir = await mkdtemp(join(tmpdir(), "mirli-calls-cloud-"));
+    app = buildApp(new Config(dataDir), { serveUi: false });
+    await app.ready();
+  });
+  afterAll(async () => {
+    await app.close();
+    gw.close();
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  it("switches the back end without ever showing the token", async () => {
+    const url = `http://127.0.0.1:${(gw.address() as AddressInfo).port}`;
+    const r = await app.inject({ method: "PUT", url: "/api/calls/backend", headers: h, payload: { mode: "cloud", url, token: "dev-token" } });
+    expect(r.json()).toEqual({ mode: "cloud", url, signed_in: true });
+    expect(JSON.stringify((await app.inject({ method: "GET", url: "/api/calls/backend" })).json())).not.toContain("dev-token");
+    const s = (await app.inject({ method: "GET", url: "/api/calls/status" })).json();
+    expect(s).toMatchObject({ mode: "cloud", voice: true, face: { engine: "musetalk" } });
+  });
+
+  it("a video call with Santa goes through the gateway, his portrait goes to the pod, and hang-up ends it there", async () => {
+    const r = await app.inject({ method: "POST", url: "/api/calls", headers: h, payload: { mode: "video", character: "santa" } });
+    expect(r.statusCode).toBe(201);
+    expect(r.json()).toMatchObject({ call_id: "c_cloud1", character: "santa", token: "pod-call-token", persona: SANTA_PERSONA });
+    expect(seen.find((x) => x.path === "/v1/calls")).toMatchObject({ auth: "Bearer dev-token", body: { mode: "video", character: "santa" } });
+    expect(seen.find((x) => x.path === "/facesrv/faces")?.auth).toBe("Bearer pod-call-token");
+    expect(seen.some((x) => x.path === "/facesrv/face")).toBe(true);
+    const beat = (await app.inject({ method: "POST", url: "/api/calls/c_cloud1/heartbeat", headers: h })).json();
+    expect(beat).toMatchObject({ token: "pod-call-token-2", minutes_left_s: 240 });
+    expect((await app.inject({ method: "DELETE", url: "/api/calls/c_cloud1", headers: h })).statusCode).toBe(200);
+    expect(seen.some((x) => x.method === "DELETE" && x.path === "/v1/calls/c_cloud1")).toBe(true);
+  });
+
+  it("says so when not signed in to Mirli Cloud", async () => {
+    await app.inject({ method: "PUT", url: "/api/calls/backend", headers: h, payload: { token: "" } });
+    const r = await app.inject({ method: "POST", url: "/api/calls", headers: h, payload: { mode: "voice" } });
+    expect(r.statusCode).toBe(401);
+    expect(r.json().error.message).toMatch(/Sign in to Mirli Cloud/);
+    await app.inject({ method: "PUT", url: "/api/calls/backend", headers: h, payload: { mode: "local" } });
+  });
+});

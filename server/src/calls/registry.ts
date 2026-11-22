@@ -47,13 +47,19 @@ export class CallRegistry {
     this.now = opts.now ?? (() => Date.now() / 1000);
   }
 
-  create(mode: CallMode, character: string | null): Call {
-    this.reap();
-    if (this.#calls.size >= this.maxCalls) throw new CallBusyError();
+  /** `id` is given when another service (the cloud gateway) already named the call. */
+  create(mode: CallMode, character: string | null, id?: string): Call {
+    this.assertFree();
     const t = this.now();
-    const call: Call = { id: "c_" + randomBytes(9).toString("base64url"), mode, character, started: t, lastBeat: t };
+    const call: Call = { id: id ?? "c_" + randomBytes(9).toString("base64url"), mode, character, started: t, lastBeat: t };
     this.#calls.set(call.id, call);
     return { ...call };
+  }
+
+  /** Throws CallBusyError when no slot is free (lapsed calls are reaped first). */
+  assertFree(): void {
+    this.reap();
+    if (this.#calls.size >= this.maxCalls) throw new CallBusyError();
   }
 
   get(id: string): Call {

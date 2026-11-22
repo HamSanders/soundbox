@@ -118,3 +118,13 @@ test("voice call with Mirli: big reply text that fits, typing, end", async ({ pa
   await page.getByTestId("end-button").click();
   await expect(page.getByRole("dialog", { name: "Call ended" }).getByRole("button", { name: "Call Mirli again" })).toBeVisible();
 });
+
+test("the back end switch: Mirli Cloud without sign-in says so, then back to this computer", async ({ page }) => {
+  await page.goto("/#/calls");
+  const picker = page.getByRole("radiogroup", { name: "Where calls run" });
+  await picker.getByRole("radio", { name: "Mirli Cloud" }).click();
+  await expect(page.getByLabel("Mirli Cloud device token")).toBeVisible();
+  await expect(page.getByTestId("call-service")).toContainText("not reachable or not signed in", { timeout: 10_000 });
+  await picker.getByRole("radio", { name: "This computer" }).click();
+  await expect(page.getByTestId("call-service")).toContainText("voice server running", { timeout: 10_000 });
+});

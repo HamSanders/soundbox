@@ -17,6 +17,18 @@ Real-time voice and video calls with characters, as part of the Mirli app.
 
 The Mirli server finds the workers at `MIRLI_CALL_VOICE_URL` (default `http://127.0.0.1:17650`) and `MIRLI_CALL_FACE_URL` (default `17680`, then `17660`). It shares a secret with them in `~/.mirli-live/call-secret` (made on first use; `MIRLI_CALL_SECRET` overrides). Workers started after the file exists require tokens; `MIRLI_CALL_AUTH=off` on a worker runs it open, as the spike did.
 
+## Local or Mirli Cloud
+
+The **Calls** page has a switch: *This computer* or *Mirli Cloud*. The app's client and `/api/calls` are the same
+either way. With Mirli Cloud picked, the Mirli server (`server/src/calls/cloud.ts`) forwards each call to the cloud
+gateway's `/v1/calls` with the user's Mirli Cloud device token, then puts the character's portrait on the call pod
+with the call's own token. Characters stay on this machine; the persona and voice go with each call. The choice is
+stored in `<data dir>/calls-backend.json` (`MIRLI_CLOUD_URL`, `MIRLI_CLOUD_TOKEN` override it); the token is never
+sent back to the app.
+
+The cloud side: the gateway (private) hands out RunPod call pods from a warm pool, one call per pod, billed per
+minute on the credit ledger. The pod image is `spikes/realtime-pod` (API only, same token, same routing).
+
 ## Characters
 
 - Stored per profile in `<data dir>/characters/<id>/`: `character.json` (name, persona, voice), `portrait.png|jpg`, and an optional `pack/`.

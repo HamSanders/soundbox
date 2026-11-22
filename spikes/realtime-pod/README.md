@@ -75,18 +75,21 @@ open, including the reconnect grace) → `free`. `draining` = finish the current
 | Path | Who | Returns |
 |---|---|---|
 | `GET /healthz` | provider, router | 200 while the process is up. It doesn't depend on the engines, so a slow model load doesn't trigger a restart loop. |
-| `GET /readyz` | router | 200 only when the pod is `free`, otherwise 503. Body: `state`, `uptime_s`, `engines_ready_s`, `idle_s`, `call {id, connected, connected_s}`. |
+| `GET /readyz` | router | 200 only when the pod is `free`, otherwise 503. Body: `state`, `busy`, `uptime_s`, `engines_ready_s`, `idle_s`, `call {id, connected, connected_s}`. |
 | `GET /state` | router (admin token) | The same plus engine detail (VRAM, face fps), `calls_served`, `last_call`, `pod_id`. |
 | `POST /claim {call_id}` | router (admin token) | Reserves a free pod for that call. A retry with the same id returns 200; any other claim gets 409. |
 | `POST /release {call_id?, reason?}` | router (admin token) | Ends the call now (closes the sockets, flushes the face) and returns the call record. |
 | `GET /logs?name=voice\|face\|pod\|start&n=200` | router (admin token) | Tail of a process log, so a failing pod can be read without SSH. |
 | `POST /drain {draining: true\|false}` | router (admin token) | Stops new callers before the router stops the pod. |
-| `GET /?t=<token>` | caller | The call page. Sets an HttpOnly cookie, so the page's own requests and WebSockets carry the token. |
+| `POST /internal/calls/:id/end` | gateway (admin call token) | The gateway hung up: both workers drop the call and the pod is free again. |
+| `GET /voices` | caller | The pod's voices. There are no pages: the app is Mirli's own (API only). |
 | `WS /ws` | caller | The conversation (mic in, TTS out, events). One per call. |
 | `WS /facesrv/ws`, `/facesrv/faces`, `/facesrv/face`, `/facesrv/stats`, `/facesrv/flush` | caller | The face server's video socket and portrait picker. Engine switching is not offered. |
 
-The call token is `v1.<call_id>.<exp unix s>.<base64url HMAC-SHA256(POD_SECRET, "mirli-call:<call_id>:<exp>")>`.
-The router mints it; the pod never calls home. A valid token for a free pod also binds the pod to that call
+Callers carry the Mirli call token (`live/README.md`): WebSocket subprotocols `["mirli.v1", "bearer.<token>"]`, or
+`Authorization: Bearer <token>` on HTTP. It is `base64url(payload).base64url(HMAC-SHA256(POD_SECRET, payload))`
+with `aud` `voice`/`face` (`admin` for the gateway). The gateway mints it with this pod's `POD_SECRET`; the pod never
+calls home, and both workers get the same secret (`MIRLI_CALL_SECRET`) and check it again. A valid token for a free pod also binds the pod to that call
 (direct join without `/claim`).
 
 ## WebSockets through the provider proxy

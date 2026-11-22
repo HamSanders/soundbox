@@ -80,9 +80,8 @@ COPY realtime-voice/package.json realtime-voice/package-lock.json /app/realtime-
 RUN cd /app/realtime-voice && npm ci --omit=dev --no-audit --no-fund
 COPY realtime-voice/server.mjs realtime-voice/setup.mjs /app/realtime-voice/
 COPY realtime-voice/lib/ /app/realtime-voice/lib/
-COPY realtime-voice/public/ /app/realtime-voice/public/
-COPY realtime-face/server.py realtime-face/musetalk_engine.py /app/realtime-face/
-COPY realtime-face/web/ /app/realtime-face/web/
+# API only: no call pages in the image (the app is Mirli's own). call_router/call_token: per-call routing and tokens.
+COPY realtime-face/server.py realtime-face/musetalk_engine.py realtime-face/call_router.py realtime-face/call_token.py /app/realtime-face/
 # Portraits offered on the call page. Gitignored in the repo: realtime-pod/build.sh copies them in.
 COPY realtime-pod/faces/ /opt/faces/
 COPY realtime-pod/pod.mjs realtime-pod/entrypoint.sh /app/realtime-pod/

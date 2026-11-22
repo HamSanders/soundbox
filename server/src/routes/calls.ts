@@ -27,6 +27,7 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 
 import { CharacterNotFound, CharacterStore, MIRLI_PERSONA, type Character } from "../calls/characters.js";
 import { CloudPackRenderer, PackError, PackRenderer, packSettingsFromEnv } from "../calls/packs.js";
+import { BackendStore, CloudCalls, CloudError, type CloudGrant } from "../calls/cloud.js";
 import { CallBusyError, CallNotFoundError, CallRegistry, type CallMode } from "../calls/registry.js";
 import { callSecret, signCallToken } from "../calls/token.js";
 import { CallWorkers, WorkerError, workerConfigFromEnv, type PortraitSource } from "../calls/workers.js";
@@ -40,6 +41,8 @@ export interface CallsDeps {
   workers?: CallWorkers;
   registry?: CallRegistry;
   packs?: PackRenderer;
+  backend?: BackendStore;
+  cloudCalls?: CloudCalls;
   heartbeatS?: number;
 }
 
@@ -62,8 +65,18 @@ export function registerCalls(app: FastifyInstance, svc: MirliService, deps: Cal
   const packs = deps.packs ?? new PackRenderer(store, packSettingsFromEnv());
   const cloud = new CloudPackRenderer();
   const ws = (u: string) => u.replace(/^http/, "ws");
+  // Local GPU or Mirli Cloud: the app's client and these routes are the same either way.
+  const backend = deps.backend ?? new BackendStore(svc.config.paths.root);
+  const cloudCalls = deps.cloudCalls ?? new CloudCalls(() => backend.get());
+  const onCloud = new Map<string, CloudGrant>(); // calls running on Mirli Cloud, by id
 
-  const reaper = setInterval(() => { for (const row of registry.reap()) void workers.end(row.call); }, 5000);
+  const endAnywhere = async (id: string) => {
+    if (onCloud.has(id)) {
+      onCloud.delete(id);
+      await cloudCalls.end(id).catch(() => {});
+    } else await workers.end(id);
+  };
+  const reaper = setInterval(() => { for (const row of registry.reap()) void endAnywhere(row.call); }, 5000);
   reaper.unref();
   app.addHook("onClose", async () => { clearInterval(reaper); packs.stopAll(); });
 
@@ -95,13 +108,35 @@ export function registerCalls(app: FastifyInstance, svc: MirliService, deps: Cal
       if (e instanceof CallNotFoundError || e instanceof CharacterNotFound) return fail(reply, 404, "not_found", e.message);
       if (e instanceof WorkerError) return fail(reply, e.status, "worker", e.message);
       if (e instanceof PackError) return fail(reply, e.status, "pack", e.message);
+      if (e instanceof CloudError) return fail(reply, e.status, e.code, e.message);
       throw e;
     }
   };
 
   // ---- Calls ----------------------------------------------------------------
-  app.get("/api/calls/status", handle(async () => ({ mode: "local", ...(await workers.status()), active_calls: registry.active().length })));
-  app.get("/api/calls/voices", handle(async () => ({ voices: await workers.voices() })));
+  app.get("/api/calls/status", handle(async () => {
+    const b = backend.get();
+    if (b.mode === "cloud") {
+      // The cloud has the workers; what matters here is reaching the gateway, signed in.
+      let up = false;
+      try { up = (await fetch(`${b.url}/v1/health`, { signal: AbortSignal.timeout(3000) })).ok; } catch { /* down */ }
+      return { mode: "cloud", url: b.url, signed_in: !!b.token, voice: up && !!b.token, face: up && b.token ? { url: b.url, engine: "musetalk", ready: true } : null, active_calls: registry.active().length };
+    }
+    return { mode: "local", ...(await workers.status()), active_calls: registry.active().length };
+  }));
+  app.get("/api/calls/backend", async () => backend.view());
+  app.put("/api/calls/backend", async (req: any, reply) => {
+    const b = req.body ?? {};
+    if (b.mode !== undefined && b.mode !== "local" && b.mode !== "cloud") return fail(reply, 400, "bad_request", "mode is local or cloud");
+    if (b.url !== undefined && !/^https?:\/\/[^\s]+$/.test(String(b.url))) return fail(reply, 400, "bad_request", "url must be http(s)");
+    backend.set({
+      ...(b.mode ? { mode: b.mode } : {}),
+      ...(b.url ? { url: String(b.url).replace(/\/$/, "") } : {}),
+      ...(typeof b.token === "string" ? { token: b.token.trim() || null } : {}),
+    });
+    return backend.view();
+  });
+  app.get("/api/calls/voices", handle(async () => ({ voices: backend.get().mode === "cloud" ? [] : await workers.voices() })));
   app.get("/api/calls/history", async () => ({ unlimited: true, used_seconds: registry.secondsUsed(), recent_calls: registry.ledger().slice(-20).reverse() }));
   app.get("/api/calls/face-models", handle(async () => workers.faceModels()));
   app.post("/api/calls/face-models", handle(async (req, reply) => reply.code(202).send(await workers.switchFaceModel(String(req.body?.name ?? "")))));
@@ -111,6 +146,20 @@ export function registerCalls(app: FastifyInstance, svc: MirliService, deps: Cal
     const charId: string | null = typeof req.body?.character === "string" && req.body.character ? req.body.character : null;
     const c = charId ? await store.get(charId) : null;
     if (mode === "video" && !c) return fail(reply, 400, "bad_request", "A video call needs a character.");
+    if (backend.get().mode === "cloud") {
+      registry.assertFree();
+      const grant = await cloudCalls.start(mode, c?.id ?? null, c?.persona ?? MIRLI_PERSONA, c?.voice_id ?? null);
+      const call = registry.create(mode, c?.id ?? null, grant.call_id);
+      onCloud.set(call.id, grant);
+      try {
+        if (mode === "video" && c) await cloudCalls.showPortrait(grant, await portraitFor(c));
+      } catch (e) {
+        registry.end(call.id, "failed");
+        await endAnywhere(call.id);
+        throw e;
+      }
+      return reply.code(201).send({ ...grant, character: call.character });
+    }
     let faceUrl: string | null = null;
     if (mode === "video") {
       faceUrl = await workers.face();
@@ -137,6 +186,12 @@ export function registerCalls(app: FastifyInstance, svc: MirliService, deps: Cal
   app.post("/api/calls/:id/heartbeat", handle(async (req) => {
     const expires = registry.heartbeat(req.params.id);
     const call = registry.get(req.params.id);
+    const g = onCloud.get(call.id);
+    if (g) {
+      const beat = await cloudCalls.heartbeat(call.id);
+      g.token = beat.token;
+      return { call_id: call.id, expires: beat.expires, token: beat.token, minutes_left_s: beat.minutes_left_s ?? null };
+    }
     const token = signCallToken({ call: call.id, aud: call.mode === "video" ? ["voice", "face"] : ["voice"], mode: call.mode }, secret, TOKEN_TTL_S);
     return { call_id: call.id, expires, token };
   }));
@@ -145,14 +200,16 @@ export function registerCalls(app: FastifyInstance, svc: MirliService, deps: Cal
     const call = registry.get(req.params.id);
     if (call.mode !== "video") return fail(reply, 409, "voice_call", "A voice call has no face.");
     const c = await store.get(String(req.body?.character ?? ""));
-    await workers.showPortrait(await portraitFor(c));
+    const g = onCloud.get(call.id);
+    if (g) await cloudCalls.showPortrait(g, await portraitFor(c));
+    else await workers.showPortrait(await portraitFor(c));
     registry.setCharacter(call.id, c.id);
     return { character: c.id, name: c.name, persona: c.persona, voice_id: c.voice_id };
   }));
 
   app.delete("/api/calls/:id", handle(async (req) => {
     const row = registry.end(req.params.id);
-    await workers.end(row.call);
+    await endAnywhere(row.call);
     return row;
   }));
 

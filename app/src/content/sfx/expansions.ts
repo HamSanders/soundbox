@@ -24,9 +24,14 @@
  * scripts/check-sfx-noise.py and a look at the spectrogram. Prompts asking
  * for a "run of N notes" come out clean far more often than ones asking for a
  * single "ping" or "chirp", which is why several of these are worded that way.
+ *
+ * `vs(...)` adds takes of the same prompt on the music models, picked the same
+ * way. Only the takes that came out as what the prompt asked for are listed:
+ * ACE-Step plays a tune for "warp zone" rather than a sweep, and SA3 Small
+ * Music answers "extra life" with a hum, so those two pairings are left out.
  */
 
-import type { SfxSample } from "./types";
+import type { SfxSample, SfxTake } from "./types";
 
 /** Every clip in this pass renders on the current local SFX model. */
 const MODEL = "audiocpp-stable-audio-3-sfx";
@@ -35,6 +40,13 @@ function s(slug: string, title: string, prompt: string, durationS: number, seed?
   return { slug, title, prompt, source: "model", model: MODEL, durationS, ...(seed !== undefined && { seed }) };
 }
 
+/** The same sample with takes on other models beside it. */
+function vs(sample: SfxSample, ...compare: SfxTake[]): SfxSample {
+  return { ...sample, compare };
+}
+
+const SA3_MUSIC = "audiocpp-stable-audio-3-small-music";
+const ACE_STEP = "audiocpp-ace-step";
 
 export const EXTRA_SAMPLES: Record<string, SfxSample[]> = {
   /* ------------------------------------------------------------- Games */
@@ -54,13 +66,13 @@ export const EXTRA_SAMPLES: Record<string, SfxSample[]> = {
 
   "retro-game": [
     s("retro-pause", "Pause toggle", "retro arcade pause sound, single descending two-tone chirp, pulse wave, dry", 1),
-    s("retro-extra-life", "Extra life", "retro arcade extra life jingle, rapid ascending square wave run of six notes, bright, dry", 2),
+    vs(s("retro-extra-life", "Extra life", "retro arcade extra life jingle, rapid ascending square wave run of six notes, bright, dry", 2), { model: ACE_STEP, seed: 1743118495 }),
     s("retro-insert-coin", "Insert coin", "retro arcade insert coin sound, rapid ascending square wave run of four notes, bright, dry", 1.5, 424660679),
-    s("retro-high-score", "High score entry", "retro arcade high score entry sound, cheerful looping four-note pulse wave motif, bright major key, dry", 3),
+    vs(s("retro-high-score", "High score entry", "retro arcade high score entry sound, cheerful looping four-note pulse wave motif, bright major key, dry", 3), { model: SA3_MUSIC, seed: 2063804535 }, { model: ACE_STEP, seed: 1055405860 }),
     s("retro-enemy-spawn", "Enemy spawn", "retro arcade enemy spawn alert, short descending noise sweep with a square wave tail, dry", 1.5),
     s("retro-shield-hit", "Shield hit", "retro arcade shield deflect, rapid ascending square wave run of three notes, bright, dry", 1, 228152900),
-    s("retro-warp-zone", "Warp zone", "retro arcade warp zone, long rising pitch sweep of stacked pulse waves resolving into a bright sustained tone, dry", 3),
-    s("retro-attract-loop", "Attract mode loop", "retro arcade attract mode background loop, bouncy square wave melody over a simple pulse bass, upbeat major key, 140 BPM, seamless loop", 10),
+    vs(s("retro-warp-zone", "Warp zone", "retro arcade warp zone, long rising pitch sweep of stacked pulse waves resolving into a bright sustained tone, dry", 3), { model: SA3_MUSIC, seed: 1580160255 }),
+    vs(s("retro-attract-loop", "Attract mode loop", "retro arcade attract mode background loop, bouncy square wave melody over a simple pulse bass, upbeat major key, 140 BPM, seamless loop", 10), { model: SA3_MUSIC, seed: 631400529 }, { model: ACE_STEP, seed: 289135863 }),
     s("retro-continue-countdown", "Continue countdown", "retro arcade continue countdown, single urgent low square wave beep repeated at one second intervals, dry", 5),
     s("retro-tilt-alarm", "Tilt alarm", "pinball machine tilt alarm, harsh buzzing electromechanical klaxon, short bursts, dry", 2),
   ],

@@ -16,6 +16,9 @@
  *   npx tsx scripts/gen-sfx-samples.ts --only=retro-game/retro-pause,8bit/8bit-explosion
  *                                                       # re-render these, even if present
  *
+ * A sample's `compare` takes render too, as `<slug>--<model>` (names for --only
+ * use that form).
+ *
  * A sample with a `seed` renders on that seed, so it comes back as the take on
  * the page. Afterwards run scripts/level-sfx-samples.py: renders come out of
  * the model at any level, and the site's MP3s are levelled to one loudness.
@@ -35,13 +38,18 @@ import { fileURLToPath } from "node:url";
 import { wavToMp3 } from "./encode-mp3.mjs";
 
 import { SFX_CATEGORIES } from "../app/src/content/sfx/categories.ts";
-import { isPublished, type SfxSample } from "../app/src/content/sfx/types.ts";
+import {
+  DEFAULT_SAMPLE_MODEL,
+  isPublished,
+  sampleTakes,
+  type SfxSample,
+} from "../app/src/content/sfx/types.ts";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const API = process.env.SOUNDBOX_API ?? "http://127.0.0.1:17494";
 
 /** What a sample renders on when it doesn't name a model of its own. */
-const DEFAULT_MODEL = "audiocpp-stable-audio-3-sfx";
+const DEFAULT_MODEL = DEFAULT_SAMPLE_MODEL;
 const DEFAULT_DURATION_S = 4;
 
 /**
@@ -77,6 +85,17 @@ async function ensureProject(name: string): Promise<string> {
   const project = (await res.json()) as { id: string };
   projectCache.set(name, project.id);
   return project.id;
+}
+
+/**
+ * One sample becomes one render per take: the main clip, then any `compare`
+ * takes on other models. Each is shaped like a sample (its own slug, model and
+ * seed) so the rest of this script treats them the same.
+ */
+function renderUnits(samples: SfxSample[]): SfxSample[] {
+  return samples.flatMap((sample) =>
+    sampleTakes(sample).map((take) => ({ ...sample, slug: take.slug, model: take.model, seed: take.seed })),
+  );
 }
 
 async function generate(sample: SfxSample, projectId: string): Promise<string> {
@@ -151,11 +170,12 @@ async function main() {
     const manifest: Record<string, ManifestEntry> = existsSync(manifestPath)
       ? JSON.parse(await readFile(manifestPath, "utf8"))
       : {};
+    const units = renderUnits(category.content.samples);
     const todo = onlySamples.size > 0
-      ? category.content.samples.filter((s) => onlySamples.has(`${category.slug}/${s.slug}`))
+      ? units.filter((s) => onlySamples.has(`${category.slug}/${s.slug}`))
       : all
-      ? category.content.samples
-      : category.content.samples.filter(
+      ? units
+      : units.filter(
           (s) => !(s.slug in manifest) || !existsSync(join(outDir, `${s.slug}.mp3`)),
         );
     if (todo.length > 0) plan.push({ slug: category.slug, samples: todo, outDir, manifest });

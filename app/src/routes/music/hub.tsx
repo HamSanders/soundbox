@@ -44,6 +44,9 @@ import { MusicCover } from "@/components/music-cover";
 import { RevealMusicFlow } from "@/components/reveal-music-flow";
 import {
   SiteDock,
+  SiteRail,
+  SiteRailCard,
+  SiteRailLayout,
   SiteShelf,
   SiteShelfTile,
   SiteTrackList,
@@ -521,44 +524,22 @@ export function MusicHubPage() {
         <style>{STYLES}</style>
         {player.element}
 
-        <div className="mx-auto w-full max-w-[96rem] lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]">
+        <SiteRailLayout>
           {/* ------------------------------------------------------ rail */}
-          <nav
-            aria-label="On this page"
-            className="border-border sticky top-14 hidden h-[calc(100svh-3.5rem-72px)] flex-col gap-7 overflow-y-auto border-r px-3 py-6 lg:flex"
-          >
-            {RAIL.map((group) => (
-              <div key={group.heading}>
-                <p className="label-caps text-muted-foreground px-3">
-                  {group.heading}
-                </p>
-                <ul className="mt-2">
-                  {group.links.map(({ href, label, icon: Icon }) => (
-                    <li key={href}>
-                      <a
-                        href={href}
-                        className="text-muted-foreground hover:text-foreground hover:bg-card focus-visible:ring-ring/50 flex items-center gap-3 rounded-sm px-3 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-3"
-                      >
-                        <Icon className="size-4 shrink-0" aria-hidden="true" />
-                        <span className="truncate">{label}</span>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-            <div className="bg-card mt-auto rounded-md p-4">
-              <p className="text-sm font-semibold">Make your own</p>
-              <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                Every prompt here is yours to copy, edit and render again.
-              </p>
-              <Button size="sm" className="mt-3 w-full" asChild>
-                <MarketingLink href={GENERATOR_HREF}>
-                  Open the generator
-                </MarketingLink>
-              </Button>
-            </div>
-          </nav>
+          <SiteRail
+            groups={RAIL}
+            cta={
+              <SiteRailCard
+                title="Make your own"
+                body="Every prompt here is yours to copy, edit and render again."
+                action={
+                  <Button size="sm" className="w-full" asChild>
+                    <MarketingLink href={GENERATOR_HREF}>Open the generator</MarketingLink>
+                  </Button>
+                }
+              />
+            }
+          />
 
           <main className="min-w-0 px-4 pt-6 pb-28 lg:px-8">
             {/* ---------------------------------------------------- hero */}
@@ -866,7 +847,7 @@ export function MusicHubPage() {
               </p>
             </footer>
           </main>
-        </div>
+        </SiteRailLayout>
 
         <SiteDock audio={player} trailing={<DockPrompt queue={queue} />} />
       </div>

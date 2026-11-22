@@ -56,15 +56,15 @@ const SHOTS: Shot[] = [
     id: "library",
     label: "Library",
     src: "/product/app-library.webp",
-    alt: "The Mirli library: kind tabs, a search box with tag, model, favourites and agent filters, eight generated sounds each with its tags, licence badge, model and length, and the bottom player playing Door slam 01.",
+    alt: "The Mirli library: kind tabs, a search box with tag, model, favourites and agent filters, music, sound effects and speech in one list, each with its tags, licence badge, model and length, and the bottom player holding Low Tide.",
     caption:
       "Everything generated, in one list, with the prompt, model and seed kept beside it. A row marked with an agent's name was made over MCP.",
   },
   {
     id: "create",
     label: "Create",
-    src: "/product/app-create-music.webp",
-    alt: "The Create panel on its Music tab: a model picker, an instrumental switch, a styles prompt with suggestion chips, tempo and a Create button, beside the list of tracks.",
+    src: "/product/app-music.webp",
+    alt: "The Music page: the Create panel with a model picker, an instrumental switch, a styles prompt with suggestion chips, tempo and a Create button, beside seven tracks and the player holding the main theme.",
     caption: "Music, SFX and Speech in one panel, beside the takes it has already made.",
   },
   {
@@ -85,8 +85,8 @@ const SHOTS: Shot[] = [
     id: "voice-lab",
     label: "Voice Lab",
     src: "/product/app-voice-lab.webp",
-    alt: "Voice Lab: your voices as cards, a table of every voice with its kind and model, and a panel to read one line through several voices side by side.",
-    caption: "Every voice you have made or installed, and a way to hear them back to back.",
+    alt: "Voice Lab: five voices as cards, and a table of every voice with its kind, its model and how many reads it has made.",
+    caption: "Every voice you have cloned or picked from a model, with the reads behind it.",
   },
 ];
 

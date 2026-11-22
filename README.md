@@ -29,6 +29,8 @@ Environment variables are `MIRLI_*`, and the old `SOUNDBOX_*` names still work
 
 ## Describe it, hear it, arrange it
 
+<img src="site/public/product/app-studio.webp" alt="The Mirli studio: a script cast across three voices above a timeline with narration, dialogue, a music bed, ambience and sound effects on five lanes, and the library beside it" width="880">
+
 | Make | Arrange | Connect |
 |---|---|---|
 | Sound effects and ambience from a description | A multi-track timeline with effects, MIDI and mixdown | An MCP server with 24 tools for Claude Code and Cursor |
@@ -47,15 +49,17 @@ switched from the header without a restart; the models are shared.
 </picture>
 
 <details>
-<summary><b>More screenshots</b> · library, create, details, voices</summary>
+<summary><b>More screenshots</b> · library, music, sound effects, models, details, voices</summary>
 <br>
 
 | | |
 |---|---|
-| <img src="site/public/product/app-library.webp" alt="The Library: kind tabs, a search box with filter pills, eight sounds with their tags, licence and model, and the bottom player playing Door slam 01"> | <img src="site/public/product/app-create-music.webp" alt="The Create panel on its Music tab, with model, lyrics switch, styles, tempo and a Create button, beside the list of tracks"> |
-| **Library.** Every take in one list, with the player along the bottom. | **Create.** Music, SFX and Speech tabs beside the track list. |
-| <img src="site/public/product/app-details.webp" alt="The details panel docked on the right of the Library: a waveform for Rain on tin roof with trim tools and its generation settings: model, prompt, seed, steps and duration"> | <img src="site/public/product/app-voice-lab.webp" alt="Voice Lab: your voices as cards, a table of all voices with kind and model, and a panel for comparing voices on one line"> |
-| **Details.** Waveform, edits and the exact settings that made it. | **Voice Lab.** Your voices, and a side-by-side compare. |
+| <img src="site/public/product/app-library.webp" alt="The Library: kind tabs, a search box with filter pills, music, sound effects and speech in one list with their tags, licence and model, and the bottom player holding Low Tide"> | <img src="site/public/product/app-music.webp" alt="The Music page: the Create panel with model, lyrics switch, styles and tempo, beside seven tracks with their licence, model and length, and the main theme in the player"> |
+| **Library.** Every take in one list, with the player along the bottom. | **Music.** The Create panel beside the tracks it has made. |
+| <img src="site/public/product/app-sfx.webp" alt="The SFX page: a prompt box with duration, variations, seed, steps and CFG, beside ten sound effects from two models with their licence badges and lengths"> | <img src="site/public/product/app-models.webp" alt="The Models page: the Fast, Balanced, Quality and Max packs, each naming one model for sound effects, music and voice with its size"> |
+| **Sound effects.** Describe it, set a length, generate. | **Models.** Four packs, or pick models one at a time. |
+| <img src="site/public/product/app-details.webp" alt="The details panel docked on the right of the Library: a waveform for Rain on tin roof with trim tools and its generation settings: model, prompt, seed, steps and duration"> | <img src="site/public/product/app-voice-lab.webp" alt="Voice Lab: five voices as cards and as a table with the kind, model and number of reads of each"> |
+| **Details.** Waveform, edits and the exact settings that made it. | **Voice Lab.** Your voices, cloned or built in, and how much each has read. |
 | <img src="site/public/product/app-voice-new.webp" alt="Voice creation: three cards, Clone from clips, Built-in voice from a model, and Import a voice file"> | <img src="site/public/product/app-voice-clone.webp" alt="Clone a voice: an upload or record area for up to five clips, a clip timer, and name, model and notes fields"> |
 | **New voice.** Clone it, pick a built-in, or import one. | **Clone.** Up to five clips of one speaker, recorded or uploaded. |
 
@@ -128,7 +132,7 @@ gets 24 tools for sounds, speech and multi-track stories, and three skills:
 `soundbox-sfx`, `soundbox-sound-pass` and `soundbox-voice-story`. Every tool,
 the stdio bridge and the skills are in [docs/MCP.md](docs/MCP.md).
 
-<img src="site/public/product/agents.png" alt="The Agents page: connected MCP clients, copy-paste connection commands, and a log of recent calls" width="880">
+<img src="site/public/product/app-agents.webp" alt="The Agents page: call counts for the day, the MCP address and the Claude Code command to copy, and three agents that have connected" width="880">
 
 ## Models
 

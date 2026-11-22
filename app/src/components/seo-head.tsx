@@ -155,7 +155,7 @@ export function softwareAppJsonLd(): object {
     codeRepository: "https://github.com/HamSanders/soundbox",
     description:
       "Generates sound effects, music and speech on your own machine from open-weight models, with an HTTP API and an MCP server for coding agents.",
-    ...(siteUrl("/product/studio.png") ? { screenshot: siteUrl("/product/studio.png") } : {}),
+    ...(siteUrl("/product/app-studio.jpg") ? { screenshot: siteUrl("/product/app-studio.jpg") } : {}),
     ...(pageUrl("/") ? { url: pageUrl("/") } : {}),
   };
 }

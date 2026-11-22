@@ -99,5 +99,7 @@ mkdir -p /app && for d in realtime-voice realtime-face realtime-pod; do ln -sfn 
 export LD_LIBRARY_PATH=/opt/audiocpp SPIKE_AUDIOCPP_SERVER=/opt/audiocpp/audiocpp_server MIRLI_AUDIOCPP_BACKEND=cuda \
   SPIKE_MODELS_DIR=$W/models/audiocpp MIRLI_MUSETALK_HOME=/opt/musetalk SPIKE_DIR=/tmp/mirli-call \
   MIRLI_FACE_HOME=/tmp/mirli-face LLM_PROVIDER=openai POD_PORT=8080 PYTHONUNBUFFERED=1
+# Remote callers: 384 px at JPEG 70 is ~23 KB a frame (~4.6 Mbit/s) against ~80 KB (16) at 512/92.
+export FACE_JPEG="${FACE_JPEG:-70}" FACE_OUT_SIZE="${FACE_OUT_SIZE:-384}"
 stamp "setup done; starting servers"
 exec bash /app/realtime-pod/entrypoint.sh

@@ -94,6 +94,8 @@ ENV LD_LIBRARY_PATH=/opt/audiocpp \
     MIRLI_FACE_HOME=/tmp/mirli-face \
     LLM_PROVIDER=openai \
     POD_PORT=8080 \
+    FACE_JPEG=70 \
+    FACE_OUT_SIZE=384 \
     PYTHONUNBUFFERED=1
 EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=3s --start-period=180s CMD curl -fsS http://127.0.0.1:8080/healthz || exit 1

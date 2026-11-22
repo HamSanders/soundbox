@@ -74,6 +74,8 @@ ap.add_argument("--no-idle", action="store_true", help="do not generate silent '
 ap.add_argument("--max-lead", type=float, default=3.0, help="stop generating when this many seconds are already queued for playback")
 ap.add_argument("--compile", action="store_true")
 ap.add_argument("--jpeg-quality", type=int, default=int(os.environ.get("FACE_JPEG", 92)))
+ap.add_argument("--out-size", type=int, default=int(os.environ.get("FACE_OUT_SIZE", 0)),
+                help="downscale frames to this many pixels square before JPEG (0 = as generated); bandwidth for remote callers")
 ap.add_argument("--log", default=None, help="append one JSON line per chunk and per browser report")
 args = ap.parse_args()
 
@@ -238,6 +240,8 @@ def engine_thread():
             f32 = resample_poly(f32, E.SAMPLE_RATE, args.input_rate).astype(np.float32)
         frames = eng.step(f32)
         t_gen = time.time()
+        if args.out_size:
+            frames = [cv2.resize(f, (args.out_size, args.out_size), interpolation=cv2.INTER_AREA) for f in frames]
         jpegs = [cv2.imencode(".jpg", cv2.cvtColor(f, cv2.COLOR_RGB2BGR), enc)[1].tobytes() for f in frames]
         if gen != flush_gen:
             continue  # barge-in happened while this was generating

@@ -105,8 +105,8 @@ export function StudioMarketingPage() {
         title="Multi-track studio for generated audio | Mirli"
         description="Cast a script across speakers, lay music and sound effects on a timeline, add per-track effects and mix down to one file. Everything is generated and arranged on your own machine."
         path="/studio"
-        image="/product/studio.png"
-        imageAlt="The Mirli studio: a script cast across three speakers above a multi-track timeline of spoken lines, music and sound effects"
+        image="/product/app-studio.jpg"
+        imageAlt="The Mirli studio: a script cast across three voices above a timeline with narration, dialogue, a music bed, ambience and sound effects on five lanes"
         jsonLd={[softwareAppJsonLd()]}
       />
       <a

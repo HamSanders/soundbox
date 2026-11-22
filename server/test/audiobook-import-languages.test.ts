@@ -59,6 +59,8 @@ describe("multilingual headings", () => {
     expect(matterFromTitle("Index of Forbidden Things")).toBeNull();
     expect(matterFromTitle("跋涉")).toBeNull();
     expect(classifySection("Notes from Underground", ["Text."])).toEqual({ kind: "chapter", included: true });
+    // Standard Ebooks ends every book with its "Uncopyright" dedication to the public domain.
+    expect(classifySection("Uncopyright", ["May you do good and not evil."])).toEqual({ kind: "front_matter", included: false });
   });
 
   it("detects untitled copyright pages and dedications in other languages", () => {

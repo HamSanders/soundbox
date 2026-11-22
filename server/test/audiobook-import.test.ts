@@ -72,6 +72,9 @@ describe("text helpers", () => {
   it("title-cases all-caps headings", () => {
     expect(tidyTitle("CHAPTER XII. THE BALL")).toBe("Chapter XII. The Ball");
     expect(tidyTitle("Chapter 1:")).toBe("Chapter 1");
+    // Every numeral, not just the first twenty; ordinary words stay words.
+    expect(["LIX", "LX", "XLIV", "CXC", "XXXVIII"].map(tidyTitle)).toEqual(["LIX", "LX", "XLIV", "CXC", "XXXVIII"]);
+    expect(tidyTitle("CHAPTER LXI. CIVIL LIVES")).toBe("Chapter LXI. Civil Lives");
   });
 });
 

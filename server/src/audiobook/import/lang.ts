@@ -114,7 +114,7 @@ export const MATTER: Record<string, MatterKind> = {
     kind: "front_matter",
     included: false,
     names: [
-      "copyright", "legal", "imprint", "colophon", "impressum", "mentions légales", "droits d'auteur", "créditos",
+      "copyright", "uncopyright", "legal", "imprint", "colophon", "impressum", "mentions légales", "droits d'auteur", "créditos",
       "derechos de autor", "colofón", "colophon", "copyright e crediti", "colofão", "ficha técnica", "colofon",
       "prawa autorskie", "stopka redakcyjna", "выходные данные", "版权", "版權", "版权信息", "奥付",
     ],

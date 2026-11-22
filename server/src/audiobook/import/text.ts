@@ -257,5 +257,8 @@ export function tidyTitle(title: string): string {
   const s = normaliseWhitespace(title).replace(/[.:]+$/, "");
   if (s !== s.toUpperCase() || !/\p{Lu}/u.test(s)) return s;
   return s.toLowerCase().replace(/(^|[\s(“"'«-])(\p{Ll})/gu, (_m, pre: string, c: string) => pre + c.toUpperCase())
-    .replace(/\b(Ii|Iii|Iv|Vi|Vii|Viii|Ix|Xi|Xii|Xiii|Xiv|Xv|Xvi|Xvii|Xviii|Xix|Xx)\b/g, (r) => r.toUpperCase());
+    // Put Roman numerals back ("Chapter Lix" → "Chapter LIX"), up to CCCXCIX.
+    .replace(/\b[CcLlXxVvIi]{2,}\b/g, (w) => (ROMAN_NUMERAL.test(w.toUpperCase()) ? w.toUpperCase() : w));
 }
+
+const ROMAN_NUMERAL = /^C{0,3}(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/;

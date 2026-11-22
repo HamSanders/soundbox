@@ -61,7 +61,8 @@ route answers `202 { "job_id": "..." }` and the work is followed through
 | GET | `/api/models/audiocpp/runtime` | Which `audiocpp_cli` resolved, how, and where weights live |
 | POST | `/api/models/audiocpp/engine/install` | Install `audiocpp_cli`. Body `{ version?, backend? }` → job |
 | GET | `/api/models/{id}` | One model |
-| POST | `/api/models/{id}/download` | Download weights → job |
+| POST | `/api/models/{id}/download` | Download weights → job. Continues an interrupted download |
+| DELETE | `/api/models/{id}/download-failure` | Dismiss the remembered failure of the last download (`download_failure` on the model) |
 | POST | `/api/models/{id}/load` | Load into memory, unloading any other |
 | POST | `/api/models/{id}/unload` | Unload |
 | DELETE | `/api/models/{id}/weights` | Delete downloaded weights |

@@ -469,6 +469,23 @@ const models: Model[] = [
     status: "incomplete",
     installed_deps: false,
     error: null,
+    // What a server restart leaves behind: the reason the download stopped.
+    download_failure: {
+      topic: "download_truncated",
+      title: "The download ended before the whole file arrived",
+      hint:
+        "Fewer bytes came back than the server declared, or the size did not match. " +
+        "A retry continues from what arrived where it can; if it keeps happening the " +
+        "file upstream may have changed and the catalog entry needs a look.",
+      fixes: [{ label: "Open Models", to: "/models" }],
+      terminal: false,
+      stage: "downloading",
+      detail:
+        "Download of https://huggingface.co/example/weights.gguf was cut short: got 1288490188 of " +
+        "3865470566 bytes (terminated: other side closed: UND_ERR_SOCKET). Gave up after 5 attempts. " +
+        "What arrived is kept, so the next try continues from it where the server allows.",
+      at: new Date(Date.now() - 26 * 3600_000).toISOString(),
+    },
   },
   {
     id: "tangoflux-base",
@@ -2146,6 +2163,8 @@ async function runRepaintJob(
 
 async function runDownloadJob(job: Job, modelId: string) {
   const model = models.find((e) => e.id === modelId);
+  // A repair of an incomplete model picks up where the part left off.
+  const resumed = model?.status === "incomplete";
   if (model) model.status = "downloading";
   job.status = "running";
   job.phase = "loading";
@@ -2153,14 +2172,25 @@ async function runDownloadJob(job: Job, modelId: string) {
   for (let i = 1; i <= 12; i++) {
     await wait(230);
     if (cancelled.has(job.id)) {
-      if (model) model.status = "not_installed";
+      if (model) model.status = resumed ? "incomplete" : "not_installed";
       return;
     }
-    job.progress = i / 12;
-    job.message = `${Math.round((i / 12) * (model?.vram_estimate_mb ?? 4000))} MB / ${model?.vram_estimate_mb ?? 4000} MB`;
+    // The server's progress line: bytes, then rate and time left once it has
+    // a second of data to judge by.
+    const totalMb = model?.vram_estimate_mb ?? 4000;
+    const fraction = resumed ? 1 / 3 + ((i / 12) * 2) / 3 : i / 12;
+    const secondsLeft = Math.round((12 - i) * 0.23);
+    job.progress = 0.05 + 0.9 * fraction;
+    job.message =
+      `Downloading — ${((fraction * totalMb) / 1024).toFixed(1)} GB of ${(totalMb / 1024).toFixed(1)} GB` +
+      (i > 1 ? " · 38.4 MB/s" : "") +
+      (i > 1 && secondsLeft > 0 ? ` · ${secondsLeft} s left` : "");
     emit(job);
   }
-  if (model) model.status = "installed";
+  if (model) {
+    model.status = "installed";
+    model.download_failure = null;
+  }
   job.status = "done";
   job.phase = "done";
   job.progress = 1;
@@ -2528,6 +2558,14 @@ export const mockApi: MirliApi = {
     const model = models.find((e) => e.id === id);
     if (!model) throw new Error(`Unknown model ${id}`);
     model.status = "not_installed";
+    model.download_failure = null;
+  },
+
+  async clearModelDownloadFailure(id) {
+    await wait(60);
+    const model = models.find((e) => e.id === id);
+    if (!model) throw new Error(`Unknown model ${id}`);
+    model.download_failure = null;
   },
 
   async generate(req): Promise<JobRef> {

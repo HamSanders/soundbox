@@ -81,6 +81,7 @@ def main():
     }
     ok_all = True
     for name, g in cases.items():
+        g = graphs.fit_to_server(g, info)
         s = static_check(g, info)
         queued, missing, other = server_check(a.server, g) if not s else (False, [], ["skipped"])
         wired = not s and not other

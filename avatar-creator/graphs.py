@@ -133,3 +133,28 @@ def clip(start: str, end: str, prompt: str, length=81, width=896, height=1120, s
         g["20"] = ("LoraLoaderModelOnly", "lightx2v 4-step (high)", {"model": ["1", 0], "lora_name": MODELS["wan_lora_high"], "strength_model": 1})
         g["21"] = ("LoraLoaderModelOnly", "lightx2v 4-step (low)", {"model": ["2", 0], "lora_name": MODELS["wan_lora_low"], "strength_model": 1})
     return _api(g)
+
+
+def fit_to_server(g: dict, object_info: dict) -> dict:
+    """Adapt a graph to the ComfyUI version it will run on.
+
+    Newer ComfyUI (0.34+) gives SaveVideo dynamic-combo inputs, whose API keys are dotted
+    ("format.codec"), and CreateVideo gained bit_depth/color_space. Older builds, such as
+    ComfyUI 0.30.0 in RunPod's official template, take a flat "codec" and lack the extras.
+    Dotted keys the server doesn't know fall back to their last part; other unknown inputs are dropped.
+    """
+    out = {}
+    for nid, n in g.items():
+        spec = object_info.get(n["class_type"], {}).get("input", {})
+        known = {**spec.get("required", {}), **spec.get("optional", {})}
+        if not known:
+            out[nid] = n
+            continue
+        inputs = {}
+        for k, v in n["inputs"].items():
+            if k in known:
+                inputs[k] = v
+            elif "." in k and k.rsplit(".", 1)[1] in known and k.rsplit(".", 1)[1] not in n["inputs"]:
+                inputs[k.rsplit(".", 1)[1]] = v
+        out[nid] = {**n, "inputs": inputs}
+    return out

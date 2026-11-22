@@ -100,9 +100,10 @@ class FaceEngine:
         self._kw = kw
         self._f_s = torch.from_numpy(info["f_s_lst"][0]).cuda().half()
         self._seed = seed
+        self._hold = None
         self._still_cache = None
+        self._still_cache = self._still()   # render the still portrait once per face, not per reset()
         self.reset()
-        self._still_cache = self._still()  # render the resting face once per image, not after every reset()
 
     def reset(self):
         """Forget audio and motion state (new utterance, barge-in)."""
@@ -132,14 +133,20 @@ class FaceEngine:
         self._res = None           # motion sequence so far, [1, n, 265]
         self._valid = None         # index in _res of the next frame to emit
         self._pending = np.zeros(0, np.float32)
-        self._hold = self._still_cache  # last frame, repeated while the delay fills (starts as the still)
+        self._hold = getattr(self, "_still_cache", None)   # still portrait, repeated while the delay fills
 
     # -- streaming ---------------------------------------------------------------------------
     @torch.no_grad()
-    def step(self, pcm):
+    def step(self, pcm, early=None):
         """pcm: float32 16 kHz, any multiple of CHUNK_SAMPLES (0.2 s by default).
         Returns uint8 [len(pcm)/640, 512, 512, 3]. Frame k shows audio from DELAY_FRAMES earlier;
-        the first DELAY_FRAMES frames after reset() are the still portrait."""
+        the first DELAY_FRAMES frames after reset() are the still portrait.
+
+        early: optional callback, called once per call with the block's first frame (plus the still
+        padding after reset()) as soon as it is rendered, before the other frames; those frames are then
+        NOT in the return value. Lets a server ship audio + first frame ~4 renders (~85 ms) sooner.
+        Pass pcm of exactly one block when using it."""
+        self._early = early
         self._pending = np.concatenate([self._pending, pcm.astype(np.float32)])
         out = []
         while len(self._pending) >= CHUNK_SAMPLES:
@@ -179,11 +186,14 @@ class FaceEngine:
             cut = len(self._feat) - seq * 2
             self._feat = self._feat[cut:]
             self._cond_idx += cut
-        frames = self._render(a2m.cvt_fmt(emit))
-        if len(frames) < CLIP:   # first block after reset: pad the front with the still face
-            still = self._still()
-            frames = [still] * (CLIP - len(frames)) + frames
-        return frames
+        infos = a2m.cvt_fmt(emit)
+        pad = [self._still()] * (CLIP - len(infos))   # first block after reset: still face in front
+        if self._early is not None:
+            head = pad + self._render(infos[:1])
+            self._early(head)
+            self._early = None
+            return self._render(infos[1:])
+        return pad + self._render(infos)
 
     def _still(self):
         if self._hold is None:

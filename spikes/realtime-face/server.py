@@ -54,6 +54,8 @@ if not hasattr(E, "CHUNK_FRAMES"):
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--engine", default=ENGINE, choices=list(ENGINES))
+ap.add_argument("--no-fast-first", dest="fast_first", action="store_false",
+                help="Ditto: send the first lip-synced frame before the rest of its block (default on)")
 ap.add_argument("--wait-port", action="store_true", help="wait for the HTTP port to be free (used when switching engine)")
 ap.add_argument("--image", default=str(Path(os.environ.get("MIRLI_FACE_HOME", Path.home() / "mirli-spike-face")) / "upstream" / "SoulX-FlashHead" / "examples" / "girl.png"))
 ap.add_argument("--input-rate", type=int, default=16000, help="sample rate of the PCM socket (48000 for the voice spike)")
@@ -211,23 +213,44 @@ def engine_thread():
         f32 = chunk.astype(np.float32) / 32768.0
         if args.input_rate != E.SAMPLE_RATE:
             f32 = resample_poly(f32, E.SAMPLE_RATE, args.input_rate).astype(np.float32)
-        frames = eng.step(f32)
+        sent = {"audio": False, "frames": 0, "t_send": None}
+
+        def send(frames, final):
+            # The first message of a chunk carries its audio; a later one (cont) carries only frames
+            # that belong to the same chunk, starting at frame index `start_i`.
+            global hold, play_head
+            nonlocal chunk
+            jpegs = [cv2.imencode(".jpg", cv2.cvtColor(f, cv2.COLOR_RGB2BGR), enc)[1].tobytes() for f in frames]
+            if gen != flush_gen:
+                return False  # barge-in happened while this was generating
+            if not sent["audio"]:
+                if DELAY_IN:
+                    both = np.concatenate([hold, chunk])
+                    chunk, hold = both[:len(chunk)], both[len(chunk):]
+                t_send = time.time()
+                with lock:
+                    play_head = max(play_head, t_send) + CHUNK_S
+                head = {"type": "chunk", "seq": seq, "kind": kind, "rate": args.input_rate, "fps": E.FPS,
+                        "samples": len(chunk), "frames": [len(j) for j in jpegs], "t_audio0": t0, "t_send": t_send}
+                pcm = chunk.tobytes()
+                sent["audio"], sent["t_send"] = True, t_send
+            else:
+                head = {"type": "chunk", "cont": True, "seq": seq, "start_i": sent["frames"], "fps": E.FPS,
+                        "samples": 0, "frames": [len(j) for j in jpegs]}
+                pcm = b""
+            h = json.dumps(head).encode()
+            broadcast(struct.pack("<I", len(h)) + h + pcm + b"".join(jpegs))
+            sent["frames"] += len(frames)
+            return True
+
+        early = (lambda fr: send(fr, False)) if args.fast_first and ENGINE == "ditto" else None
+        frames = eng.step(f32, early=early) if early else eng.step(f32)
         t_gen = time.time()
-        jpegs = [cv2.imencode(".jpg", cv2.cvtColor(f, cv2.COLOR_RGB2BGR), enc)[1].tobytes() for f in frames]
-        if gen != flush_gen:
-            continue  # barge-in happened while this was generating
-        if DELAY_IN:
-            both = np.concatenate([hold, chunk])
-            chunk, hold = both[:len(chunk)], both[len(chunk):]
-        t_send = time.time()
-        with lock:
-            play_head = max(play_head, t_send) + CHUNK_S
-        head = json.dumps({"type": "chunk", "seq": seq, "kind": kind, "rate": args.input_rate, "fps": E.FPS,
-                           "samples": len(chunk), "frames": [len(j) for j in jpegs],
-                           "t_audio0": t0, "t_send": t_send}).encode()
-        broadcast(struct.pack("<I", len(head)) + head + chunk.tobytes() + b"".join(jpegs))
+        if not send(frames, True) and gen != flush_gen:
+            continue
+        t_send = sent["t_send"]
         rec = {"ev": "chunk", "seq": seq, "kind": kind, "step_ms": round((t_gen - t_start) * 1000, 1),
-               "jpeg_ms": round((t_send - t_gen) * 1000, 1), "t": t_send}
+               "jpeg_ms": round(max(0.0, t_send - t_gen) * 1000, 1), "t": t_send}
         if t0 is not None:
             rec["audio_to_send_ms"] = round((t_send - t0) * 1000, 1)
             stats["first_frame_ms"].append(rec["audio_to_send_ms"])

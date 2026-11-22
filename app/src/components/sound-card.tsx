@@ -19,6 +19,7 @@ import {
   SendIcon,
   RotateCcwIcon,
   ScissorsIcon,
+  SparklesIcon,
   SlidersHorizontalIcon,
   StarIcon,
   Trash2Icon,
@@ -174,7 +175,34 @@ export function SoundCard({
   // First available stem-separation model, if any — sep models aren't
   // model-per-sound configurable from here, so "split into stems" always
   // uses whichever one the catalog offers.
-  const sepModel = models?.find((e) => e.task === "sep");
+  const sepModel = models?.find((e) => e.task === "sep" && e.sep_kind !== "cleanup");
+  // Speech cleanup (noise out, one recording back) is its own action, not a split.
+  const cleanModel = models?.find((e) => e.task === "sep" && e.sep_kind === "cleanup");
+  const [cleaning, setCleaning] = useState(false);
+  const cleanUp = () => {
+    if (!cleanModel) return;
+    setCleaning(true);
+    separate.mutate(
+      { modelId: cleanModel.id, sourceSoundId: sound.id, stems: null },
+      {
+        onSuccess: ({ job_id }) => {
+          const stop = api.subscribeJob(job_id, (job) => {
+            if (job.status === "done") {
+              stop();
+              setCleaning(false);
+              void qc.invalidateQueries({ queryKey: ["sounds"] });
+              toast.success(`Cleaned up “${sound.name}”: the clean copy is under it in the library`);
+            } else if (job.status === "error" || job.status === "cancelled") {
+              stop();
+              setCleaning(false);
+              toast.error(job.error || "Could not clean up this recording");
+            }
+          });
+        },
+        onError: () => setCleaning(false),
+      },
+    );
+  };
   // A derived sound — a stem, a split half, an edit — has already been
   // taken apart as far as it goes, so it only ever opens whole.
   const splittable = Boolean(sepModel) && sound.parent_id == null;
@@ -611,6 +639,12 @@ export function SoundCard({
                 <DropdownMenuItem disabled={separating} onClick={() => setStemPicker("library")}>
                   <ScissorsIcon />
                   Split into stems…
+                </DropdownMenuItem>
+              )}
+              {cleanModel && sound.parent_id == null && (
+                <DropdownMenuItem disabled={cleaning} onClick={cleanUp}>
+                  <SparklesIcon />
+                  {cleaning ? "Cleaning up speech…" : "Clean up speech"}
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem variant="destructive" onClick={() => setConfirmOpen(true)}>

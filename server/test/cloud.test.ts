@@ -416,4 +416,15 @@ describe("Mirli Cloud voices", () => {
     expect(g.created[0]!.body).toMatchObject({ task: "separate", params: { source_upload: expect.any(String) } });
     expect(g.created[0]!.body.consent).toBeUndefined();
   });
+
+  it("offers a cleanup model as its own action, and names its one output", async () => {
+    const { g, cloud } = await signedIn();
+    const CLEAN: CloudModelInfo = { ...STEMS, id: "cloud:test-clean", name: "Test Clean", cleanup: true };
+    const model = new CloudModel(CLEAN, cloud, async () => {});
+    expect(model.describe()).toMatchObject({ task: "sep", sep_kind: "cleanup" });
+    expect(new CloudModel(STEMS, cloud, async () => {}).describe()).toMatchObject({ task: "sep", sep_kind: "stems" });
+    const out = await model.separate(await clip(12));
+    expect(out.map((o) => o.stemName)).toEqual(["cleaned"]);
+    expect(g.created[0]!.body).toMatchObject({ model: "cloud:test-clean", task: "separate" });
+  });
 });

@@ -53,6 +53,11 @@ export const cloudModel = z.object({
    * app sends it as `params.prompt` on a "speak" job. Unset: no description.
    */
   voice_description: z.boolean().optional(),
+  /**
+   * A "separate" model that returns one cleaned-up recording (speech with the
+   * noise taken out) rather than stems. The app offers it as its own action.
+   */
+  cleanup: z.boolean().optional(),
 });
 export type CloudModel = z.infer<typeof cloudModel>;
 

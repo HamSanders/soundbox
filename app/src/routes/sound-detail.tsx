@@ -97,7 +97,7 @@ export function SoundDetailPage() {
   const openInStudio = useStoryFromSound();
   // Separation is only offered when something can actually do it; without a
   // separator installed, "open in the studio" still works, just as one track.
-  const sepModel = models?.find((m) => m.task === "sep");
+  const sepModel = models?.find((m) => m.task === "sep" && m.sep_kind !== "cleanup");
   // A derived sound — a stem, a split half, an edit — has already been
   // taken apart as far as it goes, so it only ever opens whole.
   const splittable = Boolean(sepModel) && sound?.parent_id == null;

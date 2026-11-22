@@ -2122,7 +2122,7 @@ export function StudioEditor({
   };
 
   const separateClip = (segment: StorySegment, stems: StemSelection): void => {
-    const sepModel = models.data?.find((m) => m.task === "sep");
+    const sepModel = models.data?.find((m) => m.task === "sep" && m.sep_kind !== "cleanup");
     if (!sepModel || !segment.sound_id) return;
     setSeparating(true);
     separateSound.mutateAsync({ modelId: sepModel.id, sourceSoundId: segment.sound_id, stems }).then(
@@ -2238,7 +2238,7 @@ export function StudioEditor({
                   estimateS={musicSession.estimateS}
                   estimateNote={musicSession.estimateNote}
                   submitLabel="Generate & insert"
-                  canSeparate={Boolean(models.data?.some((m) => m.task === "sep"))}
+                  canSeparate={Boolean(models.data?.some((m) => m.task === "sep" && m.sep_kind !== "cleanup"))}
                 />
   );
 
@@ -2444,7 +2444,7 @@ export function StudioEditor({
             canExtend={canExtendSound}
             canCover={canCoverSound}
             onSeparateClip={setStemTarget}
-            canSeparate={Boolean(models.data?.some((m) => m.task === "sep"))}
+            canSeparate={Boolean(models.data?.some((m) => m.task === "sep" && m.sep_kind !== "cleanup"))}
             onRepaintClip={(segment, window) => {
               // Fresh answers per clip: a strength left over from the last
               // one is a setting nobody chose for this one.

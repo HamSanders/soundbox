@@ -116,6 +116,7 @@ export class CloudModel implements GenerationModel {
           : []),
       ],
       task: speech ? "tts" : vc ? "vc" : m.task === "separate" ? "sep" : "gen",
+      ...(m.task === "separate" ? { sep_kind: m.cleanup ? ("cleanup" as const) : ("stems" as const) } : {}),
       voice_ids: [...m.voice_ids],
       requires_voice_reference: Boolean(m.reference?.required),
       category: m.category === "stems" ? "utility" : m.category,
@@ -347,6 +348,6 @@ export class CloudModel implements GenerationModel {
   ): Promise<{ stemName: string; audio: RenderedAudio }[]> {
     if (this.info.task !== "separate") throw new ModelError(`${this.info.name} cannot split stems.`);
     const outs = await this.runAll("separate", {}, options.progress, { source: sourceWavPath });
-    return outs.map((o, i) => ({ stemName: o.stem ?? `stem${i + 1}`, audio: o.audio }));
+    return outs.map((o, i) => ({ stemName: o.stem ?? (this.info.cleanup ? "cleaned" : `stem${i + 1}`), audio: o.audio }));
   }
 }

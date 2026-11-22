@@ -117,6 +117,9 @@ export interface Model {
    *
    *  Only "gen" appears in the Generate composer's model picker. */
   task: "gen" | "sep" | "tts" | "vc" | "asr";
+  /** For a "sep" model: "cleanup" cleans up a recording (one output) and is
+   *  offered as "Clean up speech"; anything else splits into stems. */
+  sep_kind?: "stems" | "cleanup" | null;
   /** Built-in voice names this model ships (for a "tts" model that has them),
    *  or empty when a reference clip is the only way to pick a voice. */
   voice_ids: string[];

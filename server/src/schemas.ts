@@ -190,6 +190,10 @@ export interface ModelInfo {
    *
    *  Only "gen" appears in the Generate composer's model picker. */
   task: "gen" | "sep" | "tts" | "vc" | "asr";
+  /** For a "sep" model: "cleanup" returns one cleaned-up recording (noise
+   *  removed) and is offered as its own "Clean up speech" action; anything
+   *  else splits into stems. */
+  sep_kind?: "stems" | "cleanup" | null;
   /** Built-in voice names this model ships (audio.cpp's `--voice-id`), or
    *  empty when the only way to pick a voice is a reference clip. */
   voice_ids: string[];

@@ -33,6 +33,13 @@ describe("resolveModel", () => {
     expect(resolveModel({ ...base, voiceId: "plain" })).toBe("kokoro");
     expect(resolveModel({ ...base, voiceId: null, bookModel: null })).toBe("kokoro");
   });
+  it("never falls back onto a metered model", () => {
+    const withHosted = [{ id: "hosted", name: "Hosted", metered: true }, ...models] as unknown as Model[];
+    expect(resolveModel({ ...base, models: withHosted, voiceId: null, bookModel: null })).toBe("kokoro");
+    // A voice made on it is still read on it: choosing the voice chose the model.
+    const hostedVoice = [{ id: "h", name: "H", model_id: "hosted" }] as unknown as Voice[];
+    expect(resolveModel({ ...base, models: withHosted, voices: hostedVoice, voiceId: "h" })).toBe("hosted");
+  });
   it("names a voice's model for the pickers", () => {
     expect(voiceModelName(voices[0], models)).toBe("Chatterbox");
     expect(voiceModelName(voices[1], models)).toBe("gone-model");

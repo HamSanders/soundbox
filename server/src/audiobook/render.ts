@@ -134,7 +134,13 @@ export class RenderService {
     }
     if (book?.settings.model_id) return { model: book.settings.model_id, voice_id: voiceId, source: "book", notes };
     if (!ready.length) throw new ModelError("No text-to-speech model is installed. Download one from the Models page.");
-    return { model: (ready.find((m) => m.status === "loaded") ?? ready[0]!).id, voice_id: voiceId, source: "fallback", notes };
+    // Never fall back onto a model that may charge per render: that has to
+    // be chosen, by the voice or the paragraph.
+    const free = ready.filter((m) => !m.metered);
+    if (!free.length) {
+      throw new ModelError("Only metered models are ready. Give this voice a model in Voice Lab, or pick one for the paragraph under Advanced.");
+    }
+    return { model: (free.find((m) => m.status === "loaded") ?? free[0]!).id, voice_id: voiceId, source: "fallback", notes };
   }
 
   /** The text a model should read for a paragraph, pronunciation applied. */

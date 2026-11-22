@@ -22,7 +22,7 @@ export function useTts(): { models: Model[]; allModels: Model[]; voices: Voice[]
  *  `chooseVoice`: the paragraph's own override, then the voice's own model
  *  (a voice is made on a model, and read on another it stops sounding like
  *  itself), then the older character and book settings for a voice with no
- *  installed model, then the first installed one. */
+ *  installed model, then the first installed one that isn't metered. */
 export function resolveModel(opts: {
   paragraphModel: string | null;
   characterModel: string | null;
@@ -41,7 +41,8 @@ export function resolveModel(opts: {
     installed ??
     (opts.multiCast ? opts.characterModel : null) ??
     opts.bookModel ??
-    opts.models[0]?.id ??
+    // Never default onto a model that may charge per render.
+    opts.models.find((m) => !m.metered)?.id ??
     null
   );
 }

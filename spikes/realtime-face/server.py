@@ -27,18 +27,6 @@ import numpy as np
 from aiohttp import web, WSMsgType, ClientSession
 from scipy.signal import resample_poly
 
-<<<<<<< HEAD
-import sys
-# --engine lite|pro|musetalk picks the model; everything else (protocol, ports, pages) is shared.
-ENGINE = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--engine=")), None) or     (sys.argv[sys.argv.index("--engine") + 1] if "--engine" in sys.argv else "lite")
-if ENGINE == "musetalk":
-    import musetalk_engine as E
-else:
-    import engine as E
-    if ENGINE == "pro":  # Wan VAE: 5 motion frames, 28 new frames (1.12 s) per step
-        E.MOTION_FRAMES, E.CHUNK_FRAMES = 5, 28
-        E.CHUNK_SAMPLES = E.CHUNK_FRAMES * E.SAMPLE_RATE // E.FPS
-=======
 import importlib.util
 import socket
 import sys
@@ -52,7 +40,14 @@ ENGINES = {
     "ditto": (SPIKES / "realtime-face-ditto" / "engine.py",
               Path(os.environ.get("MIRLI_DITTO_HOME", Path.home() / "mirli-spike-ditto")) / "venv" / "Scripts" / "python.exe",
               "Ditto"),
+    "musetalk": (SPIKES / "realtime-face" / "musetalk_engine.py",
+                 Path(os.environ.get("MIRLI_FACE_HOME", Path.home() / "mirli-spike-face")) / "venv" / "Scripts" / "python.exe",
+                 "MuseTalk 1.5"),
+    "pro": (SPIKES / "realtime-face" / "engine.py",
+            Path(os.environ.get("MIRLI_FACE_HOME", Path.home() / "mirli-spike-face")) / "venv" / "Scripts" / "python.exe",
+            "FlashHead Pro"),
 }
+ENGINES["lite"] = ENGINES["flashhead"]  # older name, still used by run scripts
 _pre = argparse.ArgumentParser(add_help=False)
 _pre.add_argument("--engine", default=os.environ.get("FACE_ENGINE", "flashhead"), choices=list(ENGINES))
 ENGINE = _pre.parse_known_args()[0].engine
@@ -63,7 +58,9 @@ E = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(E)
 if not hasattr(E, "CHUNK_FRAMES"):
     E.CHUNK_FRAMES = E.CHUNK_SAMPLES * E.FPS // E.SAMPLE_RATE
->>>>>>> claude/laughing-kilby-2efba2
+if ENGINE == "pro":  # Wan VAE: 5 motion frames, 28 new frames (1.12 s) per step
+    E.MOTION_FRAMES, E.CHUNK_FRAMES = 5, 28
+    E.CHUNK_SAMPLES = E.CHUNK_FRAMES * E.SAMPLE_RATE // E.FPS
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--engine", default=ENGINE, choices=list(ENGINES))
@@ -194,17 +191,14 @@ def take_chunk():
 
 
 def engine_thread():
-<<<<<<< HEAD
-    global play_head, current_face, pending_face
-    eng = E.FaceEngine(compile_model=args.compile, compile_vae=args.compile, model_type=ENGINE)
-    # MuseTalk's frames trail the newest audio by its look-ahead; delay the audio we send by the same.
-    delay_n = int(round(getattr(eng, "delay_s", 0) * args.input_rate))
+    global play_head, current_face, pending_face, hold
+    kw = {} if ENGINE == "ditto" else {"model_type": "lite" if ENGINE == "flashhead" else ENGINE}
+    eng = E.FaceEngine(compile_model=args.compile, compile_vae=args.compile, **kw)
+    # MuseTalk keeps its look-ahead on the engine object, Ditto on the module (DELAY_IN above);
+    # hold the audio back by whichever one applies, never both.
+    delay_n = 0 if DELAY_IN else int(round(getattr(eng, "delay_s", 0) * args.input_rate))
     delay_buf = np.zeros(delay_n, dtype=np.int16)
     last_flush = flush_gen
-=======
-    global play_head, current_face, pending_face, hold
-    eng = E.FaceEngine(compile_model=args.compile, compile_vae=args.compile)
->>>>>>> claude/laughing-kilby-2efba2
     eng.set_image(FACES / f"{current_face}.png")
     for _ in range(2):  # warm-up: the first step is ~1.5 s slower (cuDNN autotune, allocator)
         eng.step(np.zeros(E.CHUNK_SAMPLES, dtype=np.float32))

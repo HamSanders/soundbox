@@ -28,6 +28,7 @@ import {
   PCM_RATE,
   StreamResampler,
   errorResponse,
+  headerParams,
   isOpenAiPath,
   parseMultipart,
   streamingWavHeader,
@@ -115,6 +116,34 @@ describe("parseMultipart", () => {
     expect(file.filename).toBe("a.wav");
     expect(file.contentType).toBe("audio/wav");
     expect(file.data.equals(data)).toBe(true);
+  });
+
+  it("reads header parameters, quoted or bare, in one pass", () => {
+    expect(Object.fromEntries(headerParams('form-data; name="file"; filename="a;b.wav"'))).toEqual({
+      name: "file",
+      filename: "a;b.wav",
+    });
+    expect(headerParams("multipart/form-data;  Boundary = abc ; x").get("boundary")).toBe("abc");
+    expect(headerParams("multipart/form-data").size).toBe(0);
+    expect(headerParams('form-data; name="unterminated').get("name")).toBe("unterminated");
+  });
+
+  it("stays fast on headers padded with a long run of spaces", () => {
+    // A pattern like /content-type:\s*(.*)$/ goes quadratic on this.
+    const spaces = " ".repeat(200_000);
+    const boundary = "pad";
+    const body = Buffer.from(
+      `--${boundary}\r\nContent-Disposition:${spaces}form-data;${spaces}name="file";${spaces}filename="a.wav"\r\n` +
+        `content-type:${spaces}\r\nContent-Type:${spaces}audio/wav${spaces}\r\n\r\nDATA\r\n--${boundary}--\r\n`,
+    );
+    const started = performance.now();
+    const form = parseMultipart(body, `multipart/form-data;${spaces}boundary=${boundary}`);
+    const elapsed = performance.now() - started;
+    const file = form.files.get("file")!;
+    expect(file.filename).toBe("a.wav");
+    expect(file.contentType).toBe("audio/wav");
+    expect(file.data.toString()).toBe("DATA");
+    expect(elapsed).toBeLessThan(500);
   });
 
   it("takes a quoted boundary, and refuses a body with none", () => {
@@ -277,7 +306,7 @@ describe("OpenAI-compatible routes", () => {
     const byName = Object.fromEntries(body.data.map((v: { name: string; kind: string }) => [v.name, v.kind]));
     expect(byName).toEqual({ Narrator: "builtin", alloy: "builtin", nova: "builtin", "Model default": "default" });
     const alloy = body.data.find((v: { id: string }) => v.id === "alloy");
-    expect(alloy).toEqual({ id: "alloy", object: "voice", name: "alloy", kind: "builtin", model: TALK });
+    expect(alloy).toEqual({ id: "alloy", object: "audio.voice", name: "alloy", kind: "builtin", model: TALK });
   });
 
   /* ------------------------------------------------------- voice and model */

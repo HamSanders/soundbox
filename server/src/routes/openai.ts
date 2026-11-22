@@ -112,6 +112,8 @@ export function openAiError(
   code: string | null = null,
   param: string | null = null,
 ): OpenAiError {
+  // OpenAI's spec types `code` as a free string and lists no values, so these
+  // two are the names its API is known to answer with, not ones it documents.
   const fallback = status === 401 ? "invalid_api_key" : status === 429 ? "rate_limit_exceeded" : null;
   return { error: { message, type: typeFor(status), param, code: code ?? fallback } };
 }
@@ -236,6 +238,55 @@ export interface MultipartForm {
 }
 
 /**
+ * The `; name=value` parameters of a header value such as
+ * `form-data; name="file"; filename="a.wav"`, keyed by lower-cased name.
+ *
+ * One pass over the characters, with no regular expression: the text comes
+ * straight from the request, and a pattern with two adjacent wildcards over
+ * it can be made to take quadratic time by a long run of spaces.
+ */
+export function headerParams(value: string): Map<string, string> {
+  const params = new Map<string, string>();
+  let i = value.indexOf(";");
+  while (i !== -1 && i < value.length) {
+    i++; // past the ';'
+    const eq = value.indexOf("=", i);
+    const semi = value.indexOf(";", i);
+    // A parameter with no '=' (or none before the next ';') has no value.
+    if (eq === -1 || (semi !== -1 && semi < eq)) {
+      i = semi;
+      continue;
+    }
+    const name = value.slice(i, eq).trim().toLowerCase();
+    let at = eq + 1;
+    let text: string;
+    if (value[at] === '"') {
+      const close = value.indexOf('"', at + 1);
+      text = value.slice(at + 1, close === -1 ? value.length : close);
+      at = close === -1 ? value.length : close + 1;
+      i = value.indexOf(";", at);
+    } else {
+      const end = value.indexOf(";", at);
+      text = value.slice(at, end === -1 ? value.length : end).trim();
+      i = end;
+    }
+    if (name && !params.has(name)) params.set(name, text);
+  }
+  return params;
+}
+
+/** A part's header block as a map of lower-cased name to trimmed value. */
+function partHeaders(block: string): Map<string, string> {
+  const headers = new Map<string, string>();
+  for (const line of block.split("\r\n")) {
+    const colon = line.indexOf(":");
+    if (colon <= 0) continue;
+    headers.set(line.slice(0, colon).trim().toLowerCase(), line.slice(colon + 1).trim());
+  }
+  return headers;
+}
+
+/**
  * Parse a buffered `multipart/form-data` body.
  *
  * By hand rather than a dependency: the body is already in memory (Fastify's
@@ -243,8 +294,7 @@ export interface MultipartForm {
  * splitting on the boundary. A repeated field keeps its last value.
  */
 export function parseMultipart(body: Buffer, contentType: string): MultipartForm {
-  const match = /boundary=(?:"([^"]+)"|([^;\s]+))/i.exec(contentType);
-  const boundary = match?.[1] ?? match?.[2];
+  const boundary = headerParams(contentType).get("boundary");
   if (!boundary) throw new OpenAiHttpError(400, "The multipart body has no boundary in its Content-Type.");
   const delimiter = Buffer.from(`--${boundary}`);
   const form: MultipartForm = { fields: new Map(), files: new Map() };
@@ -260,18 +310,18 @@ export function parseMultipart(body: Buffer, contentType: string): MultipartForm
     if (next === -1) break;
     const headerEnd = body.indexOf("\r\n\r\n", start);
     if (headerEnd !== -1 && headerEnd < next) {
-      const headers = body.toString("utf8", start, headerEnd);
+      const headers = partHeaders(body.toString("utf8", start, headerEnd));
       // The CRLF before the next delimiter belongs to the delimiter.
       let end = next;
       if (body[end - 1] === 0x0a) end--;
       if (body[end - 1] === 0x0d) end--;
       const data = body.subarray(headerEnd + 4, Math.max(end, headerEnd + 4));
-      const disposition = /^content-disposition:(.*)$/im.exec(headers)?.[1] ?? "";
-      const name = /[;\s]name="([^"]*)"/i.exec(disposition)?.[1];
-      const filename = /[;\s]filename="([^"]*)"/i.exec(disposition)?.[1];
+      const disposition = headerParams(headers.get("content-disposition") ?? "");
+      const name = disposition.get("name");
+      const filename = disposition.get("filename");
       if (name !== undefined) {
         if (filename !== undefined) {
-          const type = /^content-type:\s*(.*)$/im.exec(headers)?.[1]?.trim() ?? "application/octet-stream";
+          const type = headers.get("content-type") || "application/octet-stream";
           form.files.set(name, { filename: filename || null, contentType: type, data });
         } else {
           form.fields.set(name, data.toString("utf8"));
@@ -636,8 +686,9 @@ export function registerOpenAi(app: FastifyInstance, svc: MirliService): void {
     });
 
     /**
-     * Ours: OpenAI's reference has no route that lists voices, but clients
-     * that offer a voice picker ask for one here. Both shapes in use are
+     * Ours: OpenAI's `/audio/voices` creates and deletes custom voices but
+     * has no GET that lists them, and clients that offer a voice picker ask
+     * for one here. Entries use OpenAI's `object: "audio.voice"`. Both shapes in use are
      * answered at once: an OpenAI-style list under `data`, and the same
      * entries under `voices`.
      */
@@ -645,7 +696,7 @@ export function registerOpenAi(app: FastifyInstance, svc: MirliService): void {
       const ready = (await svc.listModels()).filter((m) => m.task === "tts" && READY.has(m.status));
       const voices: Record<string, unknown>[] = [];
       for (const v of svc.listVoices()) {
-        voices.push({ id: v.id, object: "voice", name: v.name, kind: v.kind, model: v.model_id ?? null });
+        voices.push({ id: v.id, object: "audio.voice", name: v.name, kind: v.kind, model: v.model_id ?? null });
       }
       const savedNames = new Set(svc.listVoices().map((v) => v.name.toLowerCase()));
       for (const m of ready) {
@@ -653,11 +704,11 @@ export function registerOpenAi(app: FastifyInstance, svc: MirliService): void {
           // A saved voice of the same name wins when it is asked for, so the
           // built-in one under it would be a second entry nobody can reach.
           if (savedNames.has(id.toLowerCase())) continue;
-          voices.push({ id, object: "voice", name: id, kind: "builtin", model: m.id });
+          voices.push({ id, object: "audio.voice", name: id, kind: "builtin", model: m.id });
         }
       }
       if (ready.some((m) => !m.requires_voice_reference)) {
-        voices.push({ id: DEFAULT_VOICE, object: "voice", name: "Model default", kind: "default", model: null });
+        voices.push({ id: DEFAULT_VOICE, object: "audio.voice", name: "Model default", kind: "default", model: null });
       }
       return { object: "list", data: voices, voices };
     });
@@ -840,7 +891,9 @@ function sseHeaders(request: FastifyRequest): Record<string, string> {
   };
 }
 
-/** Mirli counts no tokens, so the usage every client expects to find is zero. */
+/** The two events are `SpeechAudioDeltaEvent` and `SpeechAudioDoneEvent` in
+ *  OpenAI's OpenAPI spec; `usage` is required on the second. Mirli counts no
+ *  tokens, so it is zero. */
 const DONE_EVENT = {
   type: "speech.audio.done",
   usage: { input_tokens: 0, output_tokens: 0, total_tokens: 0 },
@@ -919,7 +972,7 @@ async function sendStream(
 function registerTranscriptions(app: FastifyInstance, svc: MirliService): void {
   app.post("/v1/audio/transcriptions", async (request, reply) => {
     const contentType = String(request.headers["content-type"] ?? "");
-    if (!Buffer.isBuffer(request.body) || !/^multipart\/form-data/i.test(contentType)) {
+    if (!Buffer.isBuffer(request.body) || !contentType.toLowerCase().startsWith("multipart/form-data")) {
       throw new OpenAiHttpError(400, "Send the audio as multipart/form-data with a 'file' field.", "invalid_request", "file");
     }
     const form = parseMultipart(request.body, contentType);
@@ -937,7 +990,7 @@ function registerTranscriptions(app: FastifyInstance, svc: MirliService): void {
         "response_format",
       );
     }
-    if (/^(true|1)$/i.test(form.fields.get("stream")?.trim() ?? "")) {
+    if (["true", "1"].includes(form.fields.get("stream")?.trim().toLowerCase() ?? "")) {
       throw new OpenAiHttpError(400, "This server sends a transcription whole; 'stream' is not supported.", "unsupported_stream", "stream");
     }
 

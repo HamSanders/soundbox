@@ -586,9 +586,10 @@ OpenAI's list shape: `{ "object": "list", "data": [{ "id", "object": "model",
 "created", "owned_by" }] }`, plus `name` and `task` (`speech` or
 `transcription`). `created` is always `0`.
 
-`/v1/audio/voices` is Mirli's own, since OpenAI's API has no route that lists
-voices: `{ "object": "list", "data": [...], "voices": [...] }`, the same
-entries under both keys, each `{ id, object: "voice", name, kind, model }`.
+`/v1/audio/voices` is Mirli's own, since OpenAI's API creates and deletes
+custom voices there but has no route that lists them:
+`{ "object": "list", "data": [...], "voices": [...] }`, the same entries
+under both keys, each `{ id, object: "audio.voice", name, kind, model }`.
 `kind` is `clone` or `builtin` for a saved voice, `builtin` for a model's own
 voice, and `default` for the entry that means the model's default voice. Pass
 an entry's `id` or `name` as `voice`.

@@ -24,7 +24,11 @@ run pod bash -c 'cd /app/realtime-pod && exec node pod.mjs'
 # A host whose GPU is broken ("CUDA unknown error", seen on a Community 4090 on 2026-11-22) can't be fixed
 # from inside the pod. Say so on /readyz (state "failed") so the router terminates it and picks another.
 if ! python3 -c "import torch,sys; sys.exit(0 if torch.cuda.is_available() else 1)" 2>/tmp/logs/gpu-check.log; then
-  { echo "GPU unavailable on this host:"; nvidia-smi 2>&1 | head -5; tail -3 /tmp/logs/gpu-check.log; } > /tmp/logs/GPU_FAILED
+  { echo "GPU unavailable on this host:"; nvidia-smi 2>&1 | head -5; tail -3 /tmp/logs/gpu-check.log
+    echo "--- without LD_LIBRARY_PATH:"; env -u LD_LIBRARY_PATH python3 -c "import torch; print('cuda ok' if torch.cuda.is_available() else 'cuda still broken')" 2>&1 | tail -1
+    echo "--- libcuda in /opt/audiocpp:"; ls /opt/audiocpp | grep -i -E "libcuda|compat" || echo none
+    echo "--- ldconfig libcuda:"; ldconfig -p | grep -E "libcuda\.so" | head -3; ls -la /dev/nvidia* 2>&1 | head -8
+  } > /tmp/logs/GPU_FAILED
   stamp "GPU check failed; not starting the engines" | tee -a /tmp/logs/pod.log
   wait; exit 1
 fi

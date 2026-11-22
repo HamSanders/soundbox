@@ -594,7 +594,7 @@ export const demoSegments: Omit<StorySegment, "sound">[] = [...placed]
 export const demoStories: Story[] = [
   {
     id: STORY,
-    title: "Ember Run: launch trailer",
+    title: "Ember Run trailer",
     created_at: hoursAgo(26),
     updated_at: hoursAgo(1),
     request_options: {},
@@ -678,7 +678,7 @@ export const demoMcpCalls: DemoMcpCall[] = [
   { min: 6, tool: "speak_story", client: CC, args: { story_id: STORY }, ms: 48200, sounds: speech.filter((s) => s.tags.length > 0).map((s) => s.id!) },
   { min: 8, tool: "add_lines", client: CC, args: { story_id: STORY, lines: 7 }, ms: 64 },
   { min: 8.4, tool: "list_voices", client: CC, ms: 15 },
-  { min: 9, tool: "create_story", client: CC, args: { title: "Ember Run: launch trailer" }, ms: 28 },
+  { min: 9, tool: "create_story", client: CC, args: { title: "Ember Run trailer" }, ms: 28 },
   { min: 12, tool: "generate", client: CC, args: { prompt: effects[5].prompt, duration_s: 3.2 }, ms: 4120, sounds: ["snd-demo-glass"] },
   { min: 14, tool: "generate", client: CC, args: { prompt: effects[4].prompt, duration_s: 3.1 }, ms: 3980, sounds: ["snd-demo-gravel"] },
   { min: 15, tool: "generate", client: CC, args: { prompt: "boots running on gravel", duration_s: 3 }, ms: 3710, error: "Cancelled by the client" },

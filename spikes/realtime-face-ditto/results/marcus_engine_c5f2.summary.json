@@ -1,0 +1,26 @@
+{
+ "clip": 5,
+ "fuse": 2,
+ "steps": 10,
+ "chunk_s": 0.2,
+ "delay_s": 0.16,
+ "speed": 1.0,
+ "audio_s": 12.16,
+ "frames": 300,
+ "load_s": 7.1,
+ "set_image_s": 1.91,
+ "reset_s": 0.17,
+ "step_ms_median": 171.0,
+ "step_ms_p95": 174.5,
+ "gen_fps": 29.2,
+ "first_audio_to_first_frame_s": 0.355,
+ "lateness_vs_audio_s": {
+  "median": 0.459,
+  "max": 0.549
+ },
+ "torch_peak_gb": 1.58,
+ "torch_reserved_gb": 2.18,
+ "vram_before_mib": 8475,
+ "vram_peak_mib": 13491,
+ "vram_delta_gb": 4.9
+}

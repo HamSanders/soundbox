@@ -4,6 +4,8 @@
             Closing the connection, or 250 ms without data, ends the utterance.
   Browser : http://127.0.0.1:17660/  (WebSocket /ws carries audio + JPEG frames per 0.96 s chunk)
   Control : POST /flush (barge-in: drop everything queued), GET /stats
+  Engine  : GET /engine, POST /engine {"name": "flashhead"|"ditto"} restarts this server on the other model
+            (each lives in its own venv; only one fits beside the voice stack on a 16 GB card)
   Faces   : GET /faces (list), GET /faces/<id> (image), POST /faces (upload, raw image body),
             GET|POST /face (current portrait; POST {"id": ...} switches it, ~0.5 s, no restart)
 
@@ -25,6 +27,7 @@ import numpy as np
 from aiohttp import web, WSMsgType, ClientSession
 from scipy.signal import resample_poly
 
+<<<<<<< HEAD
 import sys
 # --engine lite|pro|musetalk picks the model; everything else (protocol, ports, pages) is shared.
 ENGINE = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--engine=")), None) or     (sys.argv[sys.argv.index("--engine") + 1] if "--engine" in sys.argv else "lite")
@@ -35,9 +38,37 @@ else:
     if ENGINE == "pro":  # Wan VAE: 5 motion frames, 28 new frames (1.12 s) per step
         E.MOTION_FRAMES, E.CHUNK_FRAMES = 5, 28
         E.CHUNK_SAMPLES = E.CHUNK_FRAMES * E.SAMPLE_RATE // E.FPS
+=======
+import importlib.util
+import socket
+import sys
+
+SPIKES = Path(__file__).resolve().parent.parent
+ENGINES = {
+    # name: (engine.py, python of its venv, what to call it in the page)
+    "flashhead": (SPIKES / "realtime-face" / "engine.py",
+                  Path(os.environ.get("MIRLI_FACE_HOME", Path.home() / "mirli-spike-face")) / "venv" / "Scripts" / "python.exe",
+                  "FlashHead Lite"),
+    "ditto": (SPIKES / "realtime-face-ditto" / "engine.py",
+              Path(os.environ.get("MIRLI_DITTO_HOME", Path.home() / "mirli-spike-ditto")) / "venv" / "Scripts" / "python.exe",
+              "Ditto"),
+}
+_pre = argparse.ArgumentParser(add_help=False)
+_pre.add_argument("--engine", default=os.environ.get("FACE_ENGINE", "flashhead"), choices=list(ENGINES))
+ENGINE = _pre.parse_known_args()[0].engine
+_path = ENGINES[ENGINE][0]
+sys.path.insert(0, str(_path.parent))
+_spec = importlib.util.spec_from_file_location("face_engine", _path)
+E = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(E)
+if not hasattr(E, "CHUNK_FRAMES"):
+    E.CHUNK_FRAMES = E.CHUNK_SAMPLES * E.FPS // E.SAMPLE_RATE
+>>>>>>> claude/laughing-kilby-2efba2
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--image", default=str(E.UPSTREAM / "examples" / "girl.png"))
+ap.add_argument("--engine", default=ENGINE, choices=list(ENGINES))
+ap.add_argument("--wait-port", action="store_true", help="wait for the HTTP port to be free (used when switching engine)")
+ap.add_argument("--image", default=str(Path(os.environ.get("MIRLI_FACE_HOME", Path.home() / "mirli-spike-face")) / "upstream" / "SoulX-FlashHead" / "examples" / "girl.png"))
 ap.add_argument("--input-rate", type=int, default=16000, help="sample rate of the PCM socket (48000 for the voice spike)")
 ap.add_argument("--http-port", type=int, default=17660)
 ap.add_argument("--pcm-port", type=int, default=17661)
@@ -76,7 +107,11 @@ pending_face = None   # set by POST /face, applied by the engine thread between 
 
 CHUNK_S = E.CHUNK_FRAMES / E.FPS
 IN_CHUNK = args.input_rate * E.CHUNK_FRAMES // E.FPS  # input samples per model step
-assert IN_CHUNK * E.FPS == args.input_rate * E.CHUNK_FRAMES, "input rate must give a whole number of samples per 0.96 s"
+assert IN_CHUNK * E.FPS == args.input_rate * E.CHUNK_FRAMES, "input rate must give a whole number of samples per model step"
+# Engines whose frames trail their audio (Ditto: look-ahead + cross-fade) say by how much; the
+# audio sent with each step is held back by the same amount so lips and sound line up.
+DELAY_IN = int(round(getattr(E, "delay_s", 0.0) * args.input_rate))
+hold = np.zeros(DELAY_IN, dtype=np.int16)
 IDLE_LEAD_S = 0.7      # generate an idle chunk when less than this is queued in the browser
 END_OF_UTTERANCE_S = 0.25
 
@@ -113,8 +148,9 @@ def feed(samples):
 
 
 def flush():
-    global pcm_in, utter_t0, in_utterance, flush_gen, play_head
+    global pcm_in, utter_t0, in_utterance, flush_gen, play_head, hold
     with lock:
+        hold = np.zeros(DELAY_IN, dtype=np.int16)
         pcm_in = np.zeros(0, dtype=np.int16)
         utter_t0, in_utterance = None, False
         flush_gen += 1
@@ -158,16 +194,22 @@ def take_chunk():
 
 
 def engine_thread():
+<<<<<<< HEAD
     global play_head, current_face, pending_face
     eng = E.FaceEngine(compile_model=args.compile, compile_vae=args.compile, model_type=ENGINE)
     # MuseTalk's frames trail the newest audio by its look-ahead; delay the audio we send by the same.
     delay_n = int(round(getattr(eng, "delay_s", 0) * args.input_rate))
     delay_buf = np.zeros(delay_n, dtype=np.int16)
     last_flush = flush_gen
+=======
+    global play_head, current_face, pending_face, hold
+    eng = E.FaceEngine(compile_model=args.compile, compile_vae=args.compile)
+>>>>>>> claude/laughing-kilby-2efba2
     eng.set_image(FACES / f"{current_face}.png")
     for _ in range(2):  # warm-up: the first step is ~1.5 s slower (cuDNN autotune, allocator)
         eng.step(np.zeros(E.CHUNK_SAMPLES, dtype=np.float32))
     eng.reset()
+    print(f"engine: {ENGINE}", flush=True)
     print(f"ready: model loaded in {eng.load_s:.1f}s, http://127.0.0.1:{args.http_port}/  pcm tcp :{args.pcm_port} "
           f"({args.input_rate} Hz s16le mono)", flush=True)
     enc = [cv2.IMWRITE_JPEG_QUALITY, args.jpeg_quality]
@@ -203,6 +245,9 @@ def engine_thread():
         jpegs = [cv2.imencode(".jpg", cv2.cvtColor(f, cv2.COLOR_RGB2BGR), enc)[1].tobytes() for f in frames]
         if gen != flush_gen:
             continue  # barge-in happened while this was generating
+        if DELAY_IN:
+            both = np.concatenate([hold, chunk])
+            chunk, hold = both[:len(chunk)], both[len(chunk):]
         t_send = time.time()
         with lock:
             play_head = max(play_head, t_send) + CHUNK_S
@@ -292,7 +337,7 @@ async def stats_handler(_request):
     s = stats["step_ms"]
     v = stats["vram_mib"]
     return web.json_response({
-        "chunks": stats["chunks"], "speech_chunks": stats["speech_chunks"], "idle_chunks": stats["idle_chunks"],
+        "engine": ENGINE, "chunks": stats["chunks"], "speech_chunks": stats["speech_chunks"], "idle_chunks": stats["idle_chunks"],
         "step_ms_median": float(np.median(s)) if s else None,
         "gen_fps": E.CHUNK_FRAMES / (float(np.median(s)) / 1000) if s else None,
         "audio_to_send_ms": stats["first_frame_ms"][-20:],
@@ -364,8 +409,56 @@ async def index(_request):
     return web.FileResponse(Path(__file__).parent / "web" / "index.html")
 
 
+def _port_free(port):
+    with socket.socket() as so:
+        try:
+            so.bind(("127.0.0.1", port))
+            return True
+        except OSError:
+            return False
+
+
+switching = None
+
+
+async def engine_handler(request):
+    """GET: which model is loaded. POST {"name"}: restart this server on the other model."""
+    global switching
+    info = {"current": ENGINE, "switching": switching,
+            "available": [{"id": k, "name": v[2], "installed": v[1].exists() and v[0].exists()} for k, v in ENGINES.items()]}
+    if request.method == "GET":
+        return web.json_response(info)
+    name = (await request.json()).get("name", "")
+    if name not in ENGINES:
+        raise web.HTTPBadRequest(text="unknown engine")
+    if name == ENGINE:
+        return web.json_response(info)
+    py = ENGINES[name][1]
+    if not py.exists():
+        raise web.HTTPBadRequest(text=f"{ENGINES[name][2]} is not installed ({py})")
+    switching = name
+    argv = [a for a in sys.argv[1:]]
+    if "--engine" in argv:
+        i = argv.index("--engine"); del argv[i:i + 2]
+    argv = [x for x in argv if not x.startswith("--engine=") and x != "--wait-port"]
+    cmd = [str(py), str(Path(__file__).resolve()), "--engine", name, "--image", str(FACES / f"{current_face}.png"), "--wait-port"] +           [x for i, x in enumerate(argv) if not (x == "--image" or (i and argv[i - 1] == "--image"))]
+    flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(subprocess, "DETACHED_PROCESS", 0)
+    log_path = Path(__file__).resolve().parent / "results" / "server.log"
+    subprocess.Popen(cmd, cwd=str(Path(__file__).resolve().parent), stdout=open(log_path, "a"), stderr=subprocess.STDOUT,
+                     creationflags=flags, close_fds=True)
+    broadcast(json.dumps({"type": "engine", "switching": name}))
+    print(f"switching engine -> {name}; exiting", flush=True)
+    loop.call_later(0.4, lambda: os._exit(0))
+    return web.json_response({**info, "switching": name})
+
+
 async def main():
     global loop
+    if args.wait_port:
+        for _ in range(150):
+            if _port_free(args.http_port) and _port_free(args.pcm_port):
+                break
+            await asyncio.sleep(0.2)
     loop = asyncio.get_running_loop()
     threading.Thread(target=vram_thread, daemon=True).start()
     threading.Thread(target=engine_thread, daemon=True).start()
@@ -377,6 +470,7 @@ async def main():
                     web.get("/stats", stats_handler), web.get("/faces", faces_handler),
                     web.post("/faces", upload_handler), web.get("/faces/{id}", face_image_handler),
                     web.get("/face", face_handler), web.post("/face", face_handler),
+                    web.get("/engine", engine_handler), web.post("/engine", engine_handler),
                     web.options("/{tail:.*}", lambda r: web.Response())])
     runner = web.AppRunner(app)
     await runner.setup()

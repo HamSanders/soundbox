@@ -88,6 +88,12 @@ header .grow { flex: 1; }
 #callBtn .av { width: 46px; height: 46px; border-radius: 50%; overflow: hidden; background: var(--well); flex: none; }
 #callBtn .av img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .cta label { display: flex; align-items: center; gap: 10px; }
+.seg { display: inline-flex; border: 1px solid var(--rule-strong); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button { height: 34px; padding: 0 14px; border-radius: 999px; border: 0; background: transparent; cursor: pointer; font: 500 13.5px/1 var(--sans); color: var(--pencil); white-space: nowrap; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.seg button:disabled { cursor: progress; }
+.engine-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+#engineNote { min-height: 1.2em; }
 
 /* The wall: big portrait cards, tossed on the table. Hover straightens one;
    click picks it; the picked one carries the beak dot. */
@@ -265,6 +271,32 @@ td.over { color: var(--rust); font-weight: 700; }
   .controls { gap: 8px; }
   .controls .sep { display: none; }
 }
+/* ---- Floating shell (the app redesign's look): rounded panels on a shared,
+   slightly darker ground, 8 px apart, a 1 px ring and no shadow; the controls
+   sit in a full-width dock under the panels, like the app's player bar. ---- */
+body.live { background: var(--well); }
+body.live header { border-bottom: 0; }
+body.live #call { gap: 8px; padding: 0 8px 8px; height: calc(100dvh - 60px); grid-template-rows: minmax(0, 1fr) auto; }
+body.live.showlog #call { grid-template-columns: minmax(0, 1fr) minmax(320px, 400px); }
+body.live .stage { display: contents; }
+body.live .stage-main { grid-column: 1; grid-row: 1; background: var(--paper); border-radius: 12px; box-shadow: inset 0 0 0 1px var(--rule); }
+body.live .chat { grid-column: 2; grid-row: 1; border-left: 0; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--rule); overflow: hidden; }
+body.live .controls { grid-column: 1 / -1; grid-row: 2; border-top: 0; padding: 10px 14px; border-radius: 12px; background: var(--sheet);
+                      box-shadow: inset 0 0 0 1px var(--rule); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; }
+.controls .dock-who { display: none; }
+body.live .controls .dock-who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.dock-who img { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; border: 1px solid var(--rule); flex: none; }
+.dock-who b { display: block; font: 800 17px/1.1 var(--title); text-transform: uppercase; letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dock-who span { display: block; font: 400 12px/1.3 var(--log); color: var(--pencil); white-space: nowrap; }
+.dock-mid { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.dock-end { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+body:not(.live) .dock-mid, body:not(.live) .dock-end { display: contents; }
+@media (max-width: 860px) {
+  body.live #call { height: auto; }
+  body.live .chat { grid-column: 1; grid-row: auto; }
+  body.live .controls { grid-template-columns: minmax(0, 1fr); justify-items: center; position: sticky; bottom: 8px; }
+  body.live .controls .dock-who { display: none; }
+}
 @media (prefers-reduced-motion: reduce) { .tile canvas, .tile::after, .entry { animation: none; } }
 </style>
 </head>
@@ -293,6 +325,11 @@ td.over { color: var(--rust); font-weight: 700; }
       <div class="cta">
         <button class="btn ink" id="callBtn"><span class="av"><img id="ctaFace" alt=""></span><span id="ctaTxt">Start call</span></button>
         <label><span class="log">Voice</span><select class="btn" id="voice"><option value="">VoxCPM2 default</option></select></label>
+      </div>
+      <div class="engine-row" id="engineRow" hidden>
+        <span class="log">Face model</span>
+        <span class="seg" id="engineSeg" role="group" aria-label="Face model"></span>
+        <span class="log" id="engineNote"></span>
       </div>
       <span class="log" id="notice"></span>
     </div>
@@ -323,9 +360,11 @@ td.over { color: var(--rust); font-weight: 700; }
         </div>
         <svg class="penline" viewBox="0 0 420 46" preserveAspectRatio="none" aria-hidden="true"><path id="penPath" d="M2 23 L414 23"/><circle cx="414" cy="23" r="4.5"/></svg>
       </div>
-      <div id="facePop"><div class="section-h" style="margin-bottom:12px"><h2>Change face</h2><button class="btn" id="facePopClose" style="height:28px;padding:0 12px">Done</button></div></div>
+      <div id="facePop"><div class="engine-row" id="engineRowCall" style="margin-bottom:12px"><span class="log">Face model</span><span class="seg" id="engineSegCall" role="group" aria-label="Face model"></span></div><div class="section-h" style="margin-bottom:12px"><h2>Change face</h2><button class="btn" id="facePopClose" style="height:28px;padding:0 12px">Done</button></div></div>
     </div>
     <div class="controls">
+      <div class="dock-who"><img id="dockImg" alt=""><div><b id="dockName">Mirli</b><span id="dockLog">video call · runs here</span></div></div>
+      <div class="dock-mid">
       <button class="btn" id="mute" aria-pressed="false">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="5.5" y="1.5" width="5" height="8.5" rx="2.5"/><path d="M3 8a5 5 0 0 0 10 0M8 13v2"/></svg>
         <span class="mic">Mute <i></i></span>
@@ -335,7 +374,8 @@ td.over { color: var(--rust); font-weight: 700; }
         Face
       </button>
       <select class="btn" id="voice2" title="Voice"></select>
-      <span class="sep"></span>
+      </div>
+      <div class="dock-end">
       <button class="btn" id="logBtn" aria-pressed="false">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 4h10M3 8h10M3 12h6"/></svg>
         Log
@@ -345,6 +385,7 @@ td.over { color: var(--rust); font-weight: 700; }
         <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 5.5c2.6 0 5 .8 6.6 2.2.5.4.5 1.1.1 1.5l-1.2 1.2c-.4.4-1 .4-1.4.1l-1.6-1.2c-.3-.2-.4-.5-.4-.8V7.4a9 9 0 0 0-4.2 0v1.1c0 .3-.2.6-.4.8l-1.6 1.2c-.4.3-1 .3-1.4-.1L1.3 9.2c-.4-.4-.4-1.1.1-1.5C3 6.3 5.4 5.5 8 5.5z"/></svg>
         End
       </button>
+      </div>
     </div>
   </section>
 
@@ -366,6 +407,8 @@ td.over { color: var(--rust); font-weight: 700; }
   </aside>
 </main>
 
+<script type="module">import { showEnded } from "./ended.js"; window.showEnded = showEnded;</script>
+<script type="module">import { personaFor, SANTA_ID } from "./personas.js"; window.personaFor = personaFor; window.SANTA_ID = SANTA_ID; window.dispatchEvent(new Event("personas"));</script>
 <script>
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -432,6 +475,10 @@ function setTxt(el, text) {
 }
 
 // ---- Voices ---------------------------------------------------------------
+const sendPersona = () => {
+  if (ws?.readyState !== 1 || !window.personaFor || !currentFace) return;
+  ws.send(JSON.stringify({ type: "persona", text: window.personaFor(currentFace, $("who").textContent) }));
+};
 const sendVoice = () => ws?.readyState === 1 && ws.send(JSON.stringify({ type: "voice", id: $("voice").value }));
 fetch("voices").then((r) => r.json()).then((list) => {
   if (!callStart) setState("off");
@@ -450,8 +497,8 @@ const faceParam = new URLSearchParams(location.search).get("face");
 const FACE_URL = faceParam === "off" ? null : (faceParam || "ws://127.0.0.1:17660/ws");
 const faceHttp = () => FACE_URL && FACE_URL.replace(/^ws/, "http").replace(/\/ws$/, "");
 const faceSrc = (id) => `${faceHttp()}/faces/${encodeURIComponent(id)}`;
-const isUpload = (f) => /^image\d+|^[0-9a-f]{6,}$|^photo$/i.test(f.name);
-const faceName = (f) => f.id === "girl" ? "Sample" : isUpload(f) ? "Your photo" : f.name.charAt(0).toUpperCase() + f.name.slice(1);
+const isUpload = (f) => f.id !== "0fea11caf8194e3d86b337b9-56ea891b" &&  /^image\d+|^[0-9a-f]{6,}$|^photo$/i.test(f.name);
+const faceName = (f) => f.id === (window.SANTA_ID || "0fea11caf8194e3d86b337b9-56ea891b") ? "Santa" : f.id === "girl" ? "Sample" : isUpload(f) ? "Your photo" : f.name.charAt(0).toUpperCase() + f.name.slice(1);
 let currentFace = null, faceList = [];
 async function loadFaces() {
   if (!FACE_URL) return hideFaces();
@@ -492,6 +539,8 @@ function showCurrent() {
   const f = faceList.find((x) => x.id === currentFace);
   if (!f) return;
   $("ctaFace").src = faceSrc(f.id);
+  $("dockImg").src = faceSrc(f.id);
+  $("dockName").textContent = isUpload(f) || f.id === "girl" ? "Mirli" : faceName(f);
   $("ctaTxt").textContent = isUpload(f) || f.id === "girl" ? "Start call" : `Call ${faceName(f)}`;
   $("still").src = faceSrc(f.id);
   $("who").textContent = isUpload(f) || f.id === "girl" ? "Mirli" : faceName(f);
@@ -506,7 +555,7 @@ async function pickFace(id, btn) {
     for (const b of $("faces").querySelectorAll(".face-card[data-id]")) b.setAttribute("aria-pressed", String(b.dataset.id === id));
     $("faceHint").textContent = "";
     showCurrent();
-    if (callStart) sys(`Now talking to ${$("who").textContent}.`);
+    if (callStart) { sendPersona(); sys(`Now talking to ${$("who").textContent}. New conversation.`); }
   } catch (e) { $("faceHint").textContent = "Could not switch: " + e.message; }
   btn?.classList.remove("busy");
 }
@@ -531,6 +580,55 @@ function togglePicker(open) {
 $("faceBtn").onclick = () => togglePicker(!document.body.classList.contains("picking"));
 $("facePopClose").onclick = () => togglePicker(false);
 loadFaces();
+
+// ---- Face model -------------------------------------------------------------
+// The face server runs one model at a time (both don't fit beside the voice
+// stack on a 16 GB card). Switching restarts it on the other model, about 20 s.
+const ENGINE_HINT = { flashhead: "smooth, about 1 s behind", ditto: "sharper mouth, about 0.4 s behind" };
+let engine = null, engineBusy = false;
+async function loadEngine() {
+  if (!FACE_URL) return;
+  let d;
+  try { d = await (await fetch(faceHttp() + "/engine")).json(); } catch { return; }
+  engine = d.current;
+  for (const segId of ["engineSeg", "engineSegCall"]) {
+    const seg = $(segId);
+    seg.innerHTML = "";
+    for (const e of d.available.filter((x) => x.installed)) {
+      const b = document.createElement("button");
+      b.textContent = e.name;
+      b.title = ENGINE_HINT[e.id] ?? "";
+      b.setAttribute("aria-pressed", String(e.id === engine));
+      b.disabled = engineBusy;
+      b.onclick = () => switchEngine(e.id, e.name);
+      seg.append(b);
+    }
+  }
+  $("engineRow").hidden = d.available.filter((x) => x.installed).length < 2;
+  $("engineRowCall").hidden = $("engineRow").hidden;
+  if (!engineBusy) $("engineNote").textContent = ENGINE_HINT[engine] ?? "";
+}
+async function switchEngine(id, name) {
+  if (id === engine || engineBusy) return;
+  engineBusy = true;
+  $("engineNote").textContent = `Loading ${name}, about 20 s…`;
+  if (callStart) sys(`Switching the face model to ${name}. Voice keeps going; the face is back in about 20 s.`);
+  document.querySelectorAll("#engineSeg button, #engineSegCall button").forEach((b) => { b.disabled = true; b.setAttribute("aria-pressed", String(b.textContent === name)); });
+  try { await fetch(faceHttp() + "/engine", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: id }) }); } catch {}
+  // Wait for the new model to answer, then refresh everything that depends on it.
+  for (let i = 0; i < 60; i++) {
+    await new Promise((r) => setTimeout(r, 1500));
+    try {
+      const d = await (await fetch(faceHttp() + "/stats")).json();
+      if (d.engine === id && d.chunks >= 0) break;
+    } catch {}
+  }
+  engineBusy = false;
+  await loadEngine();
+  await loadFaces();
+  if (callStart) sys(`Face model: ${name}.`);
+}
+loadEngine();
 
 // ---- Video from the face server ---------------------------------------------
 // The face server listens to this server's speech and sends back each 0.96 s of
@@ -637,11 +735,28 @@ const setLog = (on) => { document.body.classList.toggle("showlog", on); $("logBt
 setLog(store.get("mirli-call-log") === "1");
 $("logBtn").onclick = () => setLog(!document.body.classList.contains("showlog"));
 $("statsBtn").onclick = () => { if (!document.body.classList.contains("showlog")) setLog(true); const on = !document.body.classList.contains("stats"); document.body.classList.toggle("stats", on); $("statsBtn").setAttribute("aria-pressed", String(on)); };
-$("endBtn").onclick = () => {
+// Ending stops the mic and audio but stays on the call, with a summary card.
+let replies = 0, ending = false;
+function hangUp() {
+  ending = true;
   try { ws?.close(); face.ws?.close(); micStream?.getTracks().forEach((t) => t.stop()); ctx?.close(); } catch {}
-  location.reload();
-};
-setInterval(() => { if (callStart) $("clock").textContent = clockStr(); }, 500);
+  faceFlush();
+  const seconds = callStart ? (Date.now() - callStart) / 1000 : 0;
+  const lastBot = [...document.querySelectorAll(".entry.bot .txt")].pop()?.textContent ?? "";
+  const f = faceList.find((x) => x.id === currentFace);
+  setState("closed");
+  window.showEnded({
+    who: $("who").textContent, photo: f ? faceSrc(f.id) : "", seconds, turns: replies, last: lastBot,
+    again: () => { ending = false; callStart = 0; replies = 0; setState("starting"); sys("New call."); $("callBtn").disabled = false; $("callBtn").click(); },
+    home: () => location.reload(),
+  });
+}
+$("endBtn").onclick = hangUp;
+setInterval(() => {
+  if (!callStart) return;
+  $("clock").textContent = clockStr();
+  $("dockLog").textContent = `${face.on ? "video" : "voice"} call · ${clockStr()}${engine ? " · " + (engine === "ditto" ? "Ditto" : "FlashHead") : ""}`;
+}, 500);
 $("msg").addEventListener("input", () => { const t = $("msg"); t.style.height = "auto"; t.style.height = Math.min(140, t.scrollHeight) + "px"; });
 $("msg").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("compose").requestSubmit(); } });
 $("compose").onsubmit = (e) => {
@@ -673,7 +788,7 @@ $("callBtn").onclick = () => {
     onJson(JSON.parse(e.data)).catch(fail);
   };
   ws.onerror = () => fail(new Error("Could not reach the call server on this machine."));
-  ws.onclose = () => { setState("closed"); if (callStart) sys("Call ended."); };
+  ws.onclose = () => { if (ending) return; setState("closed"); if (callStart) sys("Call ended."); };
 };
 
 let micLevel = 0, lastTyped = null;
@@ -682,6 +797,7 @@ async function onJson(m) {
     if (callStart) sys(`Voice: ${m.name}. The first reply in a new voice can take a few seconds.`);
   } else if (m.type === "hello") {
     sendVoice();
+    sendPersona();
     await ctx.audioWorklet.addModule("capture-worklet.js");
     await ctx.audioWorklet.addModule("playback-worklet.js");
     micStream = await navigator.mediaDevices.getUserMedia({
@@ -729,7 +845,7 @@ async function onJson(m) {
     lastTyped = null;
     youEl = null; botEl = null; botText = "";
   } else if (m.type === "reply_delta") {
-    if (!botEl) { botEl = entry("bot", "", "live"); botText = ""; }
+    if (!botEl) { botEl = entry("bot", "", "live"); botText = ""; replies++; }
     botText += m.text;
     setTxt(botEl, botText);
     $("ccLine").textContent = botText.length > 160 ? "…" + botText.slice(-160) : botText;

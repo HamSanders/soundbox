@@ -83,7 +83,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { "Content-Type": "application/json" });
     return res.end(JSON.stringify({ vram, format: tap.format, vad: config.vad, partial_ms: config.partialMs, turns: recent }));
   }
-  const file = path === "/" ? "index.html" : path.slice(1);
+  const file = path === "/" ? "home.html" : path.slice(1); // the landing page; the video call is index.html
   if (!/^[\w.-]+$/.test(file) || !MIME[extname(file)]) return res.writeHead(404).end();
   try {
     const body = readFileSync(join(config.root, "public", file));

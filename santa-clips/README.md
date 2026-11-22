@@ -1,0 +1,115 @@
+# Santa pose-graph clips
+
+Stills and clips for the animated Santa in the Call Santa video call. The format follows the player's manifest
+(`spikes/realtime-voice/public/santa-poses.js` on `claude/priceless-grothendieck-e3b9bb`).
+
+- Lookbook: https://claude.ai/artifact/4EyGD3BPSZt8cQxA95hEnS (private)
+- `stills/`: the 4:5 keyframes (896 × 1120) that the clips use. `stills/src/` holds the 896 × 1200 originals.
+  `stills/talk.png` is the master. It must also be the face server's Santa portrait, or the hand-off to
+  lip-sync will jump.
+- `manifest.json`: every pose and clip, as `{id, from, to, kind, src}`, plus `durationS`, `prompt`, `tags`,
+  and `via` (a midpoint still: these clips render in two FLF segments, from→via→to).
+- `render.py`: queues each clip in a local ComfyUI (Wan 2.2 14B FLF2V), checks the seams, and writes the MP4s.
+  Run it like this:
+  `python santa-clips/render.py --server http://127.0.0.1:8000 talk_idle_a talk_idle_b talk_to_list list_to_talk`
+
+## Status (2026-11-20)
+
+| Item | State |
+|---|---|
+| Master and 9 stills | Done. All are Nano Banana edits of the master, so identity and set match. |
+| Elf gag, hat prop | Not made. The Antigravity image quota is used up until 2026-11-21 02:03 UTC. |
+| Wink | Came out as a finger-to-lips "shh". Kept as the `shh` reaction. |
+| Reindeer gag | Needs review: the glowing red nose evokes Rudolph, a trademarked character. |
+| Clip plan | 21 clips in `manifest.json`: 6 idle, 8 transitions, 5 reactions, 2 gags. All 2–4 s. |
+| Proof render | Not run yet. ComfyUI Desktop is installed, but no Wan weights are, and the download (~35.6 GB) needs approval. |
+
+## ComfyUI check
+
+- Comfy Desktop is installed at `%LOCALAPPDATA%\Comfy-Desktop\ComfyUI-Installs\ComfyUI` (commit 7597a5a0, 2026-08-26).
+  Its `comfy_extras/nodes_wan.py` has `WanFirstLastFrameToVideo`. The inputs are positive, negative, vae,
+  width/height (step 16), length (step 4, so 4k+1 frames), and optional start_image/end_image/clip_vision.
+- The models it has: SDXL, Z-Image Turbo, MiniMax H3 (FL2VA and Ref2VA), Qwen3 text encoders. **No Wan models.**
+- Workflow: the official Comfy Wan 2.2 docs (https://docs.comfy.org/tutorials/video/wan/wan2_2) say the 14B FLF2V
+  workflow "uses the same model locations as the I2V section". Downloads needed, from
+  https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/tree/main/split_files:
+
+| File | Folder | Size |
+|---|---|---|
+| `wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors` | `models/diffusion_models` | 14.3 GB |
+| `wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors` | `models/diffusion_models` | 14.3 GB |
+| `umt5_xxl_fp8_e4m3fn_scaled.safetensors` | `models/text_encoders` | 6.74 GB |
+| `wan_2.1_vae.safetensors` | `models/vae` | 0.25 GB |
+
+  The total is about 35.6 GB. The disk has 197 GB free. The fp8 files are needed because the GPU is an RTX 5080
+  with 16 GB; the fp16 pair is 57 GB and would not fit.
+  The docs' file list names the fp16 files. Using fp8 here is my choice, not something the docs state for FLF.
+
+## Seamless cuts
+
+- Every clip is pinned to its stills at both ends by `WanFirstLastFrameToVideo`. `render.py` measures the mean
+  absolute difference between the first and last decoded frames and the stills, and writes it to `seam-report.json`.
+  It fails a clip at more than 6/255.
+- Every clip uses the same size (896 × 1120), the same frame rate (16 fps), the same encode (H.264 yuv420p,
+  BT.709 tags, CRF 16) and the same style prompt. That way the talk idles and the live lip-sync canvas don't pop
+  when they switch. If the VAE round trip shifts colour, the next step is to replace frame 0 and frame N with
+  the exact still and cross-fade 2 frames.
+
+## Licences
+
+| Model | Used for | Licence | Commercial use | Source |
+|---|---|---|---|---|
+| Nano Banana (Gemini image model, via the Antigravity CLI) | All stills | Google terms of service for the Antigravity / Gemini product | Not verified. Google's generative AI terms generally do not claim ownership of output, but the terms for the Antigravity login this was made under were not read. **Check them before the paid site ships.** US copyright protection for AI output is doubtful (*Thaler v. Perlmutter*, D.C. Cir. 2025). | https://antigravity.google, https://policies.google.com/terms/generative-ai |
+| Wan 2.2 I2V-A14B (high and low noise) | Clips (planned) | Apache 2.0 | Yes. The Comfy docs say the Wan 2.2 series supports commercial use; the licence section also bars harmful content. | https://huggingface.co/Wan-AI/Wan2.2-I2V-A14B, https://docs.comfy.org/tutorials/video/wan/wan2_2 |
+| umt5-xxl fp8 and the Wan 2.1 VAE (Comfy-Org repack) | Clips (planned) | Comes from Wan-AI, Apache 2.0 | Yes, by the upstream licence. The repack card's own licence field was not checked. | https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged |
+
+Character design: original. No hat in the master, round gold spectacles, a plain belt buckle, no logos. The
+prompts reference no film or brand.
+
+## Proof clips on fal (decided 2026-11-20: use fal, don't download Wan locally)
+
+fal endpoints that take a first and a last frame, as of 2026-11-20:
+
+| Endpoint | Start / end params | Price (fal page) | Notes |
+|---|---|---|---|
+| `minimax/h3/image-to-video` (**picked**) | `image_url` / `end_image_url` | $0.05/s 480p, $0.06/s 768p, $0.13/s 2K | Output canvas follows the input image, so 4:5 works. Marked "Commercial use". https://fal.ai/models/minimax/h3/image-to-video |
+| `fal-ai/wan/v2.2-a14b/image-to-video` | `image_url` / `end_image_url` | $0.04–0.08/s | Aspect options are auto, 16:9, 9:16 and 1:1, so 4:5 would be cropped. Removed from fal on 2027-01-04. https://fal.ai/models/fal-ai/wan/v2.2-a14b/image-to-video |
+| `fal-ai/kling-video/o3/standard/image-to-video` | `image_url` / `end_image_url` | $0.084/s | 3–15 s. https://fal.ai/models/fal-ai/kling-video/o3/standard/image-to-video |
+| `kling/v4/image-to-video` | `start_image_url` / `end_image_url` | $0.157/s at 720p | 3–30 s; the input aspect can be 0.4 to 2.5. https://fal.ai/models/kling/v4/image-to-video |
+| `fal-ai/vidu/start-end-to-video` | `start_image_url` / `end_image_url` | $0.20 per 4 s | No size or duration control. https://fal.ai/models/fal-ai/vidu/start-end-to-video |
+| `fal-ai/veo3.1/first-last-frame-to-video` | `first_frame_url` / `last_frame_url` | $0.20/s | Only 16:9 or 9:16. https://fal.ai/models/fal-ai/veo3.1/first-last-frame-to-video |
+
+**MiniMax H3 licence:** this is a closed partner model run through fal. fal's model page marks it "Commercial use", and use falls
+under fal's terms (https://fal.ai/terms). No weights are downloaded, and there is no separate open licence. The valid duration range
+isn't stated (the default is 5 s), so the 2 s idles may come back at 5 s and need retiming or trimming.
+
+### fal proof results (2026-11-20)
+
+All 4 clips were rendered with `render_fal.py` (MiniMax H3, 768P). fal's minimum is 5 s, so each clip was retimed to its manifest length.
+Seam check (mean absolute difference against the still, 0–255): talk_idle_a 6.25/6.16, talk_idle_b 6.28/6.25, talk_to_list 6.30/6.51,
+list_to_talk 6.71/6.16. All are under 8. The difference is encoding and colour drift, not pose drift. `seam-report.json` has the details.
+Cost: 4 × 5 s × $0.06 = $1.20, plus about $0.30 for one accidental duplicate submit of talk_idle_b.
+`preview_talk_list_talk.mp4` is the talk→list→talk proof (two clips joined).
+
+## Replan (2026-11-20): moves, not idles
+
+- **Talk-pose idle:** the live face model (Ditto or FlashHead) keeps running on silence, which gives blinks, breathing and small head
+  motion. A short looped fire patch keeps the fire moving. `talk_idle_a/b` stay in the manifest only as low-weight fallbacks.
+- **Clips are for real moves, 5 s each, at natural speed:** enter and sit, stand and leave, talk ↔ list/cocoa/lean/rest, and the
+  laugh/shh/think reactions as single talk→talk clips with the action in the prompt. Also check_list, sip_cocoa, and the reindeer gag
+  (to be redone with a plain nose).
+- **Second angle:** `talk_close` is a hard cut, with no clip. It needs its own still, made as an edit of the master.
+- **Still to do:** 14 clips. 12 can render now. `enter_and_sit` and `stand_and_leave` need the `empty` still, which waits on the image
+  quota. Cost is 12 × 5 s × $0.06 = $3.60 on fal, or nothing on the local 5080 once the Wan download finishes.
+
+### fal batch 2 (2026-11-20)
+
+12 more clips rendered: talk ↔ cocoa/lean/rest, laugh, shh, think, check_list, sip_cocoa and gag_reindeer. Every seam is between 6.1 and 6.8/255
+(`seam-report.json`). Cost was 12 × $0.30 = $3.60, so the fal total so far is about $5.10. The reindeer renders inside the room rather than
+at the window and needs a redo. `contact_moves.jpg` shows the mid-frames.
+
+### Live face: crop and paste back
+
+FlashHead centre-crops its portrait to a square and outputs 512²; Ditto outputs a 512² face crop. Both lose our 4:5 framing. Instead, give the
+model `poses.talk.faceBox` (a 512² crop of `stills/talk.png` at x 214, y 104), then composite its frames back into the full frame at that box
+with a feathered mask. The clip loop keeps playing underneath. Then the cut to live lines up to the pixel, and the mouth is rendered at 1:1.

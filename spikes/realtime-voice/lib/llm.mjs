@@ -29,7 +29,9 @@ export async function* chat(llm, history, signal, system = config.llm.system) {
   if (!resp.ok) throw new Error(`LLM HTTP ${resp.status}: ${(await resp.text()).slice(0, 300)}`);
   for await (const msg of sseJson(resp.body)) {
     const delta = msg.choices?.[0]?.delta?.content;
-    if (typeof delta === "string" && delta) yield delta;
+    // Emoji can't be spoken, and small models add them anyway.
+    const clean = typeof delta === "string" ? delta.replace(/[\p{Extended_Pictographic}\u{1F3FB}-\u{1F3FF}️‍]/gu, "") : "";
+    if (clean) yield clean;
   }
 }
 

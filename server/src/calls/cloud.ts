@@ -32,8 +32,11 @@ export class BackendStore {
     try {
       if (existsSync(this.#file)) saved = JSON.parse(readFileSync(this.#file, "utf8"));
     } catch { /* a broken file means local */ }
+    // A hosted studio (MIRLI_HOSTED=1, Mirli on the web) has no GPU workers of its own: calls go to Mirli Cloud
+    // unless someone picked otherwise.
+    const hosted = this.env.MIRLI_HOSTED === "1";
     return {
-      mode: saved.mode === "cloud" ? "cloud" : "local",
+      mode: saved.mode === "cloud" || saved.mode === "local" ? saved.mode : hosted ? "cloud" : "local",
       url: (this.env.MIRLI_CLOUD_URL || saved.url || DEFAULT_CLOUD_URL).replace(/\/$/, ""),
       token: this.env.MIRLI_CLOUD_TOKEN || saved.token || null,
     };

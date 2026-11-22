@@ -15,6 +15,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { buildApp } from "../src/app.js";
 import { CharacterStore, SANTA_PERSONA } from "../src/calls/characters.js";
+import { BackendStore } from "../src/calls/cloud.js";
 import { packSpec } from "../src/calls/packs.js";
 import { CallBusyError, CallRegistry } from "../src/calls/registry.js";
 import { signCallToken, verifyCallToken } from "../src/calls/token.js";
@@ -260,5 +261,17 @@ describe("calls on Mirli Cloud (stand-in gateway and pod)", () => {
     expect(r.statusCode).toBe(401);
     expect(r.json().error.message).toMatch(/Sign in to Mirli Cloud/);
     await app.inject({ method: "PUT", url: "/api/calls/backend", headers: h, payload: { mode: "local" } });
+  });
+});
+
+describe("call back end default", () => {
+  it("is this computer on a desktop, and Mirli Cloud in a hosted studio (with its injected URL and token)", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "mirli-backend-"));
+    expect(new BackendStore(dir, {}).get().mode).toBe("local");
+    const hosted = new BackendStore(dir, { MIRLI_HOSTED: "1", MIRLI_CLOUD_URL: "https://api.example/", MIRLI_CLOUD_TOKEN: "t" });
+    expect(hosted.get()).toEqual({ mode: "cloud", url: "https://api.example", token: "t" });
+    hosted.set({ mode: "local" });
+    expect(hosted.get().mode).toBe("local"); // a choice sticks
+    await rm(dir, { recursive: true, force: true });
   });
 });

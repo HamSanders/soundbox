@@ -395,6 +395,7 @@ music.volume = 0;
 // ---- Pose clips: canned idle/transition/reaction video between keyframe poses (santa-poses.js) ----
 // ?clips=<manifest.json url> loads real clips from any static server; ?clips=off turns them off.
 let poses = null, tags = SantaPoses.tagStream();
+let PACK_PERSONA = null;
 const posesReady = (async () => {
   const q = params.get("clips") || "santa-clips/manifest.json";  // the real clips, next to the page
   if (q === "off") return null;
@@ -402,6 +403,9 @@ const posesReady = (async () => {
   try { base = new URL(q, location.href).href; manifest = await (await fetch(base)).json(); }
   catch { console.info("no clips at", q, "- using the placeholder clips"); manifest = window.SANTA_CLIPS; base = location.href; }
   if (!manifest?.clips?.length) return null;
+  // A pack from the avatar creator can bring its own character: persona text and display name.
+  if (manifest.persona) PACK_PERSONA = manifest.persona;
+  if (manifest.name) document.querySelectorAll("h2, .top b").forEach((e) => (e.textContent = manifest.name));
   const p = SantaPoses.create({ manifest, base, a: $("poseA"), b: $("poseB"), bg: $("bg"),
     liveReady: () => face.on && performance.now() - (face.lastFrame || 0) < 1500,
     onLive: (on) => document.body.classList.toggle("live", on), log: params.has("debug") ? (...a) => console.log("[poses]", ...a) : null });
@@ -469,7 +473,7 @@ $("callBtn").onclick = () => {
 
 async function onJson(m) {
   if (m.type === "hello") {
-    ws.send(JSON.stringify({ type: "persona", text: PERSONA }));
+    ws.send(JSON.stringify({ type: "persona", text: PACK_PERSONA || PERSONA }));
     if (voiceId) ws.send(JSON.stringify({ type: "voice", id: voiceId }));
     await ctx.audioWorklet.addModule("capture-worklet.js");
     await ctx.audioWorklet.addModule("playback-worklet.js");

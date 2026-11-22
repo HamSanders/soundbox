@@ -135,7 +135,7 @@ def main():
     # 4. manifest in the santa-poses.js format
     have = {p.stem for p in (out / "clips").glob("*.mp4")}
     manifest = {
-        "version": 1, "id": spec["id"], "name": spec.get("name"),
+        "version": 1, "id": spec["id"], "name": spec.get("name"), "persona": spec.get("persona"),
         "talkPose": spec["talkPose"], "restPose": spec.get("restPose"), "startPose": spec.get("startPose", spec["talkPose"]),
         "width": W, "height": H, "fps": FPS,
         "poses": {pid: {"label": p.get("label", pid), "still": f"stills/{pid}.png",

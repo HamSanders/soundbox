@@ -73,7 +73,6 @@ ap.add_argument("--tap", default=None, help="also subscribe to the voice spike's
 ap.add_argument("--no-idle", action="store_true", help="do not generate silent 'listening' motion between utterances")
 ap.add_argument("--max-lead", type=float, default=3.0, help="stop generating when this many seconds are already queued for playback")
 ap.add_argument("--compile", action="store_true")
-ap.add_argument("--engine", default="lite", choices=["lite", "pro", "musetalk"])
 ap.add_argument("--jpeg-quality", type=int, default=int(os.environ.get("FACE_JPEG", 92)))
 ap.add_argument("--log", default=None, help="append one JSON line per chunk and per browser report")
 args = ap.parse_args()

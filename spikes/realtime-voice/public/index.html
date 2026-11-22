@@ -494,7 +494,10 @@ for (const [a, b] of [["voice", "voice2"], ["voice2", "voice"]]) {
 // The face server holds the portraits. Picking one switches the face live
 // (about half a second); "+" uploads a photo, cropped square by the server.
 const faceParam = new URLSearchParams(location.search).get("face");
-const FACE_URL = faceParam === "off" ? null : (faceParam || "ws://127.0.0.1:17660/ws");
+// Served by the call pod (spikes/realtime-pod), the face server sits behind the same origin at /facesrv.
+const POD = !/^(127\.0\.0\.1|localhost)$/.test(location.hostname) || new URLSearchParams(location.search).has("pod");
+const WS_PROTO = location.protocol === "https:" ? "wss:" : "ws:";
+const FACE_URL = faceParam === "off" ? null : (faceParam || (POD ? `${WS_PROTO}//${location.host}/facesrv/ws` : "ws://127.0.0.1:17660/ws"));
 const faceHttp = () => FACE_URL && FACE_URL.replace(/^ws/, "http").replace(/\/ws$/, "");
 const faceSrc = (id) => `${faceHttp()}/faces/${encodeURIComponent(id)}`;
 const isUpload = (f) => f.id !== "0fea11caf8194e3d86b337b9-56ea891b" &&  /^image\d+|^[0-9a-f]{6,}$|^photo$/i.test(f.name);
@@ -781,7 +784,7 @@ $("callBtn").onclick = () => {
     ctx = new AudioContext({ sampleRate: 48000, latencyHint: "interactive" }); // VoxCPM2's rate
     ctx.resume();
   } catch (err) { return fail(err); }
-  ws = new WebSocket(`ws://${location.host}/ws`);
+  ws = new WebSocket(`${WS_PROTO}//${location.host}/ws`);
   ws.binaryType = "arraybuffer";
   ws.onmessage = (e) => {
     if (typeof e.data !== "string") return onPcm(e.data);

@@ -48,7 +48,9 @@ const pod = {
   freeSince: null,
 };
 
+const GPU_FAILED = env.POD_GPU_FAILED_FILE ?? "/tmp/logs/GPU_FAILED";
 function state() {
+  if (existsSync(GPU_FAILED)) return "failed"; // broken host: the router should terminate this pod
   if (!pod.engines.voice || !pod.engines.face) return "starting";
   if (pod.call?.connectedAt) return "busy";
   if (pod.call) return "reserved";
@@ -231,6 +233,7 @@ function publicState() {
     engines_ready_s: pod.engines.readyAt ? Math.round((pod.engines.readyAt - bootAt) / 100) / 10 : null,
     idle_s: state() === "free" && pod.freeSince ? Math.round((now() - pod.freeSince) / 1000) : 0,
     call: c && { id: c.id, connected: c.sockets.size > 0, connected_s: Math.round(connectedMs(c) / 1000) },
+    ...(existsSync(GPU_FAILED) ? { failed: readFileSync(GPU_FAILED, "utf8").slice(0, 2000) } : {}),
   };
 }
 

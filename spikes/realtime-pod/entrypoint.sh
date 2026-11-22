@@ -21,6 +21,14 @@ run() { local name=$1; shift; ( "$@" ) > >(tee -a "/tmp/logs/$name.log") 2>&1 & 
 # The front door first, so /healthz and /logs answer while everything else starts.
 run pod bash -c 'cd /app/realtime-pod && exec node pod.mjs'
 
+# A host whose GPU is broken ("CUDA unknown error", seen on a Community 4090 on 2026-11-22) can't be fixed
+# from inside the pod. Say so on /readyz (state "failed") so the router terminates it and picks another.
+if ! python3 -c "import torch,sys; sys.exit(0 if torch.cuda.is_available() else 1)" 2>/tmp/logs/gpu-check.log; then
+  { echo "GPU unavailable on this host:"; nvidia-smi 2>&1 | head -5; tail -3 /tmp/logs/gpu-check.log; } > /tmp/logs/GPU_FAILED
+  stamp "GPU check failed; not starting the engines" | tee -a /tmp/logs/pod.log
+  wait; exit 1
+fi
+
 # The voice server checks the LLM once at start-up and exits if it can't reach it. Wait for the LLM instead
 # (it may be a pod that is still booting), up to LLM_WAIT_S.
 for i in $(seq 1 "${LLM_WAIT_S:-900}"); do

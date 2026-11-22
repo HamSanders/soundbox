@@ -194,7 +194,7 @@ function ModelBody({ model, entry }: { model: Model; entry?: AudioCppCatalogEntr
   const { data: catalog } = useAudioCppCatalog();
   const setEnabled = useSetAudioCppEnabled();
   const hfTokenSet = settings?.hf_token_set ?? false;
-  const { remove } = useModelAction();
+  const { remove, dismissFailure } = useModelAction();
   const confirm = useModelDetailStore((s) => s.confirm);
   const setConfirm = useModelDetailStore((s) => s.setConfirm);
   const close = useModelDetailStore((s) => s.close);
@@ -203,6 +203,15 @@ function ModelBody({ model, entry }: { model: Model; entry?: AudioCppCatalogEntr
   const { job, downloading, progressPct, busyLabel } = useModelJob(model);
   const dl = useRequestDownload(model);
   const can = modelCan(model, useCan());
+  /** The failed download to show: the server's record of it, which survives a
+   *  restart, or the job this page just watched fail on a server too old to
+   *  keep one. */
+  const downloadFailure = model.download_failure ?? lastFailure?.failure ?? null;
+  const failedAt = model.download_failure ? new Date(model.download_failure.at) : null;
+  const dismissDownloadFailure = () => {
+    setFailure(model.id, null);
+    if (model.download_failure) dismissFailure.mutate(model.id);
+  };
 
   const [selfTest, setSelfTest] = useState<ModelSelfTest | null>(null);
   const [testing, setTesting] = useState(false);
@@ -273,18 +282,22 @@ function ModelBody({ model, entry }: { model: Model; entry?: AudioCppCatalogEntr
         </p>
       )}
 
-      {lastFailure && !downloading && (
+      {(downloadFailure || lastFailure) && !downloading && (
         <FailureCard
           compact
-          failure={lastFailure.failure}
-          error={lastFailure.error ?? "The download failed."}
-          context={`Downloading ${model.name}`}
-          onRetry={dl.start}
-          retryLabel="Download again"
-          onDismiss={() => setFailure(model.id, null)}
+          failure={downloadFailure}
+          error={lastFailure?.error ?? "The download failed."}
+          context={
+            failedAt && !Number.isNaN(failedAt.getTime())
+              ? `Downloading ${model.name}, ${failedAt.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}`
+              : `Downloading ${model.name}`
+          }
+          onRetry={can.repair || can.download ? dl.start : undefined}
+          retryLabel={model.status === "incomplete" ? "Repair" : "Retry"}
+          onDismiss={dismissDownloadFailure}
         />
       )}
-      {model.status === "error" && model.error && !lastFailure && (
+      {model.status === "error" && model.error && !lastFailure && !downloadFailure && (
         <FailureCard compact failure={model.failure} error={model.error} context={model.name} />
       )}
 

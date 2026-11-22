@@ -154,6 +154,39 @@ path, and enabling one adds it to the picker immediately.
 Every model shows its licence before you download it. Some licences allow
 open use of the weights but forbid selling what the model makes.
 
+### When a download is interrupted
+
+Models are large, and a download that stops partway is picked up rather than
+started again. This is what Mirli's own downloader does (the prompt assistant,
+the artwork models, the engines, and audio models when the audio.cpp runtime
+has no package manager of its own; when it has one, audio.cpp does the
+transfer and Mirli reports its progress):
+
+- **Before it starts**, Mirli compares what is still to download, plus 2 GB to
+  keep free, with the free space on the drive that holds the models folder.
+  If it will not fit, nothing is downloaded and the message names the three
+  sizes and the folder. Engines and sampled instruments are checked without
+  the 2 GB margin.
+- **While it runs**, the bytes go to `<file>.part`, with a small
+  `<file>.part.meta` beside it that records which version of the file they
+  came from. The progress line shows the transfer rate and the time left.
+- **If the connection drops, stalls, or the server answers 429 or a 5xx**, the
+  download waits and tries again, up to five tries, with a longer wait each
+  time. A `Retry-After` from the server is followed when it asks for a minute
+  or less. A 401, 403 or 404 is not retried: see Step 3.
+- **Each new try continues from the `.part`** with an HTTP `Range` request.
+  If the file changed upstream in the meantime, or the server cannot continue
+  it, the download starts again from the beginning. A finished file is
+  checked for size, and against its SHA-256 where the source publishes one,
+  before it is renamed into place.
+- **If every try fails**, the `.part` is kept. The model shows as
+  **Incomplete** on the Models page with the reason, and **Repair** continues
+  from where it stopped, including after a restart of Mirli. The reason is
+  kept in `models/download-failures.json` until a download succeeds, the
+  weights are deleted or you dismiss it.
+- **Cancelling** a download, a full disk, or a file of the wrong size or
+  checksum removes the `.part`, so nothing half-written is left behind.
+
 ## Step 3: gated models
 
 The audio models come from audio.cpp's GGUF repo (`audio-cpp/audio.cpp-gguf`),
@@ -500,6 +533,15 @@ you built or downloaded yourself.
 the cache is partial. Click Download again; it resumes. (Mirli writes a
 completion marker at the end of a download and does not mark a model
 installed without it, so this should be rare.)
+
+**A model says Incomplete.** A download stopped before every file arrived.
+The Models page shows why. Click **Repair**: it downloads only what is
+missing and continues a half-fetched file. See "When a download is
+interrupted" under Step 2.
+
+**"Not enough disk space".** The message gives the size still to download,
+the 2 GB kept free, the free space, and the folder. Free space on that drive,
+or move the models folder (Settings → Storage) to a larger one.
 
 **CUDA out of memory.** Only one model is resident at a time, but a long clip
 can still exhaust a small card. Shorten the clip, or unload the model.

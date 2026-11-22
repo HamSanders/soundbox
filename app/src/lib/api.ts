@@ -212,6 +212,10 @@ export interface Model {
   error?: string | null;
   /** Set alongside `error` when the adapter could not report its status. */
   failure?: Failure | null;
+  /** Why the last download of this model failed. The server keeps it across
+   *  restarts, and sends it only while the model is still not usable; a
+   *  download that succeeds, deleting the weights, or dismissing it clears it. */
+  download_failure?: DownloadFailure | null;
   /** Id of the in-flight download/install job for this model, from server
    *  job state rather than client memory — lets a row resume watching
    *  progress after a reload or remount (e.g. a tab switch) instead of
@@ -1231,6 +1235,12 @@ export interface Failure {
   detail: string;
 }
 
+/** A failed download as the server remembers it: the failure, and when. */
+export interface DownloadFailure extends Failure {
+  /** ISO 8601. */
+  at: string;
+}
+
 export interface Job {
   id: string;
   kind: JobKind;
@@ -1684,6 +1694,8 @@ export interface MirliApi {
   loadModel(id: string): Promise<Model>;
   unloadModel(id: string): Promise<Model>;
   deleteModelWeights(id: string): Promise<void>;
+  /** Dismiss the remembered failure of a model's last download. */
+  clearModelDownloadFailure(id: string): Promise<void>;
   generate(req: GenerateRequest): Promise<JobRef>;
   listJobs(limit?: number): Promise<Job[]>;
   getJob(id: string): Promise<Job>;
@@ -2007,6 +2019,11 @@ export const httpApi: MirliApi = {
 
   deleteModelWeights: (id) =>
     request<void>(`/api/models/${encodeURIComponent(id)}/weights`, {
+      method: "DELETE",
+    }),
+
+  clearModelDownloadFailure: (id) =>
+    request<void>(`/api/models/${encodeURIComponent(id)}/download-failure`, {
       method: "DELETE",
     }),
 

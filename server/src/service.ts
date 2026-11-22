@@ -41,12 +41,14 @@ import {
 } from "./models/audiocpp.js";
 import { listGpus, pickGpu } from "./gpu.js";
 import { HistoryStore } from "./history.js";
+import { DOWNLOAD_FAILURES_FILE, DownloadFailureStore } from "./models/downloadFailures.js";
 import { ModelManager } from "./models/manager.js";
 import * as audiocppBinary from "./models/audiocppBinary.js";
 import { migrateLayout } from "./models/audiocppMigrate.js";
 import { withRequirements } from "./models/params.js";
 import { llmModelSpec } from "./models/llmCatalog.js";
 import { CancelledJob, ModelError, StreamUnsupported } from "./errors.js";
+import { buildFailure } from "./failure.js";
 import { JobHandle, JobManager } from "./jobs.js";
 import { LlmService, type LlmStatus } from "./llm/service.js";
 import type { StudioContext } from "./llm/studio.js";
@@ -232,6 +234,8 @@ export class MirliService {
    *  call time, so the reassignment is the whole of it. */
   db: Database;
   readonly models: ModelManager;
+  /** Each model's last failed download, kept on disk — see downloadFailures.ts. */
+  readonly downloadFailures: DownloadFailureStore;
   /** What this server allows, from its environment at start; see capabilities.ts. */
   readonly serverCapabilities: Capabilities;
   readonly jobs: JobManager;
@@ -269,6 +273,9 @@ export class MirliService {
       this.models,
       endpointSource,
       this.serverCapabilities.custom_endpoints,
+    );
+    this.downloadFailures = new DownloadFailureStore(
+      join(config.paths.models, DOWNLOAD_FAILURES_FILE),
     );
     this.jobs = new JobManager();
     this.llm = new LlmService(config);
@@ -335,6 +342,7 @@ export class MirliService {
     for (const info of infos) {
       info.avg_duration_s = this.jobs.avgDuration("generate", info.id);
       this.overlayActiveDownload(info);
+      this.overlayDownloadFailure(info);
     }
     return infos;
   }
@@ -343,7 +351,25 @@ export class MirliService {
     const info = await this.models.get(modelId).status();
     info.avg_duration_s = this.jobs.avgDuration("generate", modelId);
     this.overlayActiveDownload(info);
+    this.overlayDownloadFailure(info);
     return info;
+  }
+
+  /**
+   * Attach the remembered download failure while it still explains something:
+   * the model is not usable yet. Weights that turned up some other way (a
+   * shared audio.cpp folder, a later download from another client) make the
+   * old failure history rather than news, so it is not shown.
+   */
+  private overlayDownloadFailure(info: ModelInfo): void {
+    const relevant = info.status === "not_installed" || info.status === "incomplete";
+    info.download_failure = relevant ? this.downloadFailures.get(info.id) : null;
+  }
+
+  /** Dismiss a model's remembered download failure. */
+  clearDownloadFailure(modelId: string): void {
+    this.models.get(modelId); // an unknown id is an error, not a no-op
+    this.downloadFailures.clear(modelId);
   }
 
   /**
@@ -387,7 +413,17 @@ export class MirliService {
         },
         { handle },
       );
-      await this.models.download(modelId, cancellable);
+      try {
+        await this.models.download(modelId, cancellable);
+      } catch (exc) {
+        // Remembered so the Models page can still say why after a restart. A
+        // cancel is the user's own doing and is not a failure to report.
+        if (!(exc instanceof CancelledJob)) {
+          this.downloadFailures.record(modelId, buildFailure(exc, { stage: "downloading" }));
+        }
+        throw exc;
+      }
+      this.downloadFailures.clear(modelId);
       return { model: modelId };
     };
 
@@ -404,6 +440,7 @@ export class MirliService {
 
   async deleteWeights(modelId: string): Promise<void> {
     await this.models.deleteWeights(modelId);
+    this.downloadFailures.clear(modelId);
   }
 
   /**

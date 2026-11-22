@@ -35,7 +35,14 @@ import {
   type TaskResult,
 } from "./audiocppRuntime.js";
 import { defaultDataDir, getConfig } from "../config.js";
-import { downloadToFile } from "../download.js";
+import {
+  assertDiskSpace,
+  DownloadError,
+  downloadToFile,
+  MODEL_HEADROOM_BYTES,
+  retryLine,
+  TransferRate,
+} from "../download.js";
 import { CancelledJob, ModelError, StreamUnsupported } from "../errors.js";
 import {
   DEFAULT_SUPPORTS,
@@ -1159,6 +1166,10 @@ export class AudioCppModel {
       await this.fetchWeights(progress);
     } catch (exc) {
       if (exc instanceof ModelError || exc instanceof CancelledJob) throw exc;
+      // A failure this side of the HTTP status (a stall, a cut-off transfer, no
+      // room on the disk) already says what happened. `explainHfError` reads
+      // status codes out of the text, and a byte count can contain "404".
+      if (exc instanceof DownloadError && exc.status === null) throw new ModelError(exc.message);
       throw new ModelError(explainHfError(exc, this.spec));
     }
 
@@ -1195,43 +1206,89 @@ export class AudioCppModel {
     const credentials = this.hfToken ? { accessToken: this.hfToken } : undefined;
     const match = rglobMatcher(this.spec.weights_glob);
 
-    const wanted: { path: string; size: number }[] = [];
+    const root = this.weightsDir();
+    const listed: { path: string; dest: string; size: number; sha256: string | null }[] = [];
     for await (const file of listFiles({
       repo: { type: "model", name: this.spec.hf_repo },
       recursive: true,
       credentials,
     })) {
       if (file.type === "file" && match(file.path)) {
-        wanted.push({ path: file.path, size: file.lfs?.size ?? file.size ?? 0 });
+        listed.push({
+          path: file.path,
+          // Strip the package prefix on the way in, exactly as audio.cpp's own
+          // installer does, so a package fetched by this fallback path is
+          // indistinguishable on disk from one the runtime installed.
+          dest: join(root, ...this.onDisk(file.path).split("/")),
+          size: file.lfs?.size ?? file.size ?? 0,
+          // An LFS object id is the SHA-256 of the file's contents.
+          sha256: file.lfs?.oid && /^[0-9a-f]{64}$/i.test(file.lfs.oid) ? file.lfs.oid : null,
+        });
       }
     }
-    if (wanted.length === 0) return; // download() reports the empty-match case
+    if (listed.length === 0) return; // download() reports the empty-match case
 
-    const root = this.weightsDir();
-    for (const [index, { path, size }] of wanted.entries()) {
+    // A repair fetches what is missing. A file already in place at the listed
+    // size got there by the rename that follows a completed, checked transfer.
+    const wanted: typeof listed = [];
+    for (const file of listed) {
+      const onDisk = await stat(file.dest).then((s) => s.size, () => -1);
+      if (!(file.size > 0 && onDisk === file.size)) wanted.push(file);
+    }
+    if (wanted.length === 0) return;
+
+    // One check for the whole package before the first byte, so a model of
+    // five files does not fill the disk on the fourth.
+    const partial = await Promise.all(
+      wanted.map((f) => stat(`${f.dest}.part`).then((s) => Math.min(s.size, f.size), () => 0)),
+    );
+    const totalBytes = wanted.reduce((sum, f) => sum + f.size, 0);
+    const sized = wanted.every((f) => f.size > 0);
+    await assertDiskSpace({
+      path: root,
+      neededBytes: totalBytes,
+      alreadyBytes: partial.reduce((sum, n) => sum + n, 0),
+      headroomBytes: MODEL_HEADROOM_BYTES,
+    });
+
+    const rate = new TransferRate();
+    let before = 0;
+    for (const [index, { path, dest, size, sha256 }] of wanted.entries()) {
       const url = `https://huggingface.co/${this.spec.hf_repo}/resolve/main/${path}`;
-      // Strip the package prefix on the way in, exactly as audio.cpp's own
-      // installer does, so a package fetched by this fallback path is
-      // indistinguishable on disk from one the runtime installed.
-      const dest = join(root, ...this.onDisk(path).split("/"));
+      // Held inside 5%-95% so the bar never claims completion before the
+      // file is finalised on disk.
+      let fraction = 0.05 + (0.9 * index) / wanted.length;
       // Streamed to `<dest>.part` and renamed into place — a multi-gigabyte
       // GGUF never sits in memory, and `weightsFile()` never finds half of
-      // one. The size the repo listing gave is the size it has to be.
+      // one. The size the repo listing gave is the size it has to be, and the
+      // LFS digest is what it has to hash to. A `.part` from an interrupted
+      // attempt is continued rather than fetched again (see download.ts).
       await downloadToFile(url, dest, {
         headers: this.hfToken ? { Authorization: `Bearer ${this.hfToken}` } : {},
         expectedBytes: size,
+        expectedSha256: sha256,
+        // Zero here: the package as a whole was checked with headroom above,
+        // and a per-file margin would refuse the last small file of a package
+        // that fits.
+        headroomBytes: 0,
         onProgress: (done, total) => {
-          if (progress && total) {
-            // Held inside 5%-95% so the bar never claims completion before the
-            // file is finalised on disk.
-            const fileFrac = (index + Math.min(1, done / total)) / wanted.length;
-            progress(
-              0.05 + 0.9 * fileFrac,
-              `Downloading — ${fmtBytes(done)} of ${fmtBytes(total)}`,
-            );
-          }
+          if (!progress || !total) return;
+          // Weighted by bytes when every size is known, so a 4 GB transformer
+          // and a 2 MB config do not each move the bar the same distance.
+          fraction =
+            0.05 +
+            0.9 *
+              (sized
+                ? Math.min(1, (before + done) / totalBytes)
+                : (index + Math.min(1, done / total)) / wanted.length);
+          const line = sized ? rate.line(before + done, totalBytes) : rate.line(done, total);
+          progress(fraction, `Downloading — ${line}`);
         },
+        // Reported through the same callback, which is also what notices a
+        // cancelled job while the download is waiting to try again.
+        onRetry: (notice) => progress?.(fraction, retryLine(notice)),
       });
+      before += size;
     }
   }
 
@@ -2324,20 +2381,6 @@ export function runChild(
       resolve(tail);
     });
   });
-}
-
-function fmtBytes(n: number): string {
-  const units = ["B", "KB", "MB", "GB"];
-  let value = n;
-  for (const unit of units) {
-    if (Math.abs(value) < 1024 || unit === "GB") {
-      return unit === "B" || unit === "KB"
-        ? `${value.toFixed(0)} ${unit}`
-        : `${value.toFixed(1)} ${unit}`;
-    }
-    value /= 1024;
-  }
-  return `${value.toFixed(1)} GB`;
 }
 
 /** Turn Hugging Face's failures into something a user can act on. Trimmed

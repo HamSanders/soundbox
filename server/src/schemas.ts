@@ -220,6 +220,12 @@ export interface ModelInfo {
   error?: string | null;
   /** Set alongside `error` when the adapter could not report its status. */
   failure?: Failure | null;
+  /**
+   * Why the last download of this model failed, kept across restarts until a
+   * download succeeds, the weights are deleted or it is dismissed. Only set
+   * while the model is still not usable (not installed, or incomplete).
+   */
+  download_failure?: DownloadFailure | null;
   active_job_id?: string | null;
   avg_duration_s?: number | null;
 }
@@ -369,6 +375,12 @@ export interface Failure {
   stage: string | null;
   /** Exactly what the runtime or server said. */
   detail: string;
+}
+
+/** A failed download as it is remembered: the failure, and when. */
+export interface DownloadFailure extends Failure {
+  /** ISO 8601. */
+  at: string;
 }
 
 export interface Job {

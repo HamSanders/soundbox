@@ -170,6 +170,7 @@ export const GUARDED_ROUTES: Record<string, CapabilityKey> = {
   "DELETE /api/endpoints/:id": "custom_endpoints",
   "POST /api/models/:model_id/download": "downloads",
   "DELETE /api/models/:model_id/weights": "downloads",
+  "DELETE /api/models/:model_id/download-failure": "downloads",
   "POST /api/models/audiocpp/engine/install": "downloads",
   "POST /api/llm/engine/install": "downloads",
   "POST /api/llm/models/:model_id/download": "downloads",

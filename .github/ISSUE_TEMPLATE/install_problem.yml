@@ -1,0 +1,85 @@
+name: Install problem
+description: Mirli won't download, install, start or update
+labels: ["install"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        [docs/DESKTOP.md](https://github.com/HamSanders/soundbox/blob/main/docs/DESKTOP.md) covers the first-launch warnings on Windows and macOS and the Linux graphics workarounds, and [docs/INSTALL.md](https://github.com/HamSanders/soundbox/blob/main/docs/INSTALL.md#troubleshooting) has a troubleshooting section. Worth a look first.
+
+        Mirli's installers come only from [mirli.app/download](https://mirli.app/download/) and this repository's [Releases](https://github.com/HamSanders/soundbox/releases). If a reply here tells you to paste a command that downloads something, or to install a "fixed" build from a link, don't run it.
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Where did it fail
+      options:
+        - Downloading the installer
+        - Running the installer (SmartScreen, Gatekeeper, permissions)
+        - First launch (the splash screen, or "the server did not start")
+        - Installing the audio.cpp runtime
+        - Downloading a model
+        - The first generation after installing
+        - Updating from an older version
+        - Setting up from a clone (npm install, npm run dev)
+        - Docker
+        - Uninstalling
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS (Apple silicon)
+        - macOS (Intel)
+        - Linux
+        - Docker
+        - Other (say which below)
+    validations:
+      required: true
+  - type: input
+    id: os-detail
+    attributes:
+      label: OS version
+      description: For Linux, the distribution and release, and whether the session is Wayland or X11.
+      placeholder: "Ubuntu 24.04, Wayland"
+  - type: input
+    id: version
+    attributes:
+      label: Mirli version
+      description: The version in the installer's file name, or the commit of your clone.
+      placeholder: "0.6.2"
+    validations:
+      required: true
+  - type: input
+    id: file
+    attributes:
+      label: Which file
+      description: The installer or package you used.
+      placeholder: "Soundbox_0.6.2_x64-setup.exe"
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU
+      description: Model and driver version, if the failure is about the runtime or a model.
+      placeholder: "RTX 3060, driver 566.36"
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did and what you saw. Paste the exact error text; a screenshot of a dialog is fine too.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Logs
+      description: |
+        Either or both, if they exist:
+        - The desktop app's own log, `soundbox-desktop.log`, in the system temp directory (`%TEMP%` on Windows).
+        - The server log, `soundbox-<port>.log` in the data directory (`~/.mirli` unless you moved it).
+
+        Remove any token or API key you see, and tell us it was there.
+      render: text

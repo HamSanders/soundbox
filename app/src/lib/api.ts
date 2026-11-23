@@ -33,6 +33,62 @@ export interface ModelPrice {
   min_credits: number;
 }
 
+/**
+ * GET /api/capabilities: what this server lets its user do. The UI shows only
+ * what is allowed; the server refuses the rest with 403. On a desktop every
+ * flag is true; a sandboxed server (MIRLI_SANDBOXED=1) turns them all off.
+ */
+export interface Capabilities {
+  sandboxed: boolean;
+  /** Settings keys the server ignores on PATCH. */
+  settings_locked: string[];
+  filesystem: boolean;
+  reveal: boolean;
+  downloads: boolean;
+  local_models: boolean;
+  custom_endpoints: boolean;
+  updates: boolean;
+  gpu_status: boolean;
+  agent_connect: boolean;
+  skills_install: boolean;
+  logs: boolean;
+  setup_wizard: boolean;
+  /** Which path is in force: models on this computer ("full"), or only
+   *  models that run elsewhere ("simple"). See Settings → Setup. */
+  setup: SetupMode;
+  /** The server can't run models itself, so the setup is always "simple". */
+  setup_locked: boolean;
+}
+
+export type SetupMode = "full" | "simple";
+
+export type CapabilityKey = Exclude<keyof Capabilities, "sandboxed" | "settings_locked" | "setup" | "setup_locked">;
+
+export const DESKTOP_CAPABILITIES: Capabilities = {
+  sandboxed: false,
+  settings_locked: [],
+  filesystem: true,
+  reveal: true,
+  downloads: true,
+  local_models: true,
+  custom_endpoints: true,
+  updates: true,
+  gpu_status: true,
+  agent_connect: true,
+  skills_install: true,
+  logs: true,
+  setup_wizard: true,
+  setup: "full",
+  setup_locked: false,
+};
+
+/** What the UI assumes before the server has said, or when it can't be asked:
+ *  nothing that touches the host. Failing closed means a sandboxed server's
+ *  controls never flash on while the answer is on its way. */
+export const NO_CAPABILITIES: Capabilities = Object.fromEntries(
+  Object.entries(DESKTOP_CAPABILITIES).map(([k, v]) => [k, typeof v === "boolean" ? false : v]),
+) as unknown as Capabilities;
+
 /** `commercial` drives the licence badge colour on the Models screen. */
 export interface LicenseInfo {
   name: string;
@@ -150,6 +206,12 @@ export interface Model {
   provider?: ModelProvider;
   /** Mirli Cloud models only: what a render costs. */
   price?: ModelPrice | null;
+  /** Each render may cost the user money; never picked by default. Absent
+   *  from an older server: treat as false. */
+  metered?: boolean;
+  /** Has weights to download, load and delete. Absent from an older server:
+   *  treat as true for local models. */
+  downloadable?: boolean;
   /** Whether the engine that runs this model is installed. False with
    *  weights present is exactly the "needs_runtime" case. */
   installed_deps: boolean;
@@ -162,6 +224,10 @@ export interface Model {
   error?: string | null;
   /** Set alongside `error` when the adapter could not report its status. */
   failure?: Failure | null;
+  /** Why the last download of this model failed. The server keeps it across
+   *  restarts, and sends it only while the model is still not usable; a
+   *  download that succeeds, deleting the weights, or dismissing it clears it. */
+  download_failure?: DownloadFailure | null;
   /** Id of the in-flight download/install job for this model, from server
    *  job state rather than client memory — lets a row resume watching
    *  progress after a reload or remount (e.g. a tab switch) instead of
@@ -1188,6 +1254,12 @@ export interface Failure {
   detail: string;
 }
 
+/** A failed download as the server remembers it: the failure, and when. */
+export interface DownloadFailure extends Failure {
+  /** ISO 8601. */
+  at: string;
+}
+
 export interface Job {
   id: string;
   kind: JobKind;
@@ -1294,11 +1366,10 @@ export interface Settings {
   cloud_signed_in?: boolean;
   cloud_max_credits_per_call?: number;
   cloud_max_credits_per_day?: number;
-  /** "cloud": the simple setup for people without a usable GPU. */
-  run_mode?: RunMode;
+  /** Absent from an older server, which only had the full setup. */
+  setup?: SetupMode;
+  setup_include_local?: boolean;
 }
-
-export type RunMode = "local" | "cloud";
 
 /** GET /api/cloud. See Settings → Mirli Cloud. */
 export type CloudSignIn =
@@ -1377,7 +1448,8 @@ export interface SettingsPatch {
   update_check?: boolean;
   cloud_max_credits_per_call?: number;
   cloud_max_credits_per_day?: number;
-  run_mode?: RunMode;
+  setup?: SetupMode;
+  setup_include_local?: boolean;
 }
 
 /**
@@ -1668,6 +1740,8 @@ export interface MirliApi {
   loadModel(id: string): Promise<Model>;
   unloadModel(id: string): Promise<Model>;
   deleteModelWeights(id: string): Promise<void>;
+  /** Dismiss the remembered failure of a model's last download. */
+  clearModelDownloadFailure(id: string): Promise<void>;
   generate(req: GenerateRequest): Promise<JobRef>;
   listJobs(limit?: number): Promise<Job[]>;
   getJob(id: string): Promise<Job>;
@@ -1812,6 +1886,8 @@ export interface MirliApi {
    *  pickers. Omit `path` to start at the server user's home directory. */
   browseDirectories(path?: string | null): Promise<DirectoryListing>;
   getSettings(): Promise<Settings>;
+  /** What this server lets its user do. See `Capabilities`. */
+  getCapabilities(): Promise<Capabilities>;
   updateSettings(patch: SettingsPatch): Promise<Settings>;
   getUpdateStatus(): Promise<UpdateStatus>;
   /** Ask now, whatever the once-a-day throttle says. A no-op when the check is off. */
@@ -1999,6 +2075,11 @@ export const httpApi: MirliApi = {
 
   deleteModelWeights: (id) =>
     request<void>(`/api/models/${encodeURIComponent(id)}/weights`, {
+      method: "DELETE",
+    }),
+
+  clearModelDownloadFailure: (id) =>
+    request<void>(`/api/models/${encodeURIComponent(id)}/download-failure`, {
       method: "DELETE",
     }),
 
@@ -2404,6 +2485,13 @@ export const httpApi: MirliApi = {
     ),
 
   getSettings: () => request<Settings>("/api/settings"),
+
+  // A server from before capabilities existed allows everything.
+  getCapabilities: () =>
+    request<Capabilities>("/api/capabilities").catch((e: unknown) => {
+      if (e instanceof ApiError && e.status === 404) return DESKTOP_CAPABILITIES;
+      throw e;
+    }),
 
   updateSettings: (patch) =>
     request<Settings>("/api/settings", {

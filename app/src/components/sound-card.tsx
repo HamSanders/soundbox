@@ -63,7 +63,6 @@ import { LicenseChip } from "@/components/license-badge";
 import {
   useStories,
   useDeleteSound,
-  useHosted,
   useModels,
   useProjects,
   useRevealSound,
@@ -71,6 +70,7 @@ import {
   useStoryFromSound,
   useSettings,
   useUpdateSound,
+  useCan,
 } from "@/lib/queries";
 import { api } from "@/lib/api";
 import { usePlayerStore } from "@/lib/player-store";
@@ -133,8 +133,7 @@ export function SoundCard({
   const update = useUpdateSound();
   const remove = useDeleteSound();
   const reveal = useRevealSound();
-  // Mirli on the web: the file is on a server; Download is how you get it.
-  const hosted = useHosted();
+  const can = useCan();
   const { data: settings } = useSettings();
   const [downloading, setDownloading] = useState(false);
   const { data: projects } = useProjects();
@@ -562,7 +561,7 @@ export function SoundCard({
                 <DownloadIcon />
                 Download
               </DropdownMenuItem>
-              {!hosted && (
+              {can.reveal && (
                 <DropdownMenuItem onClick={() => reveal.mutate(sound.id)}>
                   <FolderOpenIcon />
                   Open in Finder

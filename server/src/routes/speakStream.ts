@@ -121,7 +121,7 @@ export function registerSpeakStream(app: FastifyInstance, svc: MirliService): vo
 }
 
 /** CORS by hand, as `startSse` does: `hijack()` skips @fastify/cors. */
-function baseHeaders(request: FastifyRequest): Record<string, string> {
+export function baseHeaders(request: FastifyRequest): Record<string, string> {
   const headers: Record<string, string> = {};
   const origin = request.headers.origin;
   if (origin && isAllowedOrigin(origin, request.headers.host)) {

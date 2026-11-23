@@ -212,7 +212,8 @@ async function signedIn() {
   const cloud = new CloudService(config, models, gw.fetchImpl, true);
   await cloud.refresh();
   config.updateSettings({ cloud_token: gw.g.token });
-  await models.setCloudModels([SFX], cloud);
+  cloud.source.set([SFX], cloud);
+  await models.refreshSource(cloud.source);
   return { ...gw, cloud };
 }
 
@@ -358,7 +359,7 @@ describe("Mirli Cloud models", () => {
     const gw = fakeGateway();
     const cloud = new CloudService(config, models, gw.fetchImpl, true);
     await cloud.refresh();
-    const spy = vi.spyOn(models, "setCloudModels");
+    const spy = vi.spyOn(models, "refreshSource");
     await cloud.refreshIfStale(0);
     expect(gw.g.modelReads).toBe(2);
     expect(spy).not.toHaveBeenCalled();

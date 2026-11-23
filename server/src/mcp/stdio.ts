@@ -253,10 +253,10 @@ export function build(): McpServer {
           }
           if (model === undefined || model === null) {
             const models = await request("GET", "/api/models");
-            // Never a Mirli Cloud model by default: those cost credits.
+            // Never a metered model by default: those cost the user money.
             const ready = models.filter(
-              (e: { status: string; provider?: string }) =>
-                e.provider !== "cloud" && (e.status === "installed" || e.status === "loaded"),
+              (e: { status: string; metered?: boolean }) =>
+                !e.metered && (e.status === "installed" || e.status === "loaded"),
             );
             if (!ready.length) {
               throw new Error(

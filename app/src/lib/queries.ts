@@ -14,7 +14,9 @@ import { forgetStoryDevices } from "@/hooks/use-track-devices";
 import { followPlacement } from "@/lib/reading-order";
 import {
   api,
+  NO_CAPABILITIES,
   errorMessage,
+  type Capabilities,
   type AssistantChatRequest,
   type AssistantChatResponse,
   type AssistantOpenersRequest,
@@ -95,6 +97,7 @@ export const qk = {
   tracks: (storyId: string) => ["story", storyId, "tracks"] as const,
   voices: ["voices"] as const,
   settings: ["settings"] as const,
+  capabilities: ["capabilities"] as const,
   fsDirs: (path: string | null) => ["fs-dirs", path] as const,
   profiles: ["profiles"] as const,
   llmStatus: ["llm-status"] as const,
@@ -563,6 +566,31 @@ export function useTags(): UseQueryResult<TagCount[]> {
   return useQuery({ queryKey: qk.tags, queryFn: () => api.listTags() });
 }
 
+/** What this server allows. Fixed for the server's lifetime, so fetched once.
+ *  The shell waits for it (see App.tsx), so `useCan()` below never guesses. */
+export function useCapabilities(): UseQueryResult<Capabilities> {
+  return useQuery({
+    queryKey: qk.capabilities,
+    queryFn: () => api.getCapabilities(),
+    staleTime: Infinity,
+    // The shell waits on this, so give up fast and say so (App.tsx) rather
+    // than hold a blank window through the default three slow retries.
+    retry: 1,
+    retryDelay: 500,
+  });
+}
+
+/**
+ * The capabilities, for gating UI: `const can = useCan(); can.reveal && …`.
+ *
+ * Fails closed: until the server has answered, and if it never does, nothing
+ * that touches the host is offered. (An older server without the route
+ * answers 404, which `getCapabilities` turns into the desktop defaults.)
+ */
+export function useCan(): Capabilities {
+  return useCapabilities().data ?? NO_CAPABILITIES;
+}
+
 export function useSettings(): UseQueryResult<Settings> {
   return useQuery({ queryKey: qk.settings, queryFn: () => api.getSettings() });
 }
@@ -708,7 +736,12 @@ export function useModelAction() {
     },
   });
 
-  return { download, load, unload, remove };
+  const dismissFailure = useMutation({
+    mutationFn: (id: string) => api.clearModelDownloadFailure(id),
+    onSuccess: invalidate,
+  });
+
+  return { download, load, unload, remove, dismissFailure };
 }
 
 export function useUpdateSound() {
@@ -1374,15 +1407,24 @@ export function useActivateProfile() {
   });
 }
 
+/** After a settings save: the setup decides capabilities and which models list. */
+export function afterSettingsSaved(qc: ReturnType<typeof useQueryClient>, patch: SettingsPatch): void {
+  void qc.invalidateQueries({ queryKey: qk.update });
+  if ("setup" in patch || "setup_include_local" in patch) {
+    void qc.invalidateQueries({ queryKey: qk.capabilities });
+    void qc.invalidateQueries({ queryKey: qk.models });
+  }
+}
+
 export function useUpdateSettings() {
   const qc = useQueryClient();
   return useMutation<Settings, Error, SettingsPatch>({
     mutationFn: (patch) => api.updateSettings(patch),
     onError: fail("Could not save settings"),
-    onSuccess: (next) => {
+    onSuccess: (next, patch) => {
       qc.setQueryData(qk.settings, next);
       // Turning the check on or off changes what the update row may show.
-      void qc.invalidateQueries({ queryKey: qk.update });
+      afterSettingsSaved(qc, patch);
       toast.success("Settings saved");
     },
   });

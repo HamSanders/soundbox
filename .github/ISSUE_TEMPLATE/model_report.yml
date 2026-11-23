@@ -1,0 +1,52 @@
+name: Model report
+description: Propose a model, or report one that sounds wrong, fails, or is described wrongly
+title: "[Model] "
+labels: ["model"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What is this about
+      options:
+        - A new open-weight model to add
+        - A supported model that fails or sounds wrong
+        - A wrong licence, size or other detail on a model
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model
+      description: Its name, and a link to the Hugging Face repo or the official GitHub.
+    validations:
+      required: true
+  - type: textarea
+    id: licence
+    attributes:
+      label: Licence of the weights
+      description: |
+        The licence on the **weights**, which often differs from the code's. Does it permit commercial use? Is the repo gated on Hugging Face? Link the page where you read it.
+
+        A model whose licence can't be determined is still welcome. It goes in as non-commercial until someone reads the terms, and non-commercial models are labelled as such in the app.
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: |
+        For a new model: parameter count, sample rate, channels, maximum duration, approximate VRAM, and what it does better than the models already supported. "It sounds noticeably better for impacts" is useful.
+
+        For a model that misbehaves: the prompt and settings, what you heard or the error shown on the Models screen, and your hardware.
+    validations:
+      required: true
+  - type: textarea
+    id: audiocpp
+    attributes:
+      label: audio.cpp support
+      description: |
+        Mirli runs every model through [audio.cpp](https://github.com/0xShug0/audio.cpp). For a new model: is there an audio.cpp loader family and a GGUF conversion? Link them if so. This is the part that becomes the catalog entry.
+  - type: input
+    id: version
+    attributes:
+      label: Mirli version
+      description: For a report about a model that is already supported.
+      placeholder: "0.6.2"

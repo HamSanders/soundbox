@@ -22,7 +22,7 @@
  * motion, where the wave is drawn once and holds still.
  */
 
-import { ArrowDownIcon, ArrowUpRightIcon, StarIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpRightIcon, CloudIcon, StarIcon } from "lucide-react";
 import {
   useEffect,
   useRef,
@@ -44,7 +44,7 @@ import {
   type Release,
   type ReleaseAsset,
 } from "@/lib/installers";
-import { REPO_URL } from "@/lib/marketing-links";
+import { cloudWaitlistHref, REPO_URL } from "@/lib/marketing-links";
 import { cn } from "@/lib/utils";
 
 interface Repo {
@@ -548,6 +548,13 @@ export function DownloadPage() {
             >
               every platform
             </a>
+            {" · "}
+            <a
+              href={cloudWaitlistHref("download-hero")}
+              className="hover:text-foreground underline underline-offset-4"
+            >
+              no GPU? Mirli Cloud
+            </a>
           </p>
         </div>
 
@@ -673,6 +680,34 @@ export function DownloadPage() {
             </a>
             .
           </p>
+
+          {/* No GPU, or too small a one: the hosted version, while it takes a waitlist. */}
+          <Lit className="border-border mt-10 border p-6 sm:p-7">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="max-w-xl">
+                <p className="label-caps text-muted-foreground flex items-center gap-2">
+                  <CloudIcon className="size-3.5" aria-hidden="true" />
+                  Mirli Cloud <span aria-hidden="true">/</span> Coming soon
+                </p>
+                <h3 className="font-display mt-3 text-4xl leading-[0.9] font-extrabold uppercase sm:text-5xl">
+                  No graphics card?
+                </h3>
+                <p className="text-muted-foreground mt-3 leading-relaxed">
+                  Mirli Cloud runs the models for you, from your browser or
+                  the app, and you pay only for what you make. Join the waitlist
+                  and we'll email you once, when it opens.
+                </p>
+              </div>
+              <ButtonLink
+                href={cloudWaitlistHref("download")}
+                solid
+                className="h-12 w-full shrink-0 px-7 text-base sm:w-auto"
+              >
+                Join the waitlist
+                <ArrowUpRightIcon className="size-4" aria-hidden="true" />
+              </ButtonLink>
+            </div>
+          </Lit>
         </div>
       </section>
 

@@ -7,6 +7,8 @@
  * the words you see, and `#/settings?s=<id>` deep-links to it.
  */
 
+import type { Capabilities, CapabilityKey } from "@/lib/api";
+
 export interface SettingsGroupMeta {
   id: string;
   title: string;
@@ -51,6 +53,11 @@ export const SETTINGS_GROUPS: SettingsGroupMeta[] = [
     description: "Optional helper models. Both are off by default.",
   },
   {
+    id: "setup",
+    title: "Setup",
+    description: "Where sounds are made: with models on this computer, or only with models that run elsewhere.",
+  },
+  {
     id: "storage",
     title: "Storage",
     description: "Where sounds, weights and the index live on disk.",
@@ -83,13 +90,6 @@ export const SETTINGS: SettingMeta[] = [
     keywords: ["cloud", "credits", "balance", "buy", "sign in", "login", "account", "gpu", "hosted"],
   },
   {
-    id: "run-mode",
-    group: "cloud",
-    label: "Simple setup",
-    description: "Lead with Mirli Cloud and hide the settings for running models on this computer.",
-    keywords: ["cloud", "simple", "mode", "local", "gpu", "advanced", "hide"],
-  },
-  {
     id: "cloud-cap-call",
     group: "cloud",
     label: "Limit per render",
@@ -102,6 +102,22 @@ export const SETTINGS: SettingMeta[] = [
     label: "Limit per day",
     description: "The most credits all renders may cost in a day, across your devices.",
     keywords: ["cloud", "cap", "credits", "spend", "budget", "daily"],
+  },
+  // Setup
+  {
+    id: "setup-simple",
+    group: "setup",
+    label: "Simple setup",
+    description:
+      "Only models that run elsewhere: Mirli Cloud, a server you run or a hosted API. Nothing to download, and the settings for running models here are hidden.",
+    keywords: ["simple", "full", "local", "gpu", "remote", "download", "mode", "setup"],
+  },
+  {
+    id: "setup-include-local",
+    group: "setup",
+    label: "Also use models on this computer",
+    description: "In the simple setup, offer the models already installed here too.",
+    keywords: ["local", "installed", "simple", "mix"],
   },
   // Sound & files
   {
@@ -224,6 +240,21 @@ export const SETTINGS: SettingMeta[] = [
       "Off: on studio, Music and Voice Lab pages the navigation folds to an icon rail so the timeline gets the width.",
     keywords: ["navigation", "rail", "collapse", "layout"],
   },
+  {
+    id: "background",
+    group: "interface",
+    label: "Background",
+    description:
+      "What moves behind the panels. Smoke drifts in from a corner and your pointer blows it away; Liquid is warm colour you can stir; Gradient is a quiet wash of the accent from the corners; Pixel is a grid of soft lights that shows the spectrum of what is playing. None keeps the plain ground.",
+    keywords: ["ambient", "animation", "smoke", "liquid", "gradient", "pixel", "none", "visualizer", "motion", "wallpaper"],
+  },
+  {
+    id: "background-reactive",
+    group: "interface",
+    label: "Reactive background",
+    description: "The pointer pushes the background and whatever is playing moves it. Off, it just drifts on its own.",
+    keywords: ["ambient", "visualizer", "audio", "reactive", "music", "mouse", "pointer", "cursor"],
+  },
   // Updates & telemetry
   {
     id: "update-check",
@@ -258,6 +289,43 @@ export const SETTINGS: SettingMeta[] = [
 ];
 
 const BY_ID = new Map(SETTINGS.map((s) => [s.id, s]));
+
+/**
+ * The capability a setting needs (see `Capabilities`). A server that turns it
+ * off neither shows the row nor finds it in search; rows not listed are
+ * always there.
+ */
+const NEEDS: Record<string, CapabilityKey> = {
+  device: "local_models",
+  "auto-unload": "local_models",
+  "audiocpp-mode": "downloads",
+  // Where weights go: only meaningful where models are downloaded.
+  "models-dir": "downloads",
+  endpoints: "custom_endpoints",
+  "hf-token": "downloads",
+  "llm-mode": "downloads",
+  artwork: "downloads",
+  "data-dir": "filesystem",
+  "sounds-dir": "filesystem",
+  "weights-dir": "downloads",
+  "update-check": "updates",
+  // The server sends traces to a URL you give it: the same trust as an endpoint.
+  "otel-endpoint": "custom_endpoints",
+  "clear-hf-token": "downloads",
+  "rerun-setup": "setup_wizard",
+};
+
+/** Rows that depend on the setup rather than on a single capability. */
+const WHEN: Record<string, (can: Capabilities) => boolean> = {
+  "setup-simple": (can) => !can.setup_locked,
+  "setup-include-local": (can) => can.setup === "simple" && !can.setup_locked,
+};
+
+export function settingAllowed(id: string, can: Capabilities): boolean {
+  const need = NEEDS[id];
+  const when = WHEN[id];
+  return (!need || can[need]) && (!when || when(can));
+}
 
 export function settingMeta(id: string): SettingMeta {
   const meta = BY_ID.get(id);

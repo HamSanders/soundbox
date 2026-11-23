@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCreateProfile, useDeleteProfile, useHosted, useRenameProfile } from "@/lib/queries";
+import { useCan, useCreateProfile, useDeleteProfile, useHosted, useRenameProfile } from "@/lib/queries";
 import type { Profile } from "@/lib/api";
 
 /** Kept out of the dropdown itself — a menu that switches profile on click
@@ -40,6 +40,7 @@ export function ProfileManagerDialog({
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const create = useCreateProfile();
+  const can = useCan();
   const rename = useRenameProfile();
   const remove = useDeleteProfile();
   // Mirli on the web: the folder is on a server the person never sees.
@@ -98,7 +99,7 @@ export function ProfileManagerDialog({
                   </div>
                   {/* The folder is the profile, so it is worth showing: it is
                       what you back up, and what you point a second tool at. */}
-                  {!hosted && (
+                  {can.filesystem && (
                     <div className="text-muted-foreground truncate font-mono text-[11px]">
                       {profile.data_dir}
                     </div>
@@ -124,6 +125,9 @@ export function ProfileManagerDialog({
                 // open one has a live database attached. Both are refused
                 // server-side too; this only saves the round trip.
                 disabled={profile.id === "default" || profile.active}
+                // Each profile is a folder on the server: removing one is the
+                // server's to allow.
+                hidden={!can.filesystem}
                 onClick={() => {
                   if (hosted) {
                     // A folder left behind on the server would be unreachable, so it goes too.
@@ -146,26 +150,28 @@ export function ProfileManagerDialog({
           ))}
         </ul>
 
-        <DialogFooter className="sm:justify-start">
-          <div className="flex w-full items-end gap-2">
-            <div className="flex-1 space-y-1.5">
-              <Label htmlFor="new-profile">New profile</Label>
-              <Input
-                id="new-profile"
-                value={name}
-                placeholder="Demo"
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") submitNew();
-                }}
-              />
+        {can.filesystem && (
+          <DialogFooter className="sm:justify-start">
+            <div className="flex w-full items-end gap-2">
+              <div className="flex-1 space-y-1.5">
+                <Label htmlFor="new-profile">New profile</Label>
+                <Input
+                  id="new-profile"
+                  value={name}
+                  placeholder="Demo"
+                  onChange={(e) => setName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") submitNew();
+                  }}
+                />
+              </div>
+              <Button onClick={submitNew} disabled={!name.trim() || create.isPending}>
+                <Plus className="size-4" />
+                Create
+              </Button>
             </div>
-            <Button onClick={submitNew} disabled={!name.trim() || create.isPending}>
-              <Plus className="size-4" />
-              Create
-            </Button>
-          </div>
-        </DialogFooter>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

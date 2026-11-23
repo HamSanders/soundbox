@@ -92,30 +92,21 @@ export function SettingsPage() {
     );
   }
 
-  // Simple setup (and always on the web): nothing about running models here.
-  const cloudOnly = Boolean(cloud?.hosted || (cloud?.enabled && settings.run_mode === "cloud"));
-
+  // The server's capabilities hide what a sandboxed or simple setup can't use
+  // (settings-index.ts). On the web, Privacy and Danger go too: updates and
+  // the setup wizard belong to the server, not the person.
   return (
     <SettingsLayout
-      hiddenGroups={[
-        ...(cloud?.enabled ? [] : ["cloud"]),
-        ...(cloudOnly ? ["performance", "models", "helpers"] : []),
-        // On the web, folders and updates belong to the server, not the person.
-        // Nor the token and setup wizard in Danger: there is no download or setup there.
-        ...(cloud?.hosted ? ["storage", "privacy", "danger"] : []),
-      ]}
+      hiddenGroups={[...(cloud?.enabled ? [] : ["cloud"]), ...(cloud?.hosted ? ["privacy", "danger"] : [])]}
     >
       <div className="space-y-8">
         <SoundGroup settings={settings} />
         {cloud?.enabled && <CloudGroup settings={settings} status={cloud} />}
-        {!cloudOnly && (
-          <>
-            <PerformanceGroup settings={settings} />
-            <ModelsGroup settings={settings} />
-          </>
-        )}
-        {!cloudOnly && <HelpersGroup settings={settings} />}
-        {!cloud?.hosted && <StorageGroup settings={settings} />}
+        <PerformanceGroup settings={settings} />
+        <ModelsGroup settings={settings} />
+        <HelpersGroup settings={settings} />
+        <SetupGroup settings={settings} />
+        <StorageGroup settings={settings} />
         <InterfaceGroup />
         {!cloud?.hosted && <PrivacyGroup settings={settings} />}
         {!cloud?.hosted && <DangerGroup settings={settings} />}
@@ -350,19 +341,6 @@ function CloudGroup({ settings, status }: { settings: Settings; status: CloudSta
       <SettingRow id="cloud-account" stack>
         <CloudAccountPanel status={status} />
       </SettingRow>
-      {!status.hosted && (
-      <SettingRow
-        id="run-mode"
-        htmlFor="run-mode"
-        control={
-          <Switch
-            id="run-mode"
-            checked={settings.run_mode === "cloud"}
-            onCheckedChange={(on) => save("run-mode", { run_mode: on ? "cloud" : "local" })}
-          />
-        }
-      />
-      )}
       <SettingRow
         id="cloud-cap-call"
         htmlFor="cloud-cap-call"
@@ -804,11 +782,21 @@ function StorageGroup({ settings }: { settings: Settings }) {
 
 function InterfaceGroup() {
   const keep = useUiPrefs((s) => s.sidebarKeepExpanded);
+  const background = useUiPrefs((s) => s.background);
+  const backgroundReactive = useUiPrefs((s) => s.backgroundReactive);
   const set = useUiPrefs((s) => s.set);
   const markSaved = useMarkSaved();
   const change = (on: boolean) => {
     set({ sidebarKeepExpanded: on });
     markSaved("sidebar-keep");
+  };
+  const changeBackground = (v: typeof background) => {
+    set({ background: v });
+    markSaved("background");
+  };
+  const changeBackgroundReactive = (on: boolean) => {
+    set({ backgroundReactive: on });
+    markSaved("background-reactive");
   };
   return (
     <SettingsGroup id="interface">
@@ -819,11 +807,75 @@ function InterfaceGroup() {
         onReset={() => change(false)}
         control={<Switch id="sidebar-keep" checked={keep} onCheckedChange={change} />}
       />
+      <SettingRow
+        id="background"
+        htmlFor="background"
+        modified={background !== "smoke"}
+        onReset={() => changeBackground("smoke")}
+        control={
+          <Select value={background} onValueChange={(v) => changeBackground(v as typeof background)}>
+            <SelectTrigger id="background" className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="smoke">Smoke</SelectItem>
+              <SelectItem value="liquid">Liquid</SelectItem>
+              <SelectItem value="gradient">Gradient</SelectItem>
+              <SelectItem value="pixel">Pixel</SelectItem>
+              <SelectItem value="none">None</SelectItem>
+            </SelectContent>
+          </Select>
+        }
+      />
+      <SettingRow
+        id="background-reactive"
+        htmlFor="background-reactive"
+        modified={!backgroundReactive}
+        onReset={() => changeBackgroundReactive(true)}
+        control={
+          <Switch
+            id="background-reactive"
+            checked={backgroundReactive}
+            disabled={background === "none"}
+            onCheckedChange={changeBackgroundReactive}
+          />
+        }
+      />
     </SettingsGroup>
   );
 }
 
 // ------------------------------------------------------------- privacy
+
+function SetupGroup({ settings }: { settings: Settings }) {
+  const { save } = useSettingSave();
+  return (
+    <SettingsGroup id="setup">
+      <SettingRow
+        id="setup-simple"
+        htmlFor="setup-simple"
+        control={
+          <Switch
+            id="setup-simple"
+            checked={settings.setup === "simple"}
+            onCheckedChange={(on) => save("setup-simple", { setup: on ? "simple" : "full" })}
+          />
+        }
+      />
+      <SettingRow
+        id="setup-include-local"
+        htmlFor="setup-include-local"
+        control={
+          <Switch
+            id="setup-include-local"
+            checked={settings.setup_include_local ?? false}
+            onCheckedChange={(on) => save("setup-include-local", { setup_include_local: on })}
+          />
+        }
+      />
+    </SettingsGroup>
+  );
+}
 
 function PrivacyGroup({ settings }: { settings: Settings }) {
   const { save } = useSettingSave();

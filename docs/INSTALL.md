@@ -154,6 +154,39 @@ path, and enabling one adds it to the picker immediately.
 Every model shows its licence before you download it. Some licences allow
 open use of the weights but forbid selling what the model makes.
 
+### When a download is interrupted
+
+Models are large, and a download that stops partway is picked up rather than
+started again. This is what Mirli's own downloader does (the prompt assistant,
+the artwork models, the engines, and audio models when the audio.cpp runtime
+has no package manager of its own; when it has one, audio.cpp does the
+transfer and Mirli reports its progress):
+
+- **Before it starts**, Mirli compares what is still to download, plus 2 GB to
+  keep free, with the free space on the drive that holds the models folder.
+  If it will not fit, nothing is downloaded and the message names the three
+  sizes and the folder. Engines and sampled instruments are checked without
+  the 2 GB margin.
+- **While it runs**, the bytes go to `<file>.part`, with a small
+  `<file>.part.meta` beside it that records which version of the file they
+  came from. The progress line shows the transfer rate and the time left.
+- **If the connection drops, stalls, or the server answers 429 or a 5xx**, the
+  download waits and tries again, up to five tries, with a longer wait each
+  time. A `Retry-After` from the server is followed when it asks for a minute
+  or less. A 401, 403 or 404 is not retried: see Step 3.
+- **Each new try continues from the `.part`** with an HTTP `Range` request.
+  If the file changed upstream in the meantime, or the server cannot continue
+  it, the download starts again from the beginning. A finished file is
+  checked for size, and against its SHA-256 where the source publishes one,
+  before it is renamed into place.
+- **If every try fails**, the `.part` is kept. The model shows as
+  **Incomplete** on the Models page with the reason, and **Repair** continues
+  from where it stopped, including after a restart of Mirli. The reason is
+  kept in `models/download-failures.json` until a download succeeds, the
+  weights are deleted or you dismiss it.
+- **Cancelling** a download, a full disk, or a file of the wrong size or
+  checksum removes the `.part`, so nothing half-written is left behind.
+
 ## Step 3: gated models
 
 The audio models come from audio.cpp's GGUF repo (`audio-cpp/audio.cpp-gguf`),
@@ -243,6 +276,17 @@ docker run -d --name soundbox -p 127.0.0.1:17494:17494 \
 or build it yourself with `docker build -t soundbox .` and run `soundbox` in
 place of the image name.
 
+**Without local models.** `Dockerfile.slim` builds the server and web UI
+without audio.cpp, for a machine that generates only through custom endpoints
+(see [ENDPOINTS.md](./ENDPOINTS.md)) or other remote models. It needs no GPU
+and is a fraction of the size. The image sets `MIRLI_DISABLE=local_models`, so
+the Models page doesn't offer models it can't run:
+
+```bash
+docker build -f Dockerfile.slim -t mirli-slim .
+docker run -d -p 127.0.0.1:17494:17494 -v mirli-data:/data mirli-slim
+```
+
 **No authentication unless you set a token.** By default the server has no
 login of any kind. Anyone who can reach the port can generate audio, read and
 delete your library, change settings (including the stored Hugging Face token)
@@ -299,7 +343,7 @@ or `-e MIRLI_API_TOKEN=...` for Docker. The token must be at least 16
 characters; a shorter one stops the server at startup. The banner shows
 `Access token -> required` when one is in force.
 
-With a token set, every request to `/api/*`, `/mcp`, `/files/*` and
+With a token set, every request to `/api/*`, `/v1/*`, `/mcp`, `/files/*` and
 `/artwork/*` needs it, or the server answers **401**:
 
 - **The web UI** shows a sign-in screen. Paste the token once and the browser
@@ -490,6 +534,15 @@ the cache is partial. Click Download again; it resumes. (Mirli writes a
 completion marker at the end of a download and does not mark a model
 installed without it, so this should be rare.)
 
+**A model says Incomplete.** A download stopped before every file arrived.
+The Models page shows why. Click **Repair**: it downloads only what is
+missing and continues a half-fetched file. See "When a download is
+interrupted" under Step 2.
+
+**"Not enough disk space".** The message gives the size still to download,
+the 2 GB kept free, the free space, and the folder. Free space on that drive,
+or move the models folder (Settings → Storage) to a larger one.
+
 **CUDA out of memory.** Only one model is resident at a time, but a long clip
 can still exhaust a small card. Shorten the clip, or unload the model.
 
@@ -504,6 +557,25 @@ port), or the MCP endpoint's DNS-rebinding check answers 403.
 **403 "Forbidden host" through a reverse proxy.** The proxy forwards a `Host`
 the server does not know. List it in `MIRLI_ALLOWED_HOSTS`; see
 [Reverse proxy or another machine](#reverse-proxy-or-another-machine).
+
+## Running Mirli for someone else
+
+When the people using Mirli don't own the machine it runs on (a shared
+server, a NAS, a container behind a proxy that signs them in), set
+`MIRLI_SANDBOXED=1` as well as `MIRLI_API_TOKEN`. The UI then offers nothing
+that touches the host, and the server refuses it with **403** if asked anyway:
+
+- folder browsing, folder settings, "Show in folder", and making or removing
+  profiles
+- model, engine and sample downloads, and models run on this machine
+- custom endpoints, so the server never fetches a URL a page hands it
+- the update check, the GPU readout, the server log and installing agent skills
+- first-run setup
+
+Settings that name a path, a device, an engine or a URL are locked. Generation still
+works through whatever model sources the server has. To turn off only some of
+these, list them in `MIRLI_DISABLE` instead, e.g. `MIRLI_DISABLE=reveal,updates`;
+the names are the flags `GET /api/capabilities` reports.
 
 ## Environment variables
 
@@ -527,9 +599,12 @@ name, as the table shows.
 | `MIRLI_LLAMA_SERVER_BACKEND` | server | Same, for the `llama-server` download. |
 | `MIRLI_SD_SERVER_BACKEND` | server | Same, for the `sd-server` download. |
 | `MIRLI_ALLOW_UNVERIFIED_BINARIES` | server | `1` installs an engine archive that no published SHA-256 covers. Off by default; a checksum *mismatch* is refused regardless. |
-| `MIRLI_API_TOKEN` | server, stdio MCP bridge, CLI | An access token of at least 16 characters. Set on the server, every `/api/*`, `/mcp`, `/files` and `/artwork` request needs it as `Authorization: Bearer <token>` or a session cookie from the UI's sign-in screen; `GET /api/health` stays open. Set for the stdio bridge, `soundbox ps` or `soundbox enhance`, it is sent to the server. See [Access token](#access-token). |
+| `MIRLI_API_TOKEN` | server, stdio MCP bridge, CLI | An access token of at least 16 characters. Set on the server, every `/api/*`, `/v1/*`, `/mcp`, `/files` and `/artwork` request needs it as `Authorization: Bearer <token>` or a session cookie from the UI's sign-in screen; `GET /api/health` stays open. Set for the stdio bridge, `soundbox ps` or `soundbox enhance`, it is sent to the server. See [Access token](#access-token). |
 | `MIRLI_ALLOWED_HOSTS` | server, Vite | Comma-separated `host` (any port) or `host:port` (that port only). Adds `Host` values the server accepts (UI, `/api/*` and `/mcp`) and trusted browser origins (CORS and the MCP `Origin` check); under `npm run dev` also Vite's `server.allowedHosts`, which reads it only as `SOUNDBOX_ALLOWED_HOSTS`. See [Reverse proxy or another machine](#reverse-proxy-or-another-machine) and [SECURITY.md](https://github.com/HamSanders/soundbox/blob/main/SECURITY.md). |
 | `SOUNDBOX_DEV_HOST` | `npm run dev`, Vite | Address the Vite dev server listens on (`0.0.0.0`, a LAN IP). Default localhost. The server stays on `127.0.0.1`. No authentication, so open it up only on a network you trust or behind a proxy that has some. |
+| `MIRLI_SANDBOXED` | server | `1` for a server whose users don't own the machine: nothing in the UI touches the host. See [Running Mirli for someone else](#running-mirli-for-someone-else). |
+| `MIRLI_DISABLE` | server | Comma-separated capabilities to turn off (`filesystem`, `reveal`, `downloads`, `local_models`, `custom_endpoints`, `updates`, `gpu_status`, `agent_connect`, `skills_install`, `logs`, `setup_wizard`). Turning off `custom_endpoints` also locks the prompt assistant's and artwork's external URLs and the OpenTelemetry endpoint. |
+| `MIRLI_IDLE_EXIT_MINUTES` | server | Exit (status 0) after this many minutes with no requests, none still being answered, and no queued or running jobs, for hosts that scale to zero and start the server again on the next request. Health checks don't count as use. Off by default. |
 | `MIRLI_UPDATE_CHECK` | server | `0` (or `false`, `off`, `no`) turns off the daily "is there a newer version?" request, whatever Settings says; Settings shows the switch as locked. `npm run dev` sets it to `0`. See [PRIVACY.md](./PRIVACY.md). |
 | `MIRLI_UPDATE_URL` | server | Where the update check asks. Default `https://mirli.app/api/update`. |
 | `MIRLI_LOG_LEVEL` | server | `debug`, `info` (default), `warning`, `error` or `critical`; `warn` works too. Used when `--log-level` isn't given, so it reaches `npm run dev`, Docker and the desktop app, none of which pass the flag. The startup banner shows the level in force; an unknown value logs a warning and runs at `info`. At `debug`, every request to the prompt assistant, artwork and custom endpoints is logged with its full URL, HTTP status and timing. Custom endpoints also log the body's field names. Keys, headers, prompts and lyrics are never logged. For the desktop app, set it as a user environment variable (Windows) or with `launchctl setenv` (macOS), then restart the app. |
@@ -542,6 +617,7 @@ name, as the table shows.
 | `SOUNDBOX_NODE` | desktop shell | Node interpreter to run the built server with, if `node` is not on `PATH`. |
 | `SOUNDBOX_PROJECT_ROOT` | desktop shell | Path to the checkout, if the shell cannot find it from its own location. |
 | `VITE_MOCK` | app build | `1` runs the UI against the in-browser fake backend (`npm run dev:mock` sets it). |
+| `VITE_MOCK_FIXTURE` | app build | With `VITE_MOCK=1`, `demo` starts the fake backend from the demo library the screenshots are taken from (`npm run capture:media` sets it). |
 | `VITE_REPO_URL` | app build | Repository URL used in the app's links. Default `https://github.com/HamSanders/soundbox`. |
 | `VITE_SITE_ORIGIN` | app and site builds | Absolute origin for canonical URLs and the site's RSS feed. |
 

@@ -219,6 +219,14 @@ export interface ModelInfo {
   provider: ModelProvider;
   /** Mirli Cloud models only: the price, for "≈ 15 credits" by Generate. */
   price?: ModelPrice | null;
+  /**
+   * Each render may cost the user money (a paid API used with their key).
+   * Never picked by default, by the app or by MCP: only when chosen or named.
+   */
+  metered: boolean;
+  /** Has weights to fetch, load into memory and delete. False for anything
+   *  that runs somewhere else. */
+  downloadable: boolean;
   installed_deps: boolean;
   auto_installable: boolean;
   manual_install_reason?: string | null;
@@ -226,6 +234,12 @@ export interface ModelInfo {
   error?: string | null;
   /** Set alongside `error` when the adapter could not report its status. */
   failure?: Failure | null;
+  /**
+   * Why the last download of this model failed, kept across restarts until a
+   * download succeeds, the weights are deleted or it is dismissed. Only set
+   * while the model is still not usable (not installed, or incomplete).
+   */
+  download_failure?: DownloadFailure | null;
   active_job_id?: string | null;
   avg_duration_s?: number | null;
 }
@@ -378,6 +392,12 @@ export interface Failure {
   stage: string | null;
   /** Exactly what the runtime or server said. */
   detail: string;
+}
+
+/** A failed download as it is remembered: the failure, and when. */
+export interface DownloadFailure extends Failure {
+  /** ISO 8601. */
+  at: string;
 }
 
 export interface Job {
@@ -1304,7 +1324,8 @@ export const settingsPatchSchema = z.object({
   update_check: z.boolean().nullish(),
   cloud_max_credits_per_call: z.number().int().min(1).max(100_000).nullish(),
   cloud_max_credits_per_day: z.number().int().min(1).max(1_000_000).nullish(),
-  run_mode: z.enum(["local", "cloud"]).nullish(),
+  setup: z.enum(["full", "simple"]).nullish(),
+  setup_include_local: z.boolean().nullish(),
   // ISO timestamp when first-run setup was finished or skipped. "" clears it,
   // the `sounds_dir` convention — see `Config.updateSettings`.
   onboarded_at: z.string().nullish(),

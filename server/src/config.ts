@@ -138,13 +138,18 @@ export interface SettingsData {
   /** Mirli Cloud caps, enforced here before a request leaves the machine. */
   cloud_max_credits_per_call: number;
   cloud_max_credits_per_day: number;
-  /** "cloud" is the simple setup chosen at first run by people without a
-   *  usable GPU: the pickers lead with Mirli Cloud models and the app hides
-   *  the local-engine settings. "local" is everything, as before. */
-  run_mode: RunMode;
+  /**
+   * How this profile makes sounds. "full": models on this machine, plus any
+   * from elsewhere the user added. "simple": only models that run elsewhere;
+   * nothing to download, and the settings for running models here are hidden.
+   * Chosen at first run, switchable in Settings. See capabilities.ts.
+   */
+  setup: SetupMode;
+  /** In the simple setup, also offer the models already installed here. */
+  setup_include_local: boolean;
 }
 
-export type RunMode = "local" | "cloud";
+export type SetupMode = "full" | "simple";
 
 const DEFAULT_SETTINGS: SettingsData = {
   output_format: "wav",
@@ -176,7 +181,8 @@ const DEFAULT_SETTINGS: SettingsData = {
   cloud_token: null,
   cloud_max_credits_per_call: 50,
   cloud_max_credits_per_day: 300,
-  run_mode: "local",
+  setup: "full",
+  setup_include_local: false,
 };
 
 /** Every key a client is allowed to set, so an unknown field is ignored rather
@@ -217,7 +223,8 @@ export interface PublicSettings {
   cloud_signed_in: boolean;
   cloud_max_credits_per_call: number;
   cloud_max_credits_per_day: number;
-  run_mode: RunMode;
+  setup: SetupMode;
+  setup_include_local: boolean;
 }
 
 export class Settings {
@@ -250,7 +257,8 @@ export class Settings {
   cloud_token: string | null = DEFAULT_SETTINGS.cloud_token;
   cloud_max_credits_per_call: number = DEFAULT_SETTINGS.cloud_max_credits_per_call;
   cloud_max_credits_per_day: number = DEFAULT_SETTINGS.cloud_max_credits_per_day;
-  run_mode: RunMode = DEFAULT_SETTINGS.run_mode;
+  setup: SetupMode = DEFAULT_SETTINGS.setup;
+  setup_include_local: boolean = DEFAULT_SETTINGS.setup_include_local;
 
   constructor(data: Partial<SettingsData> = {}) {
     Object.assign(this, DEFAULT_SETTINGS, {
@@ -308,7 +316,8 @@ export class Settings {
       cloud_signed_in: Boolean(this.cloud_token) || process.env.MIRLI_HOSTED === "1",
       cloud_max_credits_per_call: this.cloud_max_credits_per_call,
       cloud_max_credits_per_day: this.cloud_max_credits_per_day,
-      run_mode: process.env.MIRLI_HOSTED === "1" ? "cloud" : this.run_mode,
+      setup: this.setup,
+      setup_include_local: this.setup_include_local,
     };
   }
 
@@ -377,7 +386,8 @@ export class Settings {
       cloud_token: this.cloud_token,
       cloud_max_credits_per_call: this.cloud_max_credits_per_call,
       cloud_max_credits_per_day: this.cloud_max_credits_per_day,
-      run_mode: this.run_mode,
+      setup: this.setup,
+      setup_include_local: this.setup_include_local,
     };
   }
 }

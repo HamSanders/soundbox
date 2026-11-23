@@ -6,21 +6,25 @@ import type { FastifyInstance } from "fastify";
 
 import type { SettingsData } from "../config.js";
 import { settingsPatchSchema } from "../schemas.js";
-import { HOSTED_LOCKED_SETTINGS, hostedMode } from "../hosted.js";
 import type { MirliService } from "../service.js";
 import { intQuery } from "./helpers.js";
 
 export function registerSettings(app: FastifyInstance, svc: MirliService): void {
   app.get("/api/settings", async () => svc.getSettings());
 
+  /** What this server lets its user do. See capabilities.ts. */
+  app.get("/api/capabilities", async () => svc.capabilities);
+
   app.patch("/api/settings", async (request) => {
     const parsed = settingsPatchSchema.parse(request.body ?? {});
     // `exclude_none=True` in the Python. The service keys its side effects off
     // `"x" in patch`, so an omitted field must not survive as an explicit null.
     const patch: Partial<SettingsData> = {};
-    const locked = hostedMode() ? HOSTED_LOCKED_SETTINGS : [];
+    const locked = svc.capabilities.settings_locked;
     for (const [key, value] of Object.entries(parsed)) {
       if (value === null || value === undefined) continue;
+      // Names something on a host the user doesn't own: ignored, not refused,
+      // so a client that sends every field still saves the rest.
       if (locked.includes(key)) continue;
       (patch as Record<string, unknown>)[key] = value;
     }

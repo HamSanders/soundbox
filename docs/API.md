@@ -25,8 +25,13 @@ drive the server, and a third when an access token is set:
   curl -X POST -H 'X-Soundbox: 1' http://127.0.0.1:17494/api/sessions
   ```
 
+  The [OpenAI-compatible routes](#openai-compatible-routes) under `/v1/` have
+  their own form of this rule, because their clients send no such header and
+  upload as `multipart/form-data`: a "simple" request is refused only when the
+  browser marks it as coming from another site.
+
 - **Access token.** When the server runs with `MIRLI_API_TOKEN`, every
-  `/api/*`, `/mcp`, `/files/*` and `/artwork/*` request needs
+  `/api/*`, `/v1/*`, `/mcp`, `/files/*` and `/artwork/*` request needs
   `Authorization: Bearer <token>` or the session cookie that
   `POST /api/auth/login` sets, or it gets `401`. `GET /api/health`,
   `GET /api/auth/status`, `POST /api/auth/login` and `POST /api/auth/logout`
@@ -56,7 +61,8 @@ route answers `202 { "job_id": "..." }` and the work is followed through
 | GET | `/api/models/audiocpp/runtime` | Which `audiocpp_cli` resolved, how, and where weights live |
 | POST | `/api/models/audiocpp/engine/install` | Install `audiocpp_cli`. Body `{ version?, backend? }` → job |
 | GET | `/api/models/{id}` | One model |
-| POST | `/api/models/{id}/download` | Download weights → job |
+| POST | `/api/models/{id}/download` | Download weights → job. Continues an interrupted download |
+| DELETE | `/api/models/{id}/download-failure` | Dismiss the remembered failure of the last download (`download_failure` on the model) |
 | POST | `/api/models/{id}/load` | Load into memory, unloading any other |
 | POST | `/api/models/{id}/unload` | Unload |
 | DELETE | `/api/models/{id}/weights` | Delete downloaded weights |
@@ -102,6 +108,15 @@ route answers `202 { "job_id": "..." }` and the work is followed through
 | DELETE | `/api/image/models/{id}` | Delete its weights |
 | POST / DELETE | `/api/sounds/{id}/artwork` | Draw or remove a sound's cover art |
 | POST / DELETE | `/api/voices/{id}/artwork` | Draw or remove a voice's avatar |
+
+**OpenAI-compatible** (`routes/openai.ts`). See [OpenAI-compatible routes](#openai-compatible-routes).
+
+| Method | Path | What it does |
+|---|---|---|
+| POST | `/v1/audio/speech` | Text to speech. Body `{ input, model?, voice?, response_format?: "wav" \| "pcm" \| "mp3", speed?, instructions?, stream_format?: "audio" \| "sse", keep? }` → the audio |
+| POST | `/v1/audio/transcriptions` | Speech to text. Multipart `file`, `model?`, `language?`, `response_format?: "json" \| "text" \| "verbose_json"` |
+| GET | `/v1/models` | The speech and transcription models that are ready, as an OpenAI list |
+| GET | `/v1/audio/voices` | Saved voices and the ready models' own voices |
 
 **Voices** (`routes/voices.ts`)
 
@@ -214,6 +229,7 @@ Studio's MIDI dry render can play. See `docs/STUDIO.md`.
 | Method | Path | What it does |
 |---|---|---|
 | GET / PATCH | `/api/settings` | Read or change settings |
+| GET | `/api/capabilities` | What this server lets its user do (see [Capabilities](#capabilities)) |
 | GET | `/api/update` | What the daily update check last learned: `enabled`, `current`, `latest`, `available`, `url`, `checked_at` |
 | POST | `/api/update/check` | Ask now (the Settings button). Does nothing when the check is off |
 | GET | `/api/logs` | Tail of the server log (`?lines`) |
@@ -249,6 +265,24 @@ otherwise a JSON stub saying it has not.
 hardware `gpu_name` and the `vram_*` fields come from `nvidia-smi`, for the
 first GPU in `CUDA_VISIBLE_DEVICES` or GPU 0 when that is unset. Without
 `nvidia-smi` (Metal, AMD, Intel, CPU) they are `null`.
+
+## Capabilities
+
+`GET /api/capabilities`
+```json
+{ "sandboxed": false, "settings_locked": [],
+  "filesystem": true, "reveal": true, "downloads": true, "local_models": true,
+  "custom_endpoints": true, "updates": true, "gpu_status": true,
+  "agent_connect": true, "skills_install": true, "logs": true, "setup_wizard": true }
+```
+Each flag says whether the server allows something, and the UI shows only what
+is allowed. On a desktop everything is `true`. With `MIRLI_SANDBOXED=1` every
+flag is `false`. `settings_locked` lists the settings that need a flag that is
+off (a path on the host, a local engine, or a URL the server would fetch), which
+`PATCH /api/settings` then ignores. A request a flag turns off gets **403**
+`{"detail": "This server doesn't allow that."}`; without `gpu_status`,
+`/api/health` reports the GPU fields as `null`. See
+[INSTALL.md](./INSTALL.md#running-mirli-for-someone-else).
 
 ## Models
 
@@ -458,6 +492,135 @@ disconnects before it finishes, the job is cancelled.
 Some proxies cut a request that waits too long; a GPU host's HTTP proxy often
 allows about 100 seconds. For longer renders behind one of those, use
 `/api/generate` and follow the job instead.
+
+## OpenAI-compatible routes
+
+Four routes under `/v1/` take the same requests as OpenAI's audio API, so a
+program with an "OpenAI base URL" setting (a chat UI, a voice agent framework,
+a workflow tool, or OpenAI's own SDK) can use Mirli for speech. They run the
+same models through the same queue as `/api/speak` and `/api/transcribe`.
+
+Set the base URL to `http://127.0.0.1:17494/v1`. The API key can be any
+string, unless the server has an [access token](INSTALL.md#access-token): then
+the token is the key, since both travel as `Authorization: Bearer ...`.
+
+```sh
+curl http://127.0.0.1:17494/v1/audio/speech \
+  -H 'Content-Type: application/json' \
+  -d '{"model": "tts-1", "input": "Hello from Mirli.", "voice": "default", "response_format": "wav"}' \
+  -o hello.wav
+```
+
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://127.0.0.1:17494/v1", api_key="mirli")
+
+with client.audio.speech.with_streaming_response.create(
+    model="tts-1", voice="default", input="Hello from Mirli.", response_format="wav",
+) as response:
+    response.stream_to_file("hello.wav")
+
+with open("hello.wav", "rb") as clip:
+    print(client.audio.transcriptions.create(model="whisper-1", file=clip).text)
+```
+
+### `POST /v1/audio/speech`
+
+| Field | Default | |
+|---|---|---|
+| `input` | required | The text, up to 20,000 characters |
+| `voice` | the model's default | A saved voice by id or by name (case does not matter), one of a model's own voice names, or `default`. OpenAI's `{ "id": "..." }` form works too |
+| `model` | see below | A Mirli speech model, by id or by name |
+| `response_format` | `mp3` | `wav`, `pcm` or `mp3` |
+| `speed` | `1` | 0.25 to 4. Passed to models that have a `speed` setting, held to the range the model allows; the others read at their own pace |
+| `instructions` | | Passed to models that have an `instruct` setting; ignored by the others |
+| `stream_format` | `audio` | `audio` for the bytes, `sse` for events |
+| `keep` | `false` | Mirli's own: `true` saves the read in the library. By default it is deleted once sent, so a chat client does not fill the library |
+
+**Which model reads it.** The `model` field, when it names a speech model on
+this server. Otherwise the model the voice was made on, when that is ready.
+Otherwise a ready speech model, preferring the one in memory and never one
+that may charge per read. A name this server has never heard of (`tts-1`,
+which many clients send without being asked) falls through to the rest, so a
+client with a fixed model name still works. The answer says what was used in
+`X-Soundbox-Model` and `X-Soundbox-Voice`.
+
+**Formats.**
+
+- `wav`: the file as the model made it, at the model's sample rate.
+- `pcm`: headerless 16-bit little-endian mono at 24 kHz, the format OpenAI
+  documents, resampled from whatever the model produced.
+- `mp3`: needs `ffmpeg` on the server's `PATH`, as the app's own MP3 export
+  does. Asked for by name without it, the answer is a `400` that names the
+  formats that work. With no `response_format` at all and no ffmpeg, the
+  answer is the WAV with `X-Soundbox-Format-Fallback: wav`.
+- `opus`, `aac` and `flac` are a `400`: nothing in the server encodes them.
+
+**Streaming.** When the model can stream (`supports.streaming` in
+`GET /api/models`) and the format is `wav` or `pcm`, the audio is sent while
+it is still being made, through the same path as
+[`/api/speak/stream`](#streaming-speech); a streamed WAV carries a header with
+open-ended sizes. If the model cannot stream, or the GPU is busy with another
+job, the read goes through the queue and arrives whole. `stream_format: "sse"`
+sends `speech.audio.delta` events with base64 PCM in `audio` (24 kHz mono),
+then `speech.audio.done`; it takes `response_format: "pcm"` or none. Mirli
+counts no tokens, so the `usage` in the last event is zeros.
+
+### `POST /v1/audio/transcriptions`
+
+A `multipart/form-data` body with the audio in `file`. WAV is read directly;
+other formats (MP3, M4A, WebM and so on) are decoded with `ffmpeg` when it is
+installed, and refused with a `400` when it is not. `model` picks a
+transcription model on this server by id or name; any other value
+(`whisper-1`) means a ready one. `language` is a hint.
+
+`response_format` is `json` (`{ "text": "..." }`, the default), `text` (plain
+text) or `verbose_json` (`{ task, language, duration, text }`, without
+segments or word timings). `srt`, `vtt` and `stream: true` are a `400`. With no
+transcription model installed the answer is a `404`.
+
+### `GET /v1/models` and `GET /v1/audio/voices`
+
+`/v1/models` lists the speech and transcription models that are ready, in
+OpenAI's list shape: `{ "object": "list", "data": [{ "id", "object": "model",
+"created", "owned_by" }] }`, plus `name` and `task` (`speech` or
+`transcription`). `created` is always `0`.
+
+`/v1/audio/voices` is Mirli's own, since OpenAI's API creates and deletes
+custom voices there but has no route that lists them:
+`{ "object": "list", "data": [...], "voices": [...] }`, the same entries
+under both keys, each `{ id, object: "audio.voice", name, kind, model }`.
+`kind` is `clone` or `builtin` for a saved voice, `builtin` for a model's own
+voice, and `default` for the entry that means the model's default voice. Pass
+an entry's `id` or `name` as `voice`.
+
+### Errors
+
+Every error from these routes, including a refused `Host` and a missing access
+token, is OpenAI's envelope:
+
+```json
+{ "error": { "message": "No voice is called 'shimmer'. Voices on this server: Narrator, alloy. ...",
+             "type": "invalid_request_error", "param": "voice", "code": "voice_not_found" } }
+```
+
+`type` is `invalid_request_error`, `rate_limit_error` (a full queue) or
+`server_error`. A read that fails while it runs is a `500` whose `message` is
+the same explanation the app shows for that failure and whose `code` is its
+topic, such as `gpu_oom` or `model_not_installed`; the raw text of the failure
+is in `error.detail`, a field of Mirli's own. A wrong or missing token is
+a `401` with `code: "invalid_api_key"`.
+
+### Requests from a browser
+
+`POST` requests here do not need the `X-Soundbox` header that `/api/` asks
+for. A JSON body is safe for the same reason it is under `/api/`: a page on
+another site cannot send one without a preflight, which the server's CORS
+policy refuses. A "simple" body (multipart, form-encoded, plain text or none)
+is refused with `403` when it carries an `Origin` the server does not trust, or
+`Sec-Fetch-Site: cross-site`. Browsers add those to every cross-site `POST`;
+scripts and SDKs send neither.
 
 ## Logs
 

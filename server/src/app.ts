@@ -33,12 +33,14 @@ import {
 import { registerJobs } from "./routes/jobs.js";
 import { registerSpeakStream } from "./routes/speakStream.js";
 import { registerRender } from "./routes/render.js";
+import { crossSiteRefusal, isOpenAiPath, openAiError, registerOpenAi } from "./routes/openai.js";
 import { registerLlm } from "./routes/llm.js";
 import { registerImage } from "./routes/image.js";
-import { hostedMode, registerHostedGuards } from "./hosted.js";
 import { registerCloud } from "./routes/cloud.js";
 import { registerEndpoints } from "./routes/endpoints.js";
 import { AccessGuard, FAILURE_WINDOW_MS, MAX_FAILURES, registerAuth } from "./auth.js";
+import { registerCapabilityGuards } from "./capabilities.js";
+import { registerIdleExit } from "./idle.js";
 import { mountMcp, toolInfos } from "./mcp/server.js";
 import { hostnameOf, isListedHost } from "./origins.js";
 import { registerMcp, type McpToolsProvider } from "./routes/mcp.js";
@@ -187,6 +189,13 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
         });
       }
     }
+    // The OpenAI-compatible routes can't use that rule: their clients send no
+    // custom header and upload as multipart. They refuse what a browser marks
+    // as coming from another site instead (see crossSiteRefusal).
+    if (MUTATING.has(request.method) && isOpenAiPath(request.url)) {
+      const refused = crossSiteRefusal(request);
+      if (refused) return reply.code(403).send(openAiError(403, refused, "cross_site_request"));
+    }
   });
 
   // FastAPI treats a body-less POST to an endpoint with an optional model as
@@ -227,6 +236,10 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
   });
 
   registerAuth(app, guard);
+  // After auth: refuse what this server has turned off (see capabilities.ts).
+  registerCapabilityGuards(app, () => svc.capabilities);
+  // MIRLI_IDLE_EXIT_MINUTES: exit when nobody has used it for that long.
+  registerIdleExit(app, { busy: () => svc.jobs.busy });
   registerModels(app, svc);
   registerInstruments(app, svc);
   registerJobs(app, svc);
@@ -237,6 +250,8 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
   void app.register(async (scope) => {
     registerRender(scope, svc);
   });
+  // /v1/audio/speech and friends, for clients with an OpenAI base URL setting.
+  registerOpenAi(app, svc);
   registerSounds(app, svc);
   registerVoices(app, svc);
   registerSessions(app, svc);
@@ -316,7 +331,6 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
     }
   }
 
-  if (hostedMode()) registerHostedGuards(app, { busy: () => svc.jobs.busy });
 
   // Free VRAM after a period of inactivity so the GPU is usable for other
   // things between bursts of generation.

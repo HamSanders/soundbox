@@ -47,19 +47,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api, errorMessage, type SettingsPatch } from "@/lib/api";
-import { qk } from "@/lib/queries";
+import { afterSettingsSaved, qk, useCan } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
 import {
   SETTINGS,
   SETTINGS_GROUPS,
   matchesQuery,
+  settingAllowed,
   settingMeta,
 } from "@/components/settings-index";
 
 // ------------------------------------------------------------------ context
 
 interface SettingsUi {
+  /** False for a row this server doesn't let its user change. */
+  allowed: (id: string) => boolean;
   query: string;
   setQuery: (q: string) => void;
   saved: ReadonlySet<string>;
@@ -91,9 +94,9 @@ export function useSettingSave() {
   const { markSaved } = useSettingsUi();
   const m = useMutation({
     mutationFn: ({ patch }: { id: string; patch: SettingsPatch }) => api.updateSettings(patch),
-    onSuccess: (next, { id }) => {
+    onSuccess: (next, { id, patch }) => {
       qc.setQueryData(qk.settings, next);
-      void qc.invalidateQueries({ queryKey: qk.update });
+      afterSettingsSaved(qc, patch);
       markSaved(id);
     },
     onError: (err) => toast.error("Could not save settings", { description: errorMessage(err) }),
@@ -177,9 +180,20 @@ export function SettingsLayout({ children, hiddenGroups = [] }: { children: Reac
     return () => cancelAnimationFrame(raf);
   }, [deepLink]);
 
+  const can = useCan();
+  // Groups the page hides for its own reasons (Mirli Cloud when it's off).
   const hidden = hiddenGroups.join(",");
-  const groups = useMemo(() => SETTINGS_GROUPS.filter((g) => !hidden.split(",").includes(g.id)), [hidden]);
-  const matches = useMemo(() => SETTINGS.filter((s) => matchesQuery(s, query)), [query]);
+  const allowed = useCallback(
+    (id: string) => settingAllowed(id, can) && !hidden.split(",").includes(settingMeta(id).group),
+    [can, hidden],
+  );
+  const matches = useMemo(
+    () => SETTINGS.filter((s) => allowed(s.id) && matchesQuery(s, query)),
+    [query, allowed],
+  );
+  // Groups with nothing this server allows are left out of the nav entirely,
+  // not greyed out like a group the search has emptied.
+  const groups = SETTINGS_GROUPS.filter((g) => SETTINGS.some((s) => s.group === g.id && allowed(s.id)));
   const visibleGroups = groups.filter((g) => matches.some((m) => m.group === g.id));
   const searching = query.trim() !== "";
 
@@ -209,8 +223,8 @@ export function SettingsLayout({ children, hiddenGroups = [] }: { children: Reac
   };
 
   const ctx = useMemo<SettingsUi>(
-    () => ({ query, setQuery, saved, markSaved, flash }),
-    [query, saved, markSaved, flash],
+    () => ({ allowed, query, setQuery, saved, markSaved, flash }),
+    [allowed, query, saved, markSaved, flash],
   );
 
   return (
@@ -349,10 +363,10 @@ export function SettingsGroup({
   description?: string;
   children: ReactNode;
 }) {
-  const { query } = useSettingsUi();
+  const { query, allowed } = useSettingsUi();
   const group = SETTINGS_GROUPS.find((g) => g.id === id);
   if (!group) throw new Error(`Unknown settings group: ${id}`);
-  const any = SETTINGS.some((s) => s.group === id && matchesQuery(s, query));
+  const any = SETTINGS.some((s) => s.group === id && allowed(s.id) && matchesQuery(s, query));
   if (!any) return null;
   return (
     <section id={`group-${id}`} aria-labelledby={`group-${id}-title`} className="scroll-mt-36">
@@ -415,9 +429,9 @@ export interface SettingRowProps {
 }
 
 export function SettingRow({ id, control, children, stack, modified, onReset, htmlFor }: SettingRowProps) {
-  const { query, saved, flash } = useSettingsUi();
+  const { query, saved, flash, allowed } = useSettingsUi();
   const meta = settingMeta(id);
-  if (!matchesQuery(meta, query)) return null;
+  if (!allowed(id) || !matchesQuery(meta, query)) return null;
   const isSaved = saved.has(id);
 
   const status = (

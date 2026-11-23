@@ -6,8 +6,32 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Mirli Cloud waitlist links on mirli.app.** The top nav, the home page and the download page point people without a graphics card to the Mirli Cloud waitlist at cloud.mirli.app.
+- **Sandboxed mode for shared servers.** `MIRLI_SANDBOXED=1` runs Mirli for people who don't own the machine: folder browsing, profile folders, downloads, local models, custom endpoints, the update check, the server log and agent skill installs are off, and settings that name a path, an engine or a URL are locked. The guards match the route the server resolved, so an encoded path can't slip past them. `MIRLI_DISABLE` turns off single capabilities, and `GET /api/capabilities` reports what the server allows. See `docs/INSTALL.md`.
+- **OpenAI-compatible speech routes.** Point anything with an OpenAI base URL setting at `http://127.0.0.1:17494/v1` and it can use Mirli for speech: `POST /v1/audio/speech` (WAV, 24 kHz PCM, and MP3 when ffmpeg is installed; streamed where the model can stream, or as `speech.audio.delta` events), `POST /v1/audio/transcriptions`, `GET /v1/models` and `GET /v1/audio/voices`. `voice` is a saved voice's name or id, or one of a model's own voices; a model name the server doesn't know, such as `tts-1`, falls back to the voice's model or a ready one. Reads are not kept in the library unless the request says `"keep": true`. With `MIRLI_API_TOKEN` set, the token is the API key. See `docs/API.md`.
+- **Exit when idle.** `MIRLI_IDLE_EXIT_MINUTES` stops the server after that long with no requests, none still being answered and no jobs, for hosts that scale to zero. It shuts down the same way Ctrl+C does.
+- **Model downloads resume, retry and check the disk first.** A download that is cut off continues from where it stopped (an HTTP `Range` request from the `.part` file) instead of starting again, also after a restart of Mirli. If the file changed upstream in between, or the server cannot continue it, it starts again from the beginning; size and SHA-256 are still checked before the file is put in place. A dropped connection, a stall, a 429 or a 5xx is retried up to five times with a growing wait, following `Retry-After`; a 401, 403 or 404 is not. Before any download starts, Mirli compares what is still to fetch plus 2 GB with the free space at the models folder, and says which sizes and folder are involved when it will not fit. The progress line shows the transfer rate and the time left. The reason a download failed is kept per model across restarts and shown on the Models page with **Retry**, or **Repair** for an incomplete model; `GET /api/models` returns it as `download_failure`. See "When a download is interrupted" in `docs/INSTALL.md`.
+- **Checksums for the installers.** Each release now carries `SHA256SUMS.txt`, the SHA-256 of every installer, so you can check a download is the file the release built. `docs/DESKTOP.md` shows how on Windows, macOS and Linux.
+- **A slim Docker image without audio.cpp** (`Dockerfile.slim`), for a server that only uses custom endpoints or other remote models; local models are off in it. CI builds it and checks that it starts. See `docs/INSTALL.md`.
+
+- **A moving background behind the panels.** The app, the desktop launch screen and the Mirli Cloud pages now draw a faint moving ground in the gaps around the panels, behind the sidebar and under the player. Choose it in Settings → Interface → Background: **Smoke** (the default) rolls in from a corner and your pointer blows it away; **Liquid** is warm colour you can stir; **Gradient** is a quiet wash of the accent from the corners; **Pixel** is a grid of soft lights that shows the spectrum of what is playing; or **None**. Each one reacts to your pointer and a little to whatever is playing; **Reactive background** turns both off and leaves it drifting. The sidebar's current page and hover are frosted glass over it. It listens without rerouting audio, so the output device you chose in Settings still applies. It draws one still frame when the system asks for reduced motion, and the old flat background where WebGL is missing. Colours are the `--ambient-*` variables in `app/src/index.css`.
+
+### Changed
+- New screenshots of the 0.6 app in the README, on the site and in the press kit, with the Studio timeline second in the README. `npm run capture:media` takes them again from the app's mock backend, so they can be kept current.
+- **Two setups: on this computer, or elsewhere.** First-run setup now starts by asking where sounds should be made. "On this computer" is the app as before. "Elsewhere" is a simple setup with nothing to download: renders go to a server you run or a hosted API with your own key, the Models page and pickers list only those models, and the settings for running models locally are hidden. Settings → Setup switches between them, and can keep the models already installed here in the simple setup; switching to it unloads a model left in memory. "On this computer" is preselected, and a server that can't run models itself skips the question.
+- Agents and the app no longer pick a model that may charge you per render unless you choose it. A custom endpoint outside your machine, your local network and a private overlay network such as Tailscale (a hosted API used with your own key) is marked as metered: the composer never lands on it by default, and `soundbox.generate` and `soundbox.speak` without a `model` skip it and say how to name one. A voice made on a metered model is still read on it, since choosing the voice chooses its model.
+
+## [0.6.2] - 2026-11-20
+
+### Fixed
+- **Scrubbing the player works.** Dragging the yellow ball on the player's timeline now moves playback there. The server sent sound files without byte-range support, so the browser (and the desktop app's window) treated them as unseekable and every scrub snapped back. `/files/{name}` now answers `Range` requests with `206 Partial Content`.
+
 ### Changed
 - **A sound plays once and stops.** The bottom player no longer runs on to the next sound in the list when one ends. Two toggles beside the transport turn on **Autoplay** (play the next sound) and **Repeat** (loop this one); both are off by default and remembered in this browser.
+- **A livelier splash screen.** While the desktop app starts, the mark plays a loop: rain falls into a puddle, the ripples swell into a sound wave, the wave folds into the M, the M opens into a pulsing ring and sinks back into the puddle. A slow amber glow breathes from the window's edges. Under the mark there is now just one status line and one thin progress bar, which also shows an update's download; tips take turns at the bottom edge instead of stacking under the status. Both settle to a still M when the app is ready, and stay still with reduced motion.
+- **Desktop updates install at launch.** A new version now installs on the splash screen before the app opens, with its progress shown, and Mirli reopens on it. No more "Update available" dialog over the app after it has started, and on Windows no installer window: the per-user installer runs silently. The check gives up after 5 seconds when offline, and **Settings → Updates → Check for updates** still turns it off.
+- **New screenshots.** The README and the mirli.app home page show the 0.6.0 redesign: the dashboard, the library with the player, the Create panel, the docked details panel, Voice Lab and the voice clone page.
 
 ## [0.6.0] - 2026-11-20
 
@@ -340,7 +364,8 @@ Initial public release, MIT-licensed. Everything below is new.
   `SOUNDBOX_ALLOWED_HOSTS`), and requires JSON or an `X-Soundbox` header on
   mutating API requests.
 
-[Unreleased]: https://github.com/HamSanders/soundbox/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/HamSanders/soundbox/compare/v0.6.2...HEAD
+[0.6.2]: https://github.com/HamSanders/soundbox/compare/v0.6.0...v0.6.2
 [0.6.0]: https://github.com/HamSanders/soundbox/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/HamSanders/soundbox/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/HamSanders/soundbox/compare/v0.4.0...v0.4.1

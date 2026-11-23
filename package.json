@@ -1,6 +1,6 @@
 {
   "name": "soundbox-monorepo",
-  "version": "0.6.0",
+  "version": "0.6.2",
   "private": true,
   "description": "Open-source AI sound effects, music and text-to-speech that run on your own machine, with an MCP server for coding agents",
   "license": "MIT",
@@ -45,13 +45,15 @@
     "desktop:build": "tauri build --config src-tauri/tauri.bundle.conf.json",
     "tauri": "tauri",
     "site:dev": "npm run dev --workspace site",
-    "site:build": "turbo run build --filter=site"
+    "site:build": "turbo run build --filter=site",
+    "capture:media": "node scripts/capture-media.mjs"
   },
   "engines": {
     "node": ">=22.12.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.12.4",
+    "playwright": "^1.65.1",
     "react-router-dom": "^6.30.6",
     "turbo": "^2.11.11"
   }

@@ -29,10 +29,12 @@ Environment variables are `MIRLI_*`, and the old `SOUNDBOX_*` names still work
 
 ## Describe it, hear it, arrange it
 
+<img src="site/public/product/app-studio.webp" alt="The Mirli studio: a script cast across three voices above a timeline with narration, dialogue, a music bed, ambience and sound effects on five lanes, and the library beside it" width="880">
+
 | Make | Arrange | Connect |
 |---|---|---|
 | Sound effects and ambience from a description | A multi-track timeline with effects, MIDI and mixdown | An MCP server with 24 tools for Claude Code and Cursor |
-| Instrumentals, or songs from a lyric sheet | Cast saved voices onto the lines of a script | A local HTTP API on port 17494 |
+| Instrumentals, or songs from a lyric sheet | Cast saved voices onto the lines of a script | A local HTTP API on port 17494, with OpenAI-compatible speech routes |
 | Speech, voice cloning and voice conversion | Extend, cover, repaint, split into stems | Three agent skills, including a full sound pass |
 
 Four models are verified end to end and on by default; 61 more can be switched
@@ -41,18 +43,25 @@ Everything stays in one SQLite file and a folder of WAVs under `~/.mirli`.
 Profiles give you several libraries in one install, one per game or client,
 switched from the header without a restart; the models are shared.
 
-<details>
-<summary><b>Screenshots</b> · studio, music, SFX, Voice Lab, models</summary>
-<br>
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="site/public/product/app-dashboard-light.webp">
+  <img src="site/public/product/app-dashboard.webp" alt="The Mirli dashboard: a sidebar of icons, Studio, Music and SFX shortcuts, a shelf of tag tiles and a list of recent sounds with licence badges, models and lengths" width="880">
+</picture>
 
-<img src="site/public/product/studio.png" alt="The Mirli studio: a script cast across three speakers above a multi-track timeline holding the spoken lines, an ambient music bed and sound effects, with the library panel on the right" width="880">
+<details>
+<summary><b>More screenshots</b> · library, music, sound effects, models, details, voices</summary>
+<br>
 
 | | |
 |---|---|
-| <img src="site/public/product/music-studio.png" alt="The Music page: a request form with model, licence, styles, tempo, key and length beside a shelf of generated takes"> | <img src="site/public/product/sfx.png" alt="The SFX library with waveforms, models and seeds, and the prompt composer"> |
-| **Music.** A style prompt or a lyric sheet in, a shelf of takes out. | **Sound effects.** Every take kept with its prompt, model and seed. |
-| <img src="site/public/product/voice-lab.png" alt="The Voice Lab: saved voices as cards, cloned from a clip or built into a model"> | <img src="site/public/product/models.png" alt="The Models page: each model with its licence badge, size and install state"> |
-| **Voice Lab.** Clone a voice, then cast it onto script lines. | **Models.** Licence and VRAM shown before you download. |
+| <img src="site/public/product/app-library.webp" alt="The Library: kind tabs, a search box with filter pills, music, sound effects and speech in one list with their tags, licence and model, and the bottom player holding Low Tide"> | <img src="site/public/product/app-music.webp" alt="The Music page: the Create panel with model, lyrics switch, styles and tempo, beside seven tracks with their licence, model and length, and the main theme in the player"> |
+| **Library.** Every take in one list, with the player along the bottom. | **Music.** The Create panel beside the tracks it has made. |
+| <img src="site/public/product/app-sfx.webp" alt="The SFX page: a prompt box with duration, variations, seed, steps and CFG, beside ten sound effects from two models with their licence badges and lengths"> | <img src="site/public/product/app-models.webp" alt="The Models page: the Fast, Balanced, Quality and Max packs, each naming one model for sound effects, music and voice with its size"> |
+| **Sound effects.** Describe it, set a length, generate. | **Models.** Four packs, or pick models one at a time. |
+| <img src="site/public/product/app-details.webp" alt="The details panel docked on the right of the Library: a waveform for Rain on tin roof with trim tools and its generation settings: model, prompt, seed, steps and duration"> | <img src="site/public/product/app-voice-lab.webp" alt="Voice Lab: five voices as cards and as a table with the kind, model and number of reads of each"> |
+| **Details.** Waveform, edits and the exact settings that made it. | **Voice Lab.** Your voices, cloned or built in, and how much each has read. |
+| <img src="site/public/product/app-voice-new.webp" alt="Voice creation: three cards, Clone from clips, Built-in voice from a model, and Import a voice file"> | <img src="site/public/product/app-voice-clone.webp" alt="Clone a voice: an upload or record area for up to five clips, a clip timer, and name, model and notes fields"> |
+| **New voice.** Clone it, pick a built-in, or import one. | **Clone.** Up to five clips of one speaker, recorded or uploaded. |
 
 </details>
 
@@ -123,7 +132,7 @@ gets 24 tools for sounds, speech and multi-track stories, and three skills:
 `soundbox-sfx`, `soundbox-sound-pass` and `soundbox-voice-story`. Every tool,
 the stdio bridge and the skills are in [docs/MCP.md](docs/MCP.md).
 
-<img src="site/public/product/agents.png" alt="The Agents page: connected MCP clients, copy-paste connection commands, and a log of recent calls" width="880">
+<img src="site/public/product/app-agents.webp" alt="The Agents page: call counts for the day, the MCP address and the Claude Code command to copy, and three agents that have connected" width="880">
 
 ## Models
 
@@ -220,6 +229,11 @@ curl -X POST http://127.0.0.1:17494/api/generate \
 
 Long jobs return an id with a server-sent event stream. Every route is in
 [docs/API.md](docs/API.md).
+
+Anything with an OpenAI base URL setting can use Mirli for speech: point it at
+`http://127.0.0.1:17494/v1` for `/v1/audio/speech` and
+`/v1/audio/transcriptions`. See
+[OpenAI-compatible routes](docs/API.md#openai-compatible-routes).
 
 </details>
 

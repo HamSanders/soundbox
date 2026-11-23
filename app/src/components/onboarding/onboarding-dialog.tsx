@@ -41,11 +41,9 @@ import { StepIntent } from "@/components/onboarding/step-intent";
 import { StepModels } from "@/components/onboarding/step-models";
 import { StepUsage } from "@/components/onboarding/step-usage";
 import { StepWhere } from "@/components/onboarding/step-where";
-import { suggestedRunMode } from "@/lib/cloud";
-import { CloudAccountPanel } from "@/components/cloud-settings";
+import { useCloudSetupOption } from "@/components/onboarding/cloud-setup-option";
 import {
   useAudioCppCatalog,
-  useCloud,
   useHealth,
   useImageEngineInstall,
   useImageModelDownload,
@@ -57,6 +55,7 @@ import {
   useModels,
   useSettings,
   useUpdateSettings,
+  useCan,
 } from "@/lib/queries";
 import {
   INTENTS,
@@ -65,11 +64,14 @@ import {
   type Intent,
   type Usage,
 } from "@/lib/onboarding";
-import { api, type JobRef, type RunMode } from "@/lib/api";
+import { api, type JobRef, type SetupMode } from "@/lib/api";
+import { StepConnect } from "@/components/onboarding/step-connect";
 import { cn } from "@/lib/utils";
 
+/** The full setup's questions, after "Where it runs". The simple setup has
+ *  nothing to download, so it asks only where renders should go. */
 const LOCAL_STEPS = ["What you make", "Licence", "Models", "Extras"] as const;
-type StepName = (typeof LOCAL_STEPS)[number] | "Where it runs" | "Sign in";
+type StepName = "Where it runs" | "Connect" | (typeof LOCAL_STEPS)[number];
 
 /** Resolve when a job reaches a terminal status, so the engine install can be
  *  sequenced ahead of the model download that needs it. Never rejects: a
@@ -98,11 +100,11 @@ export function OnboardingDialog() {
   const { data: settings } = useSettings();
   const { data: models } = useModels();
   const { data: health } = useHealth();
+  const can = useCan();
   const { data: catalog } = useAudioCppCatalog();
   const { data: llm } = useLlmStatus();
   const { data: image } = useImageStatus();
-  const { data: cloud, isPending: cloudPending } = useCloud();
-  const cloudOn = Boolean(cloud?.enabled);
+  useCloudSetupOption();
 
   const update = useUpdateSettings();
   const { download } = useModelAction();
@@ -119,27 +121,29 @@ export function OnboardingDialog() {
   const [assistant, setAssistant] = useState(false);
   const [artwork, setArtwork] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [runMode, setRunMode] = useState<RunMode | null>(null);
-  const mode: RunMode = runMode ?? suggestedRunMode(health);
-
-  // Mirli Cloud on: the first question is where sounds are made, and the
-  // cloud answer replaces every question about this machine with a sign-in.
-  const STEPS: readonly StepName[] = !cloudOn
-    ? LOCAL_STEPS
-    : mode === "cloud"
-      ? ["Where it runs", "Sign in"]
-      : ["Where it runs", ...LOCAL_STEPS];
+  const [mode, setMode] = useState<SetupMode | null>(null);
+  // A server that can't run models itself has already decided (setup_locked):
+  // no fork, no model downloads, straight to connecting a source. Otherwise
+  // this computer unless the person picks Elsewhere.
+  const locked = can.setup_locked || !can.local_models;
+  const path: SetupMode = locked ? "simple" : (mode ?? "full");
+  // The model questions only lead to downloads, so a server that runs models
+  // but doesn't allow fetching them (MIRLI_DISABLE=downloads) skips them
+  // rather than queue requests it would refuse.
+  const STEPS: readonly StepName[] = locked
+    ? ["Connect"]
+    : path === "simple"
+      ? ["Where it runs", "Connect"]
+      : ["Where it runs", ...(can.downloads ? LOCAL_STEPS : [])];
   const current = STEPS[Math.min(step, STEPS.length - 1)]!;
-  const local = !cloudOn || mode === "local";
 
   // Opened from the queries rather than held open by them: once it is up, a
   // refetch that flips `shouldOnboard` (the first download landing, say) must
   // not yank the dialog out from under whoever is halfway through it.
-  // Mirli on the web has nothing to set up (the host signs it in), so wait
-  // for /api/cloud to say which this is before opening.
   useEffect(() => {
-    if (!cloudPending && !cloud?.hosted && shouldOnboard(settings, models)) setOpen(true);
-  }, [settings, models, cloudPending, cloud?.hosted]);
+    // A server with nothing to set up (no downloads, see capabilities) never asks.
+    if (can.setup_wizard && shouldOnboard(settings, models)) setOpen(true);
+  }, [settings, models, can.setup_wizard]);
 
   const recommendations = useMemo(
     () =>
@@ -199,13 +203,14 @@ export function OnboardingDialog() {
     }
   }
 
-  /** Both exits write the flag; only Finish queues anything. */
-  async function close(finish: boolean) {
+  /** Both exits write the flag; only Finish saves the path and queues anything.
+   *  `then` is where to go after: the endpoint settings, from the simple setup. */
+  async function close(finish: boolean, then?: string) {
     setBusy(true);
     try {
       await update.mutateAsync({
         onboarded_at: new Date().toISOString(),
-        ...(cloudOn && finish ? { run_mode: mode } : {}),
+        ...(finish && !locked ? { setup: path } : {}),
       });
     } catch {
       // The flag failing to save is not a reason to trap someone in the
@@ -213,7 +218,8 @@ export function OnboardingDialog() {
     }
     setBusy(false);
     setOpen(false);
-    if (!finish || !local) return;
+    if (then) navigate(then);
+    if (!finish || path === "simple" || !can.downloads) return;
     void runInstalls();
     if (selectedIds.length || assistant || artwork) {
       toast.success("Downloading in the background", {
@@ -242,9 +248,9 @@ export function OnboardingDialog() {
         <DialogHeader>
           <DialogTitle>Set up Mirli</DialogTitle>
           <DialogDescription>
-            {local
-              ? "A few questions, then it downloads in the background."
-              : "Sign in, buy credits when you need them, and start making sounds."}
+            {path === "simple"
+              ? "Nothing to download: choose where renders should go."
+              : "A few questions, then it downloads in the background."}
           </DialogDescription>
         </DialogHeader>
 
@@ -269,15 +275,9 @@ export function OnboardingDialog() {
         </div>
 
         <div className="min-h-64 py-1">
-          {current === "Where it runs" && <StepWhere value={mode} onChange={setRunMode} health={health} />}
-          {current === "Sign in" && cloud && (
-            <div className="space-y-3">
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                Sign in to Mirli Cloud in your browser. New accounts start at 0 credits; packs start at $10, and a
-                render that fails is never charged.
-              </p>
-              <CloudAccountPanel status={cloud} />
-            </div>
+          {current === "Where it runs" && <StepWhere value={path} onChange={setMode} health={health} />}
+          {current === "Connect" && (
+            <StepConnect onEndpoint={() => void close(true, "/settings?s=endpoints")} />
           )}
           {current === "What you make" && <StepIntent value={intents} onChange={setIntents} />}
           {current === "Licence" && <StepUsage value={usage} onChange={setUsage} />}
@@ -326,10 +326,8 @@ export function OnboardingDialog() {
               </Button>
             ) : (
               <Button disabled={busy} onClick={() => void close(true)}>
-                {!local
-                  ? cloud?.signed_in
-                    ? "Start"
-                    : "Start without signing in"
+                {path === "simple"
+                  ? "Start"
                   : selectedIds.length || assistant || artwork
                     ? "Install and start"
                     : "Start with nothing"}

@@ -85,9 +85,10 @@ export function endpointModelId(id: string): string {
  *
  * Decides whether the UI warns that prompts leave the network. Judged from the
  * hostname alone, without a DNS lookup: loopback, the private IPv4 ranges,
- * IPv6 unique-local and link-local, single-label names (`homeserver`) and the
- * usual home-network suffixes. A public name that resolves to a LAN address is
- * reported as remote, which errs toward warning.
+ * IPv6 unique-local and link-local, single-label names (`homeserver`), the
+ * usual home-network suffixes, and private overlay networks (the shared
+ * 100.64.0.0/10 range and `*.ts.net`, which Tailscale uses). A public name that
+ * resolves to a LAN address is reported as remote, which errs toward warning.
  */
 export function isLocalUrl(url: string): boolean {
   let host: string;
@@ -98,11 +99,18 @@ export function isLocalUrl(url: string): boolean {
   }
   if (host === "localhost" || host.endsWith(".localhost")) return true;
   if (!host.includes(".") && !host.includes(":")) return true;
-  if (/\.(local|lan|home|internal|home\.arpa)$/.test(host)) return true;
+  if (/\.(local|lan|home|internal|home\.arpa|ts\.net)$/.test(host)) return true;
   const v4 = /^(\d+)\.(\d+)\.\d+\.\d+$/.exec(host);
   if (v4) {
     const [a, b] = [Number(v4[1]), Number(v4[2])];
-    return a === 127 || a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254);
+    return (
+      a === 127 ||
+      a === 10 ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 169 && b === 254) ||
+      (a === 100 && b >= 64 && b <= 127)
+    );
   }
   return host === "::1" || /^f[cd][0-9a-f]{2}:/.test(host) || /^fe[89ab][0-9a-f]:/.test(host);
 }

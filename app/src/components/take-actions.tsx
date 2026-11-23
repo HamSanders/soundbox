@@ -37,7 +37,7 @@ import { DEFAULT_INSTRUMENT, INSTRUMENTS, notesDuration, renderNotes } from "@/l
 import { useMidiStore } from "@/lib/midi-store";
 import type { TakeSource } from "@/lib/midi-store";
 import { formatDuration } from "@/lib/format";
-import { useHosted, useInstruments } from "@/lib/queries";
+import { useCan, useInstruments } from "@/lib/queries";
 import { libraryId, SamplesUnavailable, sampledId } from "@/lib/sampler";
 
 /** What to ask a model for, once the dry take is placed. */
@@ -144,8 +144,7 @@ export function TakeActions({
   const { data: sampled } = useInstruments();
   const installed = (sampled ?? []).filter((i) => i.installed);
   const [samplesOpen, setSamplesOpen] = useState(false);
-  // Mirli on the web can't download sample packs (the server refuses).
-  const hosted = useHosted();
+  const can = useCan();
   const duration = notesDuration(notes);
   const disabled = readOnly || busy;
 
@@ -215,7 +214,8 @@ export function TakeActions({
           </Select>
         </div>
 
-        {!hosted && (
+        {/* Sample packs are downloads: offered only where the server allows them. */}
+        {can.downloads && (
           <>
             <Button
               size="sm"

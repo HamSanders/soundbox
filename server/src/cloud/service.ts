@@ -22,6 +22,7 @@ import { envVar } from "../env.js";
 import { hostedMode } from "../hosted.js";
 import { ModelError } from "../errors.js";
 import { getLogger } from "../logging.js";
+import { CloudSource } from "./source.js";
 import type { ModelManager } from "../models/manager.js";
 import { CloudClient, CloudError, type FetchFn } from "./client.js";
 import type { CloudModel as CloudModelInfo, PackId } from "./contract.js";
@@ -64,7 +65,15 @@ export class CloudService implements CloudContext {
     private readonly models: ModelManager,
     private readonly fetchImpl: FetchFn = fetch,
     readonly enabled = cloudEnabled(),
+    /** The cloud models as the manager sees them (cloud/source.ts). */
+    readonly source = new CloudSource(),
   ) {}
+
+  /** Hand the manager a new list of cloud models (empty when off). */
+  private async register(models: CloudModelInfo[]): Promise<void> {
+    this.source.set(models, this);
+    await this.models.refreshSource(this.source);
+  }
 
   get baseUrl(): string {
     return (envVar("MIRLI_CLOUD_URL") || DEFAULT_CLOUD_URL).replace(/\/+$/, "");
@@ -135,7 +144,7 @@ export class CloudService implements CloudContext {
     if (this.retry) clearTimeout(this.retry);
     this.retry = null;
     if (!this.enabled) {
-      await this.models.setCloudModels([], this);
+      await this.register([]);
       return;
     }
     const before = JSON.stringify(this.catalog);
@@ -156,7 +165,7 @@ export class CloudService implements CloudContext {
     // (or on the first call, which registers even an empty catalog).
     if (!this.registered || JSON.stringify(this.catalog) !== before) {
       this.registered = true;
-      await this.models.setCloudModels(this.offered(), this);
+      await this.register(this.offered());
     }
   }
 
@@ -173,7 +182,7 @@ export class CloudService implements CloudContext {
   async reload(): Promise<void> {
     this.cancelPoll();
     this.signIn = { state: "idle" };
-    await this.models.setCloudModels(this.offered(), this);
+    await this.register(this.offered());
   }
 
   /** The catalog plus the voice-clip transcriber, which the gateway serves outside it. */
@@ -285,7 +294,7 @@ export class CloudService implements CloudContext {
 
   private async forget(): Promise<void> {
     this.config.updateSettings({ cloud_token: "" });
-    await this.models.setCloudModels(this.offered(), this);
+    await this.register(this.offered());
   }
 
   /* -------------------------------------------------------------- warming */

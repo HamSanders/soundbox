@@ -7,11 +7,13 @@
  * not enough, because anyone who can reach the port is a legitimate client as
  * far as they can tell. `MIRLI_API_TOKEN` closes that gap.
  *
- * With a token set, every request to `/api/`, `/mcp`, `/files/` and
+ * With a token set, every request to `/api/`, `/v1/`, `/mcp`, `/files/` and
  * `/artwork/` must prove it knows the token, one of two ways:
  *
  *   - `Authorization: Bearer <token>`, for scripts, MCP clients, the stdio
- *     bridge and another Mirli using this one as a custom endpoint.
+ *     bridge and another Mirli using this one as a custom endpoint. It is
+ *     also where an OpenAI client puts its API key, so on the `/v1/` routes
+ *     the token is the key.
  *   - A session cookie, for the browser UI. The sign-in screen posts the token
  *     once to `/api/auth/login`, which sets an HttpOnly, SameSite=Strict
  *     cookie. A cookie is the only thing EventSource, `<audio src>` and plain
@@ -103,6 +105,8 @@ export function isProtectedPath(url: string): boolean {
   const path = routedPath(url);
   return (
     path.startsWith("/api/") ||
+    path === "/v1" ||
+    path.startsWith("/v1/") ||
     path === "/mcp" ||
     path.startsWith("/mcp/") ||
     path.startsWith("/files/") ||

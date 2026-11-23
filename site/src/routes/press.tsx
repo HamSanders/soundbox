@@ -220,46 +220,46 @@ interface Still {
 
 const SCREENSHOTS: Still[] = [
   {
-    src: "/product/studio.png",
-    alt: "The Mirli studio: a script cast across three speakers above a multi-track timeline holding spoken lines, a music bed and sound effects",
+    src: "/product/app-studio.webp",
+    alt: "The Mirli studio: a script cast across three voices above a timeline with narration, dialogue, a music bed, ambience and sound effects on five lanes",
     caption: "The studio, with a script cast across three voices above the timeline.",
-    size: "1600 × 1000",
+    size: "2400 × 1500",
   },
   {
-    src: "/product/sfx.png",
-    alt: "The SFX library with waveforms, models and seeds, and the prompt composer",
-    caption: "The sound effects library. Each take keeps its prompt, model and seed.",
-    size: "1600 × 1000",
+    src: "/product/app-sfx.webp",
+    alt: "The SFX page: the prompt composer beside ten sound effects with their licence badges, models and lengths",
+    caption: "The sound effects page. Each take keeps its prompt, model and seed.",
+    size: "2400 × 1500",
   },
   {
-    src: "/product/music-studio.png",
-    alt: "The Music page: a request form with model, licence, styles, tempo, key and length beside a shelf of generated takes",
+    src: "/product/app-music.webp",
+    alt: "The Music page: a request form with model, licence, lyrics switch, styles and tempo beside seven generated tracks, with one in the player",
     caption: "The music page takes a style prompt or a lyric sheet.",
-    size: "1600 × 1000",
+    size: "2400 × 1500",
   },
   {
-    src: "/product/models.png",
-    alt: "The Models page: each model with its licence badge, size and install state",
-    caption: "The models page shows each licence and VRAM figure before download.",
-    size: "1600 × 1000",
+    src: "/product/app-models.webp",
+    alt: "The Models page: the Fast, Balanced, Quality and Max packs, each naming one model for sound effects, music and voice with its size",
+    caption: "Model packs install one model each for sound effects, music and voice.",
+    size: "2400 × 1500",
   },
   {
-    src: "/product/agents.png",
-    alt: "The Agents page: connected MCP clients, copy-paste connection commands, and a log of recent calls",
+    src: "/product/app-agents.webp",
+    alt: "The Agents page: call counts for the day, copy-paste connection commands and the MCP clients that have connected",
     caption: "The agents page lists each MCP client that has connected and what it called.",
-    size: "1600 × 1000",
+    size: "2400 × 1500",
   },
   {
-    src: "/product/library.png",
-    alt: "The Mirli library: generated sounds with waveforms, prompts, models and seeds",
+    src: "/product/app-library.webp",
+    alt: "The Mirli library: music, sound effects and speech in one list with licence badges, models and lengths, above the player",
     caption: "Sound effects, music and speech in one library.",
-    size: "1600 × 1000",
+    size: "2400 × 1500",
   },
   {
-    src: "/product/voice-lab.png",
-    alt: "The Voice Lab: saved voices as cards, cloned from a clip or built into a model",
+    src: "/product/app-voice-lab.webp",
+    alt: "The Voice Lab: saved voices as cards and in a table, cloned from a clip or built into a model, with the number of reads each has made",
     caption: "Saved and cloned voices in the Voice Lab.",
-    size: "1600 × 470",
+    size: "2400 × 1500",
   },
 ];
 
@@ -434,7 +434,7 @@ function StillCard({ still }: { still: Still }) {
         <p className="text-sm leading-relaxed">{still.caption}</p>
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="text-muted-foreground font-mono text-xs">{still.size}</span>
-          <DownloadLink href={still.src}>{fileName(still.src).endsWith(".gif") ? "GIF" : "PNG"}</DownloadLink>
+          <DownloadLink href={still.src}>{fileName(still.src).split(".").pop()?.toUpperCase()}</DownloadLink>
         </div>
       </div>
     </li>

@@ -166,6 +166,9 @@ export class CloudModel implements GenerationModel {
       auto_installable: false,
       provider: "cloud",
       price: asr ? null : { ...m.price },
+      // Every render costs credits, so never a default (schemas.ts).
+      metered: true,
+      downloadable: false,
     };
   }
 

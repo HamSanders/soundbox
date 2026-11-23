@@ -63,11 +63,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import {
   useDeleteSession,
   useHealth,
-  useHosted,
   useModelAction,
   useModels,
   useSessions,
   useUpdateStatus,
+  useCan,
 } from "@/lib/queries";
 import { useUiPrefs, wantsRail } from "@/lib/ui-prefs";
 import { formatMb, formatRelative } from "@/lib/format";
@@ -673,7 +673,7 @@ function ThemeToggle() {
 
 export function AppSidebar() {
   const { setOpenMobile } = useSidebar();
-  const hosted = useHosted();
+  const can = useCan();
   useRailOnImmersivePages();
 
   return (
@@ -724,12 +724,11 @@ export function AppSidebar() {
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            {/* Mirli on the web: updates and the GPU are the host's business. */}
-            {!hosted && <UpdateNotice />}
+            {can.updates && <UpdateNotice />}
             <SidebarMenuItem>
               <ThemeToggle />
             </SidebarMenuItem>
-            {!hosted && (
+            {can.gpu_status && (
               <SidebarMenuItem>
                 <DeviceStatus />
               </SidebarMenuItem>

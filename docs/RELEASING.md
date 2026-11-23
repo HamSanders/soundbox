@@ -78,10 +78,25 @@ of the release PR (step 2 below).
 4. **Merge the PR.** **Tag release** sees a version with no tag, tags the
    merge commit `vX.Y.Z`, and starts **Release** on the tag. That builds the
    installers again and attaches them to a draft GitHub Release with the
-   changelog section as its notes.
+   changelog section as its notes. When every installer is up, the
+   **Checksums** job adds `SHA256SUMS.txt`.
 5. **Publish the draft** from the Releases page once the assets are all there.
-   Check that `latest.json` is among them: publishing is what offers the
-   update to installed copies.
+   Check that `latest.json` and `SHA256SUMS.txt` are among them: publishing
+   is what offers the update to installed copies.
+
+**Release** stops before building anything if `CHANGELOG.md` has no notes for
+the tag's version, so a release never goes out with a bare link for notes.
+That can only happen to a tag pushed by hand: Prepare release writes the
+section. Add the notes on the branch, then tag again.
+
+`SHA256SUMS.txt` lists the installers people download (`.exe`, `.dmg`,
+`.AppImage`, `.deb`), hashed from the draft's own assets after all four
+builds finish. The updater's bundles and `latest.json` are not in it and are
+not touched; they are covered by the updater key. If a build fails and you
+re-run it, re-run failed jobs so **Checksums** runs after it. If you replace
+an installer on the draft by hand, re-run **Checksums** too, or the list will
+be wrong. [DESKTOP.md](./DESKTOP.md#checking-a-download) tells users how to
+check a download.
 
 The tag is created by the merge. Don't push version tags by hand, except for
 a pre-release (below).
@@ -105,7 +120,8 @@ When a fix can't wait for `main` to be releasable:
 A tag with a hyphen, such as `v0.4.0-beta.1`, makes a draft marked as a
 pre-release. It isn't part of the normal flow, since release candidates are
 PR builds. It's there for a wider test, pushed by hand on a commit of `main`.
-Its installers carry the version in the files, not the tag's suffix.
+Its installers carry the version in the files, not the tag's suffix. Its
+notes are the `## [Unreleased]` section, which must not be empty.
 
 ## One-time repository settings
 
@@ -118,7 +134,15 @@ These live in GitHub, not in the repo:
   merge.
 - Settings → Actions → General: **Allow GitHub Actions to create and approve
   pull requests** turned on, so Prepare release can open its PR.
-- A `no-changelog` label.
+- A `no-changelog` label, and the labels the issue forms apply: `bug`,
+  `install` and `model`. A form whose label doesn't exist still opens the
+  issue, just unlabelled. (**Scam guard** creates its own `possible-scam`
+  label the first time it needs it.)
+- Code scanning's default setup (CodeQL) and Dependabot alerts, under
+  Settings → Code security. **Security** (`.github/workflows/security.yml`)
+  adds the gitleaks secret scan and the npm and cargo audits; make
+  **Secret scan (gitleaks)** a required check in the Main ruleset if a leaked
+  secret should block a merge.
 - The **updater key** secrets (below).
 
 ## Update counts

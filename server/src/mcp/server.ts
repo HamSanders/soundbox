@@ -944,8 +944,10 @@ interface TtsChoice {
  *   1. an explicit `model` — the caller asked, every line uses it;
  *   2. the line's voice's `model_id`, when that model is installed — a voice
  *      is made on a model, and a clone read on another family does not sound
- *      like the voice (Chatterbox's "guy" read on Vevo2 is a stranger);
- *   3. a ready TTS model, preferring the loaded one to save a cold start.
+ *      like the voice (Chatterbox's "guy" read on Vevo2 is a stranger). Naming
+ *      the voice names its model, so this holds for a metered model too;
+ *   3. a ready TTS model that isn't metered, preferring the loaded one to save
+ *      a cold start.
  *
  * Returns a per-line resolver rather than one id because a story is a cast:
  * two characters can be voices on two families, and each is read on its own.
@@ -968,8 +970,10 @@ async function ttsResolver(
     }
     return () => ({ model: chosen.id });
   }
-  // Mirli Cloud costs money, so it is never the default: an agent gets it only by naming it.
-  const ready = tts.filter((m) => m.provider !== "cloud" && (m.status === "loaded" || m.status === "installed"));
+  const installed = tts.filter((m) => m.status === "loaded" || m.status === "installed");
+  // A metered model costs the user money, so an agent gets one only by naming
+  // it, or a voice made on it.
+  const ready = installed.filter((m) => !m.metered);
   const fallback = (): string => {
     if (!ready.length) {
       throw new Error(
@@ -983,7 +987,7 @@ async function ttsResolver(
     const voice = voiceId ? svc.getVoice(voiceId) : null;
     const wanted = voice?.model_id ?? null;
     if (wanted === null) return { model: fallback() };
-    if (ready.some((m) => m.id === wanted)) return { model: wanted };
+    if (installed.some((m) => m.id === wanted)) return { model: wanted };
     const model = fallback();
     return {
       model,
@@ -1072,17 +1076,23 @@ export function buildMcp(
         },
         async (rec) => {
           const svc = getService();
-          let modelId = model ?? svc.models.resident;
+          // The resident model, unless the profile's setup has put local
+          // models out of reach (it is unloaded then, but a render may still
+          // be finishing on it).
+          let modelId = model ?? (svc.capabilities.local_models ? svc.models.resident : null);
           if (modelId === null || modelId === undefined) {
             const models = await svc.listModels();
-            // Never a Mirli Cloud model by default: those cost credits.
+            // Never a metered model by default: those cost the user money.
             const ready = models.filter(
-              (e) => e.provider !== "cloud" && (e.status === "installed" || e.status === "loaded"),
+              (e) => !e.metered && (e.status === "installed" || e.status === "loaded"),
             );
             if (!ready.length) {
               throw new Error(
-                "No local model is installed yet. Open the Mirli app and download " +
-                  "one from the Models tab, or call soundbox.list_models to see options.",
+                models.some((e) => e.metered)
+                  ? "No free model is installed, and metered models (charged per render) are " +
+                    "never picked by default. Pass one as `model`; soundbox.list_models lists them."
+                  : "No local model is installed yet. Open the Mirli app and download " +
+                    "one from the Models tab, or call soundbox.list_models to see options.",
               );
             }
             modelId = ready[0].id;

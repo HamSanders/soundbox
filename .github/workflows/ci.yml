@@ -23,6 +23,8 @@ jobs:
       - uses: actions/checkout@v7
       # Every file that records the version agrees (scripts/version.mjs).
       - run: node scripts/version.mjs check
+      # The splash keeps a copy of the app's ambient background.
+      - run: node scripts/sync-ambient-field.mjs --check
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
@@ -53,6 +55,34 @@ jobs:
       # Builds the app, stages app/dist into server/web, then builds the server.
       - run: npm run build
       - run: npm run site:build
+
+  # The scripts workflows run (.github/scripts) have their own tests, on the
+  # runner's own Node, since that is what runs them.
+  workflow-scripts:
+    name: Workflow scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: node --test .github/scripts/scam-guard.test.mjs
+
+  docker-slim:
+    name: Docker (Dockerfile.slim)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Built, not published: proves the image still builds and the server in
+      # it starts and answers.
+      - run: docker build -f Dockerfile.slim -t mirli-slim:ci .
+      - name: Start and probe
+        run: |
+          docker run -d --name slim -p 127.0.0.1:17494:17494 mirli-slim:ci
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:17494/api/health && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:17494/api/capabilities | grep -q '"local_models":false'
+      - if: ${{ failure() }}
+        run: docker logs slim
 
   desktop:
     name: Desktop shell (cargo check)

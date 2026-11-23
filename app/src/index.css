@@ -19,6 +19,15 @@
    already stays off on these devices; this is the other half. */
 @custom-variant no-hover (@media (hover: none));
 
+/* Window size classes, after Android's width classes (docs/device-nav):
+   compact under 600px gets the bottom tab bar, medium 600 to 839px the
+   labelled rail, expanded from 840px the sidebar. `md` (768px) stays for
+   page content; the shell switches on these. */
+@theme {
+  --breakpoint-medium: 37.5rem;
+  --breakpoint-expanded: 52.5rem;
+}
+
 @theme inline {
     --font-heading: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
     --font-display: 'Big Shoulders Display Variable', 'Arial Narrow', 'Roboto Condensed', sans-serif;
@@ -282,15 +291,22 @@
   }
 }
 
-/* The phone tab bar's height, or nothing where there is no tab bar. Read by
-   the shell's bottom padding, the player and anything else pinned to the
-   bottom, so they all stop above it. 767.98px matches `useIsMobile`. */
+/* The phone tab bar's height and the tablet rail's width, or nothing where
+   neither is shown. The shell's padding, the player and anything else pinned
+   to an edge read them so they stop short of the bar or the rail. The
+   breakpoints match `useSizeClass` (hooks/use-size-class.ts). */
 :root {
   --tabbar-h: 0px;
+  --rail-w: 0px;
 }
-@media (max-width: 767.98px) {
+@media (max-width: 599.98px) {
   :root {
     --tabbar-h: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+@media (min-width: 600px) and (max-width: 839.98px) {
+  :root {
+    --rail-w: calc(5rem + env(safe-area-inset-left, 0px));
   }
 }
 

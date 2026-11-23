@@ -74,7 +74,8 @@ export function AppHeader() {
       className="relative z-30 flex h-12 shrink-0 items-center gap-2 px-3"
     >
       <div className="-ml-1 flex items-center">
-        <SidebarTrigger />
+        {/* On a tablet the rail carries this button; phones and desktops keep it here. */}
+        <SidebarTrigger className="medium:max-expanded:hidden" />
         <HistoryButtons />
       </div>
       <nav aria-label="Breadcrumb" className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-sm">

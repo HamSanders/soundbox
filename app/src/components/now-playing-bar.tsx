@@ -229,10 +229,10 @@ export function NowPlayingBar() {
       role="region"
       aria-label="Now playing"
       className={cn(
-        "bg-sidebar md:bg-transparent fixed inset-x-0 bottom-(--tabbar-h,0px) z-40 grid h-(--dock-h,80px) grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] md:pr-2",
+        "bg-sidebar expanded:bg-transparent fixed right-0 left-(--rail-w,0px) bottom-(--tabbar-h,0px) z-40 grid h-(--dock-h,80px) grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 expanded:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] expanded:pr-2",
         // Its edges line up with the panels above: left with the first
         // panel (just past the sidebar), right with their 8px margin.
-        sidebarState === "collapsed" ? "md:pl-[calc(var(--sidebar-width-icon)+1rem)]" : "md:pl-(--sidebar-width)",
+        sidebarState === "collapsed" ? "expanded:pl-[calc(var(--sidebar-width-icon)+1rem)]" : "expanded:pl-(--sidebar-width)",
       )}
     >
       <audio
@@ -254,7 +254,7 @@ export function NowPlayingBar() {
       {/* Narrow windows have no room for the centre column; the timeline runs
           along the dock's top edge instead, with a taller hit area than it
           looks. */}
-      {scrubber("absolute inset-x-0 -top-2 h-4 md:hidden")}
+      {scrubber("absolute inset-x-0 -top-2 h-4 expanded:hidden")}
 
       {/* The sound */}
       <div className="flex min-w-0 items-center gap-3">
@@ -275,7 +275,7 @@ export function NowPlayingBar() {
       </div>
 
       {/* Transport and timeline */}
-      <div className="flex min-w-0 flex-col items-center gap-1.5 max-md:order-last max-md:hidden">
+      <div className="flex min-w-0 flex-col items-center gap-1.5 max-expanded:order-last max-expanded:hidden">
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -326,7 +326,7 @@ export function NowPlayingBar() {
 
       {/* Close; on narrow windows the play button lives here instead. */}
       <div className="flex items-center justify-end gap-1">
-        <Button size="icon-sm" className="rounded-full md:hidden" aria-label={playing ? "Pause" : "Play"} onClick={toggle}>
+        <Button size="icon-sm" className="rounded-full expanded:hidden" aria-label={playing ? "Pause" : "Play"} onClick={toggle}>
           {playing ? <PauseIcon /> : <PlayIcon />}
         </Button>
         <Button

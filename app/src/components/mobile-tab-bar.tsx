@@ -37,7 +37,7 @@ type Tab = {
   primary?: boolean;
 };
 
-const TABS: Tab[] = [
+export const TABS: Tab[] = [
   { to: "/dashboard", label: "Home", icon: HomeIcon, match: /^\/(dashboard|chat|console)(\/|$)/ },
   { to: "/library", label: "Library", icon: LibraryIcon, match: /^\/(library\/?$|sounds\/|projects)/ },
   {
@@ -57,7 +57,7 @@ export function MobileTabBar() {
   return (
     <nav
       aria-label="Main"
-      className="bg-sidebar border-border fixed inset-x-0 bottom-0 z-40 grid h-(--tabbar-h) grid-cols-5 border-t pb-[env(safe-area-inset-bottom,0px)] md:hidden"
+      className="bg-sidebar border-border fixed inset-x-0 bottom-0 z-40 grid h-(--tabbar-h) grid-cols-5 border-t pb-[env(safe-area-inset-bottom,0px)] medium:hidden"
     >
       {TABS.map((tab) => {
         const active = tab.match.test(pathname);

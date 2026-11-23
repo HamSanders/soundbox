@@ -102,7 +102,7 @@ export function ModelDetailPanel() {
   return (
     <aside
       aria-label={`Details for ${name}`}
-      className="bg-background ring-border animate-in fade-in-0 slide-in-from-right-8 fixed inset-x-0 top-0 bottom-[calc(var(--dock-h,0px)+var(--tabbar-h,0px))] z-30 flex flex-col duration-(--duration-base) md:static md:z-auto md:my-2 md:mr-2 md:relative md:h-[calc(100svh-1rem-var(--dock-h,0px))] md:w-(--panel-w) md:shrink-0 md:rounded-xl md:ring-1"
+      className="bg-background ring-border animate-in fade-in-0 slide-in-from-right-8 fixed right-0 left-(--rail-w,0px) top-0 bottom-[calc(var(--dock-h,0px)+var(--tabbar-h,0px))] z-30 flex flex-col duration-(--duration-base) expanded:static expanded:z-auto expanded:my-2 expanded:mr-2 expanded:relative expanded:h-[calc(100svh-1rem-var(--dock-h,0px))] expanded:w-(--panel-w) expanded:shrink-0 expanded:rounded-xl expanded:ring-1"
       style={panel.style}
     >
       {panel.handle}

@@ -37,7 +37,7 @@ import {
 import { useGenerateSession } from "@/hooks/use-generate-session";
 import { prefillFromSound, usePrefillStore } from "@/lib/generate-store";
 import { usePlayerStore } from "@/lib/player-store";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useSizeClass } from "@/hooks/use-size-class";
 import { useModels, useProjects, useSounds, useTags } from "@/lib/queries";
 import { clampDuration, preferredModel } from "@/lib/session-store";
 import type { Model, SoundQuery } from "@/lib/api";
@@ -68,7 +68,7 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
   // The "now playing" dock pins to the same viewport-bottom spot the
   // category composer does — see the matching hook in routes/generate.tsx.
   const nowPlaying = usePlayerStore((s) => s.sound !== null);
-  const isDesktop = !useIsMobile();
+  const isDesktop = useSizeClass() === "expanded";
   const [searchParams, setSearchParams] = useSearchParams();
   const projectId = searchParams.get("project");
   // The combined Library filters by kind in place; a kind page is one kind.
@@ -458,7 +458,7 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
           // beside it: `main` has 24px of bottom padding, and without pulling
           // through it the composer would rest 24px above the window edge on a
           // short page while sitting flush against it on a long one.
-          className="from-background via-background sticky z-20 mt-auto md:hidden -mx-3 -mb-6 overflow-x-clip [overflow-clip-margin:12px] bg-gradient-to-t via-75% to-transparent px-3 pt-6 pb-6 transition-[bottom]"
+          className="from-background via-background sticky z-20 mt-auto expanded:hidden -mx-3 -mb-6 overflow-x-clip [overflow-clip-margin:12px] bg-gradient-to-t via-75% to-transparent px-3 pt-6 pb-6 transition-[bottom]"
           // Desktop scrolls inside the panel, which already ends above the
           // player; only the narrow, window-scrolled layout needs the offset.
           // On a phone it also clears the tab bar, which sits under the player.

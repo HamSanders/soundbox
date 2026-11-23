@@ -1,4 +1,5 @@
 import { MobileTabBar } from "@/components/mobile-tab-bar";
+import { NavRail } from "@/components/nav-rail";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { Suspense, lazy, useEffect, type CSSProperties } from "react";
@@ -123,7 +124,7 @@ function AppShellReady() {
       // own 8px margins. Every panel's height reads it.
       // The ground is see-through so the ambient field behind it shows in
       // the gaps between panels; the panels keep their own fills.
-      className="pt-(--top-h) pb-[calc(var(--dock-h)+var(--tabbar-h,0px))] has-data-[variant=inset]:bg-transparent"
+      className="pt-(--top-h) pl-(--rail-w,0px) pb-[calc(var(--dock-h)+var(--tabbar-h,0px))] has-data-[variant=inset]:bg-transparent"
       style={
         {
           "--dock-h": nowPlaying ? `${PLAYER_DOCK_HEIGHT_PX}px` : "0px",
@@ -154,11 +155,11 @@ function AppShellReady() {
         // On desktop the panel is exactly the window less its 8px margins and
         // the player strip, and the page scrolls inside it, so the panel's
         // rounded bottom edge always sits just above the player.
-        className={`bg-background text-foreground min-w-0 md:h-(--panel-h)${
+        className={`bg-background text-foreground min-w-0 expanded:h-(--panel-h)${
           fullBleed
             ? // The Studio's own panels are the shell's panels here: the page
               // panel has no fill, frame or padding of its own around them.
-              " max-md:h-[calc(100svh-var(--dock-h,0px)-var(--tabbar-h,0px))] overflow-hidden md:bg-transparent! md:ring-0!" : " md:overflow-y-auto"
+              " max-expanded:h-[calc(100svh-var(--dock-h,0px)-var(--tabbar-h,0px))] overflow-hidden expanded:bg-transparent! expanded:ring-0!" : " expanded:overflow-y-auto"
         }`}
       >
         <AppHeader />
@@ -172,7 +173,7 @@ function AppShellReady() {
         <main
           className={
             fullBleed
-              ? "flex w-full min-h-0 min-w-0 flex-1 flex-col px-4 py-6 md:p-0"
+              ? "flex w-full min-h-0 min-w-0 flex-1 flex-col px-4 py-6 expanded:p-0"
               : "w-full flex-1 px-6 py-6 [&_p]:max-w-prose"
           }
         >
@@ -240,6 +241,7 @@ function AppShellReady() {
           Everything else stays in the menu behind the header's button. See
           docs/device-nav/DESIGN.md, model A. */}
       <MobileTabBar />
+      <NavRail />
       {/* Docked beside the page, in the shell's row: see sound-detail-panel.tsx. */}
       <SoundDetailPanel />
       <VoiceDetailPanel />

@@ -108,6 +108,17 @@ export const createJobRequest = z.object({
 });
 
 /** POST /v1/uploads takes the raw WAV bytes as the body. */
+/**
+ * POST /v1/warm: the gateway starts the GPU line a model runs on, because the
+ * user looks about to use it. A hint: never an error for the user to see.
+ */
+export const warmResponse = z.object({
+  state: z.enum(["ready", "warming", "busy", "skipped"]),
+  line: z.string().nullish(),
+  reason: z.string().nullish(),
+  window_s: z.number(),
+});
+
 export const uploadResponse = z.object({
   upload_id: z.string().uuid(),
   expires_at: z.string(),

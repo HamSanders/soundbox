@@ -25,6 +25,12 @@ export function registerCloud(app: FastifyInstance, svc: MirliService): void {
     return reply.code(204).send();
   });
 
+  /** The user looks about to use this cloud model: start its GPU line now (a hint, never an error). */
+  app.post("/api/cloud/warm", async (request) => {
+    const { model } = z.object({ model: z.string().min(1).max(200) }).parse(request.body ?? {});
+    return svc.cloud.warm(model);
+  });
+
   /** A checkout URL for a credit pack, to open in the browser. */
   app.post("/api/cloud/checkout", async (request) => {
     const { pack } = z.object({ pack: packId }).parse(request.body ?? {});

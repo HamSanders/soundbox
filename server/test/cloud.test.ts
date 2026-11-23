@@ -98,6 +98,7 @@ function fakeGateway() {
     purposes: [] as (string | null)[],
     uploadPolls: 0,
     modelReads: 0,
+    warmed: [] as string[],
   };
   const json = (body: unknown, status = 200) => Response.json(body, { status });
   const err = (status: number, code: string, message: string) => json({ error: { code, message } }, status);
@@ -136,6 +137,10 @@ function fakeGateway() {
     if (!authed) return err(401, "unauthorized", "Sign in.");
     if (method === "GET" && url.pathname === "/v1/account") {
       return json({ email: "me@example.com", balance: g.balance, held: 0, spent_today: g.spentToday, first_paid: true });
+    }
+    if (method === "POST" && url.pathname === "/v1/warm") {
+      g.warmed.push(String(body?.model));
+      return json({ state: "warming", line: "speech", window_s: 90 });
     }
     if (method === "POST" && url.pathname === "/v1/quote") return json({ credits: g.quote, units: 1, price_version: 1 });
     if (method === "GET" && url.pathname.startsWith("/v1/uploads/")) {
@@ -315,6 +320,19 @@ describe("Mirli Cloud models", () => {
     g.revoked = true;
     const model = new CloudModel(SFX, cloud, async () => {});
     await expect(model.generate("x", 4)).rejects.toThrow(/signed this device out/);
+  });
+
+  it("warms a cloud model's GPU line when signed in, and is quiet otherwise", async () => {
+    const gw = fakeGateway();
+    const off = new CloudService(config, models, gw.fetchImpl, true);
+    expect(await off.warm("cloud:test-sfx")).toEqual({ state: "skipped" }); // signed out: nothing sent
+    expect(gw.g.warmed).toEqual([]);
+    const { g, cloud } = await signedIn();
+    expect(await cloud.warm("cloud:test-sfx")).toMatchObject({ state: "warming", window_s: 90 });
+    expect(g.warmed).toEqual(["cloud:test-sfx"]);
+    expect(await cloud.warm("local-model")).toEqual({ state: "skipped" }); // not a cloud model
+    g.revoked = true;
+    expect(await cloud.warm("cloud:test-sfx")).toEqual({ state: "skipped" }); // a failure is never an error
   });
 
   it("picks up models the gateway adds, without a restart", async () => {

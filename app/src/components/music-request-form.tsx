@@ -52,6 +52,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 import { LicenseChip } from "@/components/license-badge";
 import { cloudPriceLabel } from "@/lib/cloud";
+import { useCloudWarm } from "@/lib/cloud-warm";
 import { LoadingVerb } from "@/components/loading-verb";
 import { StemChoice } from "@/components/stem-picker";
 import { COMMON_STEM_NAMES } from "@/lib/api";
@@ -202,6 +203,7 @@ export function MusicRequestForm({
   submitLabel = "Create",
   canSeparate = false,
 }: MusicRequestFormProps) {
+  useCloudWarm(model);
   const canSing = Boolean(model?.supports.lyrics);
   // An edit of an existing take. The source rides on the settings so the
   // chip can name it; `editable` is whether *this* model can run it, and

@@ -3809,6 +3809,9 @@ export const mockApi: MirliApi = {
   },
   async cloudCancelSignIn() {},
   async cloudSignOut() {},
+  async cloudWarm() {
+    return { state: "skipped" };
+  },
   async cloudCheckout(): Promise<never> {
     throw new ApiError("Mirli Cloud is not turned on in this build.", 400);
   },

@@ -49,6 +49,7 @@ import { ConsentSwitch, TidySwitch } from "@/components/voice-clips";
 import { formatClock, isReady } from "@/components/voice-shared";
 import { useRecorder } from "@/hooks/use-recorder";
 import { AUDIO_ACCEPT, stemOf, toWav } from "@/lib/audio-file";
+import { useCloudWarm } from "@/lib/cloud-warm";
 import { ApiError, api } from "@/lib/api";
 import type { Model } from "@/lib/api";
 import {
@@ -523,6 +524,7 @@ export function VoiceCloneCreatePage() {
   // A model that runs elsewhere sends the clip off this machine with every
   // read, and that service refuses a clip nobody vouched for.
   const chosen = cloneModels.find((m) => m.id === modelId);
+  useCloudWarm(chosen);
   const consentRequired = Boolean(chosen && (chosen.provider ?? "local") !== "local");
 
   const canSave =

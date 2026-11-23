@@ -288,6 +288,23 @@ export class CloudService implements CloudContext {
     await this.models.setCloudModels(this.offered(), this);
   }
 
+  /* -------------------------------------------------------------- warming */
+
+  /**
+   * Ask the gateway to start the GPU line a cloud model runs on, so the render
+   * the user is about to start doesn't wait for a cold start. A hint: signed
+   * out, off or failing, it answers "skipped" and nothing is shown.
+   */
+  async warm(model: string): Promise<{ state: string }> {
+    const client = this.enabled ? this.client() : null;
+    if (!client || !model.startsWith("cloud:")) return { state: "skipped" };
+    try {
+      return await client.warm(model);
+    } catch {
+      return { state: "skipped" };
+    }
+  }
+
   /* -------------------------------------------------------------- buying */
 
   async checkout(pack: PackId): Promise<{ url: string }> {

@@ -1849,6 +1849,8 @@ export interface MirliApi {
   cloudCancelSignIn(): Promise<void>;
   cloudSignOut(): Promise<void>;
   cloudCheckout(pack: CloudPack): Promise<{ url: string }>;
+  /** Start the GPU line a cloud model runs on, ahead of a render. A hint: never throws to the user. */
+  cloudWarm(model: string): Promise<{ state: string }>;
   saveEndpoint(id: string, input: AudioEndpointInput): Promise<AudioEndpoint>;
   deleteEndpoint(id: string): Promise<void>;
   /** Render one short clip through a configuration; nothing is saved. `id`
@@ -2464,6 +2466,7 @@ export const httpApi: MirliApi = {
   cloudSignIn: () => request<CloudSignIn>("/api/cloud/sign-in", { method: "POST" }),
   cloudCancelSignIn: () => request<void>("/api/cloud/sign-in", { method: "DELETE" }),
   cloudSignOut: () => request<void>("/api/cloud/sign-out", { method: "POST" }),
+  cloudWarm: (model) => request<{ state: string }>("/api/cloud/warm", { method: "POST", body: JSON.stringify({ model }) }),
   cloudCheckout: (pack) =>
     request<{ url: string }>("/api/cloud/checkout", { method: "POST", body: JSON.stringify({ pack }) }),
   saveEndpoint: (id, input) =>

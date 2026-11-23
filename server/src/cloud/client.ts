@@ -20,6 +20,7 @@ import {
   quoteResponse,
   type Task,
   uploadResponse,
+  warmResponse,
 } from "./contract.js";
 
 export type FetchFn = typeof fetch;
@@ -93,6 +94,11 @@ export class CloudClient {
 
   account() {
     return this.call(accountResponse, "GET", "/v1/account");
+  }
+
+  /** Start the GPU line `model` runs on (the user picked it, or is typing a prompt for it). */
+  warm(model: string) {
+    return this.call(warmResponse, "POST", "/v1/warm", { model });
   }
 
   quote(model: string, task: Task, params: JobParams) {

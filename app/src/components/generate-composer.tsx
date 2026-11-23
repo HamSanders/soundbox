@@ -71,6 +71,7 @@ import { PHASE_LABEL } from "@/components/pending-sound-row";
 import { formatDuration } from "@/lib/format";
 import type { Job, Model, Project, Voice } from "@/lib/api";
 import type { ComposerBlocker } from "@/lib/composer-blocker";
+import { useCloudWarm } from "@/lib/cloud-warm";
 import { NOT_READY } from "@/lib/model-ready";
 import { clampDuration, type ComposerSettings } from "@/lib/session-store";
 import { cn } from "@/lib/utils";
@@ -232,6 +233,7 @@ export function GenerateComposer({
   enhance,
   lyricsAssist,
 }: ComposerProps) {
+  useCloudWarm(model);
   const [modelsOpen, setModelsOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = useState(false);
   const [voicesOpen, setVoicesOpen] = useState(false);

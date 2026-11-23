@@ -18,16 +18,37 @@ interface UiPrefs {
    *  cards you place yourself (see `panel-canvas`). One choice for every
    *  story, because it is how you work rather than what you are working on. */
   studioLayout: "columns" | "canvas";
+  /** The moving ground behind the panels (components/ambient-background),
+   *  or none. */
+  background: "smoke" | "liquid" | "gradient" | "pixel" | "none";
+  /** Whether that ground reacts: the pointer pushes it and sound moves it.
+   *  Off, it only drifts. */
+  backgroundReactive: boolean;
   set: (patch: Partial<Omit<UiPrefs, "set">>) => void;
 }
 
+const BACKGROUNDS = ["smoke", "liquid", "gradient", "pixel", "none"];
+
 function load(): Omit<UiPrefs, "set"> {
-  const defaults: Omit<UiPrefs, "set"> = { sidebarKeepExpanded: false, studioLayout: "columns" };
+  const defaults: Omit<UiPrefs, "set"> = {
+    sidebarKeepExpanded: false,
+    studioLayout: "columns",
+    background: "smoke",
+    backgroundReactive: true,
+  };
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return defaults;
-    const parsed = JSON.parse(raw) as Partial<typeof defaults>;
-    return { ...defaults, ...parsed };
+    const parsed = JSON.parse(raw) as Partial<typeof defaults> & { backgroundSound?: boolean };
+    // An earlier build saved only a sound switch: carry its choice over.
+    if (parsed.backgroundReactive === undefined && typeof parsed.backgroundSound === "boolean") {
+      parsed.backgroundReactive = parsed.backgroundSound;
+    }
+    delete parsed.backgroundSound;
+    const merged = { ...defaults, ...parsed };
+    // A name from an older build ("off") or a hand edit falls back to the default.
+    if (!BACKGROUNDS.includes(merged.background)) merged.background = defaults.background;
+    return merged;
   } catch {
     return defaults;
   }

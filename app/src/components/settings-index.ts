@@ -213,6 +213,21 @@ export const SETTINGS: SettingMeta[] = [
       "Off: on studio, Music and Voice Lab pages the navigation folds to an icon rail so the timeline gets the width.",
     keywords: ["navigation", "rail", "collapse", "layout"],
   },
+  {
+    id: "background",
+    group: "interface",
+    label: "Background",
+    description:
+      "What moves behind the panels. Smoke drifts in from a corner and your pointer blows it away; Liquid is warm colour you can stir; Gradient is a quiet wash of the accent from the corners; Pixel is a grid of soft lights that shows the spectrum of what is playing. None keeps the plain ground.",
+    keywords: ["ambient", "animation", "smoke", "liquid", "gradient", "pixel", "none", "visualizer", "motion", "wallpaper"],
+  },
+  {
+    id: "background-reactive",
+    group: "interface",
+    label: "Reactive background",
+    description: "The pointer pushes the background and whatever is playing moves it. Off, it just drifts on its own.",
+    keywords: ["ambient", "visualizer", "audio", "reactive", "music", "mouse", "pointer", "cursor"],
+  },
   // Updates & telemetry
   {
     id: "update-check",

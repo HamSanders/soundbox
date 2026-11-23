@@ -70,6 +70,7 @@ import { chainShapeChanged } from "@/lib/devices";
 import type { LaneChain } from "@/lib/device-chain";
 import type { DeviceSpec, TrackDevices } from "@/lib/devices";
 import type { EditKind, Sound, StorySegment, StoryTrack, TrackPatch } from "@/lib/api";
+import { ambientTap } from "@/lib/ambient/audio-bus";
 
 /** The story transport's handle in the global one-thing-plays-at-a-time
  *  store, so a clip's own player yields to it and vice versa. */
@@ -1231,6 +1232,9 @@ export function StoryTimeline({
     usePlayerStore.getState().play(STORY_PLAYER_ID);
 
     const ctx = new AudioContext();
+    // The app's ambient background listens here too (lib/ambient/audio-bus).
+    // A side branch beside the destination: it changes nothing you hear.
+    const ambient = ambientTap(ctx);
     const sources: AudioBufferSourceNode[] = [];
     const trackGains = new Map<number, GainNode>();
     const chains = new Map<number, LaneChain>();
@@ -1253,6 +1257,7 @@ export function StoryTimeline({
         const fader = ctx.createGain();
         fader.gain.value = laneGain(tracksRef.current, lane);
         fader.connect(ctx.destination);
+        if (ambient) fader.connect(ambient);
         trackGains.set(lane, fader);
         const specs = devicesRef.current[lane] ?? [];
         chain = createLaneChain(ctx, fader, specs);

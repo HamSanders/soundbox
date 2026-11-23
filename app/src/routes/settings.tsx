@@ -696,11 +696,21 @@ function StorageGroup({ settings }: { settings: Settings }) {
 
 function InterfaceGroup() {
   const keep = useUiPrefs((s) => s.sidebarKeepExpanded);
+  const background = useUiPrefs((s) => s.background);
+  const backgroundReactive = useUiPrefs((s) => s.backgroundReactive);
   const set = useUiPrefs((s) => s.set);
   const markSaved = useMarkSaved();
   const change = (on: boolean) => {
     set({ sidebarKeepExpanded: on });
     markSaved("sidebar-keep");
+  };
+  const changeBackground = (v: typeof background) => {
+    set({ background: v });
+    markSaved("background");
+  };
+  const changeBackgroundReactive = (on: boolean) => {
+    set({ backgroundReactive: on });
+    markSaved("background-reactive");
   };
   return (
     <SettingsGroup id="interface">
@@ -710,6 +720,40 @@ function InterfaceGroup() {
         modified={keep}
         onReset={() => change(false)}
         control={<Switch id="sidebar-keep" checked={keep} onCheckedChange={change} />}
+      />
+      <SettingRow
+        id="background"
+        htmlFor="background"
+        modified={background !== "smoke"}
+        onReset={() => changeBackground("smoke")}
+        control={
+          <Select value={background} onValueChange={(v) => changeBackground(v as typeof background)}>
+            <SelectTrigger id="background" className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="smoke">Smoke</SelectItem>
+              <SelectItem value="liquid">Liquid</SelectItem>
+              <SelectItem value="gradient">Gradient</SelectItem>
+              <SelectItem value="pixel">Pixel</SelectItem>
+              <SelectItem value="none">None</SelectItem>
+            </SelectContent>
+          </Select>
+        }
+      />
+      <SettingRow
+        id="background-reactive"
+        htmlFor="background-reactive"
+        modified={!backgroundReactive}
+        onReset={() => changeBackgroundReactive(true)}
+        control={
+          <Switch
+            id="background-reactive"
+            checked={backgroundReactive}
+            disabled={background === "none"}
+            onCheckedChange={changeBackgroundReactive}
+          />
+        }
       />
     </SettingsGroup>
   );

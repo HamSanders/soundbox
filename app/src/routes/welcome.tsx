@@ -26,7 +26,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AudioLinesIcon,
+  ArrowUpRightIcon,
   BookOpenIcon,
+  CloudIcon,
   ExternalLinkIcon,
   StarIcon,
   TerminalIcon,
@@ -40,7 +42,7 @@ import { COMPARISON, COMPARISON_HEAD } from "@/content/comparison";
 import { COMMERCIAL, FREE, GPU, MAC, MODELS_FAQ, OFFLINE, RENAMED } from "@/content/faq";
 import { SamplePlay } from "@/components/sample-play";
 import { type ExampleId } from "@/content/examples";
-import { MODELS_HUB_HREF, REPO_URL, repoFile } from "@/lib/marketing-links";
+import { cloudWaitlistHref, MODELS_HUB_HREF, REPO_URL, repoFile } from "@/lib/marketing-links";
 import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------- data */
@@ -212,6 +214,15 @@ function Hero() {
               </a>
             </Button>
           </div>
+          <p className="text-muted-foreground mt-4 text-sm">
+            No graphics card?{" "}
+            <a
+              href={cloudWaitlistHref("home-hero")}
+              className="text-foreground underline underline-offset-4"
+            >
+              Join the Mirli Cloud waitlist
+            </a>
+          </p>
         </div>
 
         <ul
@@ -461,6 +472,34 @@ function Download() {
   );
 }
 
+/* ------------------------------------------------------------------- cloud */
+
+/**
+ * For the visitor the rest of the page leaves out: no GPU, or not one big
+ * enough. Mirli Cloud is the hosted version and is not open yet, so this hands
+ * off to its waitlist. It sits after Download because the free app comes first.
+ */
+function Cloud() {
+  return (
+    <Section id="cloud" labelledBy="cloud-heading" className="bg-muted/20">
+      <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+        <SectionHead id="cloud-heading" eyebrow="Mirli Cloud · Coming soon" title="No graphics card? Use Mirli Cloud">
+          The models, run for you. Make sound effects, music and voices
+          from your browser or the Mirli app and pay only for what you make.
+          Join the waitlist and we'll email you once, when it opens.
+        </SectionHead>
+        <Button size="lg" asChild className="shrink-0 self-start md:self-auto">
+          <a href={cloudWaitlistHref("home")}>
+            <CloudIcon aria-hidden="true" />
+            Join the waitlist
+            <ArrowUpRightIcon aria-hidden="true" />
+          </a>
+        </Button>
+      </div>
+    </Section>
+  );
+}
+
 /* ---------------------------------------------------------------- footer */
 
 function Footer() {
@@ -497,6 +536,14 @@ function Footer() {
               >
                 GitHub
                 <ExternalLinkIcon className="size-3" aria-hidden="true" />
+              </a>
+            </li>
+            <li>
+              <a
+                href={cloudWaitlistHref("home-footer")}
+                className="hover:text-foreground focus-visible:ring-ring rounded focus-visible:ring-2 focus-visible:outline-none"
+              >
+                Mirli Cloud waitlist
               </a>
             </li>
             <li>
@@ -612,6 +659,7 @@ export function WelcomePage() {
         <Compare />
         <Questions />
         <Download />
+        <Cloud />
       </main>
       <Footer />
     </div>

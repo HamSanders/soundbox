@@ -12,6 +12,7 @@ import { HeaderSlot } from "@/components/header-slot";
 import { QueueIndicator } from "@/components/queue-indicator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useSound } from "@/lib/queries";
+import { cn } from "@/lib/utils";
 
 const TITLES: Record<string, string> = {
   "/dashboard": "Home",
@@ -66,7 +67,18 @@ export function AppHeader() {
   return (
     // The first row of the page panel, not a bar across the window: the
     // sidebar keeps the logo, and each panel carries its own controls.
-    <header className="bg-background/90 supports-[backdrop-filter]:bg-background/70 sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 px-3 backdrop-blur">
+    <header
+      className={cn(
+        "sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 px-3",
+        // In the Studio nothing scrolls under the bar (each panel scrolls
+        // inside itself), so it sits on the ground with no fill. On ordinary
+        // pages the page scrolls beneath it and the frosted fill keeps the
+        // crumb readable over whatever passes under.
+        builder
+          ? "bg-transparent"
+          : "bg-background/90 supports-[backdrop-filter]:bg-background/70 backdrop-blur",
+      )}
+    >
       <div className="-ml-1 flex items-center">
         <SidebarTrigger />
         <HistoryButtons />

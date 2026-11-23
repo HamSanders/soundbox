@@ -15,14 +15,16 @@ import { ArrowLeftIcon, CompassIcon, SearchIcon, XIcon } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { importApi } from "@/components/audiobook/import/api";
+import { CoverRow } from "@/components/cover-row";
 import { EmptyState } from "@/components/empty-state";
+import { FilterChip } from "@/components/filter-chip";
+import { languageName } from "@/lib/format";
 import { ClassicDialog } from "@/components/listen/classic-dialog";
 import { ExploreCard } from "@/components/listen/explore-card";
 import { ExploreCarousel } from "@/components/listen/explore-carousel";
 import { ListenTabs } from "@/components/listen/listen-tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ANY,
@@ -43,43 +45,6 @@ import {
   type SortKey,
 } from "@/lib/listen-explore";
 import { useShelf } from "@/lib/listen-queries";
-
-function languageName(code: string): string {
-  try {
-    return new Intl.DisplayNames(undefined, { type: "language" }).of(code) ?? code;
-  } catch {
-    return code;
-  }
-}
-
-function Chip<T extends string>({
-  label,
-  value,
-  onChange,
-  options,
-  width = "w-40",
-}: {
-  label: string;
-  value: T;
-  onChange: (v: T) => void;
-  options: { value: T; label: string }[];
-  width?: string;
-}) {
-  return (
-    <Select value={value} onValueChange={(v) => onChange(v as T)}>
-      <SelectTrigger size="sm" className={`${width} rounded-full`} aria-label={label}>
-        <SelectValue placeholder={label} />
-      </SelectTrigger>
-      <SelectContent>
-        {options.map((o) => (
-          <SelectItem key={o.value} value={o.value}>
-            {o.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
 
 function Grid({ items, onPick }: { items: ExploreItem[]; onPick: (it: ExploreItem) => void }) {
   return (
@@ -114,13 +79,10 @@ export function ListenExplorePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="space-y-2">
-          <ListenTabs />
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">Find your next listen</h1>
-          <p className="text-muted-foreground text-sm">Your books and public-domain classics, ready to voice.</p>
-        </div>
-        <div className="relative w-full sm:w-72">
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="font-heading mr-auto text-2xl font-semibold tracking-tight">Explore</h1>
+        <ListenTabs />
+        <div className="relative w-full sm:w-64">
           <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
           <Input
             className="pl-8"
@@ -134,15 +96,15 @@ export function ListenExplorePage() {
 
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filters">
         {facets.tags.length > 0 && (
-          <Chip label="Tags" value={f.tag} onChange={(v) => set("tag", v)} width="w-32" options={[{ value: ANY, label: "Any tag" }, ...facets.tags.map((t) => ({ value: t, label: t }))]} />
+          <FilterChip label="Tags" value={f.tag} onChange={(v) => set("tag", v)} width="w-32" options={[{ value: ANY, label: "Any tag" }, ...facets.tags.map((t) => ({ value: t, label: t }))]} />
         )}
-        <Chip
+        <FilterChip
           label="Genre"
           value={f.genre}
           onChange={(v) => set("genre", v)}
           options={[{ value: ANY, label: "All genres" }, ...facets.genres.map(([g, n]) => ({ value: g, label: `${g} (${n})` }))]}
         />
-        <Chip<Narration>
+        <FilterChip<Narration>
           label="Narrated by"
           value={f.narration}
           onChange={(v) => set("narration", v)}
@@ -153,7 +115,7 @@ export function ListenExplorePage() {
           ]}
         />
         {facets.languages.length > 1 && (
-          <Chip
+          <FilterChip
             label="Language"
             value={f.language}
             onChange={(v) => set("language", v)}
@@ -161,14 +123,14 @@ export function ListenExplorePage() {
             options={[{ value: ANY, label: "All languages" }, ...facets.languages.map((l) => ({ value: l, label: languageName(l) }))]}
           />
         )}
-        <Chip
+        <FilterChip
           label="Length"
           value={f.length}
           onChange={(v) => set("length", v)}
           width="w-36"
           options={[{ value: ANY, label: "Any length" }, ...LENGTHS.map((l) => ({ value: l.id as string, label: l.label }))]}
         />
-        <Chip<SortKey> label="Sort by" value={f.sort} onChange={(v) => set("sort", v)} options={SORTS.map((s) => ({ value: s.id, label: s.label }))} />
+        <FilterChip<SortKey> label="Sort by" value={f.sort} onChange={(v) => set("sort", v)} options={SORTS.map((s) => ({ value: s.id, label: s.label }))} />
         {filtering && (
           <Button variant="ghost" size="sm" onClick={() => setF(NO_FILTERS)}>
             <XIcon /> Clear
@@ -247,22 +209,20 @@ export function ListenExplorePage() {
           )}
 
           {rows.map((r) => (
-            <section key={r.id} className="space-y-3">
-              <div className="flex items-baseline justify-between gap-3">
-                <div>
-                  <h2 className="font-heading text-lg font-semibold tracking-tight">{r.title}</h2>
-                  {r.subtitle && <p className="text-muted-foreground text-xs">{r.subtitle}</p>}
-                </div>
+            <CoverRow
+              key={r.id}
+              title={r.title}
+              subtitle={r.subtitle}
+              action={
                 <Button variant="ghost" size="xs" asChild>
                   <Link to={`?view=${encodeURIComponent(r.id)}`}>View all</Link>
                 </Button>
-              </div>
-              <div className="-mx-1 flex snap-x gap-4 overflow-x-auto px-1 pb-2">
-                {r.items.slice(0, 12).map((it) => (
-                  <ExploreCard key={it.key} item={it} onPickClassic={setPicked} className="w-36 shrink-0 snap-start sm:w-40" />
-                ))}
-              </div>
-            </section>
+              }
+            >
+              {r.items.slice(0, 12).map((it) => (
+                <ExploreCard key={it.key} item={it} onPickClassic={setPicked} className="w-36 shrink-0 snap-start sm:w-40" />
+              ))}
+            </CoverRow>
           ))}
         </div>
       )}

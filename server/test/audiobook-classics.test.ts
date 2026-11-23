@@ -114,6 +114,8 @@ describe("classic import routes", () => {
     expect(commit.statusCode, commit.body).toBe(201);
     const book = commit.json();
     const detail = (await app.inject({ method: "GET", url: `/api/audiobooks/${book.id ?? book.book.id}` })).json();
+    // The catalogue's genres come along, so the shelf can filter by them.
+    expect(detail.genres).toEqual(["Poetry", "Horror"]);
     const chapter = detail.chapters[0];
     const paras = (await app.inject({ method: "GET", url: `/api/audiobooks/${detail.id ?? detail.book.id}/chapters/${chapter.id}/paragraphs` })).json();
     const list = paras.paragraphs ?? paras;

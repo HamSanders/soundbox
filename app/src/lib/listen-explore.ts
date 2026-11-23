@@ -48,7 +48,11 @@ const norm = (s: string | null | undefined) => (s ?? "").toLowerCase().replace(/
 /** The classic a book came from: its recorded id, or for a book added before
  *  that was recorded, a classic with the same title whose author the book's
  *  author line starts with. */
-function classicOf(b: ShelfBook, classics: ClassicSummary[], byId: Map<string, ClassicSummary>): ClassicSummary | null {
+export function classicOf(
+  b: { classic_id?: string | null; title: string; author: string | null },
+  classics: ClassicSummary[],
+  byId: Map<string, ClassicSummary> = new Map(classics.map((w) => [w.id, w])),
+): ClassicSummary | null {
   if (b.classic_id) return byId.get(b.classic_id) ?? null;
   return classics.find((w) => norm(w.title) === norm(b.title) && norm(b.author).startsWith(norm(w.author))) ?? null;
 }

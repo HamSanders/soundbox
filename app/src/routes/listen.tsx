@@ -1,24 +1,26 @@
 /**
  * The listening shelf: every book you can play, arranged the way a reading
  * app arranges a catalogue. Continue listening first, then what you finished,
- * then a shelf per genre and per series. Search and filters (genre, tag,
- * language, length) switch to a single grid of matches.
+ * then a shelf per genre and per series, each a row that pages sideways.
+ * Search and filters (genre, tag, language, length) switch to a single grid
+ * of matches.
  */
 
 import { useMemo, useState } from "react";
 import { HeadphonesIcon, SearchIcon, XIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { CoverRow } from "@/components/cover-row";
+import { FilterChip } from "@/components/filter-chip";
+import { languageName } from "@/lib/format";
 import { BookTile } from "@/components/listen/book-tile";
 import { ListenTabs } from "@/components/listen/listen-tabs";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ShelfBook } from "@/lib/listen-types";
 import { useShelf } from "@/lib/listen-queries";
-import { cn } from "@/lib/utils";
 
 const ANY = "__any";
 
@@ -29,28 +31,14 @@ const LENGTHS = [
   { id: "epic", label: "Over 10 hours", test: (s: number) => s >= 10 * 3600 },
 ] as const;
 
-function languageName(code: string): string {
-  try {
-    return new Intl.DisplayNames(undefined, { type: "language" }).of(code) ?? code;
-  } catch {
-    return code;
-  }
-}
-
 function Shelf({ title, books, action }: { title: string; books: ShelfBook[]; action?: React.ReactNode }) {
   if (books.length === 0) return null;
   return (
-    <section className="space-y-3">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-heading text-lg font-semibold tracking-tight">{title}</h2>
-        {action}
-      </div>
-      <div className="-mx-1 flex snap-x gap-4 overflow-x-auto px-1 pb-2">
-        {books.map((b) => (
-          <BookTile key={b.id} book={b} className="w-36 shrink-0 snap-start sm:w-40" />
-        ))}
-      </div>
-    </section>
+    <CoverRow title={title} action={action}>
+      {books.map((b) => (
+        <BookTile key={b.id} book={b} className="w-36 shrink-0 snap-start sm:w-40" />
+      ))}
+    </CoverRow>
   );
 }
 
@@ -60,7 +48,7 @@ export function ListenPage() {
   const [genre, setGenre] = useState(ANY);
   const [language, setLanguage] = useState(ANY);
   const [length, setLength] = useState(ANY);
-  const [tags, setTags] = useState<string[]>([]);
+  const [tag, setTag] = useState(ANY);
 
   const all = useMemo(() => shelf.data ?? [], [shelf.data]);
   const facets = useMemo(() => {
@@ -79,7 +67,7 @@ export function ListenPage() {
     };
   }, [all]);
 
-  const filtering = search.trim() !== "" || genre !== ANY || language !== ANY || length !== ANY || tags.length > 0;
+  const filtering = search.trim() !== "" || genre !== ANY || language !== ANY || length !== ANY || tag !== ANY;
   const matches = useMemo(() => {
     const q = search.trim().toLowerCase();
     const lengthTest = LENGTHS.find((l) => l.id === length)?.test;
@@ -87,7 +75,7 @@ export function ListenPage() {
       .filter((b) => genre === ANY || b.genres.includes(genre))
       .filter((b) => language === ANY || b.language === language)
       .filter((b) => !lengthTest || lengthTest(b.duration_s))
-      .filter((b) => tags.every((t) => b.tags.includes(t)))
+      .filter((b) => tag === ANY || b.tags.includes(tag))
       .map((b) => {
         if (!q) return { b, score: 1 };
         // Title matches first, then author/series/narrator, then the rest.
@@ -102,7 +90,7 @@ export function ListenPage() {
       })
       .filter((x) => x.score > 0);
     return scored.sort((x, y) => y.score - x.score || x.b.title.localeCompare(y.b.title)).map((x) => x.b);
-  }, [all, search, genre, language, length, tags]);
+  }, [all, search, genre, language, length, tag]);
 
   const continuing = useMemo(
     () =>
@@ -131,21 +119,15 @@ export function ListenPage() {
     setGenre(ANY);
     setLanguage(ANY);
     setLength(ANY);
-    setTags([]);
+    setTag(ANY);
   };
-  const toggleTag = (t: string) => setTags((cur) => (cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]));
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="space-y-2">
-          <ListenTabs />
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">Listen</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Your audiobooks, with read-along text. Pick up where you left off.
-          </p>
-        </div>
-        <div className="relative w-full sm:w-72">
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="font-heading mr-auto text-2xl font-semibold tracking-tight">Listen</h1>
+        <ListenTabs />
+        <div className="relative w-full sm:w-64">
           <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
           <Input
             className="pl-8"
@@ -158,72 +140,42 @@ export function ListenPage() {
       </div>
 
       {all.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <Select value={genre} onValueChange={setGenre}>
-              <SelectTrigger size="sm" className="w-44" aria-label="Genre">
-                <SelectValue placeholder="Genre" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ANY}>All genres</SelectItem>
-                {facets.genres.map(([g, n]) => (
-                  <SelectItem key={g} value={g}>
-                    {g} ({n})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={language} onValueChange={setLanguage}>
-              <SelectTrigger size="sm" className="w-36" aria-label="Language">
-                <SelectValue placeholder="Language" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ANY}>All languages</SelectItem>
-                {facets.languages.map((l) => (
-                  <SelectItem key={l} value={l}>
-                    {languageName(l)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={length} onValueChange={setLength}>
-              <SelectTrigger size="sm" className="w-36" aria-label="Length">
-                <SelectValue placeholder="Length" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ANY}>Any length</SelectItem>
-                {LENGTHS.map((l) => (
-                  <SelectItem key={l.id} value={l.id}>
-                    {l.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {filtering && (
-              <Button variant="ghost" size="sm" onClick={clear}>
-                <XIcon /> Clear
-              </Button>
-            )}
-          </div>
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filters">
+          <FilterChip
+            label="Genre"
+            value={genre}
+            onChange={setGenre}
+            options={[{ value: ANY, label: "All genres" }, ...facets.genres.map(([g, n]) => ({ value: g, label: `${g} (${n})` }))]}
+          />
           {facets.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Tags">
-              {facets.tags.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  aria-pressed={tags.includes(t)}
-                  onClick={() => toggleTag(t)}
-                  className={cn(
-                    "rounded-full border px-2.5 py-0.5 text-xs transition-colors",
-                    tags.includes(t)
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "border-border text-muted-foreground hover:bg-accent hover:text-foreground",
-                  )}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
+            <FilterChip
+              label="Tag"
+              value={tag}
+              onChange={setTag}
+              width="w-32"
+              options={[{ value: ANY, label: "Any tag" }, ...facets.tags.map((t) => ({ value: t, label: t }))]}
+            />
+          )}
+          {facets.languages.length > 1 && (
+            <FilterChip
+              label="Language"
+              value={language}
+              onChange={setLanguage}
+              width="w-36"
+              options={[{ value: ANY, label: "All languages" }, ...facets.languages.map((l) => ({ value: l, label: languageName(l) }))]}
+            />
+          )}
+          <FilterChip
+            label="Length"
+            value={length}
+            onChange={setLength}
+            width="w-36"
+            options={[{ value: ANY, label: "Any length" }, ...LENGTHS.map((l) => ({ value: l.id as string, label: l.label }))]}
+          />
+          {filtering && (
+            <Button variant="ghost" size="sm" onClick={clear}>
+              <XIcon /> Clear
+            </Button>
           )}
         </div>
       )}

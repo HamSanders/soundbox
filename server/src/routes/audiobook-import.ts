@@ -251,10 +251,15 @@ function routes(app: FastifyInstance, svc: MirliService): void {
     const settings = { ...(body.settings ?? {}) } as SettingsPatch;
     // Remember which classic a book came from, so Explore can tell it's owned.
     if (preview.source.classic_id) settings.classic_id = preview.source.classic_id;
-    const book = await commitManuscript(svc, manuscript, settings, {
+    let book = await commitManuscript(svc, manuscript, settings, {
       headings: body.headings,
       project_id: body.project_id ?? null,
     });
+    // A classic brings its catalogue genres, so the shelf can filter by them.
+    const work = preview.source.classic_id ? getClassic(preview.source.classic_id) : undefined;
+    if (work && book.genres.length === 0 && work.genres.length > 0) {
+      book = audiobooks(svc).updateBook(book.id, { genres: [...work.genres] }) ?? book;
+    }
     store.delete(preview.id);
     return reply.code(201).send(book);
   });

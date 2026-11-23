@@ -98,3 +98,12 @@ export function saveBlob(blob: Blob, fileName: string): void {
     URL.revokeObjectURL(url);
   }
 }
+
+/** "en" → "English", in the reader's own language. */
+export function languageName(code: string): string {
+  try {
+    return new Intl.DisplayNames(undefined, { type: "language" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}

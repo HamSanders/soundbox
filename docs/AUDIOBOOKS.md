@@ -10,6 +10,15 @@ The steps below follow the order most books take: import, cast, pronounce,
 render, add beds, master, export, listen. You can do them in any order and go
 back to any of them.
 
+The **Audiobooks** page lists every book with how much of it is voiced. Once
+there are a few, a row of filters narrows it by status (not started, in
+progress, voiced), type (novel, novella, short story, poetry, children's),
+genre, estimated length and language, and a sort puts it in order: recently
+edited or added, title, author, shortest first, oldest first or most voiced.
+A book's type comes from the classic it was started from, or from a form genre
+such as "Novels" or "Poetry" in its details; a book with neither shows only
+under "All types".
+
 An agent can do all of it too, through the MCP tools under
 [Audiobooks in MCP.md](./MCP.md#audiobooks). The HTTP API is under
 [Audiobooks in API.md](./API.md#audiobooks).
@@ -247,7 +256,8 @@ when it is missing, Mirli says so and how to install it.
 ## Listen
 
 **Listen** is a shelf for the books you have made: continue listening first,
-then finished books, every book, then a shelf per genre and per series. Search and the
+then finished books, every book, then a shelf per genre and per series. Each
+shelf pages sideways with the arrows by its title. Search and the
 genre, tag, language and length filters switch to a grid of matches. Each book
 has a detail page with its cover, description, length, narrator, table of
 contents and a preview.

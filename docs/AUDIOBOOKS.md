@@ -86,6 +86,28 @@ narrator plus a voice per character) in the book's settings.
   family). Under **Advanced** it can be read on a different model, for a
   line the voice's model gets wrong.
 
+## The timeline
+
+The chapter's timeline is docked along the bottom of the editor: the same
+timeline as the studio, on the chapter's own story. Drag its top edge to
+resize it, or fold it away with the arrow; both are remembered in this browser.
+
+- **The narration lane** holds a clip per voiced paragraph and pause, end to
+  end with the book's pacing. It ripples: when a paragraph is voiced to a new
+  length, everything after it moves along, and dragging a paragraph's clip
+  somewhere else moves the paragraph there in the text too. Unvoiced
+  paragraphs keep their places. Splitting, duplicating or adding narration is
+  done in the text, not on the lane.
+- **The lanes below** hold beds, recordings and sounds you drop or import
+  from the library, and work as they do in the studio.
+- **Text and timeline stay together.** Clicking a clip selects its paragraph;
+  while the timeline plays, the paragraph being read is highlighted and
+  scrolled into view. Edits on the timeline share the editor's undo
+  (Ctrl+Z).
+
+**Open in timeline** still opens the chapter in the full studio, with the
+library, prompt and device panels.
+
 ## Pronounce
 
 The **Pronounce** tab holds rules for words the model gets wrong: names,

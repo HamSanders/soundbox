@@ -164,6 +164,11 @@ export function ChapterTimeline({
       `#${pacing.paragraph_gap_s}/${pacing.heading_gap_s}`,
     [paragraphs, pacing.heading_gap_s, pacing.paragraph_gap_s],
   );
+  // The book's events refresh the paragraphs; the timeline reads the same
+  // rows as story segments, so follow along whenever they change.
+  useEffect(() => {
+    void qc.invalidateQueries({ queryKey: qk.segments(storyId) });
+  }, [qc, signature, storyId]);
   const laidOut = useRef<string | null>(null);
   useEffect(() => {
     if (laidOut.current === signature) return;

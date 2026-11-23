@@ -112,9 +112,9 @@
       import { createAmbientField } from "./ambient-field.js";
       const darkScheme = matchMedia("(prefers-color-scheme: dark)");
       const ambientPalette = () => darkScheme.matches
-        ? { bg: "#181817", c1: "#f39a1a", c2: "#8a3f16", c3: "#24323f" }
-        : { bg: "#f1ece0", c1: "#f5b23a", c2: "#e2a184", c3: "#b8c3c6" };
-      const ambientStrength = () => (darkScheme.matches ? 0.34 : 0.42);
+        ? { bg: "#181817", c1: "#f39a1a", c2: "#8a6a55", c3: "#a4a7aa" }
+        : { bg: "#f1ece0", c1: "#e8a23a", c2: "#b39a84", c3: "#8c877e" };
+      const ambientStrength = () => (darkScheme.matches ? 0.24 : 0.2);
       const field = createAmbientField(document.getElementById("ambient"), {
         palette: ambientPalette(),
         strength: ambientStrength(),

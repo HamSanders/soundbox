@@ -183,3 +183,46 @@ export function readAmbientLevels(): Levels | null {
   }
   return null;
 }
+
+const BAND_COUNT = 16;
+const bandsOut = new Float32Array(BAND_COUNT);
+/** Band edges, log-spaced from 40 Hz to 14 kHz, the way pitch is heard. */
+const BAND_EDGES = Array.from({ length: BAND_COUNT + 1 }, (_, i) => 40 * Math.pow(14000 / 40, i / BAND_COUNT));
+
+/** 16 spectrum bands, low to high, each 0..1, for the pixel background. The
+ *  loudest of every live source per band; null when nothing is playing. */
+export function readAmbientBands(): Float32Array | null {
+  bandsOut.fill(0);
+  let heard = false;
+  for (const tap of taps) {
+    if (tap.ctx.state !== "running") continue;
+    const a = tap.analyser;
+    const n = a.frequencyBinCount;
+    if (!spectrum || spectrum.length !== n) spectrum = new Float32Array(new ArrayBuffer(n * 4));
+    a.getFloatFrequencyData(spectrum);
+    const hz = tap.ctx.sampleRate / 2 / n;
+    for (let b = 0; b < BAND_COUNT; b++) {
+      // At least one bin per band, so the low bands (narrower than a bin at
+      // this FFT size) still read something.
+      const from = Math.max(1, Math.floor(BAND_EDGES[b] / hz));
+      const to = Math.max(from + 1, Math.ceil(BAND_EDGES[b + 1] / hz));
+      let sum = 0;
+      for (let i = from; i < to && i < n; i++) sum += fromDb(spectrum[i]);
+      const v = sum / (to - from);
+      if (v > 0.05) heard = true;
+      bandsOut[b] = Math.max(bandsOut[b], v);
+    }
+  }
+  if (heard) return bandsOut;
+  // Playing but unheard (WebKit): a gentle made-up shape that breathes.
+  for (const el of playing) {
+    if (!el.paused && !el.muted && el.volume > 0) {
+      const t = performance.now() / 1000;
+      for (let b = 0; b < BAND_COUNT; b++) {
+        bandsOut[b] = (0.25 + 0.15 * Math.sin(t * 2.4 + b * 0.7)) * (1 - b / (BAND_COUNT * 1.4));
+      }
+      return bandsOut;
+    }
+  }
+  return null;
+}

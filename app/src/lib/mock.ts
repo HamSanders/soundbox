@@ -3024,6 +3024,9 @@ export const mockApi: MirliApi = {
     return { ...s };
   },
 
+  /** The mock has no event stream, so no agent ever asks it anything. */
+  async studioReply() {},
+
   async deleteStory(id, deleteSounds = false) {
     await wait(120);
     const i = stories.findIndex((x) => x.id === id);

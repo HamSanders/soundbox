@@ -17,6 +17,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { IS_MOCK } from "@/lib/api";
 import { qk } from "@/lib/queries";
+import { answerStudioRequest, type StudioRequest } from "@/lib/studio-bridge";
 
 export interface AgentActivity {
   active: boolean;
@@ -27,11 +28,21 @@ export interface AgentActivity {
 
 type StoryEvent =
   | { type: "changed" }
-  | { type: "agent"; active: boolean; label: string; count: number };
+  | { type: "agent"; active: boolean; label: string; count: number }
+  | ({ type: "request" } & StudioRequest);
 
 const IDLE: AgentActivity = { active: false, label: null, count: 0 };
 
-export function useStoryEvents(storyId: string | null): AgentActivity {
+/**
+ * `answer` marks this as a mounted studio that agents may ask things of: the
+ * server only sends `request` events to a stream that opted in, and only to
+ * one of them, because applying edits twice is not harmless.
+ */
+export function useStoryEvents(
+  storyId: string | null,
+  options: { answer?: boolean } = {},
+): AgentActivity {
+  const answer = options.answer ?? false;
   const qc = useQueryClient();
   const [agent, setAgent] = useState<AgentActivity>(IDLE);
 
@@ -41,7 +52,9 @@ export function useStoryEvents(storyId: string | null): AgentActivity {
     if (!storyId || IS_MOCK) return;
     setAgent(IDLE);
 
-    const source = new EventSource(`/api/stories/${encodeURIComponent(storyId)}/events`);
+    const source = new EventSource(
+      `/api/stories/${encodeURIComponent(storyId)}/events${answer ? "?answer=1" : ""}`,
+    );
 
     source.onmessage = (message) => {
       let event: StoryEvent;
@@ -49,6 +62,10 @@ export function useStoryEvents(storyId: string | null): AgentActivity {
         event = JSON.parse(message.data) as StoryEvent;
       } catch {
         return; // a malformed frame is not worth tearing the stream down for
+      }
+      if (event.type === "request") {
+        void answerStudioRequest(storyId, event);
+        return;
       }
       if (event.type === "agent") {
         setAgent({
@@ -85,7 +102,7 @@ export function useStoryEvents(storyId: string | null): AgentActivity {
     };
 
     return () => source.close();
-  }, [storyId, qc]);
+  }, [storyId, qc, answer]);
 
   return agent;
 }

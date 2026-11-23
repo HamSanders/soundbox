@@ -653,6 +653,9 @@ export const demoMcpTools: Omit<McpToolInfo, "calls">[] = (
     ["delete_line", "Delete a line"],
     ["split_line", "Split a line in two"],
     ["export_story", "Mix a story down"],
+    ["studio_context", "Read the open studio"],
+    ["studio_apply", "Edit the open studio"],
+    ["search_docs", "Search Mirli's documentation"],
   ] as const
 ).map(([name, title]) => ({ name: `soundbox.${name}`, title, description: title }));
 

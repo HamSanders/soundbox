@@ -70,7 +70,7 @@ See [Access token](INSTALL.md#access-token).
 
 ## Tools
 
-Twenty-one tools in four groups: sounds, voices, stories, arrangement. The
+Twenty-seven tools in five groups: sounds, voices, stories, arrangement, and the open studio. The
 authority is `server/src/mcp/server.ts`: the `MCP_TOOLS` table for names and
 descriptions, and the zod `inputSchema` on each `registerTool` call for
 arguments. Where this file and that one disagree, that one is right.
@@ -297,6 +297,48 @@ shows each change as it lands.
 
 > Devices are heard in the studio's timeline playback. `export_story` mixes
 > dry, without them.
+
+### The open studio
+
+These three work on the studio as it is on screen, not on the saved story. They
+need Mirli open in a browser or the desktop app with a studio showing; the
+server asks that tab and waits a few seconds for its answer.
+
+#### `soundbox.studio_context`
+
+Takes an optional `story_id` (omit it when one studio is open; with several
+open, the error lists them). Returns the lanes (name, muted, soloed and the
+effect kinds on the rack), every clip with its `id`, lane, start, length and
+label (the line's words, or the sound's name), the playhead in seconds, the
+selected clip ids and the voices a line can be cast to.
+
+#### `soundbox.studio_apply`
+
+Takes `actions`, and optionally `story_id`, `summary` (shown in the studio's
+toast and history) and `allow_delete`. The actions are the vocabulary the
+studio's own command bar uses: `set_track`, `rename_track`, `move_clip`,
+`set_clip` (mute, text, speaker, voice, gain, fades, length, trim),
+`delete_clip`, `add_clip`, `add_lines`, `speak_lines`, `add_device`,
+`remove_device`, `set_device`, `generate_clip`, `show_panel` and
+`start_recording`. The tool description has the shape of each.
+
+Any clip action can take `select` instead of `clip_id` to mean many clips:
+`{"scope": "all"}`, `{"scope": "selected"}`, `{"from_track": 2}` or
+`{"matching": "vocal"}` (label contains), combined with AND.
+
+Every action is checked against the live studio before anything is sent. An
+action naming a clip, lane, voice or effect that is not there is dropped and
+counted under `dropped`. `delete_clip` is held, and counted under
+`held_deletes`, unless `allow_delete` is true. The studio applies what is left
+through the same handlers a click uses, so each edit is on the user's undo
+stack. Generating and reading lines run in the background: read the context
+again to see the clips fill in.
+
+#### `soundbox.search_docs`
+
+Takes `query` and optionally `limit` (1–8, default 4). Returns the sections of
+Mirli's README and `docs/` that match, each with its `source` file, `heading`
+and `text`.
 
 ### Delivery
 

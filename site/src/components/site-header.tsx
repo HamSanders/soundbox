@@ -23,6 +23,7 @@ import {
   BotIcon,
   BoxesIcon,
   ChevronDownIcon,
+  CloudIcon,
   MenuIcon,
   MicVocalIcon,
   MusicIcon,
@@ -32,6 +33,7 @@ import {
 } from "lucide-react";
 
 import { BrandMark, Wordmark } from "@/components/brand-mark";
+import { cloudWaitlistHref } from "@/lib/marketing-links";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -282,6 +284,13 @@ export function SiteHeader() {
                 {link.label}
               </Link>
             ))}
+            <a
+              href={cloudWaitlistHref("nav")}
+              className="label-caps border-border-strong text-foreground hover:bg-accent focus-visible:ring-ring/50 inline-flex h-9 items-center gap-1.5 rounded-full border px-4 outline-none transition-colors focus-visible:ring-3"
+            >
+              <CloudIcon className="size-3.5" aria-hidden="true" />
+              Mirli Cloud
+            </a>
             <Link
               to="/download"
               className="label-caps bg-foreground text-background hover:bg-foreground/85 focus-visible:ring-ring/50 inline-flex h-9 items-center rounded-full px-4 outline-none transition-colors focus-visible:ring-3"
@@ -351,6 +360,15 @@ export function SiteHeader() {
                 {link.label}
               </Link>
             ))}
+            <a
+              href={cloudWaitlistHref("nav")}
+              className="font-display hover:bg-accent flex items-center gap-3 rounded-sm px-3 py-2 text-3xl font-extrabold uppercase"
+            >
+              Mirli Cloud
+              <span className="text-muted-foreground font-sans text-sm font-medium normal-case">
+                Waitlist
+              </span>
+            </a>
           </div>
         </nav>
       </div>

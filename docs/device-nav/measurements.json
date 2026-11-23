@@ -1,0 +1,2973 @@
+{
+ "phone": {
+  "/dashboard": {
+   "vw": 375,
+   "docW": 375,
+   "overflowX": false,
+   "targets": 52,
+   "lt44": 37,
+   "lt24": 8,
+   "offRight": [
+    "Aambience2 sounds",
+    "Ddebris1 sound",
+    "Ddoor1 sound",
+    "Eexplosion1 sound",
+    "Ffootstep1 sound",
+    "Gglass1 sound",
+    "Mmachine1 sound",
+    "Mmetal1 sound"
+   ],
+   "offRightN": 10,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Details for Door slam 01",
+     "s": 20
+    },
+    {
+     "l": "Details for UI confirm blip",
+     "s": 20
+    },
+    {
+     "l": "Details for Gravel footstep",
+     "s": 20
+    },
+    {
+     "l": "Details for Rain on tin roof",
+     "s": 20
+    },
+    {
+     "l": "Details for Sword unsheath",
+     "s": 20
+    },
+    {
+     "l": "Details for Distant explosio",
+     "s": 20
+    }
+   ],
+   "h1": "Welcome back",
+   "sidebarVisible": false,
+   "route": "/dashboard",
+   "final": "#/dashboard"
+  },
+  "/chat": {
+   "vw": 375,
+   "docW": 375,
+   "overflowX": false,
+   "targets": 4,
+   "lt44": 4,
+   "lt24": 0,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    },
+    {
+     "l": "Forward",
+     "s": 28
+    },
+    {
+     "l": "Turn on the prompt assistant",
+     "s": 32
+    }
+   ],
+   "h1": "The assistant is off",
+   "sidebarVisible": false,
+   "route": "/chat",
+   "final": "#/chat"
+  },
+  "/console": {
+   "vw": 375,
+   "docW": 375,
+   "overflowX": false,
+   "targets": 37,
+   "lt44": 24,
+   "lt24": 4,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Seed",
+     "s": 15
+    },
+    {
+     "l": "Negative prompt",
+     "s": 17
+    },
+    {
+     "l": "Reject",
+     "s": 22
+    },
+    {
+     "l": "Lock",
+     "s": 22
+    },
+    {
+     "l": "Store",
+     "s": 24
+    },
+    {
+     "l": "Clr",
+     "s": 24
+    }
+   ],
+   "h1": "",
+   "sidebarVisible": false,
+   "route": "/console",
+   "final": "#/console"
+  },
+  "/studio": {
+   "vw": 375,
+   "docW": 375,
+   "overflowX": false,
+   "targets": 9,
+   "lt44": 7,
+   "lt24": 0,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "All (2)",
+     "s": 25
+    },
+    {
+     "l": "Script (1)",
+     "s": 25
+    },
+    {
+     "l": "Music & SFX (1)",
+     "s": 25
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    },
+    {
+     "l": "Forward",
+     "s": 28
+    }
+   ],
+   "h1": "Studio",
+   "sidebarVisible": false,
+   "route": "/studio",
+   "final": "#/studio"
+  },
+  "STUDIO_SCRIPT": {
+   "vw": 375,
+   "docW": 375,
+   "overflowX": false,
+   "targets": 57,
+   "lt44": 57,
+   "lt24": 12,
+   "offRight": [
+    "Use the canvas layout",
+    "Panels",
+    "Story options",
+    "Duplicate the selected clip",
+    "Mute the selected clip",
+    "Select a clip to loop it, or",
+    "Nothing to undo",
+    "Nothing to redo"
+   ],
+   "offRightN": 13,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Volume for track 0",
+     "s": 4
+    },
+    {
+     "l": "Volume for track 1",
+     "s": 4
+    },
+    {
+     "l": "Story title",
+     "s": 14
+    },
+    {
+     "l": "empty",
+     "s": 16
+    },
+    {
+     "l": "empty",
+     "s": 16
+    },
+    {
+     "l": "Script Builder",
+     "s": 20
+    }
+   ],
+   "h1": "",
+   "sidebarVisible": false,
+   "route": "/studio/script/story-1-mwthhn4i",
+   "final": "#/studio/script/story-1-mwthhn4i"
+  },
+  "STUDIO_MUSIC": {
+   "vw": 375,
+   "docW": 375,
+   "overflowX": false,
+   "targets": 58,
+   "lt44": 58,
+   "lt24": 17,
+   "offRight": [
+    "Use the canvas layout",
+    "Panels",
+    "Story options",
+    "Duplicate the selected clip",
+    "Mute the selected clip",
+    "Select a clip to loop it, or",
+    "Nothing to undo",
+    "Nothing to redo"
+   ],
+   "offRightN": 13,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Volume for track 0",
+     "s": 4
+    },
+    {
+     "l": "Volume for track 1",
+     "s": 4
+    },
+    {
+     "l": "TEXTAREA",
+     "s": 9
+    },
+    {
+     "l": "SPAN",
+     "s": 12
+    },
+    {
+     "l": "Story title",
+     "s": 14
+    },
+    {
+     "l": "empty",
+     "s": 16
+    }
+   ],
+   "h1": "",
+   "sidebarVisible": false,
+   "route": "/studio/music/story-2-mwthhpay",
+   "final": "#/studio/music/story-2-mwthhpay"
+  },
+  "/voice/lab": {
+   "vw": 375,
+   "docW": 375,
+   "overflowX": false,
+   "targets": 25,
+   "lt44": 22,
+   "lt24": 3,
+   "offRight": [
+    "AdaChatterbox (audio.cpp) · "
+   ],
+   "offRightN": 1,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Script Builder",
+     "s": 17
+    },
+    {
+     "l": "Details for Narrator",
+     "s": 20
+    },
+    {
+     "l": "Details for Ada",
+     "s": 20
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    },
+    {
+     "l": "Forward",
+     "s": 28
+    }
+   ],
+   "h1": "Voice Lab",
+   "sidebarVisible": false,
+   "route": "/voice/lab",
+   "final": "#/voice/lab"
+  },
+  "/voice/new": {
+   "vw": 375,
+   "docW": 375,
+   "overflowX": false,
+   "targets": 8,
+   "lt44": 8,
+   "lt24": 2,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Open it",
+     "s": 17
+    },
+    {
+     "l": "Voice Lab",
+     "s": 20
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    },
+    {
+     "l": "Forward",
+     "s": 28
+    },
+    {
+     "l": "Create",
+     "s": 32
+    }
+   ],
+   "h1": "Voice creation",
+   "sidebarVisible": false,
+   "route": "/voice/new",
+   "final": "#/voice/new"
+  },
+  "/library": {
+   "vw": 375,
+   "docW": 375,
+   "overflowX": false,
+   "targets": 44,
+   "lt44": 44,
+   "lt24": 9,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "All",
+     "s": 17
+    },
+    {
+     "l": "Details for Door slam 01",
+     "s": 20
+    },
+    {
+     "l": "Details for UI confirm blip",
+     "s": 20
+    },
+    {
+     "l": "Details for Gravel footstep",
+     "s": 20
+    },
+    {
+     "l": "Details for Rain on tin roof",
+     "s": 20
+    },
+    {
+     "l": "Details for Sword unsheath",
+     "s": 20
+    }
+   ],
+   "h1": "Library",
+   "sidebarVisible": false,
+   "route": "/library",
+   "final": "#/library"
+  },
+  "/library/sfx": {
+   "vw": 375,
+   "docW": 375,
+   "overflowX": false,
+   "targets": 51,
+   "lt44": 50,
+   "lt24": 8,
+   "offRight": [
+    "Sampling steps: 8. Change st",
+    "CFG scale: 1. Change guidanc",
+    "Negative prompt: none. Add o"
+   ],
+   "offRightN": 3,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Details for Door slam 01",
+     "s": 20
+    },
+    {
+     "l": "Details for UI confirm blip",
+     "s": 20
+    },
+    {
+     "l": "Details for Gravel footstep",
+     "s": 20
+    },
+    {
+     "l": "Details for Rain on tin roof",
+     "s": 20
+    },
+    {
+     "l": "Details for Sword unsheath",
+     "s": 20
+    },
+    {
+     "l": "Details for Distant explosio",
+     "s": 20
+    }
+   ],
+   "h1": "SFX",
+   "sidebarVisible": false,
+   "route": "/library/sfx",
+   "final": "#/library/sfx"
+  },
+  "/library/music": {
+   "vw": 375,
+   "docW": 375,
+   "overflowX": false,
+   "targets": 19,
+   "lt44": 18,
+   "lt24": 0,
+   "offRight": [
+    "Sampling steps: 8. Change st",
+    "CFG scale: 1. Change guidanc",
+    "Lyrics: none — generates ins"
+   ],
+   "offRightN": 3,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    },
+    {
+     "l": "Forward",
+     "s": 28
+    },
+    {
+     "l": "Model: ACE-Step 1.5 Turbo (a",
+     "s": 28
+    },
+    {
+     "l": "Project: none. Add one.",
+     "s": 28
+    },
+    {
+     "l": "Duration: 10.0 seconds. Chan",
+     "s": 28
+    }
+   ],
+   "h1": "Music",
+   "sidebarVisible": false,
+   "route": "/library/music",
+   "final": "#/library/music"
+  },
+  "/library/speech": {
+   "vw": 375,
+   "docW": 375,
+   "overflowX": false,
+   "targets": 14,
+   "lt44": 13,
+   "lt24": 0,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    },
+    {
+     "l": "Forward",
+     "s": 28
+    },
+    {
+     "l": "Voice: the model's default. ",
+     "s": 28
+    },
+    {
+     "l": "Project: none. Add one.",
+     "s": 28
+    },
+    {
+     "l": "Seed: random each run. Chang",
+     "s": 28
+    }
+   ],
+   "h1": "Text to Speech",
+   "sidebarVisible": false,
+   "route": "/library/speech",
+   "final": "#/library/speech"
+  },
+  "/projects": {
+   "vw": 375,
+   "docW": 375,
+   "overflowX": false,
+   "targets": 4,
+   "lt44": 4,
+   "lt24": 0,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    },
+    {
+     "l": "Forward",
+     "s": 28
+    },
+    {
+     "l": "New project",
+     "s": 32
+    }
+   ],
+   "h1": "Projects",
+   "sidebarVisible": false,
+   "route": "/projects",
+   "final": "#/projects"
+  },
+  "SOUND": {
+   "missing": true
+  },
+  "/models": {
+   "vw": 375,
+   "docW": 375,
+   "overflowX": false,
+   "targets": 38,
+   "lt44": 27,
+   "lt24": 0,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    },
+    {
+     "l": "Forward",
+     "s": 28
+    },
+    {
+     "l": "Show packs",
+     "s": 28
+    },
+    {
+     "l": "All",
+     "s": 28
+    },
+    {
+     "l": "SFX",
+     "s": 28
+    }
+   ],
+   "h1": "Models",
+   "sidebarVisible": false,
+   "route": "/models",
+   "final": "#/models"
+  },
+  "/agents": {
+   "vw": 375,
+   "docW": 375,
+   "overflowX": false,
+   "targets": 14,
+   "lt44": 14,
+   "lt24": 6,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Settings",
+     "s": 17
+    },
+    {
+     "l": "1m agogenerateclaude-codesin",
+     "s": 20
+    },
+    {
+     "l": "3m agolist_modelsclaude-code",
+     "s": 20
+    },
+    {
+     "l": "3m agolist_soundsclaude-code",
+     "s": 20
+    },
+    {
+     "l": "1d agogeneratecursormetal sw",
+     "s": 20
+    },
+    {
+     "l": "1d agodelete_soundcursorsnd-",
+     "s": 20
+    }
+   ],
+   "h1": "Agents",
+   "sidebarVisible": false,
+   "route": "/agents",
+   "final": "#/agents"
+  },
+  "/activity": {
+   "vw": 375,
+   "docW": 375,
+   "overflowX": false,
+   "targets": 13,
+   "lt44": 12,
+   "lt24": 6,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "3f4c0470",
+     "s": 20
+    },
+    {
+     "l": "3f4c0470",
+     "s": 20
+    },
+    {
+     "l": "3f4c0470",
+     "s": 20
+    },
+    {
+     "l": "3f4c0470",
+     "s": 20
+    },
+    {
+     "l": "3f4c0470",
+     "s": 20
+    },
+    {
+     "l": "b1ab888b",
+     "s": 20
+    }
+   ],
+   "h1": "Activity",
+   "sidebarVisible": false,
+   "route": "/activity",
+   "final": "#/activity"
+  },
+  "/settings": {
+   "vw": 375,
+   "docW": 375,
+   "overflowX": false,
+   "targets": 40,
+   "lt44": 40,
+   "lt24": 9,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Change it under Models folde",
+     "s": 15
+    },
+    {
+     "l": "Agents",
+     "s": 15
+    },
+    {
+     "l": "BUTTON",
+     "s": 18
+    },
+    {
+     "l": "BUTTON",
+     "s": 18
+    },
+    {
+     "l": "BUTTON",
+     "s": 18
+    },
+    {
+     "l": "BUTTON",
+     "s": 18
+    }
+   ],
+   "h1": "Settings",
+   "sidebarVisible": false,
+   "route": "/settings",
+   "final": "#/settings"
+  },
+  "sidebarSheet": {
+   "vw": 375,
+   "docW": 375,
+   "overflowX": false,
+   "targets": 66,
+   "lt44": 48,
+   "lt24": 8,
+   "offRight": [
+    "Aambience2 sounds",
+    "Ddebris1 sound",
+    "Ddoor1 sound",
+    "Eexplosion1 sound",
+    "Ffootstep1 sound",
+    "Gglass1 sound",
+    "Mmachine1 sound",
+    "Mmetal1 sound"
+   ],
+   "offRightN": 10,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Details for Door slam 01",
+     "s": 20
+    },
+    {
+     "l": "Details for UI confirm blip",
+     "s": 20
+    },
+    {
+     "l": "Details for Gravel footstep",
+     "s": 20
+    },
+    {
+     "l": "Details for Rain on tin roof",
+     "s": 20
+    },
+    {
+     "l": "Details for Sword unsheath",
+     "s": 20
+    },
+    {
+     "l": "Details for Distant explosio",
+     "s": 20
+    }
+   ],
+   "h1": "Welcome back",
+   "sidebarVisible": true
+  }
+ },
+ "tablet": {
+  "/dashboard": {
+   "vw": 768,
+   "docW": 768,
+   "overflowX": false,
+   "targets": 67,
+   "lt44": 52,
+   "lt24": 9,
+   "offRight": [
+    "Ddoor1 sound",
+    "Eexplosion1 sound",
+    "Ffootstep1 sound",
+    "Gglass1 sound",
+    "Mmachine1 sound",
+    "Mmetal1 sound",
+    "Rrain1 sound",
+    "Ssynth1 sound"
+   ],
+   "offRightN": 8,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Details for Door slam 01",
+     "s": 20
+    },
+    {
+     "l": "Details for UI confirm blip",
+     "s": 20
+    },
+    {
+     "l": "Details for Gravel footstep",
+     "s": 20
+    },
+    {
+     "l": "Details for Rain on tin roof",
+     "s": 20
+    },
+    {
+     "l": "Details for Sword unsheath",
+     "s": 20
+    }
+   ],
+   "h1": "Welcome back",
+   "sidebarVisible": true,
+   "route": "/dashboard",
+   "final": "#/dashboard"
+  },
+  "/chat": {
+   "vw": 768,
+   "docW": 768,
+   "overflowX": false,
+   "targets": 19,
+   "lt44": 19,
+   "lt24": 1,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    },
+    {
+     "l": "Forward",
+     "s": 28
+    },
+    {
+     "l": "Mirli",
+     "s": 32
+    },
+    {
+     "l": "Create",
+     "s": 32
+    }
+   ],
+   "h1": "The assistant is off",
+   "sidebarVisible": true,
+   "route": "/chat",
+   "final": "#/chat"
+  },
+  "/console": {
+   "vw": 768,
+   "docW": 768,
+   "overflowX": false,
+   "targets": 52,
+   "lt44": 39,
+   "lt24": 5,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Seed",
+     "s": 15
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Negative prompt",
+     "s": 17
+    },
+    {
+     "l": "Reject",
+     "s": 22
+    },
+    {
+     "l": "Lock",
+     "s": 22
+    },
+    {
+     "l": "Store",
+     "s": 24
+    }
+   ],
+   "h1": "",
+   "sidebarVisible": true,
+   "route": "/console",
+   "final": "#/console"
+  },
+  "/studio": {
+   "vw": 768,
+   "docW": 768,
+   "overflowX": false,
+   "targets": 24,
+   "lt44": 22,
+   "lt24": 1,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "All (2)",
+     "s": 25
+    },
+    {
+     "l": "Script (1)",
+     "s": 25
+    },
+    {
+     "l": "Music & SFX (1)",
+     "s": 25
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    }
+   ],
+   "h1": "Studio",
+   "sidebarVisible": true,
+   "route": "/studio",
+   "final": "#/studio"
+  },
+  "STUDIO_SCRIPT": {
+   "vw": 768,
+   "docW": 768,
+   "overflowX": false,
+   "targets": 80,
+   "lt44": 80,
+   "lt24": 20,
+   "offRight": [
+    "Bar ruler",
+    "Time ruler"
+   ],
+   "offRightN": 2,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Volume for track 0",
+     "s": 4
+    },
+    {
+     "l": "Volume for track 1",
+     "s": 4
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "empty",
+     "s": 16
+    },
+    {
+     "l": "empty",
+     "s": 16
+    },
+    {
+     "l": "Door slam 01",
+     "s": 16
+    }
+   ],
+   "h1": "",
+   "sidebarVisible": true,
+   "route": "/studio/script/story-1-mwthigu7",
+   "final": "#/studio/script/story-1-mwthigu7"
+  },
+  "STUDIO_MUSIC": {
+   "vw": 768,
+   "docW": 768,
+   "overflowX": false,
+   "targets": 73,
+   "lt44": 72,
+   "lt24": 15,
+   "offRight": [
+    "Bar ruler",
+    "Time ruler"
+   ],
+   "offRightN": 2,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Volume for track 0",
+     "s": 4
+    },
+    {
+     "l": "Volume for track 1",
+     "s": 4
+    },
+    {
+     "l": "SPAN",
+     "s": 12
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "empty",
+     "s": 16
+    },
+    {
+     "l": "empty",
+     "s": 16
+    }
+   ],
+   "h1": "",
+   "sidebarVisible": true,
+   "route": "/studio/music/story-2-mwthij0w",
+   "final": "#/studio/music/story-2-mwthij0w"
+  },
+  "/voice/lab": {
+   "vw": 768,
+   "docW": 768,
+   "overflowX": false,
+   "targets": 42,
+   "lt44": 39,
+   "lt24": 4,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Script Builder",
+     "s": 17
+    },
+    {
+     "l": "Details for Narrator",
+     "s": 20
+    },
+    {
+     "l": "Details for Ada",
+     "s": 20
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    }
+   ],
+   "h1": "Voice Lab",
+   "sidebarVisible": true,
+   "route": "/voice/lab",
+   "final": "#/voice/lab"
+  },
+  "/voice/new": {
+   "vw": 768,
+   "docW": 768,
+   "overflowX": false,
+   "targets": 23,
+   "lt44": 23,
+   "lt24": 3,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Open it",
+     "s": 17
+    },
+    {
+     "l": "Voice Lab",
+     "s": 20
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    },
+    {
+     "l": "Forward",
+     "s": 28
+    }
+   ],
+   "h1": "Voice creation",
+   "sidebarVisible": true,
+   "route": "/voice/new",
+   "final": "#/voice/new"
+  },
+  "/library": {
+   "vw": 768,
+   "docW": 768,
+   "overflowX": false,
+   "targets": 59,
+   "lt44": 59,
+   "lt24": 10,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "All",
+     "s": 17
+    },
+    {
+     "l": "Details for Door slam 01",
+     "s": 20
+    },
+    {
+     "l": "Details for UI confirm blip",
+     "s": 20
+    },
+    {
+     "l": "Details for Gravel footstep",
+     "s": 20
+    },
+    {
+     "l": "Details for Rain on tin roof",
+     "s": 20
+    }
+   ],
+   "h1": "Library",
+   "sidebarVisible": true,
+   "route": "/library",
+   "final": "#/library"
+  },
+  "/library/sfx": {
+   "vw": 768,
+   "docW": 768,
+   "overflowX": false,
+   "targets": 69,
+   "lt44": 60,
+   "lt24": 9,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Details for Door slam 01",
+     "s": 20
+    },
+    {
+     "l": "Details for UI confirm blip",
+     "s": 20
+    },
+    {
+     "l": "Details for Gravel footstep",
+     "s": 20
+    },
+    {
+     "l": "Details for Rain on tin roof",
+     "s": 20
+    },
+    {
+     "l": "Details for Sword unsheath",
+     "s": 20
+    }
+   ],
+   "h1": "SFX",
+   "sidebarVisible": true,
+   "route": "/library/sfx",
+   "final": "#/library/sfx"
+  },
+  "/library/music": {
+   "vw": 768,
+   "docW": 768,
+   "overflowX": false,
+   "targets": 47,
+   "lt44": 45,
+   "lt24": 3,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "SPAN",
+     "s": 12
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "BUTTON",
+     "s": 18
+    },
+    {
+     "l": "SFX",
+     "s": 27
+    },
+    {
+     "l": "Deal five different styles",
+     "s": 28
+    },
+    {
+     "l": "Marimba",
+     "s": 28
+    }
+   ],
+   "h1": "Music",
+   "sidebarVisible": true,
+   "route": "/library/music",
+   "final": "#/library/music"
+  },
+  "/library/speech": {
+   "vw": 768,
+   "docW": 768,
+   "overflowX": false,
+   "targets": 32,
+   "lt44": 28,
+   "lt24": 1,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "SFX",
+     "s": 27
+    },
+    {
+     "l": "Voice: the model's default. ",
+     "s": 28
+    },
+    {
+     "l": "Tags: none. Add tags.",
+     "s": 28
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    }
+   ],
+   "h1": "Text to Speech",
+   "sidebarVisible": true,
+   "route": "/library/speech",
+   "final": "#/library/speech"
+  },
+  "/projects": {
+   "vw": 768,
+   "docW": 768,
+   "overflowX": false,
+   "targets": 19,
+   "lt44": 19,
+   "lt24": 1,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    },
+    {
+     "l": "Forward",
+     "s": 28
+    },
+    {
+     "l": "Mirli",
+     "s": 32
+    },
+    {
+     "l": "Create",
+     "s": 32
+    }
+   ],
+   "h1": "Projects",
+   "sidebarVisible": true,
+   "route": "/projects",
+   "final": "#/projects"
+  },
+  "SOUND": {
+   "missing": true
+  },
+  "/models": {
+   "vw": 768,
+   "docW": 768,
+   "overflowX": false,
+   "targets": 53,
+   "lt44": 42,
+   "lt24": 1,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    },
+    {
+     "l": "Forward",
+     "s": 28
+    },
+    {
+     "l": "Show packs",
+     "s": 28
+    },
+    {
+     "l": "All",
+     "s": 28
+    }
+   ],
+   "h1": "Models",
+   "sidebarVisible": true,
+   "route": "/models",
+   "final": "#/models"
+  },
+  "/agents": {
+   "vw": 768,
+   "docW": 768,
+   "overflowX": false,
+   "targets": 29,
+   "lt44": 29,
+   "lt24": 7,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Settings",
+     "s": 17
+    },
+    {
+     "l": "1m agogenerateclaude-codesin",
+     "s": 20
+    },
+    {
+     "l": "3m agolist_modelsclaude-code",
+     "s": 20
+    },
+    {
+     "l": "3m agolist_soundsclaude-code",
+     "s": 20
+    },
+    {
+     "l": "1d agogeneratecursormetal sw",
+     "s": 20
+    }
+   ],
+   "h1": "Agents",
+   "sidebarVisible": true,
+   "route": "/agents",
+   "final": "#/agents"
+  },
+  "/activity": {
+   "vw": 768,
+   "docW": 768,
+   "overflowX": false,
+   "targets": 28,
+   "lt44": 28,
+   "lt24": 7,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "3f4c0470",
+     "s": 20
+    },
+    {
+     "l": "3f4c0470",
+     "s": 20
+    },
+    {
+     "l": "3f4c0470",
+     "s": 20
+    },
+    {
+     "l": "3f4c0470",
+     "s": 20
+    },
+    {
+     "l": "3f4c0470",
+     "s": 20
+    }
+   ],
+   "h1": "Activity",
+   "sidebarVisible": true,
+   "route": "/activity",
+   "final": "#/activity"
+  },
+  "/settings": {
+   "vw": 768,
+   "docW": 768,
+   "overflowX": false,
+   "targets": 55,
+   "lt44": 55,
+   "lt24": 10,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Change it under Models folde",
+     "s": 15
+    },
+    {
+     "l": "Agents",
+     "s": 15
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "BUTTON",
+     "s": 18
+    },
+    {
+     "l": "BUTTON",
+     "s": 18
+    },
+    {
+     "l": "BUTTON",
+     "s": 18
+    }
+   ],
+   "h1": "Settings",
+   "sidebarVisible": true,
+   "route": "/settings",
+   "final": "#/settings"
+  }
+ },
+ "ipad-land": {
+  "/dashboard": {
+   "vw": 1180,
+   "docW": 1180,
+   "overflowX": false,
+   "targets": 67,
+   "lt44": 52,
+   "lt24": 9,
+   "offRight": [
+    "Gglass1 sound",
+    "Mmachine1 sound",
+    "Mmetal1 sound",
+    "Rrain1 sound",
+    "Ssynth1 sound"
+   ],
+   "offRightN": 5,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Details for Door slam 01",
+     "s": 20
+    },
+    {
+     "l": "Details for UI confirm blip",
+     "s": 20
+    },
+    {
+     "l": "Details for Gravel footstep",
+     "s": 20
+    },
+    {
+     "l": "Details for Rain on tin roof",
+     "s": 20
+    },
+    {
+     "l": "Details for Sword unsheath",
+     "s": 20
+    }
+   ],
+   "h1": "Welcome back",
+   "sidebarVisible": true,
+   "route": "/dashboard",
+   "final": "#/dashboard"
+  },
+  "/chat": {
+   "vw": 1180,
+   "docW": 1180,
+   "overflowX": false,
+   "targets": 19,
+   "lt44": 19,
+   "lt24": 1,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    },
+    {
+     "l": "Forward",
+     "s": 28
+    },
+    {
+     "l": "Mirli",
+     "s": 32
+    },
+    {
+     "l": "Create",
+     "s": 32
+    }
+   ],
+   "h1": "The assistant is off",
+   "sidebarVisible": true,
+   "route": "/chat",
+   "final": "#/chat"
+  },
+  "/console": {
+   "vw": 1180,
+   "docW": 1180,
+   "overflowX": false,
+   "targets": 52,
+   "lt44": 39,
+   "lt24": 5,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Seed",
+     "s": 15
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Negative prompt",
+     "s": 17
+    },
+    {
+     "l": "Reject",
+     "s": 22
+    },
+    {
+     "l": "Lock",
+     "s": 22
+    },
+    {
+     "l": "Store",
+     "s": 24
+    }
+   ],
+   "h1": "",
+   "sidebarVisible": true,
+   "route": "/console",
+   "final": "#/console"
+  },
+  "/studio": {
+   "vw": 1180,
+   "docW": 1180,
+   "overflowX": false,
+   "targets": 24,
+   "lt44": 22,
+   "lt24": 1,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "All (2)",
+     "s": 25
+    },
+    {
+     "l": "Script (1)",
+     "s": 25
+    },
+    {
+     "l": "Music & SFX (1)",
+     "s": 25
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    }
+   ],
+   "h1": "Studio",
+   "sidebarVisible": true,
+   "route": "/studio",
+   "final": "#/studio"
+  },
+  "STUDIO_SCRIPT": {
+   "vw": 1180,
+   "docW": 1180,
+   "overflowX": false,
+   "targets": 80,
+   "lt44": 80,
+   "lt24": 20,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Volume for track 0",
+     "s": 4
+    },
+    {
+     "l": "Volume for track 1",
+     "s": 4
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "empty",
+     "s": 16
+    },
+    {
+     "l": "empty",
+     "s": 16
+    },
+    {
+     "l": "Door slam 01",
+     "s": 16
+    }
+   ],
+   "h1": "",
+   "sidebarVisible": true,
+   "route": "/studio/script/story-1-mwthj9k1",
+   "final": "#/studio/script/story-1-mwthj9k1"
+  },
+  "STUDIO_MUSIC": {
+   "vw": 1180,
+   "docW": 1180,
+   "overflowX": false,
+   "targets": 73,
+   "lt44": 72,
+   "lt24": 14,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Volume for track 0",
+     "s": 4
+    },
+    {
+     "l": "Volume for track 1",
+     "s": 4
+    },
+    {
+     "l": "SPAN",
+     "s": 12
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "empty",
+     "s": 16
+    },
+    {
+     "l": "empty",
+     "s": 16
+    }
+   ],
+   "h1": "",
+   "sidebarVisible": true,
+   "route": "/studio/music/story-2-mwthjbq7",
+   "final": "#/studio/music/story-2-mwthjbq7"
+  },
+  "/voice/lab": {
+   "vw": 1180,
+   "docW": 1180,
+   "overflowX": false,
+   "targets": 42,
+   "lt44": 39,
+   "lt24": 4,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Script Builder",
+     "s": 17
+    },
+    {
+     "l": "Details for Narrator",
+     "s": 20
+    },
+    {
+     "l": "Details for Ada",
+     "s": 20
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    }
+   ],
+   "h1": "Voice Lab",
+   "sidebarVisible": true,
+   "route": "/voice/lab",
+   "final": "#/voice/lab"
+  },
+  "/voice/new": {
+   "vw": 1180,
+   "docW": 1180,
+   "overflowX": false,
+   "targets": 23,
+   "lt44": 23,
+   "lt24": 3,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Open it",
+     "s": 17
+    },
+    {
+     "l": "Voice Lab",
+     "s": 20
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    },
+    {
+     "l": "Forward",
+     "s": 28
+    }
+   ],
+   "h1": "Voice creation",
+   "sidebarVisible": true,
+   "route": "/voice/new",
+   "final": "#/voice/new"
+  },
+  "/library": {
+   "vw": 1180,
+   "docW": 1180,
+   "overflowX": false,
+   "targets": 59,
+   "lt44": 59,
+   "lt24": 10,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "All",
+     "s": 17
+    },
+    {
+     "l": "Details for Door slam 01",
+     "s": 20
+    },
+    {
+     "l": "Details for UI confirm blip",
+     "s": 20
+    },
+    {
+     "l": "Details for Gravel footstep",
+     "s": 20
+    },
+    {
+     "l": "Details for Rain on tin roof",
+     "s": 20
+    }
+   ],
+   "h1": "Library",
+   "sidebarVisible": true,
+   "route": "/library",
+   "final": "#/library"
+  },
+  "/library/sfx": {
+   "vw": 1180,
+   "docW": 1180,
+   "overflowX": false,
+   "targets": 69,
+   "lt44": 60,
+   "lt24": 9,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Details for Door slam 01",
+     "s": 20
+    },
+    {
+     "l": "Details for UI confirm blip",
+     "s": 20
+    },
+    {
+     "l": "Details for Gravel footstep",
+     "s": 20
+    },
+    {
+     "l": "Details for Rain on tin roof",
+     "s": 20
+    },
+    {
+     "l": "Details for Sword unsheath",
+     "s": 20
+    }
+   ],
+   "h1": "SFX",
+   "sidebarVisible": true,
+   "route": "/library/sfx",
+   "final": "#/library/sfx"
+  },
+  "/library/music": {
+   "vw": 1180,
+   "docW": 1180,
+   "overflowX": false,
+   "targets": 47,
+   "lt44": 45,
+   "lt24": 3,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "SPAN",
+     "s": 12
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "BUTTON",
+     "s": 18
+    },
+    {
+     "l": "SFX",
+     "s": 27
+    },
+    {
+     "l": "Deal five different styles",
+     "s": 28
+    },
+    {
+     "l": "Taiko Drums",
+     "s": 28
+    }
+   ],
+   "h1": "Music",
+   "sidebarVisible": true,
+   "route": "/library/music",
+   "final": "#/library/music"
+  },
+  "/library/speech": {
+   "vw": 1180,
+   "docW": 1180,
+   "overflowX": false,
+   "targets": 32,
+   "lt44": 28,
+   "lt24": 1,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "SFX",
+     "s": 27
+    },
+    {
+     "l": "Voice: the model's default. ",
+     "s": 28
+    },
+    {
+     "l": "Tags: none. Add tags.",
+     "s": 28
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    }
+   ],
+   "h1": "Text to Speech",
+   "sidebarVisible": true,
+   "route": "/library/speech",
+   "final": "#/library/speech"
+  },
+  "/projects": {
+   "vw": 1180,
+   "docW": 1180,
+   "overflowX": false,
+   "targets": 19,
+   "lt44": 19,
+   "lt24": 1,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    },
+    {
+     "l": "Forward",
+     "s": 28
+    },
+    {
+     "l": "Mirli",
+     "s": 32
+    },
+    {
+     "l": "Create",
+     "s": 32
+    }
+   ],
+   "h1": "Projects",
+   "sidebarVisible": true,
+   "route": "/projects",
+   "final": "#/projects"
+  },
+  "SOUND": {
+   "missing": true
+  },
+  "/models": {
+   "vw": 1180,
+   "docW": 1180,
+   "overflowX": false,
+   "targets": 53,
+   "lt44": 42,
+   "lt24": 1,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    },
+    {
+     "l": "Forward",
+     "s": 28
+    },
+    {
+     "l": "Show packs",
+     "s": 28
+    },
+    {
+     "l": "All",
+     "s": 28
+    }
+   ],
+   "h1": "Models",
+   "sidebarVisible": true,
+   "route": "/models",
+   "final": "#/models"
+  },
+  "/agents": {
+   "vw": 1180,
+   "docW": 1180,
+   "overflowX": false,
+   "targets": 29,
+   "lt44": 29,
+   "lt24": 7,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Settings",
+     "s": 17
+    },
+    {
+     "l": "1m agogenerateclaude-codesin",
+     "s": 20
+    },
+    {
+     "l": "3m agolist_modelsclaude-code",
+     "s": 20
+    },
+    {
+     "l": "3m agolist_soundsclaude-code",
+     "s": 20
+    },
+    {
+     "l": "1d agogeneratecursormetal sw",
+     "s": 20
+    }
+   ],
+   "h1": "Agents",
+   "sidebarVisible": true,
+   "route": "/agents",
+   "final": "#/agents"
+  },
+  "/activity": {
+   "vw": 1180,
+   "docW": 1180,
+   "overflowX": false,
+   "targets": 28,
+   "lt44": 28,
+   "lt24": 7,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "3f4c0470",
+     "s": 20
+    },
+    {
+     "l": "3f4c0470",
+     "s": 20
+    },
+    {
+     "l": "3f4c0470",
+     "s": 20
+    },
+    {
+     "l": "3f4c0470",
+     "s": 20
+    },
+    {
+     "l": "3f4c0470",
+     "s": 20
+    }
+   ],
+   "h1": "Activity",
+   "sidebarVisible": true,
+   "route": "/activity",
+   "final": "#/activity"
+  },
+  "/settings": {
+   "vw": 1180,
+   "docW": 1180,
+   "overflowX": false,
+   "targets": 63,
+   "lt44": 62,
+   "lt24": 10,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Change it under Models folde",
+     "s": 15
+    },
+    {
+     "l": "Agents",
+     "s": 15
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "BUTTON",
+     "s": 18
+    },
+    {
+     "l": "BUTTON",
+     "s": 18
+    },
+    {
+     "l": "BUTTON",
+     "s": 18
+    }
+   ],
+   "h1": "Settings",
+   "sidebarVisible": true,
+   "route": "/settings",
+   "final": "#/settings"
+  }
+ },
+ "desktop": {
+  "/dashboard": {
+   "vw": 1440,
+   "docW": 1440,
+   "overflowX": false,
+   "targets": 67,
+   "lt44": 52,
+   "lt24": 9,
+   "offRight": [
+    "Mmetal1 sound",
+    "Rrain1 sound",
+    "Ssynth1 sound"
+   ],
+   "offRightN": 3,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Details for Door slam 01",
+     "s": 20
+    },
+    {
+     "l": "Details for UI confirm blip",
+     "s": 20
+    },
+    {
+     "l": "Details for Gravel footstep",
+     "s": 20
+    },
+    {
+     "l": "Details for Rain on tin roof",
+     "s": 20
+    },
+    {
+     "l": "Details for Sword unsheath",
+     "s": 20
+    }
+   ],
+   "h1": "Welcome back",
+   "sidebarVisible": true,
+   "route": "/dashboard",
+   "final": "#/dashboard"
+  },
+  "/chat": {
+   "vw": 1440,
+   "docW": 1440,
+   "overflowX": false,
+   "targets": 19,
+   "lt44": 19,
+   "lt24": 1,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    },
+    {
+     "l": "Forward",
+     "s": 28
+    },
+    {
+     "l": "Mirli",
+     "s": 32
+    },
+    {
+     "l": "Create",
+     "s": 32
+    }
+   ],
+   "h1": "The assistant is off",
+   "sidebarVisible": true,
+   "route": "/chat",
+   "final": "#/chat"
+  },
+  "/console": {
+   "vw": 1440,
+   "docW": 1440,
+   "overflowX": false,
+   "targets": 52,
+   "lt44": 39,
+   "lt24": 5,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Seed",
+     "s": 15
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Negative prompt",
+     "s": 17
+    },
+    {
+     "l": "Reject",
+     "s": 22
+    },
+    {
+     "l": "Lock",
+     "s": 22
+    },
+    {
+     "l": "Store",
+     "s": 24
+    }
+   ],
+   "h1": "",
+   "sidebarVisible": true,
+   "route": "/console",
+   "final": "#/console"
+  },
+  "/studio": {
+   "vw": 1440,
+   "docW": 1440,
+   "overflowX": false,
+   "targets": 24,
+   "lt44": 22,
+   "lt24": 1,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "All (2)",
+     "s": 25
+    },
+    {
+     "l": "Script (1)",
+     "s": 25
+    },
+    {
+     "l": "Music & SFX (1)",
+     "s": 25
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    }
+   ],
+   "h1": "Studio",
+   "sidebarVisible": true,
+   "route": "/studio",
+   "final": "#/studio"
+  },
+  "STUDIO_SCRIPT": {
+   "vw": 1440,
+   "docW": 1440,
+   "overflowX": false,
+   "targets": 80,
+   "lt44": 80,
+   "lt24": 20,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Volume for track 0",
+     "s": 4
+    },
+    {
+     "l": "Volume for track 1",
+     "s": 4
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "empty",
+     "s": 16
+    },
+    {
+     "l": "empty",
+     "s": 16
+    },
+    {
+     "l": "Door slam 01",
+     "s": 16
+    }
+   ],
+   "h1": "",
+   "sidebarVisible": true,
+   "route": "/studio/script/story-1-mwthk1rc",
+   "final": "#/studio/script/story-1-mwthk1rc"
+  },
+  "STUDIO_MUSIC": {
+   "vw": 1440,
+   "docW": 1440,
+   "overflowX": false,
+   "targets": 73,
+   "lt44": 72,
+   "lt24": 14,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Volume for track 0",
+     "s": 4
+    },
+    {
+     "l": "Volume for track 1",
+     "s": 4
+    },
+    {
+     "l": "SPAN",
+     "s": 12
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "empty",
+     "s": 16
+    },
+    {
+     "l": "empty",
+     "s": 16
+    }
+   ],
+   "h1": "",
+   "sidebarVisible": true,
+   "route": "/studio/music/story-2-mwthk3xl",
+   "final": "#/studio/music/story-2-mwthk3xl"
+  },
+  "/voice/lab": {
+   "vw": 1440,
+   "docW": 1440,
+   "overflowX": false,
+   "targets": 42,
+   "lt44": 39,
+   "lt24": 4,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Script Builder",
+     "s": 17
+    },
+    {
+     "l": "Details for Narrator",
+     "s": 20
+    },
+    {
+     "l": "Details for Ada",
+     "s": 20
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    }
+   ],
+   "h1": "Voice Lab",
+   "sidebarVisible": true,
+   "route": "/voice/lab",
+   "final": "#/voice/lab"
+  },
+  "/voice/new": {
+   "vw": 1440,
+   "docW": 1440,
+   "overflowX": false,
+   "targets": 23,
+   "lt44": 23,
+   "lt24": 3,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Open it",
+     "s": 17
+    },
+    {
+     "l": "Voice Lab",
+     "s": 20
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    },
+    {
+     "l": "Forward",
+     "s": 28
+    }
+   ],
+   "h1": "Voice creation",
+   "sidebarVisible": true,
+   "route": "/voice/new",
+   "final": "#/voice/new"
+  },
+  "/library": {
+   "vw": 1440,
+   "docW": 1440,
+   "overflowX": false,
+   "targets": 59,
+   "lt44": 59,
+   "lt24": 10,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "All",
+     "s": 17
+    },
+    {
+     "l": "Details for Door slam 01",
+     "s": 20
+    },
+    {
+     "l": "Details for UI confirm blip",
+     "s": 20
+    },
+    {
+     "l": "Details for Gravel footstep",
+     "s": 20
+    },
+    {
+     "l": "Details for Rain on tin roof",
+     "s": 20
+    }
+   ],
+   "h1": "Library",
+   "sidebarVisible": true,
+   "route": "/library",
+   "final": "#/library"
+  },
+  "/library/sfx": {
+   "vw": 1440,
+   "docW": 1440,
+   "overflowX": false,
+   "targets": 69,
+   "lt44": 60,
+   "lt24": 9,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Details for Door slam 01",
+     "s": 20
+    },
+    {
+     "l": "Details for UI confirm blip",
+     "s": 20
+    },
+    {
+     "l": "Details for Gravel footstep",
+     "s": 20
+    },
+    {
+     "l": "Details for Rain on tin roof",
+     "s": 20
+    },
+    {
+     "l": "Details for Sword unsheath",
+     "s": 20
+    }
+   ],
+   "h1": "SFX",
+   "sidebarVisible": true,
+   "route": "/library/sfx",
+   "final": "#/library/sfx"
+  },
+  "/library/music": {
+   "vw": 1440,
+   "docW": 1440,
+   "overflowX": false,
+   "targets": 47,
+   "lt44": 45,
+   "lt24": 3,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "SPAN",
+     "s": 12
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "BUTTON",
+     "s": 18
+    },
+    {
+     "l": "SFX",
+     "s": 27
+    },
+    {
+     "l": "Deal five different styles",
+     "s": 28
+    },
+    {
+     "l": "Slide Guitar",
+     "s": 28
+    }
+   ],
+   "h1": "Music",
+   "sidebarVisible": true,
+   "route": "/library/music",
+   "final": "#/library/music"
+  },
+  "/library/speech": {
+   "vw": 1440,
+   "docW": 1440,
+   "overflowX": false,
+   "targets": 32,
+   "lt44": 28,
+   "lt24": 1,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "SFX",
+     "s": 27
+    },
+    {
+     "l": "Voice: the model's default. ",
+     "s": 28
+    },
+    {
+     "l": "Tags: none. Add tags.",
+     "s": 28
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    }
+   ],
+   "h1": "Text to Speech",
+   "sidebarVisible": true,
+   "route": "/library/speech",
+   "final": "#/library/speech"
+  },
+  "/projects": {
+   "vw": 1440,
+   "docW": 1440,
+   "overflowX": false,
+   "targets": 19,
+   "lt44": 19,
+   "lt24": 1,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    },
+    {
+     "l": "Forward",
+     "s": 28
+    },
+    {
+     "l": "Mirli",
+     "s": 32
+    },
+    {
+     "l": "Create",
+     "s": 32
+    }
+   ],
+   "h1": "Projects",
+   "sidebarVisible": true,
+   "route": "/projects",
+   "final": "#/projects"
+  },
+  "SOUND": {
+   "missing": true
+  },
+  "/models": {
+   "vw": 1440,
+   "docW": 1440,
+   "overflowX": false,
+   "targets": 53,
+   "lt44": 42,
+   "lt24": 1,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 28
+    },
+    {
+     "l": "Back",
+     "s": 28
+    },
+    {
+     "l": "Forward",
+     "s": 28
+    },
+    {
+     "l": "Show packs",
+     "s": 28
+    },
+    {
+     "l": "All",
+     "s": 28
+    }
+   ],
+   "h1": "Models",
+   "sidebarVisible": true,
+   "route": "/models",
+   "final": "#/models"
+  },
+  "/agents": {
+   "vw": 1440,
+   "docW": 1440,
+   "overflowX": false,
+   "targets": 29,
+   "lt44": 29,
+   "lt24": 7,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "Settings",
+     "s": 17
+    },
+    {
+     "l": "1m agogenerateclaude-codesin",
+     "s": 20
+    },
+    {
+     "l": "3m agolist_modelsclaude-code",
+     "s": 20
+    },
+    {
+     "l": "3m agolist_soundsclaude-code",
+     "s": 20
+    },
+    {
+     "l": "1d agogeneratecursormetal sw",
+     "s": 20
+    }
+   ],
+   "h1": "Agents",
+   "sidebarVisible": true,
+   "route": "/agents",
+   "final": "#/agents"
+  },
+  "/activity": {
+   "vw": 1440,
+   "docW": 1440,
+   "overflowX": false,
+   "targets": 28,
+   "lt44": 28,
+   "lt24": 7,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "3f4c0470",
+     "s": 20
+    },
+    {
+     "l": "3f4c0470",
+     "s": 20
+    },
+    {
+     "l": "3f4c0470",
+     "s": 20
+    },
+    {
+     "l": "3f4c0470",
+     "s": 20
+    },
+    {
+     "l": "3f4c0470",
+     "s": 20
+    }
+   ],
+   "h1": "Activity",
+   "sidebarVisible": true,
+   "route": "/activity",
+   "final": "#/activity"
+  },
+  "/settings": {
+   "vw": 1440,
+   "docW": 1440,
+   "overflowX": false,
+   "targets": 63,
+   "lt44": 62,
+   "lt24": 10,
+   "offRight": [],
+   "offRightN": 0,
+   "hoverHidden": [],
+   "hoverHiddenN": 0,
+   "smallest": [
+    {
+     "l": "Change it under Models folde",
+     "s": 15
+    },
+    {
+     "l": "Agents",
+     "s": 15
+    },
+    {
+     "l": "Toggle Sidebar",
+     "s": 16
+    },
+    {
+     "l": "BUTTON",
+     "s": 18
+    },
+    {
+     "l": "BUTTON",
+     "s": 18
+    },
+    {
+     "l": "BUTTON",
+     "s": 18
+    }
+   ],
+   "h1": "Settings",
+   "sidebarVisible": true,
+   "route": "/settings",
+   "final": "#/settings"
+  }
+ }
+}

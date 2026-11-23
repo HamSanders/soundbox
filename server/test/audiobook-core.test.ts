@@ -483,6 +483,29 @@ describe("paragraphs", () => {
     expect(audiobooks(app.soundbox).modelFor(p.id)).toBe("own-model");
   });
 
+  it("re-lays a chapter's narration end to end on request", async () => {
+    const book = await json("POST", "/api/audiobooks", {
+      title: "Ripple",
+      settings: { pacing: { paragraph_gap_s: 0, heading_gap_s: 0 } },
+    });
+    const cid = book.chapters[0].id;
+    const a = await json("POST", `/api/audiobooks/${book.id}/chapters/${cid}/paragraphs`, { kind: "pause", duration_s: 1.5 });
+    const b = await json("POST", `/api/audiobooks/${book.id}/chapters/${cid}/paragraphs`, { kind: "pause", duration_s: 2 });
+    const c = await json("POST", `/api/audiobooks/${book.id}/chapters/${cid}/paragraphs`, { kind: "pause", duration_s: 1 });
+    // Dropped out of place, as a drag on the timeline would leave them.
+    for (const [p, at] of [[a, 9], [b, 0.2], [c, 40]] as const) {
+      app.soundbox.db.updateSegment(p.id, { start_s: at });
+    }
+    const res = await json<{ moved: number }>("POST", `/api/audiobooks/${book.id}/chapters/${cid}/layout`);
+    expect(res.moved).toBe(3);
+    const starts = audiobooks(app.soundbox).getParagraphs(cid)!.map((p) => [p.id, p.start_s]);
+    expect(Object.fromEntries(starts)).toMatchObject({ [a.id]: 0, [b.id]: 1.5, [c.id]: 3.5 });
+    // Another book's chapter id is refused.
+    const other = await json("POST", "/api/audiobooks", { title: "Other" });
+    const wrong = await call({ method: "POST", url: `/api/audiobooks/${other.id}/chapters/${cid}/layout` });
+    expect(wrong.statusCode).toBe(404);
+  });
+
   it("adds and deletes paragraphs", async () => {
     const book = await json("POST", "/api/audiobooks", { title: "Add" });
     const cid = book.chapters[0].id;

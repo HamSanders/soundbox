@@ -784,6 +784,28 @@ export const mockAudiobookApi: AudiobookApi = {
     return { paragraph, removed_id: next.id, split_at: p.text.length + sep.length };
   },
 
+  async layoutChapter(bookId, chapterId) {
+    await ready();
+    const book = requireBook(bookId);
+    const chapter = requireChapter(bookId, chapterId);
+    const segments = (await mockApi.listSegments(chapter.story_id))
+      .filter((s) => s.track_index === 0)
+      .sort((a, b) => a.position - b.position);
+    let at = 0;
+    let moved = 0;
+    for (const s of segments) {
+      const length = s.kind === "pause" || s.sound_id ? (s.duration_s ?? 0) : null;
+      if (length === null) continue;
+      if (Math.abs(s.start_s - at) > 0.0005) {
+        await mockApi.updateSegment(chapter.story_id, s.id, { start_s: Math.round(at * 1000) / 1000 });
+        moved++;
+      }
+      at += length + (s.kind === "pause" ? 0 : book.settings.pacing.paragraph_gap_s);
+    }
+    emit(bookId, { type: "paragraphs", chapter_id: chapterId });
+    return { moved };
+  },
+
   async reorderParagraphs(bookId, chapterId, ids) {
     await ready();
     const chapter = requireChapter(bookId, chapterId);

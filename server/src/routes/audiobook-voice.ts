@@ -302,6 +302,21 @@ function routes(app: FastifyInstance, svc: MirliService): void {
     return s().pronounce.play(req.params.id, { ruleId: body.rule_id, draft: body.draft, text: body.text });
   });
 
+  /* ---------------------------------------------------------------- layout */
+
+  /**
+   * Re-pack a chapter's narration with the book's pacing: each paragraph
+   * starts where the one before it ends, plus the paragraph gap (and the
+   * heading gap after a heading). The docked timeline calls it after a
+   * paragraph is voiced in the editor or dragged to a new place, so the
+   * narration ripples rather than overlapping or leaving holes.
+   */
+  app.post<{ Params: { id: string; cid: string } }>("/api/audiobooks/:id/chapters/:cid/layout", async (req) => {
+    const chapter = s().book.getChapter(req.params.cid);
+    if (!chapter || chapter.book_id !== req.params.id) throw new HttpError(404, "Chapter not found");
+    return { moved: s().render.layout(chapter.id) };
+  });
+
   /* ----------------------------------------------------------------- takes */
 
   app.get<ParaParams>("/api/audiobooks/:id/paragraphs/:sid/takes", async (req) => {

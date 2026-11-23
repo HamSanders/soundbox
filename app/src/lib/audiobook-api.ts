@@ -220,6 +220,8 @@ export interface AudiobookApi {
   splitParagraph(bookId: string, segmentId: string, at: number): Promise<SplitResult>;
   mergeWithNext(bookId: string, segmentId: string, joiner?: string): Promise<MergeResult>;
   reorderParagraphs(bookId: string, chapterId: string, ids: string[]): Promise<Paragraph[]>;
+  /** Re-pack a chapter's narration with the book's pacing (the timeline's ripple). */
+  layoutChapter(bookId: string, chapterId: string): Promise<{ moved: number }>;
 
   replace(bookId: string, req: ReplaceRequest): Promise<ReplaceResult>;
 
@@ -323,6 +325,11 @@ const httpAudiobookApi: AudiobookApi = {
     request<MergeResult>(`${base(bookId)}/paragraphs/${encodeURIComponent(segmentId)}/merge-next`, {
       method: "POST",
       ...json(joiner === undefined ? {} : { joiner }),
+    }),
+  layoutChapter: (bookId, chapterId) =>
+    request<{ moved: number }>(`${base(bookId)}/chapters/${encodeURIComponent(chapterId)}/layout`, {
+      method: "POST",
+      ...json({}),
     }),
   reorderParagraphs: (bookId, chapterId, ids) =>
     request<Paragraph[]>(

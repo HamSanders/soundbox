@@ -201,6 +201,7 @@ export const UNGUARDED_ROUTES: readonly string[] = [
   // exports and published files all live in the data directory. Web import
   // fetches only public addresses unless MIRLI_IMPORT_PRIVATE_HOSTS allows one.
   "GET /api/audiobooks/listen/shelf",
+  "POST /api/audiobooks/:id/chapters/:cid/layout",
   "GET /api/audiobooks/:id/listen",
   "GET /api/audiobooks/:id/listen/chapters/:cid/audio",
   "GET /api/audiobooks/:id/progress",

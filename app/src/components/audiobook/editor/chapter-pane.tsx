@@ -74,6 +74,7 @@ export function ChapterPane({
   notes,
   openNotesOnly = false,
   toolbar,
+  followId = null,
 }: {
   book: BookDetail;
   chapter: ChapterWithStats;
@@ -90,6 +91,9 @@ export function ChapterPane({
   openNotesOnly?: boolean;
   /** Extra controls at the end of the chapter toolbar. */
   toolbar?: React.ReactNode;
+  /** The paragraph the docked timeline is playing: shown as playing and
+   *  scrolled into view. */
+  followId?: string | null;
 }) {
   const qc = useQueryClient();
   const paragraphs = useParagraphs(book.id, chapter.id);
@@ -147,6 +151,9 @@ export function ChapterPane({
   useEffect(() => {
     if (selectedId) scrollTo.current(keyList.current.indexOf(selectedId));
   }, [selectedId]);
+  useEffect(() => {
+    if (followId) scrollTo.current(keyList.current.indexOf(followId));
+  }, [followId]);
 
   const generate = useCallback(
     (targets: Paragraph[]) => {
@@ -586,7 +593,7 @@ export function ChapterPane({
               selected={p.id === selectedId}
               checked={checked.has(p.id)}
               editing={p.id === editingId}
-              playing={p.id === player.playingId}
+              playing={p.id === (player.playingId ?? followId)}
               generating={generating.has(p.id)}
               dragging={p.id === dragId}
               dropEdge={drop?.id === p.id && dragId !== p.id ? (drop.after ? "after" : "before") : null}

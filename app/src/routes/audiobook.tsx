@@ -12,6 +12,8 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { BookHeader } from "@/components/audiobook/editor/book-header";
 import { ChapterList } from "@/components/audiobook/editor/chapter-list";
 import { ChapterPane } from "@/components/audiobook/editor/chapter-pane";
+import { ChapterTimeline } from "@/components/audiobook/editor/chapter-timeline";
+import { TimelineDock } from "@/components/audiobook/editor/timeline-dock";
 import { Inspector } from "@/components/audiobook/editor/inspector";
 import { announce } from "@/components/audiobook/editor/announce";
 import { LiveRegion } from "@/components/audiobook/editor/announcer";
@@ -31,6 +33,8 @@ export function AudiobookPage() {
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [findOpen, setFindOpen] = useState(false);
   const [openNotesOnly, setOpenNotesOnly] = useState(false);
+  /** The paragraph under the docked timeline's playhead. */
+  const [followId, setFollowId] = useState<string | null>(null);
   const notes = useNotes(id);
   useBookEvents(id);
   const history = useEditHistory();
@@ -82,6 +86,7 @@ export function AudiobookPage() {
       setParams({ chapter: cid }, { replace: true });
       setSelectedId(null);
       setChecked(new Set());
+      setFollowId(null);
     },
     [setParams],
   );
@@ -214,6 +219,7 @@ export function AudiobookPage() {
               }
               selectedId={selectedId}
               onSelect={setSelectedId}
+              followId={followId}
               checked={checked}
               onChecked={setChecked}
               findOpen={findOpen}
@@ -237,6 +243,21 @@ export function AudiobookPage() {
           />
         </aside>
       </div>
+      {chapter && (
+        <TimelineDock title={chapter.title}>
+          <ChapterTimeline
+            key={chapter.id}
+            book={data}
+            chapter={chapter}
+            paragraphs={paragraphs.data ?? []}
+            ops={ops}
+            history={history}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            onActiveParagraph={setFollowId}
+          />
+        </TimelineDock>
+      )}
     </div>
   );
 }

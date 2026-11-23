@@ -38,6 +38,13 @@ import { createServer } from "node:net";
 import { dirname, join } from "node:path";
 import type { Readable } from "node:stream";
 
+import {
+  assertDiskSpace,
+  freeBytesAt,
+  MODEL_HEADROOM_BYTES,
+  TransferRate,
+  type FreeBytesFn,
+} from "../download.js";
 import { CancelledJob, ModelError } from "../errors.js";
 import { sseData } from "../audio/sse.js";
 import { findBinary } from "./audiocppBinary.js";
@@ -199,14 +206,10 @@ function extractError(text: string): string {
   return text.slice(0, 400);
 }
 
-function fmtBytes(n: number): string {
-  if (n <= 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.min(units.length - 1, Math.floor(Math.log(n) / Math.log(1024)));
-  return `${(n / 1024 ** i).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
-}
-
 export class AudioCppRuntime {
+  /** How free disk space is measured before a package install. Replaced by
+   *  tests. */
+  freeBytes: FreeBytesFn = freeBytesAt;
   private running: RunningServer | null = null;
   private starting: Promise<RunningServer> | null = null;
   private lastUsed = Date.now();
@@ -500,6 +503,8 @@ export class AudioCppRuntime {
     progress?: (fraction: number, message: string) => void,
     signal?: AbortSignal,
   ): Promise<void> {
+    const rate = new TransferRate();
+    let spaceChecked = false;
     for (;;) {
       if (signal?.aborted) throw new ModelError("Download cancelled");
 
@@ -509,6 +514,25 @@ export class AudioCppRuntime {
         `/v1/ui/models/install-status?id=${encodeURIComponent(packageId)}`,
       );
       if (status === null) throw new ModelError("audio.cpp stopped reporting install status");
+
+      // audio.cpp does the transfer here, so the size is only known once it
+      // reports one. The first report that carries a total is the earliest
+      // point to say "this will not fit"; throwing stops the install (see
+      // installPackage) before most of it has been written.
+      if (!spaceChecked && status.total_bytes > 0) {
+        spaceChecked = true;
+        try {
+          await assertDiskSpace({
+            path: modelsRoot,
+            neededBytes: status.total_bytes,
+            alreadyBytes: status.downloaded_bytes,
+            headroomBytes: MODEL_HEADROOM_BYTES,
+            freeBytes: this.freeBytes,
+          });
+        } catch (exc) {
+          throw new ModelError(exc instanceof Error ? exc.message : String(exc));
+        }
+      }
 
       if (progress) {
         // Prefer real byte counts; `progress_percent` is -1 until the runtime
@@ -520,7 +544,7 @@ export class AudioCppRuntime {
             : Math.max(0, status.progress_percent) / 100;
         const detail =
           status.total_bytes > 0
-            ? `${fmtBytes(status.downloaded_bytes)} of ${fmtBytes(status.total_bytes)}`
+            ? rate.line(status.downloaded_bytes, status.total_bytes)
             : status.message;
         progress(0.05 + 0.9 * Math.min(1, fraction), `Downloading — ${detail}`);
       }

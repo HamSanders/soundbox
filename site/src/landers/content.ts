@@ -56,8 +56,8 @@ export const LANDERS: Lander[] = [
     lede: "Describe a sound and get a WAV. Read a script in a cloned voice. Everything runs on your own GPU, so there is no account, no credits and nothing to upload.",
     hero: "chip-ambience",
     shot: {
-      src: "/product/studio.png",
-      alt: 'The Mirli studio: a script cast across three speakers above a multi-track timeline holding the spoken lines, an ambient music bed and sound effects.',
+      src: "/product/app-studio.webp",
+      alt: 'The Mirli studio: a script cast across three voices above a timeline with narration, dialogue, a music bed, ambience and sound effects on five lanes.',
     },
     tricksTitle: "What you can do with it",
     tricks: [
@@ -111,8 +111,8 @@ export const LANDERS: Lander[] = [
     lede: "Write a style prompt for an instrumental, or add a lyric sheet for a song. The models run on your own machine, so there is no account, no credit meter and no queue.",
     hero: "song-own-machine",
     shot: {
-      src: "/product/music-studio.png",
-      alt: 'The Music page: a request form with model, licence, styles, tempo, key and length beside a shelf of generated takes.',
+      src: "/product/app-music.webp",
+      alt: 'The Music page: a request form with model, licence, lyrics switch, styles and tempo beside seven generated tracks, each with its licence, model and length.',
     },
     tricksTitle: "How the music side works",
     tricks: [
@@ -168,8 +168,8 @@ export const LANDERS: Lander[] = [
     lede: "Describe the sound and get a WAV file. No account, no credits, no upload. Every example on this site shows the exact prompt that made it, so you can learn what works before you install.",
     hero: "chip-impact",
     shot: {
-      src: "/product/sfx.png",
-      alt: 'The SFX page: a list of generated sounds, each with its model, tags, duration and seed, above a prompt box reading "Heavy iron portcullis slamming shut in a stone gatehouse, long echo".',
+      src: "/product/app-sfx.webp",
+      alt: 'The SFX page: a prompt box with duration, variations, seed, steps and CFG beside a list of ten generated sounds, each with its licence badge, model and duration.',
     },
     tricksTitle: "What a good prompt names",
     tricks: [
@@ -227,8 +227,8 @@ export const LANDERS: Lander[] = [
     lede: "Generate sound effects, loops and music on your own machine, one library per game. Or point Claude Code, Cursor or any MCP client at it and ask for “a door slam and a coin pickup”.",
     hero: "laser-plasma-bolt",
     shot: {
-      src: "/product/agents.png",
-      alt: 'The Agents page: the MCP address and the Claude Code command to copy, the agents that have connected, and a log of their recent calls.',
+      src: "/product/app-agents.webp",
+      alt: 'The Agents page: call counts for the day, the MCP address and the Claude Code command to copy, and the three agents that have connected.',
     },
     tricksTitle: "Built for a project with a lot of small sounds",
     tricks: [
@@ -289,8 +289,8 @@ export const LANDERS: Lander[] = [
     lede: "Read text aloud, clone a voice from a short clip, and cast saved voices onto the lines of a script. It runs locally, so your script and voice samples stay on your computer while you generate.",
     hero: "voice-intro",
     shot: {
-      src: "/product/voice-lab.png",
-      alt: 'The Voice Lab: saved voices as cards, most cloned from a clip and one built into a model, each with Try it and Edit.',
+      src: "/product/app-voice-lab.webp",
+      alt: 'The Voice Lab: five saved voices as cards and in a table, three cloned from clips and two built into a model, each with its number of reads and a Try it button.',
     },
     tricksTitle: "From one read to a whole script",
     tricks: [

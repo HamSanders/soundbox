@@ -1,0 +1,112 @@
+name: Security
+
+# Three checks that CodeQL (code scanning's default setup, configured in the
+# repository settings) and Dependabot do not cover:
+#
+#   - Secret scan: gitleaks over a pull request's commits, and over the whole
+#     history on the weekly run. This one gates: a finding fails the job.
+#   - npm audit and cargo audit: known advisories against the two lockfiles.
+#     These never fail the run. An advisory in a dependency is not something
+#     the pull request in front of you caused, so they warn and write a
+#     summary instead of blocking it.
+#
+# Every action is pinned to a commit, with its tag in the comment; Dependabot
+# (.github/dependabot.yml) moves both together.
+
+on:
+  pull_request:
+  schedule:
+    # Mondays, 05:23 UTC.
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      # gitleaks-action lists a pull request's commits to scan just those.
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The whole history: the weekly run scans all of it, and a pull
+          # request's commits must be present to be scanned.
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          # The token is read-only, so it could not comment anyway, and the
+          # report artifact would put whatever was found in a public download.
+          GITLEAKS_ENABLE_COMMENTS: "false"
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+
+  npm-audit:
+    name: npm audit (advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Reads package-lock.json only: nothing is installed and no package
+      # script runs.
+      - name: Advisories against package-lock.json
+        run: |
+          status=0
+          npm audit --audit-level=high > audit.txt 2>&1 || status=$?
+          cat audit.txt
+          {
+            echo "### npm audit (high and critical)"
+            echo '```'
+            tail -n 80 audit.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" -ne 0 ]; then
+            echo "::warning title=npm audit::npm audit reported high or critical advisories, or could not run. See this job's summary. This check does not block merging."
+          fi
+
+  cargo-audit:
+    name: cargo audit (advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CARGO_AUDIT_VERSION: "0.23.0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # cargo-audit is compiled from crates.io, which takes a few minutes, so
+      # the binary is kept between runs.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: cache
+        with:
+          path: ~/.cargo/bin/cargo-audit
+          key: cargo-audit-${{ runner.os }}-${{ env.CARGO_AUDIT_VERSION }}
+      - name: Install cargo-audit
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: cargo install cargo-audit --locked --version "$CARGO_AUDIT_VERSION"
+      - name: Advisories against src-tauri/Cargo.lock
+        run: |
+          status=0
+          cargo audit --file src-tauri/Cargo.lock > audit.txt 2>&1 || status=$?
+          cat audit.txt
+          {
+            echo "### cargo audit"
+            echo '```'
+            tail -n 80 audit.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" -ne 0 ]; then
+            echo "::warning title=cargo audit::cargo audit reported advisories, or could not run. See this job's summary. This check does not block merging."
+          fi

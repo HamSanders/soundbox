@@ -71,7 +71,25 @@ import { ApiError, DESKTOP_CAPABILITIES } from "./api";
 /** `npm run dev:mock:sandboxed`: play a sandboxed server (MIRLI_SANDBOXED=1). */
 const MOCK_SANDBOXED = import.meta.env.VITE_MOCK_SANDBOXED === "1";
 import { clampDeviceParams, createDevice } from "./devices";
+import {
+  demoCatalog,
+  demoMcpCalls,
+  demoMcpTools,
+  demoModels,
+  demoSegments,
+  demoSounds,
+  demoStories,
+  demoTracks,
+  demoVoices,
+} from "./mock-demo";
 import { followPlacement } from "./reading-order";
+
+/**
+ * `VITE_MOCK_FIXTURE=demo`: start from the demo fixture instead of the seed
+ * below. The seed is built to exercise UI states; the demo is built to be
+ * photographed (`scripts/capture-media.mjs`). See `mock-demo.ts`.
+ */
+const DEMO = import.meta.env.VITE_MOCK_FIXTURE === "demo";
 
 /* ------------------------------------------------------------- utilities */
 
@@ -162,13 +180,13 @@ async function renderBlobUrl(
   peaks: number[],
   shape: Shape,
   seed: number,
+  sampleRate = 44100,
 ): Promise<string> {
   const AC: typeof OfflineAudioContext =
     (window as unknown as { OfflineAudioContext: typeof OfflineAudioContext })
       .OfflineAudioContext ??
     (window as unknown as { webkitOfflineAudioContext: typeof OfflineAudioContext })
       .webkitOfflineAudioContext;
-  const sampleRate = 44100;
   const frames = Math.max(1, Math.floor(durationS * sampleRate));
   const ctx = new AC(1, frames, sampleRate);
   const buf = ctx.createBuffer(1, frames, sampleRate);
@@ -451,6 +469,23 @@ const models: Model[] = [
     status: "incomplete",
     installed_deps: false,
     error: null,
+    // What a server restart leaves behind: the reason the download stopped.
+    download_failure: {
+      topic: "download_truncated",
+      title: "The download ended before the whole file arrived",
+      hint:
+        "Fewer bytes came back than the server declared, or the size did not match. " +
+        "A retry continues from what arrived where it can; if it keeps happening the " +
+        "file upstream may have changed and the catalog entry needs a look.",
+      fixes: [{ label: "Open Models", to: "/models" }],
+      terminal: false,
+      stage: "downloading",
+      detail:
+        "Download of https://huggingface.co/example/weights.gguf was cut short: got 1288490188 of " +
+        "3865470566 bytes (terminated: other side closed: UND_ERR_SOCKET). Gave up after 5 attempts. " +
+        "What arrived is kept, so the next try continues from it where the server allows.",
+      at: new Date(Date.now() - 26 * 3600_000).toISOString(),
+    },
   },
   {
     id: "tangoflux-base",
@@ -684,6 +719,8 @@ const models: Model[] = [
   },
 ];
 
+if (DEMO) models.splice(0, models.length, ...demoModels);
+
 /** Canned transcripts for the mock recogniser, picked in turn. */
 const MOCK_TRANSCRIPTS = [
   "The quick brown fox jumps over the lazy dog.",
@@ -734,7 +771,10 @@ function audioCppModelFromCatalog(
   };
 }
 
-interface SeedSound {
+export interface SeedSound {
+  /** Fixed id, for a fixture whose sounds are referred to by clips, calls
+   *  and URLs. Numbered in order when absent. */
+  id?: string;
   name: string;
   prompt: string;
   tags: string[];
@@ -747,9 +787,18 @@ interface SeedSound {
    *  agent to connect. */
   source?: "app" | "api" | "mcp";
   client?: string;
+  /** How long ago it was made. Five hours apart, in order, when absent. */
+  hours_ago?: number;
+  sample_rate?: number;
+  channels?: number;
+  steps?: number | null;
+  cfg?: number | null;
+  lyrics?: string;
+  voice_id?: string;
+  project_id?: string | null;
 }
 
-const seedSounds: SeedSound[] = [
+const plainSeedSounds: SeedSound[] = [
   {
     name: "Door slam 01",
     prompt: "heavy wooden door slam, dry room, close mic",
@@ -828,6 +877,8 @@ const seedSounds: SeedSound[] = [
     source: "api",
   },
 ];
+
+const seedSounds: SeedSound[] = DEMO ? demoSounds : plainSeedSounds;
 
 interface MockSound extends Sound {
   _shape: Shape;
@@ -920,40 +971,52 @@ const mockOtherJobId = "b1ab888b-7160-45f7-b15a-2c9bc2fa9a42";
 const sounds: MockSound[] = seedSounds.map((s, i) => {
   const seed = 1000 + i * 137;
   const peaks = synthPeaks(seed, s.shape);
+  const sampleRate = s.sample_rate ?? 44100;
+  const channels = s.channels ?? 1;
   return {
-    id: `snd-${String(i + 1).padStart(3, "0")}`,
-    created_at: new Date(Date.now() - (i + 1) * 3600_000 * 5).toISOString(),
+    id: s.id ?? `snd-${String(i + 1).padStart(3, "0")}`,
+    created_at: new Date(Date.now() - (s.hours_ago ?? (i + 1) * 5) * 3600_000).toISOString(),
     model: s.model,
     prompt: s.prompt,
-    negative_prompt: i % 3 === 0 ? "music, voice" : null,
+    // None of the demo's models takes a negative prompt.
+    negative_prompt: !DEMO && i % 3 === 0 ? "music, voice" : null,
+    lyrics: s.lyrics ?? null,
     duration_s: s.duration_s,
     seed,
-    steps: 8,
-    cfg: 3.0,
-    sample_rate: 44100,
-    channels: 1,
+    steps: s.steps !== undefined ? s.steps : 8,
+    cfg: s.cfg !== undefined ? s.cfg : DEMO ? 1.0 : 3.0,
+    sample_rate: sampleRate,
+    channels,
     file: "",
     peaks,
     favorite: s.favorite,
     tags: s.tags,
     name: s.name,
-    size_bytes: Math.round(s.duration_s * 44100 * 2),
+    size_bytes: Math.round(s.duration_s * sampleRate * channels * 2),
     session_id: null,
-    project_id: null,
-    effective_project_id: null,
+    project_id: s.project_id ?? null,
+    effective_project_id: s.project_id ?? null,
     source: s.source ?? "app",
     client: s.client ?? null,
+    voice_id: s.voice_id ?? null,
     _shape: s.shape,
     _seed: seed,
   };
 });
+
+if (DEMO) {
+  voices.splice(0, voices.length, ...demoVoices);
+  stories.push(...demoStories);
+  segments.push(...demoSegments.map((s) => ({ ...s, sound: null })));
+  tracks.push(...demoTracks);
+}
 
 const jobs = new Map<string, Job>();
 const jobListeners = new Map<string, Set<(job: Job) => void>>();
 
 /** Mirrors the real backend's models.audiocpp.CATALOG_EXTRA — kept short and
  *  hand-in-sync since there's no server here to read it from. */
-const AUDIOCPP_CATALOG_EXTRA: Omit<AudioCppCatalogEntry, "enabled" | "on_disk">[] = [
+const AUDIOCPP_CATALOG_EXTRA: Omit<AudioCppCatalogEntry, "enabled" | "on_disk">[] = DEMO ? [] : [
   {
     id: "audiocpp-stable-audio-3-medium",
     name: "Stable Audio 3.0 Medium (audio.cpp)",
@@ -1559,11 +1622,15 @@ function ensureAudio(): Promise<void> {
   audioReady ??= (async () => {
     for (const s of sounds) {
       if (!s.file) {
+        // The whole length, so the player's clock agrees with the row it was
+        // started from. Nobody judges a mock by its fidelity, so anything
+        // long is rendered at a rate that keeps it cheap.
         s.file = await renderBlobUrl(
-          Math.min(s.duration_s, 6),
+          s.duration_s,
           s.peaks,
           s._shape,
           s._seed,
+          s.duration_s > 15 ? 8000 : 44100,
         );
       }
     }
@@ -2096,6 +2163,8 @@ async function runRepaintJob(
 
 async function runDownloadJob(job: Job, modelId: string) {
   const model = models.find((e) => e.id === modelId);
+  // A repair of an incomplete model picks up where the part left off.
+  const resumed = model?.status === "incomplete";
   if (model) model.status = "downloading";
   job.status = "running";
   job.phase = "loading";
@@ -2103,14 +2172,25 @@ async function runDownloadJob(job: Job, modelId: string) {
   for (let i = 1; i <= 12; i++) {
     await wait(230);
     if (cancelled.has(job.id)) {
-      if (model) model.status = "not_installed";
+      if (model) model.status = resumed ? "incomplete" : "not_installed";
       return;
     }
-    job.progress = i / 12;
-    job.message = `${Math.round((i / 12) * (model?.vram_estimate_mb ?? 4000))} MB / ${model?.vram_estimate_mb ?? 4000} MB`;
+    // The server's progress line: bytes, then rate and time left once it has
+    // a second of data to judge by.
+    const totalMb = model?.vram_estimate_mb ?? 4000;
+    const fraction = resumed ? 1 / 3 + ((i / 12) * 2) / 3 : i / 12;
+    const secondsLeft = Math.round((12 - i) * 0.23);
+    job.progress = 0.05 + 0.9 * fraction;
+    job.message =
+      `Downloading — ${((fraction * totalMb) / 1024).toFixed(1)} GB of ${(totalMb / 1024).toFixed(1)} GB` +
+      (i > 1 ? " · 38.4 MB/s" : "") +
+      (i > 1 && secondsLeft > 0 ? ` · ${secondsLeft} s left` : "");
     emit(job);
   }
-  if (model) model.status = "installed";
+  if (model) {
+    model.status = "installed";
+    model.download_failure = null;
+  }
   job.status = "done";
   job.phase = "done";
   job.progress = 1;
@@ -2125,7 +2205,7 @@ async function runDownloadJob(job: Job, modelId: string) {
 // connected. Two clients: one active a moment ago, one from yesterday — so
 // the page demonstrates both the live dot and the "seen before" state.
 
-const MOCK_TOOLS: Omit<McpToolInfo, "calls">[] = [
+const MOCK_TOOLS: Omit<McpToolInfo, "calls">[] = DEMO ? demoMcpTools : [
   {
     name: "soundbox.generate",
     title: "Generate a sound effect",
@@ -2236,6 +2316,31 @@ const mcpCalls: McpCall[] = [
   },
 ];
 
+if (DEMO) {
+  const versions = { "claude-code": "2.1.0", cursor: "1.4.2", codex: "0.31.0" };
+  mcpCalls.splice(
+    0,
+    mcpCalls.length,
+    ...demoMcpCalls.map((c, i): McpCall => ({
+      id: `call-demo-${i + 1}`,
+      ts: ago(c.min),
+      tool: `soundbox.${c.tool}`,
+      status: c.error ? "error" : "ok",
+      client_name: c.client,
+      client_version: versions[c.client],
+      // One session per client per day, which is how an agent's sitting reads.
+      session_id: `sess-${c.client}-${Math.floor(c.min / 1440)}`,
+      transport: c.client === "cursor" ? "stdio" : "http",
+      args: c.args ?? {},
+      duration_ms: c.ms,
+      error: c.error,
+      sound_ids: c.sounds ?? [],
+      job_id: c.sounds?.length ? `job-demo-${i + 1}` : null,
+      trace_id: null,
+    })),
+  );
+}
+
 function computeMcpClients(): McpClient[] {
   const active = new Set<string>();
   const byKey = new Map<string, McpClient>();
@@ -2342,6 +2447,7 @@ export const mockApi: MirliApi = {
 
   async listAudioCppCatalog() {
     await wait(60);
+    if (DEMO) return demoCatalog.map((e) => ({ ...e }));
     const enabled = new Set(settings.enabled_audiocpp_models);
     // Mirrors models.audiocpp.MODELS — every entry verified end-to-end
     // (download → load → generate → real audio), always registered.
@@ -2452,6 +2558,14 @@ export const mockApi: MirliApi = {
     const model = models.find((e) => e.id === id);
     if (!model) throw new Error(`Unknown model ${id}`);
     model.status = "not_installed";
+    model.download_failure = null;
+  },
+
+  async clearModelDownloadFailure(id) {
+    await wait(60);
+    const model = models.find((e) => e.id === id);
+    if (!model) throw new Error(`Unknown model ${id}`);
+    model.download_failure = null;
   },
 
   async generate(req): Promise<JobRef> {
@@ -2575,6 +2689,12 @@ export const mockApi: MirliApi = {
     }
     if (query.tag) items = items.filter((s) => s.tags.includes(query.tag!));
     if (query.model) items = items.filter((s) => s.model === query.model);
+    // What a category page sends: "any model in this category". Ignoring it
+    // put every sound on every page, door slams under Music included.
+    if (query.models) {
+      const anyOf = new Set(query.models);
+      items = items.filter((s) => anyOf.has(s.model));
+    }
     if (query.favorite) items = items.filter((s) => s.favorite);
     if (query.source) items = items.filter((s) => s.source === query.source);
     const total = items.length;

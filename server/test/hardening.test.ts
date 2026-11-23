@@ -262,7 +262,7 @@ describe("downloadToFile", () => {
       onProgress: (done) => seen.push(done),
     });
     expect(await readFile(dest, "utf-8")).toBe("hello");
-    expect(result).toEqual({ bytes: 5, sha256: sha("hello") });
+    expect(result).toEqual({ bytes: 5, sha256: sha("hello"), resumedFrom: 0, attempts: 1 });
     expect(seen.at(-1)).toBe(5);
     expect(existsSync(`${dest}.part`)).toBe(false);
   });
@@ -279,10 +279,12 @@ describe("downloadToFile", () => {
   it("gives up on a server that stops sending", async () => {
     const dest = join(dir, "stall.bin");
     await expect(
-      downloadToFile(`${base}/stall`, dest, { idleTimeoutMs: 300 }),
+      downloadToFile(`${base}/stall`, dest, { idleTimeoutMs: 300, retry: { attempts: 1 } }),
     ).rejects.toThrow(/stalled/);
     expect(existsSync(dest)).toBe(false);
-    expect(existsSync(`${dest}.part`)).toBe(false);
+    // What arrived is kept for the next try to continue from; the retry and
+    // resume paths are covered in download.test.ts.
+    expect(existsSync(`${dest}.part`)).toBe(true);
   });
 
   it("surfaces an HTTP error with its status", async () => {

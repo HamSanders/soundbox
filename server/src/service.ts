@@ -44,12 +44,14 @@ import { listGpus, pickGpu } from "./gpu.js";
 import { HistoryStore } from "./history.js";
 import { beds } from "./audiobook/beds.js"; // [audiobooks:soundscape]
 import { EmptyMixError, type MixPlan, type PlannedClip, renderMixLanes, sumLanes } from "./audiobook/export-mix.js"; // [audiobooks:export]
+import { DOWNLOAD_FAILURES_FILE, DownloadFailureStore } from "./models/downloadFailures.js";
 import { ModelManager } from "./models/manager.js";
 import * as audiocppBinary from "./models/audiocppBinary.js";
 import { migrateLayout } from "./models/audiocppMigrate.js";
 import { withRequirements } from "./models/params.js";
 import { llmModelSpec } from "./models/llmCatalog.js";
 import { CancelledJob, ModelError, StreamUnsupported } from "./errors.js";
+import { buildFailure } from "./failure.js";
 import { JobHandle, JobManager } from "./jobs.js";
 import { LlmService, type LlmStatus } from "./llm/service.js";
 import type { StudioContext } from "./llm/studio.js";
@@ -235,6 +237,8 @@ export class MirliService {
    *  call time, so the reassignment is the whole of it. */
   db: Database;
   readonly models: ModelManager;
+  /** Each model's last failed download, kept on disk — see downloadFailures.ts. */
+  readonly downloadFailures: DownloadFailureStore;
   /** What this server allows, from its environment at start; see capabilities.ts. */
   readonly serverCapabilities: Capabilities;
   readonly jobs: JobManager;
@@ -274,6 +278,9 @@ export class MirliService {
       this.models,
       endpointSource,
       this.serverCapabilities.custom_endpoints,
+    );
+    this.downloadFailures = new DownloadFailureStore(
+      join(config.paths.models, DOWNLOAD_FAILURES_FILE),
     );
     this.jobs = new JobManager();
     this.llm = new LlmService(config);
@@ -340,6 +347,7 @@ export class MirliService {
     for (const info of infos) {
       info.avg_duration_s = this.jobs.avgDuration("generate", info.id);
       this.overlayActiveDownload(info);
+      this.overlayDownloadFailure(info);
     }
     return infos;
   }
@@ -348,7 +356,25 @@ export class MirliService {
     const info = await this.models.get(modelId).status();
     info.avg_duration_s = this.jobs.avgDuration("generate", modelId);
     this.overlayActiveDownload(info);
+    this.overlayDownloadFailure(info);
     return info;
+  }
+
+  /**
+   * Attach the remembered download failure while it still explains something:
+   * the model is not usable yet. Weights that turned up some other way (a
+   * shared audio.cpp folder, a later download from another client) make the
+   * old failure history rather than news, so it is not shown.
+   */
+  private overlayDownloadFailure(info: ModelInfo): void {
+    const relevant = info.status === "not_installed" || info.status === "incomplete";
+    info.download_failure = relevant ? this.downloadFailures.get(info.id) : null;
+  }
+
+  /** Dismiss a model's remembered download failure. */
+  clearDownloadFailure(modelId: string): void {
+    this.models.get(modelId); // an unknown id is an error, not a no-op
+    this.downloadFailures.clear(modelId);
   }
 
   /**
@@ -392,7 +418,17 @@ export class MirliService {
         },
         { handle },
       );
-      await this.models.download(modelId, cancellable);
+      try {
+        await this.models.download(modelId, cancellable);
+      } catch (exc) {
+        // Remembered so the Models page can still say why after a restart. A
+        // cancel is the user's own doing and is not a failure to report.
+        if (!(exc instanceof CancelledJob)) {
+          this.downloadFailures.record(modelId, buildFailure(exc, { stage: "downloading" }));
+        }
+        throw exc;
+      }
+      this.downloadFailures.clear(modelId);
       return { model: modelId };
     };
 
@@ -409,6 +445,7 @@ export class MirliService {
 
   async deleteWeights(modelId: string): Promise<void> {
     await this.models.deleteWeights(modelId);
+    this.downloadFailures.clear(modelId);
   }
 
   /**
@@ -1561,6 +1598,9 @@ export class MirliService {
   } {
     const requestOptions = { ...options };
     if (!voiceId) return { refPath: null, builtinId: null, requestOptions };
+    if (voiceId.startsWith(BUILTIN_VOICE_PREFIX)) {
+      return { refPath: null, builtinId: voiceId.slice(BUILTIN_VOICE_PREFIX.length), requestOptions };
+    }
     const voice = this.db.getVoice(voiceId);
     if (voice === null) throw new ModelError(`Voice '${voiceId}' not found.`);
     if (voice.kind === "builtin") {
@@ -1702,6 +1742,18 @@ export class MirliService {
     await unlinkQuiet(join(this.config.paths.sounds, filename));
     await unlinkQuiet(join(this.config.paths.cache, `${stem}.mp3`));
     return true;
+  }
+
+  /**
+   * Delete a sound that was only made to be sent to a caller, and the session
+   * the job opened for it when nothing else is in it. For routes that render
+   * for another program and should leave the library as they found it.
+   */
+  async discardSound(soundId: string): Promise<boolean> {
+    const sessionId = this.db.getSound(soundId)?.session_id ?? null;
+    const deleted = await this.deleteSound(soundId);
+    if (deleted && sessionId) this.db.deleteIfEmpty(sessionId);
+    return deleted;
   }
 
   listTags(): TagCount[] {
@@ -2801,7 +2853,7 @@ export class MirliService {
     // the same saved voice gets that voice stamped on it, a mixed dialogue
     // (or a model-default read) gets nothing.
     const lineVoices = new Set(req.lines.map((l) => l.voice_id ?? null));
-    const soleVoice = lineVoices.size === 1 ? [...lineVoices][0]! : null;
+    const soleVoice = lineVoices.size === 1 ? savedVoiceId([...lineVoices][0]!) : null;
 
     const sound: Sound = {
       id: soundId,
@@ -2918,7 +2970,7 @@ export class MirliService {
           steps: info.supports.steps ? req.steps ?? null : null,
           cfg: info.supports.cfg ? req.cfg ?? null : null,
           projectId: req.project_id ?? null,
-          voiceId: req.voice_id ?? null,
+          voiceId: savedVoiceId(req.voice_id),
           trim: false,
           // What was heard is what's kept: normalising afterwards would make
           // the saved file louder or quieter than the stream that played.
@@ -3901,6 +3953,21 @@ async function unlinkQuiet(path: string): Promise<void> {
   } catch {
     /* already gone */
   }
+}
+
+/**
+ * A model's own built-in voice named directly, without a saved Voice for it:
+ * `builtin:<name>` in a `voice_id`, where the name is one of the model's
+ * `voice_ids`. Saved voices have UUID ids, so the two cannot collide. The
+ * OpenAI-compatible routes use it so a client can ask for a model's voice by
+ * name; a sound read this way records no voice, since there is no row to
+ * point at.
+ */
+export const BUILTIN_VOICE_PREFIX = "builtin:";
+
+/** The saved Voice a `voice_id` names, or null for none or a `builtin:` one. */
+function savedVoiceId(voiceId: string | null | undefined): string | null {
+  return voiceId && !voiceId.startsWith(BUILTIN_VOICE_PREFIX) ? voiceId : null;
 }
 
 /** One item of `MirliService.speakStream`. */

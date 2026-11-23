@@ -33,6 +33,46 @@ confirm:
   `libfuse2t64`. The packages are built on Ubuntu 22.04, so they need glibc
   2.35 or newer (Ubuntu 22.04, Debian 12, Fedora 36 and later).
 
+### Checking a download
+
+Releases after 0.6.2 carry `SHA256SUMS.txt`: the SHA-256 of each
+installer (`.exe`, `.dmg`, `.AppImage`, `.deb`), computed by the release
+workflow from the files attached to the release. To check a download, get
+`SHA256SUMS.txt` from the same
+[release](https://github.com/HamSanders/soundbox/releases/latest), put it in
+the folder with the installer, and compare.
+
+**Windows** (PowerShell). Print the installer's hash and the list's line for
+it, and check the two hashes are the same:
+
+```powershell
+(Get-FileHash .\Soundbox_<version>_x64-setup.exe -Algorithm SHA256).Hash
+Select-String -Path .\SHA256SUMS.txt -Pattern "x64-setup.exe"
+```
+
+**macOS:**
+
+```bash
+shasum -a 256 --ignore-missing -c SHA256SUMS.txt
+```
+
+**Linux:**
+
+```bash
+sha256sum --ignore-missing -c SHA256SUMS.txt
+```
+
+On macOS and Linux each installer you have is reported as `OK`, and
+`--ignore-missing` skips the ones you didn't download. A `FAILED` line, or
+hashes that differ on Windows, means the file is not the one the release
+built: delete it and download again from the release page.
+
+A matching hash shows the file arrived intact and is the one attached to the
+release. It does not replace code signing, and the list sits beside the
+installers, so it can't vouch for a file from anywhere else. In-app updates
+don't use it: they are verified against the updater key (see
+[Updates](#updates)).
+
 ### Linux: blank window or crash on NVIDIA
 
 The Linux app draws its window with the system's WebKitGTK, which has known
@@ -125,10 +165,10 @@ do not need anything staged. The output is in
 the release workflow builds each OS on its own runner.
 
 **Releases** come from `.github/workflows/release.yml`. Pushing a `v*` tag
-builds Windows (x64) and macOS (Apple silicon and Intel) installers and
-attaches them to a draft GitHub Release for a maintainer to publish. Running
-the workflow by hand builds the same installers as artifacts without touching
-Releases.
+builds Windows (x64), macOS (Apple silicon and Intel) and Linux (x64)
+installers and attaches them, with `SHA256SUMS.txt`, to a draft GitHub
+Release for a maintainer to publish. Running the workflow by hand builds the
+same installers as artifacts without touching Releases.
 
 ## What this build does and does not do
 

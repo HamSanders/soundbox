@@ -23,7 +23,13 @@ import { rm } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 
 import { defaultDataDir, getConfig } from "../config.js";
-import { DownloadError, downloadToFile } from "../download.js";
+import {
+  DownloadError,
+  downloadToFile,
+  MODEL_HEADROOM_BYTES,
+  retryLine,
+  TransferRate,
+} from "../download.js";
 import { ModelError } from "../errors.js";
 import type { LicenseInfo } from "../schemas.js";
 
@@ -396,6 +402,8 @@ export async function downloadWeights(
   // amount as a 246 MB one.
   const total = wanted.reduce((sum, f) => sum + f.size_bytes, 0) || 1;
   let completed = 0;
+  const rate = new TransferRate();
+  let fraction = 0;
 
   for (const file of wanted) {
     const url = `https://huggingface.co/${spec.hf_repo}/resolve/main/${file.path}`;
@@ -408,6 +416,8 @@ export async function downloadWeights(
       await downloadToFile(url, filePath(modelsDir, spec, file), {
         headers: hfToken ? { Authorization: `Bearer ${hfToken}` } : {},
         expectedBytes: spec.source === "builtin" ? file.size_bytes : 0,
+        headroomBytes: MODEL_HEADROOM_BYTES,
+        onRetry: (notice) => progress?.(fraction, retryLine(notice)),
         checkResponse: (resp) => {
           if (resp.ok) return;
           if (resp.status === 401 || resp.status === 403) {
@@ -420,10 +430,8 @@ export async function downloadWeights(
         },
         onProgress: (done, length) => {
           const declared = length || file.size_bytes;
-          progress?.(
-            Math.min(0.99, (completed + Math.min(done, declared)) / total),
-            `Downloading ${label} — ${Math.floor(done / 1024 / 1024)} MB`,
-          );
+          fraction = Math.min(0.99, (completed + Math.min(done, declared)) / total);
+          progress?.(fraction, `Downloading ${label} — ${rate.line(done, declared)}`);
         },
       });
     } catch (exc) {

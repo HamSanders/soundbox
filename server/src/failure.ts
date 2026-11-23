@@ -108,12 +108,12 @@ const RULES: Rule[] = [
   },
   {
     topic: "disk_full",
-    all: [/ENOSPC|no space left|not enough space on the disk|WinError 112\b|disk (is )?full/i],
-    title: "The disk is full",
+    all: [/ENOSPC|no space left|not enough space on the disk|not enough disk space|WinError 112\b|disk (is )?full/i],
+    title: "There is not enough disk space",
     hint:
-      "There was no room to write the file, so the partial file was removed. Free " +
-      "space on the drive that holds the Mirli data directory, or move the models " +
-      "folder to another drive, then try again.",
+      "There is not enough room for the file on the drive it is written to. Free " +
+      "space there, or move the models folder to another drive, then try again. " +
+      "The sizes involved are under Details.",
     fixes: [FIX.storage],
     terminal: true,
   },
@@ -133,8 +133,9 @@ const RULES: Rule[] = [
     all: [/stalled|no data for \d+s/i],
     title: "The download stopped receiving data",
     hint:
-      "The connection went quiet for too long, so the partial file was discarded " +
-      "and a retry starts clean. Check the network, a VPN or a proxy first.",
+      "The connection went quiet for too long, more than once. What arrived is " +
+      "kept, so a retry continues from there. Check the network, a VPN or a proxy " +
+      "first.",
     fixes: [FIX.models],
     terminal: false,
   },
@@ -143,9 +144,9 @@ const RULES: Rule[] = [
     all: [/ended early|cut short|bytes, expected|got \d+ of \d+ bytes|download is incomplete/i],
     title: "The download ended before the whole file arrived",
     hint:
-      "Fewer bytes came back than the server declared, so the partial file was " +
-      "removed. Retry once; if it happens again the file upstream may have changed " +
-      "and the catalog entry needs a look.",
+      "Fewer bytes came back than the server declared, or the size did not match. " +
+      "A retry continues from what arrived where it can; if it keeps happening the " +
+      "file upstream may have changed and the catalog entry needs a look.",
     fixes: [FIX.models],
     terminal: false,
   },

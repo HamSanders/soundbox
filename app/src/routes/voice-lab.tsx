@@ -31,6 +31,7 @@ import {
   MoreHorizontalIcon,
   PencilIcon,
   PlusIcon,
+  Settings2Icon,
   SquareIcon,
   Trash2Icon,
   UploadIcon,
@@ -55,7 +56,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { SearchInput } from "@/components/search-input";
 import { Label } from "@/components/ui/label";
 import {
@@ -598,8 +598,6 @@ export function VoiceLabPage() {
     if (fromId && fromSound.data) setAddOpen(true);
   }, [fromId, fromSound.data]);
   const [editing, setEditing] = useState<Voice | null>(null);
-  const [nameDraft, setNameDraft] = useState("");
-  const [notesDraft, setNotesDraft] = useState("");
   /** The model a clone reads on, or UNPINNED. */
   const [modelDraft, setModelDraft] = useState(UNPINNED);
   const [transcriptDrafts, setTranscriptDrafts] = useState<Record<string, string>>({});
@@ -676,9 +674,11 @@ export function VoiceLabPage() {
     .sort((a, b) => (b.read_count ?? 0) - (a.read_count ?? 0))
     .slice(0, SHELF_SIZE);
 
+  /** The voice whose Rename was picked, to open once its menu has closed. */
+  const renameAfterMenu = useRef<string | null>(null);
+  /** A clone's settings: the model it reads on and its clips' transcripts.
+   *  The name and notes are edited in the voice's panel, where they show. */
   const openEdit = (voice: Voice) => {
-    setNameDraft(voice.name);
-    setNotesDraft(voice.notes ?? "");
     setModelDraft(voice.model_id ?? UNPINNED);
     setTranscriptDrafts(Object.fromEntries(
       (voice.samples ?? []).map((s) => [s.id, s.reference_text ?? ""]),
@@ -694,15 +694,31 @@ export function VoiceLabPage() {
           <MoreHorizontalIcon />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent
+        align="end"
+        // Rename opens the panel with its name as a field, once the menu has
+        // closed and let go of focus.
+        onCloseAutoFocus={(e) => {
+          if (renameAfterMenu.current !== voice.id) return;
+          renameAfterMenu.current = null;
+          e.preventDefault();
+          setDetailId(voice.id, { rename: true });
+        }}
+      >
         <DropdownMenuItem onSelect={() => setDetailId(voice.id)}>
           <MicIcon />
           Try it
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => openEdit(voice)}>
+        <DropdownMenuItem onSelect={() => (renameAfterMenu.current = voice.id)}>
           <PencilIcon />
-          Edit
+          Rename
         </DropdownMenuItem>
+        {voice.kind === "clone" && (
+          <DropdownMenuItem onSelect={() => openEdit(voice)}>
+            <Settings2Icon />
+            Settings
+          </DropdownMenuItem>
+        )}
         {voice.kind === "clone" && (
           <DropdownMenuItem onSelect={() => setClipsFor(voice.id)}>
             <AudioLinesIcon />
@@ -969,32 +985,13 @@ export function VoiceLabPage() {
       <Dialog open={editing !== null} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit voice</DialogTitle>
+            <DialogTitle>{editing ? `${editing.name} settings` : "Voice settings"}</DialogTitle>
             <DialogDescription>
-              The name is how this voice appears in the script editor. Notes are
-              for you — accent, tone, where the clip came from. A cloned voice
-              also chooses the model that reads it.
+              The model that reads this clone and what its clips say. Rename it
+              or add notes in its panel.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="voice-lab-name">Name</Label>
-              <Input
-                id="voice-lab-name"
-                value={nameDraft}
-                autoFocus
-                onChange={(e) => setNameDraft(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="voice-lab-notes">Notes</Label>
-              <Input
-                id="voice-lab-notes"
-                value={notesDraft}
-                placeholder="optional"
-                onChange={(e) => setNotesDraft(e.target.value)}
-              />
-            </div>
             {editing?.kind === "clone" && (
               <div className="space-y-1.5">
                 <Label htmlFor="voice-lab-model">Reads on</Label>
@@ -1048,15 +1045,13 @@ export function VoiceLabPage() {
               Cancel
             </Button>
             <Button
-              disabled={!nameDraft.trim() || update.isPending}
+              disabled={update.isPending}
               onClick={() => {
                 if (!editing) return;
                 update.mutate(
                   {
                     id: editing.id,
                     patch: {
-                      name: nameDraft.trim(),
-                      notes: notesDraft.trim() || null,
                       model_id:
                         editing.kind === "clone" && modelDraft !== (editing.model_id ?? UNPINNED)
                           ? modelDraft === UNPINNED ? null : modelDraft

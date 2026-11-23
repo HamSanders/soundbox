@@ -1,7 +1,8 @@
 # Fish Audio reference transcripts
 
 In Voice Lab, enter **Reference Transcript** when creating a clone. Use
-**Edit voice** to enter or correct the exact words for every existing clip;
+a clone's **Settings** (in its panel or its ··· menu) to enter or correct the
+exact words for every existing clip;
 each field includes a player. When adding another clip, enter that clip's
 transcript before uploading or adding the recorded take.
 

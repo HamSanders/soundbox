@@ -19,13 +19,16 @@ import { XIcon } from "lucide-react";
 
 import { SoundArtifact } from "@/components/sound-artifact";
 import { Button } from "@/components/ui/button";
+import { InlineEdit } from "@/components/ui/inline-edit";
 import { formatBytes, formatDuration, formatRelative } from "@/lib/format";
 import { useDetailStore } from "@/lib/detail-store";
+import { useUpdateSound } from "@/lib/queries";
 
 export function SoundDetailPanel() {
   const panel = usePanelWidth({ id: "sound-detail", initial: 416, min: 320, max: 720, edge: "left" });
   const sound = useDetailStore((s) => s.sound);
   const close = useDetailStore((s) => s.close);
+  const update = useUpdateSound();
 
   // The panel belongs to the page that opened it: leaving that page closes
   // it, so a sound's details never sit beside a page that has nothing to do
@@ -61,9 +64,13 @@ export function SoundDetailPanel() {
       {panel.handle}
       <div className="border-border flex items-start gap-2 border-b px-4 pt-4 pb-3">
         <div className="grid min-w-0 flex-1 gap-1">
-          <h2 className="font-display truncate text-2xl leading-none font-extrabold tracking-[0.01em] uppercase">
-            {sound.name}
-          </h2>
+          <InlineEdit
+            as="h2"
+            value={sound.name}
+            label="Sound name"
+            onCommit={(name) => update.mutateAsync({ id: sound.id, patch: { name } })}
+            className="font-display min-w-0 truncate text-2xl leading-none font-extrabold tracking-[0.01em] uppercase"
+          />
           <p className="readout text-muted-foreground truncate">
             {sound.seed != null ? `No. ${sound.seed} · ` : ""}
             {formatDuration(sound.duration_s)} · {formatBytes(sound.size_bytes)} ·{" "}

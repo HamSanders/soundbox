@@ -1,7 +1,8 @@
 /**
  * The editor's top bar: cover, title and author, then the book-wide
- * settings: narrator voice, model, cast mode and pacing. Details opens the
- * full metadata form. Export and the render bar come from their areas.
+ * settings: narrator voice, model, cast mode and pacing. The title and
+ * author are edited where they're shown; Details opens the rest of the
+ * metadata. Export and the render bar come from their areas.
  */
 
 import { memo, useRef, useState } from "react";
@@ -19,6 +20,7 @@ import {
 import { ExportDialog } from "@/components/audiobook/export";
 import { BookCover } from "@/components/audiobook/shelf/book-cover";
 import { Button } from "@/components/ui/button";
+import { InlineEdit } from "@/components/ui/inline-edit";
 import {
   Dialog,
   DialogContent,
@@ -195,11 +197,27 @@ function BookHeaderView({
         />
       </button>
       <div className="min-w-0 flex-1 basis-56">
-        <h1 className="font-heading truncate text-lg leading-tight font-semibold">{book.title}</h1>
-        <p className="text-muted-foreground truncate text-xs">
-          {book.author || "No author"} · {book.stats.chapters} chapters · {pct}% voiced
+        <InlineEdit
+          as="h1"
+          value={book.title}
+          label="Title"
+          onCommit={(title) => update.mutateAsync({ title })}
+          className="font-heading truncate text-lg leading-tight font-semibold"
+        />
+        <p className="text-muted-foreground flex min-w-0 items-baseline truncate text-xs">
+          <InlineEdit
+            value={book.author ?? ""}
+            label="Author"
+            placeholder="Add author"
+            allowEmpty
+            onCommit={(author) => update.mutateAsync({ author: author || null })}
+            className="min-w-0 shrink truncate"
+          />
+          <span className="shrink-0 whitespace-pre">
+            {" "}· {book.stats.chapters} chapters · {pct}% voiced
           {book.stats.stale ? ` · ${book.stats.stale} stale` : ""}
           {book.stats.duration_s > 0 ? ` · ${formatDuration(book.stats.duration_s)}` : ""}
+          </span>
         </p>
       </div>
 

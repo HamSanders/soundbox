@@ -7,7 +7,7 @@
  *
  * The panel is rendered by the shell, not the Voice Lab, so that it sits in
  * the shell's row and the page narrows beside it. The actions that open the
- * Lab's own dialogs (Edit, Clips, the ··· menu) are registered here by the
+ * Lab's own dialogs (Settings, Clips, the ··· menu) are registered here by the
  * Lab while it is mounted, and the panel calls them.
  */
 
@@ -25,20 +25,25 @@ export interface VoiceDetailActions {
 
 interface VoiceDetailState {
   voiceId: string | null;
+  /** The panel's name is being edited in place (Rename in a ··· menu). */
+  renaming: boolean;
   actions: VoiceDetailActions | null;
-  open: (voiceId: string) => void;
+  open: (voiceId: string, opts?: { rename?: boolean }) => void;
+  setRenaming: (renaming: boolean) => void;
   close: () => void;
   setActions: (actions: VoiceDetailActions | null) => void;
 }
 
 export const useVoiceDetailStore = create<VoiceDetailState>((set) => ({
   voiceId: null,
+  renaming: false,
   actions: null,
-  open: (voiceId) => {
+  open: (voiceId, opts) => {
     // One docked panel at a time.
     useDetailStore.getState().close();
-    set({ voiceId });
+    set({ voiceId, renaming: Boolean(opts?.rename) });
   },
-  close: () => set({ voiceId: null }),
+  setRenaming: (renaming) => set({ renaming }),
+  close: () => set({ voiceId: null, renaming: false }),
   setActions: (actions) => set({ actions }),
 }));

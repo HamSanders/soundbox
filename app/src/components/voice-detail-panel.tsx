@@ -5,8 +5,10 @@
  * stays live beside it. On a narrow window it covers the page instead.
  *
  * It holds who the voice is, its reference clip, a test read and what it has
- * said lately. Edit, Clips and the ··· menu open the Voice Lab's own dialogs,
- * through the actions the Lab registers in `voice-detail-store`.
+ * said lately. The name and notes are edited where they're shown. Settings
+ * (a clone's model and transcripts), Clips and the ··· menu open the Voice
+ * Lab's own dialogs, through the actions the Lab registers in
+ * `voice-detail-store`.
  *
  * Closes on ×, on Escape, and when the route changes.
  */
@@ -15,9 +17,10 @@ import { usePanelWidth } from "@/hooks/use-panel-width";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
-import { AudioLinesIcon, MicIcon, PencilIcon, XIcon } from "lucide-react";
+import { AudioLinesIcon, MicIcon, Settings2Icon, XIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { InlineEdit } from "@/components/ui/inline-edit";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { JobResult, isReady } from "@/components/voice-shared";
@@ -25,7 +28,7 @@ import { VoiceAvatar } from "@/components/voice-avatar";
 import { clipsSummary } from "@/components/voice-clips";
 import { WaveformPlayer } from "@/components/waveform-player";
 import { useJobStream } from "@/hooks/use-job-stream";
-import { useModels, useSounds, useSpeak, useVoices, qk } from "@/lib/queries";
+import { useModels, useSounds, useSpeak, useUpdateVoice, useVoices, qk } from "@/lib/queries";
 import { useDetailStore } from "@/lib/detail-store";
 import { useVoiceDetailStore } from "@/lib/voice-detail-store";
 import type { Model, Voice } from "@/lib/api";
@@ -172,14 +175,24 @@ function VoiceDetails({
   const items = reads.data?.items ?? [];
   const total = reads.data?.total ?? 0;
   const clips = clipsSummary(voice);
+  const update = useUpdateVoice();
+  const renaming = useVoiceDetailStore((s) => s.renaming);
+  const setRenaming = useVoiceDetailStore((s) => s.setRenaming);
   return (
     <>
       <div className="border-border flex items-center gap-3 border-b px-4 pt-4 pb-3">
         <VoiceAvatar voice={voice} className="ring-border size-14 rounded-md ring-1 ring-inset" />
         <div className="grid min-w-0 flex-1 gap-1">
-          <h2 className="font-display truncate text-2xl leading-none font-extrabold tracking-[0.01em] uppercase">
-            {voice.name}
-          </h2>
+          {/* The name is how the voice appears in the script editor. */}
+          <InlineEdit
+            as="h2"
+            value={voice.name}
+            label="Voice name"
+            editing={renaming}
+            onEditingChange={setRenaming}
+            onCommit={(name) => update.mutateAsync({ id: voice.id, patch: { name } })}
+            className="font-display min-w-0 truncate text-2xl leading-none font-extrabold tracking-[0.01em] uppercase"
+          />
           <p className="readout text-muted-foreground truncate">
             {[
               voice.kind === "clone" ? "Clone" : `Built-in ${voice.voice_id ?? ""}`.trim(),
@@ -194,10 +207,10 @@ function VoiceDetails({
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
         <div className="flex flex-wrap items-center gap-1.5">
-          {onEdit && (
+          {onEdit && voice.kind === "clone" && (
             <Button variant="outline" size="sm" onClick={onEdit}>
-              <PencilIcon />
-              Edit
+              <Settings2Icon />
+              Settings
             </Button>
           )}
           {onClips && voice.kind === "clone" && (
@@ -209,7 +222,18 @@ function VoiceDetails({
           <span className="ml-auto">{menu}</span>
         </div>
 
-        {voice.notes && <p className="text-sm">{voice.notes}</p>}
+        {/* Notes are for you: accent, tone, where the clip came from. The
+            avatar is drawn from them too. */}
+        <InlineEdit
+          as="div"
+          multiline
+          allowEmpty
+          value={voice.notes ?? ""}
+          label="Notes"
+          placeholder="Add notes: accent, tone, where the clip came from"
+          onCommit={(notes) => update.mutateAsync({ id: voice.id, patch: { notes: notes || null } })}
+          className="text-sm"
+        />
 
         {voice.kind === "clone" && voice.reference_file && (
           <section className="grid gap-2">

@@ -711,6 +711,9 @@ export function useUpdateSound() {
     mutationFn: ({ id, patch }) => api.updateSound(id, patch),
     onError: fail("Could not save the sound"),
     onSuccess: (sound, { patch }) => {
+      // The docked panel holds its own copy of the sound; keep it current.
+      const panel = useDetailStore.getState();
+      if (panel.sound?.id === sound.id) panel.open(sound);
       void qc.invalidateQueries({ queryKey: ["sounds"] });
       void qc.invalidateQueries({ queryKey: qk.sound(sound.id) });
       void qc.invalidateQueries({ queryKey: qk.tags });

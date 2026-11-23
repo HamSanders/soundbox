@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { InlineEdit } from "@/components/ui/inline-edit";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -138,9 +139,13 @@ export function SoundDetailPage() {
             />
           )}
           <div className="min-w-0">
-            <h1 className="font-heading truncate text-2xl font-semibold tracking-tight">
-              {sound.name}
-            </h1>
+            <InlineEdit
+              as="h1"
+              value={sound.name}
+              label="Sound name"
+              onCommit={(name) => update.mutateAsync({ id: sound.id, patch: { name } })}
+              className="font-heading truncate text-2xl font-semibold tracking-tight"
+            />
             <p className="text-muted-foreground mt-1 text-sm leading-relaxed">{sound.prompt}</p>
           </div>
         </div>

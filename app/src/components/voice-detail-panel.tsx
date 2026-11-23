@@ -294,7 +294,7 @@ export function VoiceDetailPanel() {
   return (
     <aside
       aria-label={`Details for ${voice.name}`}
-      className="bg-background ring-border animate-in fade-in-0 slide-in-from-right-8 fixed inset-x-0 top-(--top-h,0px) bottom-(--dock-h,0px) z-30 flex flex-col duration-(--duration-base) md:static md:z-auto md:my-2 md:mr-2 md:relative md:h-(--panel-h) md:w-(--panel-w) md:shrink-0 md:rounded-xl md:ring-1"
+      className="bg-background ring-border animate-in fade-in-0 slide-in-from-right-8 fixed inset-x-0 top-(--top-h,0px) bottom-[calc(var(--dock-h,0px)+var(--tabbar-h,0px))] z-30 flex flex-col duration-(--duration-base) md:static md:z-auto md:my-2 md:mr-2 md:relative md:h-(--panel-h) md:w-(--panel-w) md:shrink-0 md:rounded-xl md:ring-1"
       style={panel.style}
     >
       {panel.handle}

@@ -229,7 +229,7 @@ export function NowPlayingBar() {
       role="region"
       aria-label="Now playing"
       className={cn(
-        "bg-sidebar md:bg-transparent fixed inset-x-0 bottom-0 z-40 grid h-(--dock-h,80px) grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] md:pr-2",
+        "bg-sidebar md:bg-transparent fixed inset-x-0 bottom-(--tabbar-h,0px) z-40 grid h-(--dock-h,80px) grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] md:pr-2",
         // Its edges line up with the panels above: left with the first
         // panel (just past the sidebar), right with their 8px margin.
         sidebarState === "collapsed" ? "md:pl-[calc(var(--sidebar-width-icon)+1rem)]" : "md:pl-(--sidebar-width)",

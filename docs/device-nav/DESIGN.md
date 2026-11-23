@@ -159,3 +159,10 @@ The hosted-mode branch (`claude/mirli-cloud-client`) needs its gating reconciled
 - Timeline: `touch-none` on clips; a ⋯ on the selected clip and on each track header (touch only) opening the existing clip and lane menus; both menus become a bottom sheet on touch. Piano roll: a Delete note button on touch.
 - Checked in Chrome with Playwright touch emulation at 375 × 812 and 1024 × 768, and without touch at 1280 × 800: hit areas measure 44 px on touch and are absent on desktop; the ⋯ buttons appear only on touch; menu rows measure 44 px.
 
+
+### Step 2, first part, as built
+
+- `app/src/components/mobile-tab-bar.tsx`: below 768 px a bottom bar of Home, Library, Create (centre, filled), Studio and Voices. Projects, Models, Agents, Settings and Activity stay in the menu behind the header's button for now; a dedicated "You" sheet is still to come.
+- `--tabbar-h` in `index.css` (56 px plus the bottom safe area on phones, 0 elsewhere). The shell's bottom padding, the full-bleed studio height, the player, the three detail panels and the library's pinned composer all add it, so nothing sits under the bar and the player sits flush on top of it.
+- Checked in the browser pane at 375 × 812: the bar is laid out in five columns, the Music library composer and the player end at the bar's top edge, and the Music Builder page ends at the player. At desktop width the bar is hidden and `--tabbar-h` is 0.
+- Not yet: the labelled rail for 600 to 839 px, and moving the shell's switch from 768 px to the Android size classes. Today 600 to 767 px also gets the bottom bar.

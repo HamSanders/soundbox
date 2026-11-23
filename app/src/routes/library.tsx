@@ -461,7 +461,12 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
           className="from-background via-background sticky z-20 mt-auto md:hidden -mx-3 -mb-6 overflow-x-clip [overflow-clip-margin:12px] bg-gradient-to-t via-75% to-transparent px-3 pt-6 pb-6 transition-[bottom]"
           // Desktop scrolls inside the panel, which already ends above the
           // player; only the narrow, window-scrolled layout needs the offset.
-          style={{ bottom: nowPlaying && !isDesktop ? PLAYER_DOCK_HEIGHT_PX : 0 }}
+          // On a phone it also clears the tab bar, which sits under the player.
+          style={{
+            bottom: isDesktop
+              ? 0
+              : `calc(${nowPlaying ? PLAYER_DOCK_HEIGHT_PX : 0}px + var(--tabbar-h, 0px))`,
+          }}
         >
           {/* Capped and centred: a prompt box the full width of the list is
               a long line to read and a long way to the Generate button. */}

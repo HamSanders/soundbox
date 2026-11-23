@@ -282,6 +282,18 @@
   }
 }
 
+/* The phone tab bar's height, or nothing where there is no tab bar. Read by
+   the shell's bottom padding, the player and anything else pinned to the
+   bottom, so they all stop above it. 767.98px matches `useIsMobile`. */
+:root {
+  --tabbar-h: 0px;
+}
+@media (max-width: 767.98px) {
+  :root {
+    --tabbar-h: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring;

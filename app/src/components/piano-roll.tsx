@@ -40,7 +40,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { DownloadIcon, ZoomInIcon, ZoomOutIcon } from "lucide-react";
+import { DownloadIcon, Trash2Icon, ZoomInIcon, ZoomOutIcon } from "lucide-react";
 import { toast } from "sonner";
 import { exportTake, useMidiStore } from "@/lib/midi-store";
 import type { RollNote } from "@/lib/midi-store";
@@ -387,6 +387,18 @@ export function PianoRoll({
             }
           >
             <ZoomInIcon />
+          </Button>
+          {/* Right-click and Delete remove a note; a touch screen has
+              neither, so the selected note gets a button there. */}
+          <Button
+            size="icon-xs"
+            variant="outline"
+            className="hidden pointer-coarse:inline-flex"
+            aria-label="Delete note"
+            disabled={readOnly || selectedId === null}
+            onClick={() => selectedId !== null && removeNote(selectedId)}
+          >
+            <Trash2Icon />
           </Button>
         </div>
         <span className="text-muted-foreground text-xs">

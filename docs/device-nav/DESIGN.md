@@ -1,6 +1,6 @@
 # Mirli navigation per device class
 
-Status: **draft for discussion, nothing built.** Started 2026-11-23 on branch `design/device-nav`, from `main` at 295622b (after the visual redesign).
+Status: **model A chosen 2026-11-23; building in steps.** Started 2026-11-23 on branch `design/device-nav`, from `main` at 295622b (after the visual redesign).
 
 The question: Mirli now also runs as a browser studio, so people will open it from a phone, an iPad or a desktop. How should navigation and menus work on each? The visual style stays as it is; this is about structure, menus and touch.
 
@@ -136,8 +136,26 @@ All three keep today's desktop sidebar and studio unchanged at expanded width, a
 
 **C. Phone companion.** Phone: three tabs, Make, Library and Queue. Studio projects open as listen, export and redo-a-line, with "Continue on a larger screen". Tablet and up: the full studio, with an iPad-style top tab bar that can expand into the sidebar.
 
-Open for the user: which model, and whether arranging on a phone is in scope.
+**Chosen: A, adaptive tabs** (2026-11-23). Arranging on a phone is in scope through the track-focus timeline; the piano roll stays tablet and up.
 
-## 5. Build order (after a choice)
+## 5. Build order (model A)
 
-To be filled in once a model is picked. Likely first PR in every case: touch sizing under `(pointer: coarse)`, hover-only controls visible under `(hover: none)`, and ⋯ alternatives for the right-click menus, since all three models need them.
+Each step is its own PR to `main`, small enough to review, and none changes the desktop layout at expanded width.
+
+1. **Touch foundations.** `(pointer: coarse)` raises the shared `Button` icon and small sizes, dropdown and context-menu items and sidebar rows to 44 px. `(hover: none)` shows hover-only controls (script editor line tools, Delete project, Remove track, tile play overlays). Timeline clips, empty lanes and piano-roll notes get a visible ⋯ that opens the same menu the right-click does. The clip body gets `touch-none` so a touch drag moves the clip instead of scrolling. The timeline's own clip and lane menus already open as a bottom sheet on touch, because the phone timeline panel is too short for a popup. **Built on this branch; see below.**
+2. **Size classes and the shell.** A `useSizeClass()` hook (compact under 600, medium 600 to 839, expanded 840 and up) replaces the single `md` switch in the shell. Compact gets the bottom tab bar (Home, Library, Create, Studio, Voices) with safe-area padding and the mini player flush above it; "You" opens a sheet with Projects, Models, Agents, Activity, Settings and the profile. Medium gets a labelled rail. Expanded keeps today's sidebar.
+3. **Menus as bottom sheets on touch.** Dropdowns and context menus render as a bottom sheet when the pointer is coarse; long-press opens the same sheet as right-click.
+4. **"Desktop app" labels.** Where `useCan()` hides a host feature, show it greyed with a one-line reason instead of removing it, on every device.
+5. **Studio on tablet.** The side panels become a supporting pane: a bottom sheet in portrait, a side column in landscape. Pop-out is hidden on touch devices.
+6. **Studio on phone.** Track-focus timeline (hidden track headers, one lane tall), a selection toolbar at the bottom for the clip menu's actions, toolbar toggles for loop, repaint window, multi-select and snap, pinch to zoom, and "Add at playhead" from the library instead of drag. Script, Library and Mixer open as sheets.
+7. **Settings and the rest.** Settings section nav as a list-then-detail on compact; voice-clone file picker primary on touch; check `setSinkId` on iOS Safari and hide the output picker if it is missing.
+
+The hosted-mode branch (`claude/mirli-cloud-client`) needs its gating reconciled with `useCan()` before step 4 lands, or the two will conflict.
+
+### Step 1 as built
+
+- `app/src/index.css`: a `no-hover` variant, and under `(pointer: coarse)` an invisible 44 px hit area on every shared `Button` (drawn size unchanged), 44 px dropdown, select and sidebar rows.
+- Hover-only controls shown under `(hover: none)`: script line tools, Remove track, Delete project, the sidebar row action. The tile play overlays already catch a tap while invisible, so they are left alone.
+- Timeline: `touch-none` on clips; a ⋯ on the selected clip and on each track header (touch only) opening the existing clip and lane menus; both menus become a bottom sheet on touch. Piano roll: a Delete note button on touch.
+- Checked in Chrome with Playwright touch emulation at 375 × 812 and 1024 × 768, and without touch at 1280 × 800: hit areas measure 44 px on touch and are absent on desktop; the ⋯ buttons appear only on touch; menu rows measure 44 px.
+

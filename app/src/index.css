@@ -14,6 +14,10 @@
 @import "@fontsource-variable/big-shoulders-display";
 
 @custom-variant dark (&:is(.dark *));
+/* No hover at all (phones, tablets): anything that only appears on hover has
+   to be shown outright, or a finger never finds it. Tailwind's own `hover:`
+   already stays off on these devices; this is the other half. */
+@custom-variant no-hover (@media (hover: none));
 
 @theme inline {
     --font-heading: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
@@ -240,6 +244,42 @@
     --ambient-pixel-strength: 0.3;
     --ambient-gradient-1: #f2a40c;
     --ambient-gradient-strength: 0.14;
+}
+
+/* Touch sizing, by input rather than by width: a 1024 px iPad gets it and a
+   narrow desktop window does not. Apple asks for 44 pt and WCAG 2.5.5 for
+   44 px; see docs/device-nav/DESIGN.md. Buttons keep the size they are drawn
+   at and grow an invisible hit area instead, so dense toolbars keep their
+   layout; menu rows and sidebar rows simply get taller. */
+@media (pointer: coarse) {
+  [data-slot="button"] {
+    touch-action: manipulation;
+  }
+  [data-slot="button"]:not(.absolute, .fixed, .sticky) {
+    position: relative;
+  }
+  /* inset's percentages are of the button's own box (top/bottom of its
+     height, left/right of its width), so this always totals 44 px and never
+     shrinks a button that is already bigger. */
+  [data-slot="button"]::after {
+    content: "";
+    position: absolute;
+    inset: min(0px, calc((100% - 44px) / 2));
+  }
+  [data-slot="dropdown-menu-item"],
+  [data-slot="dropdown-menu-checkbox-item"],
+  [data-slot="dropdown-menu-radio-item"],
+  [data-slot="dropdown-menu-sub-trigger"],
+  [data-slot="select-item"] {
+    min-height: 44px;
+  }
+  [data-sidebar="menu-button"]:not([data-size="sm"]) {
+    min-height: 44px;
+  }
+  /* The folded icon rail keeps its square buttons; it is wide enough to tap. */
+  [data-collapsible="icon"] [data-sidebar="menu-button"] {
+    min-height: 0;
+  }
 }
 
 @layer base {

@@ -23,6 +23,8 @@ jobs:
       - uses: actions/checkout@v7
       # Every file that records the version agrees (scripts/version.mjs).
       - run: node scripts/version.mjs check
+      # The splash keeps a copy of the app's ambient background.
+      - run: node scripts/sync-ambient-field.mjs --check
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}

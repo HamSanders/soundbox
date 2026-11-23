@@ -28,6 +28,7 @@ import { useJobStream } from "@/hooks/use-job-stream";
 import { useModels, useSounds, useSpeak, useVoices, qk } from "@/lib/queries";
 import { useDetailStore } from "@/lib/detail-store";
 import { useVoiceDetailStore } from "@/lib/voice-detail-store";
+import { useVoiceLabPrefs } from "@/lib/voice-lab-prefs";
 import type { Model, Voice } from "@/lib/api";
 import { voiceReferenceError } from "@/lib/voice-reference";
 
@@ -253,7 +254,8 @@ export function VoiceDetailPanel() {
   const close = useVoiceDetailStore((s) => s.close);
   const voices = useVoices();
   const models = useModels();
-  const [line, setLine] = useState("The quick brown fox jumps over the lazy dog.");
+  const line = useVoiceLabPrefs((s) => s.line);
+  const setLine = useVoiceLabPrefs((s) => s.setLine);
   const voice = voiceId ? (voices.data?.find((v) => v.id === voiceId) ?? null) : null;
 
   // A deleted voice takes its panel with it.

@@ -1,6 +1,6 @@
 # Voice Lab and comparing voices
 
-Status: **proposal, waiting for a choice.** Started 2026-11-23 from `main` at 295622b.
+Status: **A, shortlist tray, chosen 2026-11-23; building in steps.** Started 2026-11-23 from `main` at 295622b.
 
 The brief: Voice Lab feels cluttered, worst on a phone, and comparing voices needs rethinking. This doc covers the Voice Lab screen (`app/src/routes/voice-lab.tsx`, `components/voice-library.tsx`, `components/voice-detail-panel.tsx`) and the `/voice/new*` pages. Navigation is out of scope: [`docs/device-nav/DESIGN.md`](../device-nav/DESIGN.md) on `design/device-nav` already chose adaptive tabs, which puts Voice Lab behind a Voices tab on phones and a rail item on tablets. The mockups assume that shell.
 
@@ -76,7 +76,16 @@ Sources read by a research pass on 2026-11-23. Inference is marked.
 
 **What this suggests (inference):** comparing is best done with one player and a switch, not N players; hearing a voice should take one tap from the list; "try" and "keep" are separate actions; and a phone wants one docked bar, not a panel at the bottom of a long page.
 
-## 3. Changes in every direction
+## 3. Matching the 0.6 redesign
+
+A second look at the redesigned Library, Projects and Home (mock mode, light and dark, 1280 and 375) before building. The pages share a shape that Voice Lab did not follow, and step 1 follows it:
+
+- **Header:** the title, a count line under it ("48 sounds", "0 projects"), the one ink action on the right. No paragraph.
+- **Kinds as underlined tabs**, not pills: the Library's All, Music, SFX, Speech (`LibraryKindChips`). Voice Lab's All, Cloned, Built-in now use the same look.
+- **One filter row:** search, then each filter as a small pill (`FilterMenu`, now shared in `components/filter-pills.tsx`). Voice Lab gets a Model pill naming models, not families.
+- **Tiles** are the Home and Library shelf tiles (`ShelfTile`): square, `ProjectThumb`'s tint from the name, the name in the display face at the bottom, a log line under. A voice with drawn artwork shows it under a dusk scrim, the scrim the music hub uses for text on a picture.
+
+## 4. Changes in every direction
 
 These hold whichever direction is chosen:
 
@@ -89,7 +98,7 @@ These hold whichever direction is chosen:
 7. **Convert leaves the list.** It becomes "Change the voice of a sound…" in Voice Lab's ⋯ menu and on a Library sound's menu, next to the existing "Make a voice from this" (`sound-card.tsx:603`).
 8. **`/voice/new` on a phone:** the three cards become compact rows so all three fit on one screen. Clone and Built-in pages stay as they are apart from device-nav's touch sizing. (Small; can ride along with whichever direction.)
 
-## 4. Three directions for comparing
+## 5. Three directions for comparing
 
 ### A. Shortlist tray (recommended)
 
@@ -124,13 +133,21 @@ Voice Lab gets two tabs, Voices and Compare. Voices is the plain list. Compare i
 - **Level matching** (Metric AB) is not in the mockups. Whether takes from different models already come out at similar loudness needs checking before deciding on it.
 - **Pick** is invented as a closing step. Where it leads ("Use in a script" opens the Script Builder with that voice cast on the selected line, or just on the clipboard of voices) is open.
 
-## 5. Build order (for A; adjusted if B or C is chosen)
+## 6. Build order (A)
 
 Each step is its own PR to `main`, asked for before pushing.
 
-1. **Declutter and cast grid.** Section 3 items 1 to 6: the cast grid with a list switch, header with ⋯, filters with a Model menu, simpler rows, empty-state explanation, a shared test line.
-2. **Convert moves.** Section 3 item 7: a route or sheet for converting, reached from Voice Lab's ⋯ and the Library sound menu.
+1. **Declutter and cast grid.** Section 4 items 1 to 6: the cast grid with a list switch, header with ⋯, filters with a Model menu, simpler rows, empty-state explanation, a shared test line. **Built on `voice-lab/cast-grid`; see below.**
+2. **Convert moves.** Section 4 item 7: a route or sheet for converting, reached from Voice Lab's ⋯ and the Library sound menu.
 3. **Compare tray and sheet.** Row toggle, tray, compare sheet or panel reusing the existing queue in `ComparePanel`, the shared transport with A/B switch, Keep place, Loop and Pick.
 4. **`/voice/new` on phone.** Compact hub rows.
 
 Tests: mock-mode Playwright checks at 375, 768 and 1280 for targets and layout, in light and dark; unit tests for the queue and the switch logic. `npm run typecheck`, `npm run lint`, `npm test`.
+
+### Step 1 as built
+
+- `components/voice-library.tsx`: `VoiceTile` and `VoiceGrid` (two columns on a phone, 10rem tiles from there up), `VoiceKindTabs`, `VoiceViewSwitch`. The shelf card and the pill chips are gone. A row's name button stretches over the row, so the row is one target instead of a 20 px line.
+- `lib/voice-lab-prefs.ts`: the grid or list choice and the test line, kept in this browser. The detail panel and Compare read the same line.
+- `routes/voice-lab.tsx`: header with the count, **New voice** and ⋯ (Import a voice file); kind tabs; search (from six voices), Model pill, view switch; voices sorted by most used. Compare and Convert are unchanged until steps 2 and 3.
+- The default test line stays "The quick brown fox…"; changing it is left for later.
+- Checked with Playwright against the mock app (demo fixture) at 375, 768 and 1280, light and dark: targets on the page went from 43 to 28 on a phone, and none is under 24 px (was 6). Clicking a tile opens the details with the yellow ring; the list choice survives a reload. The demo fixture's clones have no reference clip, so the play button and artwork were checked with a temporary fixture edit that was not committed.

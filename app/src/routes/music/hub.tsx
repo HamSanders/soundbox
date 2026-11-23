@@ -25,6 +25,7 @@ import {
   BotIcon,
   Disc3Icon,
   FlameIcon,
+  Gamepad2Icon,
   ListMusicIcon,
   MicVocalIcon,
   MusicIcon,
@@ -51,10 +52,16 @@ import {
   SiteShelfTile,
   SiteTrackList,
   SiteTrackRow,
+  WaveTile,
   useSiteAudio,
 } from "@/components/site/site-tracks";
 import type { SiteAudio, SiteTrack } from "@/components/site/site-tracks";
 import { getModelByCatalogId } from "@/content/models/models";
+import { gameMusic } from "@/content/sfx/game-music";
+import type { GameMusicEntry } from "@/content/sfx/game-music";
+import { coverThumb } from "@/content/sfx/types";
+import { modelName, sampleFact } from "@/components/sfx/sample-list";
+import { sampleAudioUrl } from "@/lib/sfx-sample";
 import {
   FEATURED_SLUG,
   MUSIC_TRACKS,
@@ -87,12 +94,12 @@ const FAQS = [
   {
     question: "Can I use this music in a commercial game or video?",
     answer:
-      "It depends on which model rendered the track; every row names it. The instrumentals come from Stable Audio 3.0 Small Music, under the Stability AI Community License: free for commercial use below USD $1M annual revenue, Enterprise licence required above it. The sung tracks come from ACE-Step 1.5, whose LICENSE file is MIT: commercial use is permitted with no threshold. Mirli itself is MIT and imposes no terms on what you generate.",
+      "It depends on which model rendered the track; every row names it. The instrumentals come from Stable Audio 3.0 Small Music, under the Stability AI Community License: free for commercial use below USD $1M annual revenue, Enterprise licence required above it. The sung tracks come from ACE-Step 1.5, whose LICENSE file is MIT: commercial use is permitted with no threshold. The game music comes from ACE-Step 1.5 XL Turbo (the trailer choir from ACE-Step 1.5 Turbo), under the same MIT licence. Mirli itself is MIT and imposes no terms on what you generate.",
   },
   {
     question: "How long can a generated track be?",
     answer:
-      "Stable Audio 3.0 Small Music renders up to 120 seconds in one pass and ACE-Step up to 60. Everything on this page is about 20 seconds, loop or cue length. For anything longer than the limit, generate sections and arrange them.",
+      "Stable Audio 3.0 Small Music renders up to 120 seconds in one pass and ACE-Step up to 60. The catalogue tracks are about 20 seconds and the game music runs 8 to 30, loop or cue length. For anything longer than the limit, generate sections and arrange them.",
   },
   {
     question: "Which model should I use for music with vocals?",
@@ -143,6 +150,7 @@ const RAIL = [
       { href: "#trending", label: "Popular now", icon: FlameIcon },
       { href: "#instrumental", label: "Instrumental", icon: MusicIcon },
       { href: "#vocal", label: "Sung with lyrics", icon: MicVocalIcon },
+      { href: "#game-music", label: "Game music", icon: Gamepad2Icon },
       { href: "#artists", label: LABEL.name, icon: Disc3Icon },
     ],
   },
@@ -413,6 +421,56 @@ function TrackRow({
   );
 }
 
+/** The id a game-music piece plays under in the dock. */
+function gameMusicId({ category, sample }: GameMusicEntry): string {
+  return `game-${category.slug}-${sample.slug}`;
+}
+
+/** The category's cover thumbnail, or the plain wave tile. */
+function GameMusicTile({ entry }: { entry: GameMusicEntry }) {
+  const cover = entry.category.coverImage;
+  return cover ? (
+    <img src={assetUrl(coverThumb(cover))} alt="" loading="lazy" className="bg-muted size-full object-cover" />
+  ) : (
+    <WaveTile />
+  );
+}
+
+/**
+ * A piece of game music from the /sfx pages, on the same row as a catalogue
+ * track. Its title links to the sample's own page, where the prompt and the
+ * rest of its category live; the model and licence come from the sample.
+ */
+function GameMusicRow({ entry, index }: { entry: GameMusicEntry; index: number }) {
+  const { current, playing, toggle } = usePlayer();
+  const { category, sample } = entry;
+  const id = gameMusicId(entry);
+  const model = getModelByCatalogId(sample.model);
+  const length = sampleFact(category.slug, sample.slug)?.[0];
+  return (
+    <SiteTrackRow
+      id={`game-${sample.slug}`}
+      no={String(index + 1).padStart(2, "0")}
+      tile={<GameMusicTile entry={entry} />}
+      title={sample.title}
+      href={`/sfx/${category.slug}/${sample.slug}`}
+      log={[category.name, model?.license.name].filter(Boolean).join(" · ")}
+      detail={
+        <p className="text-muted-foreground/80 truncate font-mono text-[11px] leading-relaxed" title={sample.prompt}>
+          {sample.prompt}
+        </p>
+      }
+      license={model?.license.commercial}
+      model={modelName(sample.model)}
+      length={length ? formatDuration(length) : sample.durationS ? `${sample.durationS}s` : ""}
+      isCurrent={current?.id === id}
+      playing={playing}
+      onPlay={() => toggle(id)}
+      actions={<CopyButton value={sample.prompt} label="Copy prompt" className="shrink-0" />}
+    />
+  );
+}
+
 function TrackTable({
   id,
   title,
@@ -464,6 +522,7 @@ export function MusicHubPage() {
   const trending = trendingTracks();
   const instrumental = tracksIn("instrumental");
   const vocal = tracksIn("vocal");
+  const games = gameMusic();
 
   // Everything the bar can play, in the order the page lists it.
   const queue: Playable[] = [
@@ -476,6 +535,16 @@ export function MusicHubPage() {
       prompt: track.prompt,
       href: `/music/${track.slug}`,
       durationS: manifest?.[track.slug]?.durationS,
+    })),
+    ...games.map((entry) => ({
+      id: gameMusicId(entry),
+      title: entry.sample.title,
+      sub: `${entry.category.name} · ${modelName(entry.sample.model)}`,
+      tile: <GameMusicTile entry={entry} />,
+      url: sampleAudioUrl(entry.category.slug, entry.sample.slug),
+      prompt: entry.sample.prompt,
+      href: `/sfx/${entry.category.slug}/${entry.sample.slug}`,
+      durationS: sampleFact(entry.category.slug, entry.sample.slug)?.[0],
     })),
     ...(artistsFailed
       ? []
@@ -647,6 +716,18 @@ export function MusicHubPage() {
               tracks={vocal}
               manifest={manifest}
             />
+            <Section
+              id="game-music"
+              title="Game music"
+              lede={`${games.length} themes, loops and stings from the sound-effect pages: 8-bit and chiptune scores, boss themes, fanfares and choir cues. Each links to its sample page, where its category's other sounds are.`}
+              className="min-w-0"
+            >
+              <SiteTrackList>
+                {games.map((entry, i) => (
+                  <GameMusicRow key={gameMusicId(entry)} entry={entry} index={i} />
+                ))}
+              </SiteTrackList>
+            </Section>
 
             {/* The label. A mock roster with a real point: an artist identity,
                 to a generator, is a prompt held constant — so every signed act is

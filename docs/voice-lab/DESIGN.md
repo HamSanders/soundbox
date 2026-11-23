@@ -80,10 +80,10 @@ Sources read by a research pass on 2026-11-23. Inference is marked.
 
 These hold whichever direction is chosen:
 
-1. **One list.** Drop the "Your voices" shelf; sort the list by most used instead, which is what the shelf was for. (Bring a shelf back only if people end up with dozens of voices.)
+1. **One set of voices, shown as a cast grid by default.** The "Your voices" shelf cards were the part that looked good, so they grow into the whole All view: square tiles drawn like the Home page's By-tag shelf (the `ProjectThumb` tint from the voice's name, the name in the display face, the kind as a pill, a play button for a clone's reference clip), with the model and notes under each tile. Sorted by most used, which is what the shelf was for. A grid/list switch beside the search box gives today's dense table for people with many voices. The voices are no longer drawn twice (shelf and table) or three times (plus the compare chips). Added 2026-11-23 after Anthony's feedback on the first draft; whether the switch is remembered per device is open.
 2. **Header: title, New voice, ⋯.** Import moves into New voice, where the `/voice/new` hub already has an Import card. The explanation moves to the empty state, shown only when there are no voices.
 3. **Filters: search, All, Cloned, Built-in, and one Model menu** that lists models by their display name. One row on a phone, scrolling sideways if needed.
-4. **Rows: avatar (plays the clip), name, notes, ⋯.** Kind and model columns only at desktop width. The name stops being a separate 20 px text button; the whole row opens the details.
+4. **Tiles and rows open the details when tapped.** Rows keep avatar (plays the clip), name, notes, ⋯, with kind and model columns only at desktop width. The name stops being a separate 20 px text button. Grid columns: two on a phone, three on a tablet (two beside an open panel), five or more on desktop.
 5. **Details: a bottom sheet on phone, the docked panel elsewhere**, as today. Edit, Clips and "Use in a script" as buttons, the rest in ⋯.
 6. **One test line** shared by the detail panel and comparing, and a default line that sounds like a script rather than a typing test (the mockups use "The airlock opens at dawn. Bring the maps."; invented).
 7. **Convert leaves the list.** It becomes "Change the voice of a sound…" in Voice Lab's ⋯ menu and on a Library sound's menu, next to the existing "Make a voice from this" (`sound-card.tsx:603`).
@@ -93,7 +93,7 @@ These hold whichever direction is chosen:
 
 ### A. Shortlist tray (recommended)
 
-Each row gets a round compare toggle. Ticking voices fills a tray, flush above the tab bar on a phone and at the foot of the list on larger screens, with the picked voices lettered A to D and a **Compare** button. Compare opens a sheet (phone) or the side panel (tablet, desktop): the line, **Read in N voices**, then the takes as rows, and **one transport** at the bottom with play, an A B C D switch, Keep place and Loop. Tapping a take or a letter switches what you hear. **Pick** marks the winner and offers "Use in a script".
+Each tile (or row) gets a round compare toggle in its corner. Ticking voices fills a tray, flush above the tab bar on a phone and at the foot of the list on larger screens, with the picked voices lettered A to D and a **Compare** button. Compare opens a sheet (phone) or the side panel (tablet, desktop): the line, **Read in N voices**, then the takes as rows, and **one transport** at the bottom with play, an A B C D switch, Keep place and Loop. Tapping a take or a letter switches what you hear. **Pick** marks the winner and offers "Use in a script".
 
 - Compare happens where the voices are, with the same list you browse.
 - One player and a switch is how plugin A/B and ABX tools compare.
@@ -128,7 +128,7 @@ Voice Lab gets two tabs, Voices and Compare. Voices is the plain list. Compare i
 
 Each step is its own PR to `main`, asked for before pushing.
 
-1. **Declutter.** Section 3 items 1 to 6: one list, header with ⋯, filters with a Model menu, simpler rows, empty-state explanation, a shared test line.
+1. **Declutter and cast grid.** Section 3 items 1 to 6: the cast grid with a list switch, header with ⋯, filters with a Model menu, simpler rows, empty-state explanation, a shared test line.
 2. **Convert moves.** Section 3 item 7: a route or sheet for converting, reached from Voice Lab's ⋯ and the Library sound menu.
 3. **Compare tray and sheet.** Row toggle, tray, compare sheet or panel reusing the existing queue in `ComparePanel`, the shared transport with A/B switch, Keep place, Loop and Pick.
 4. **`/voice/new` on phone.** Compact hub rows.

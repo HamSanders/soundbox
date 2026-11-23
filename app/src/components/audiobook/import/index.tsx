@@ -67,6 +67,13 @@ import {
   type WorkingSection,
 } from "./sections";
 
+
+/** Only our own cover route or a local blob (the demo's uploaded file) ever
+ *  goes into an image's src. */
+function safeImageUrl(url: string | null): string | null {
+  return url && (url.startsWith("blob:") || url.startsWith("/api/")) ? url : null;
+}
+
 export interface ImportWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -589,7 +596,7 @@ function DetailsStep({
   run: Run;
 }) {
   const coverInput = useRef<HTMLInputElement>(null);
-  const cover = importApi.coverUrl(preview);
+  const cover = safeImageUrl(importApi.coverUrl(preview));
   return (
     <div className="grid gap-5 sm:grid-cols-[10rem_minmax(0,1fr)]">
       <div className="space-y-2">

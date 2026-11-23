@@ -72,8 +72,12 @@ const MIME: Record<string, string> = {
 
 export function registerAudiobookExport(app: FastifyInstance, svc: MirliService): void {
   const exports = () => audiobookExports(svc);
-  const requireBook = (id: string) => {
-    if (!audiobooks(svc).getBook(id)) throw new HttpError(404, `Book '${id}' not found.`);
+  /** The book's own id, as stored: what the exporter is given to build
+   *  folder names from, never the raw URL parameter. */
+  const requireBook = (id: string): string => {
+    const book = audiobooks(svc).getBook(id);
+    if (!book) throw new HttpError(404, "Book not found.");
+    return book.id;
   };
   // Build the store (and its tables) at startup, so interrupted exports are
   // marked failed before anyone lists them.
@@ -85,24 +89,24 @@ export function registerAudiobookExport(app: FastifyInstance, svc: MirliService)
   });
 
   app.post<BookParams>("/api/audiobooks/:id/master/analyze", async (request) => {
-    requireBook(request.params.id);
-    return exports().analyze(request.params.id, analyzeSchema.parse(request.body ?? {}));
+    const bookId = requireBook(request.params.id);
+    return exports().analyze(bookId, analyzeSchema.parse(request.body ?? {}));
   });
 
   app.post<BookParams>("/api/audiobooks/:id/credits", async (request) => {
-    requireBook(request.params.id);
-    return exports().credits(request.params.id, creditsSchema.parse(request.body ?? {}));
+    const bookId = requireBook(request.params.id);
+    return exports().credits(bookId, creditsSchema.parse(request.body ?? {}));
   });
 
   app.post<BookParams>("/api/audiobooks/:id/exports", async (request, reply) => {
-    requireBook(request.params.id);
-    const record = await exports().start(request.params.id, exportSchema.parse(request.body));
+    const bookId = requireBook(request.params.id);
+    const record = await exports().start(bookId, exportSchema.parse(request.body));
     return reply.code(202).send(record);
   });
 
   app.get<BookParams>("/api/audiobooks/:id/exports", async (request) => {
-    requireBook(request.params.id);
-    return exports().list(request.params.id);
+    const bookId = requireBook(request.params.id);
+    return exports().list(bookId);
   });
 
   app.get<ExportParams>("/api/audiobooks/:id/exports/:eid", async (request) => {

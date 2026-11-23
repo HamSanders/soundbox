@@ -27,7 +27,9 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
-          files=$(gh pr diff "$PR" --repo "$REPO" --name-only)
+          # The files endpoint, not `gh pr diff`: GitHub refuses the diff of a
+          # PR over 20,000 lines, and the file list doesn't need it.
+          files=$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename')
           if echo "$files" | grep -qx CHANGELOG.md; then
             echo "CHANGELOG.md is updated."
             exit 0

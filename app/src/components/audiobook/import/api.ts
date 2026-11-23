@@ -129,7 +129,8 @@ const httpImportApi: ImportApi = {
     request<ImportPreview>(`${BASE}/${encodeURIComponent(previewId)}/cover`, { method: "DELETE" }),
   discard: (previewId) => request<void>(`${BASE}/${encodeURIComponent(previewId)}`, { method: "DELETE" }),
   commit: (req) => request<BookDetail>(`${BASE}/commit`, json(req)),
-  coverUrl: (preview) => (preview.cover ? `${BASE}/cover/${preview.cover.token}` : null),
+  // The token comes from the server; encode it so it can only ever be one path segment.
+  coverUrl: (preview) => (preview.cover ? `${BASE}/cover/${encodeURIComponent(preview.cover.token)}` : null),
 };
 
 export const importApi: ImportApi = IS_MOCK ? mockImportApi : httpImportApi;

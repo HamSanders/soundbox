@@ -296,6 +296,9 @@ export interface CreditsResult {
   sample: BookExportRecord | null;
 }
 
+/** Ids that may name a folder: letters, digits, "-" and "_" only. */
+const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/;
+
 const EXT: Record<ExportRequest["format"], string> = { mp3: "mp3", wav: "wav", flac: "flac", m4b: "m4b" };
 const MIME: Record<string, string> = { mp3: "audio/mpeg", wav: "audio/wav", flac: "audio/flac", m4b: "audio/mp4" };
 
@@ -533,7 +536,7 @@ export class AudiobookExportService {
   }
 
   private removeFiles(e: BookExportRecord): void {
-    rmSync(join(this.root, e.book_id, e.id), { recursive: true, force: true });
+    rmSync(this.exportDir(e.book_id, e.id), { recursive: true, force: true });
   }
 
   /** Validate, record and queue an export. Resolves with the queued record. */
@@ -572,6 +575,14 @@ export class AudiobookExportService {
     this.books.hub.publish(e.book_id, { type: "export", export_id: e.id, status, progress, message });
   }
 
+  /** An export's folder under the exports root. Book and export ids are
+   *  generated UUIDs; anything else (a "..", a slash) is refused rather
+   *  than joined into a path. */
+  private exportDir(bookId: string, exportId: string): string {
+    if (!SAFE_ID.test(bookId) || !SAFE_ID.test(exportId)) throw new Error("Not a valid book or export id.");
+    return join(this.root, bookId, exportId);
+  }
+
   private async runBook(id: string, bookId: string, request: ExportRequest): Promise<void> {
     const ref = { id, book_id: bookId };
     const fail = (error: string) => {
@@ -585,7 +596,7 @@ export class AudiobookExportService {
       fail(exc instanceof Error ? exc.message : String(exc));
       return;
     }
-    const dir = join(this.root, bookId, id);
+    const dir = this.exportDir(bookId, id);
     mkdirSync(dir, { recursive: true });
     const work = join(dir, "work");
     mkdirSync(work, { recursive: true });
@@ -830,7 +841,7 @@ export class AudiobookExportService {
 
   private async runSample(id: string, book: BookDetail, chapter: Chapter, format: "mp3" | "wav", targetS: number) {
     const ref = { id, book_id: book.id };
-    const dir = join(this.root, book.id, id);
+    const dir = this.exportDir(book.id, id);
     mkdirSync(dir, { recursive: true });
     try {
       this.progress(ref, "running", 0.2, `Mastering ${chapter.title}`);

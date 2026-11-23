@@ -292,7 +292,8 @@ function pgLine(line) {
 }
 
 /** Small capitals at the start of a fable ("THE ANTS were…") as plain words. */
-const unshout = (p) => p.replace(/^(?:[A-Z][A-Z’'-]*\s?)+?(?=\s[a-z]|[,.;:]|$)/, (run) =>
+// One space between words, so a run of capitals can only split one way.
+const unshout = (p) => p.replace(/^[A-Z][A-Z’'-]*(?:\s[A-Z][A-Z’'-]*)*?(?=\s[a-z]|[,.;:]|$)/, (run) =>
   run.replace(/[A-Z][A-Z’'-]+/g, (w) => (w.length === 1 ? w : w[0] + w.slice(1).toLowerCase())));
 
 const same = (a, b) => a.replace(/\s+/g, " ").trim() === b.replace(/\s+/g, " ").trim();

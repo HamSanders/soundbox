@@ -286,10 +286,13 @@ yet. A classic you have already added shows once, as your book. It has:
 - **Filters**: genre, tags, narration (voiced, or not voiced yet), language,
   length and sort order, plus search. They apply inside a View all list too.
 
-A classic opens its details, with where the text comes from and the rights
-note. **Add to library** imports the whole work with default settings and opens
-it in Audiobooks to cast and voice; to change sections first, use
-**Classics** on the Audiobooks page instead. Lengths for anything not voiced
+A classic's **+** (on its cover, or **Add to library** under Top picks)
+imports the whole work with default settings and leaves you in Explore. The
+toast that follows has **Open**, to go to the book in Audiobooks to cast and
+voice it, and **Undo**, which removes it again. Clicking the cover opens its
+details, with where the text comes from and the rights note, and the same
+**Add to library**. To change sections first, use **Classics** on the
+Audiobooks page instead. Lengths for anything not voiced
 are estimates at about 155 words a minute.
 
 ## Compared with ElevenLabs

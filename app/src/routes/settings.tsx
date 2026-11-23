@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangleIcon, CheckCircle2Icon, CheckIcon, CopyIcon, EyeOffIcon, FolderOpenIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,7 +28,6 @@ import { ArtworkSettingsCard } from "@/components/artwork-settings";
 import { EndpointSettingsCard } from "@/components/endpoint-settings";
 import { FolderPickerDialog } from "@/components/folder-picker";
 import {
-  ConfirmAction,
   Embedded,
   SettingRow,
   SettingsGroup,
@@ -46,7 +46,9 @@ import {
   useMcpStatus,
   useSettings,
   useUpdateStatus,
+  qk,
 } from "@/lib/queries";
+import { reversible, undoable } from "@/lib/undo";
 import type { Settings } from "@/lib/api";
 
 /** The server's defaults (server/src/config.ts `DEFAULT_SETTINGS`). */
@@ -877,32 +879,53 @@ function PrivacyGroup({ settings }: { settings: Settings }) {
 
 function DangerGroup({ settings }: { settings: Settings }) {
   const { save, pending } = useSettingSave();
+  const qc = useQueryClient();
+  const saveNow = (id: string, patch: Parameters<typeof save>[1]) =>
+    new Promise<void>((resolve, reject) =>
+      save(id, patch, { onSuccess: resolve, onError: () => reject(new Error("Could not save settings")) }),
+    );
+  const setTokenShown = (set: boolean) =>
+    qc.setQueryData<Settings>(qk.settings, (s) => (s ? { ...s, hf_token_set: set } : s));
+
+  // Neither asks "Are you sure?". The token is only cleared when the toast
+  // closes, so Undo means it never was; setup again just clears a date,
+  // which Undo puts back.
+  const clearToken = () =>
+    undoable({
+      message: "Cleared the Hugging Face token",
+      description: "Downloads from gated repositories fail until you save one again.",
+      apply: () => setTokenShown(false),
+      revert: () => setTokenShown(true),
+      commit: () => saveNow("clear-hf-token", { hf_token: "" }),
+      failure: "Could not clear the token",
+    });
+  const rerunSetup = () => {
+    const was = settings.onboarded_at;
+    if (!was) return;
+    void reversible({
+      run: () => saveNow("rerun-setup", { onboarded_at: "" }),
+      message: "Setup will run again",
+      description: "It opens by itself only when no models are installed.",
+      undo: () => saveNow("rerun-setup", { onboarded_at: was }),
+    }).catch(() => {});
+  };
+
   return (
     <SettingsGroup id="danger">
       <SettingRow
         id="clear-hf-token"
         control={
-          <ConfirmAction
-            label="Clear token"
-            title="Clear the Hugging Face token?"
-            description="The saved token is deleted. Downloads from gated repositories fail until you save a token again."
-            confirmLabel="Clear token"
-            disabled={!settings.hf_token_set || pending}
-            onConfirm={() => save("clear-hf-token", { hf_token: "" })}
-          />
+          <Button variant="outline" size="sm" disabled={!settings.hf_token_set || pending} onClick={clearToken}>
+            Clear token
+          </Button>
         }
       />
       <SettingRow
         id="rerun-setup"
         control={
-          <ConfirmAction
-            label="Run setup again"
-            title="Run first-run setup again?"
-            description="The setup wizard is marked as not done. It opens by itself only when no models are installed; with models already on disk, nothing will appear."
-            confirmLabel="Run setup again"
-            disabled={pending || !settings.onboarded_at}
-            onConfirm={() => save("rerun-setup", { onboarded_at: "" })}
-          />
+          <Button variant="outline" size="sm" disabled={pending || !settings.onboarded_at} onClick={rerunSetup}>
+            Run setup again
+          </Button>
         }
       >
         <p className="readout text-muted-foreground">

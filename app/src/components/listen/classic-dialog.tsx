@@ -1,59 +1,41 @@
 /**
  * A classic's details in Explore, with "Add to library": it imports the work
- * as it stands (every section, default settings) and opens the new book in
- * Audiobooks to cast and voice. The import review with edits lives under
- * Audiobooks → Classics; this is the one-click path.
+ * as it stands (every section, default settings), the same one-click add as
+ * the "+" on its card, so you stay in Explore with Open and Undo on a toast.
+ * The import review with edits lives under Audiobooks → Classics.
  */
 
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { BookPlusIcon, ExternalLinkIcon, Loader2Icon } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { BookPlusIcon, ExternalLinkIcon } from "lucide-react";
 
-import { importApi } from "@/components/audiobook/import/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { errorMessage } from "@/lib/api";
-import { abk } from "@/lib/audiobook-queries";
 import type { ExploreItem } from "@/lib/listen-explore";
-import { lk } from "@/lib/listen-queries";
 
 import { lengthLabel } from "./explore-card";
 import { ListenCover } from "./listen-cover";
+import type { useAddClassic } from "./use-add-classic";
 
 const FORM: Record<string, string> = { story: "Short story", children: "For children", novella: "Novella", poem: "Poem" };
 
-export function ClassicDialog({ item, rights, onClose }: { item: ExploreItem | null; rights: string | null; onClose: () => void }) {
-  const qc = useQueryClient();
-  const navigate = useNavigate();
-  const [error, setError] = useState<string | null>(null);
+export function ClassicDialog({
+  item,
+  rights,
+  adder,
+  onClose,
+}: {
+  item: ExploreItem | null;
+  rights: string | null;
+  adder: ReturnType<typeof useAddClassic>;
+  onClose: () => void;
+}) {
   const work = item?.work ?? null;
-
-  const add = useMutation({
-    mutationFn: async (id: string) => {
-      const preview = await importApi.parseClassic(id);
-      return importApi.commit({ preview_id: preview.id });
-    },
-    onSuccess: (book) => {
-      void qc.invalidateQueries({ queryKey: abk.books });
-      void qc.invalidateQueries({ queryKey: lk.shelf });
-      toast.success(`Added “${book.title}” to your library`, { description: "Cast a narrator and voice it here." });
-      onClose();
-      navigate(`/audiobooks/${book.id}`);
-    },
-    onError: (err) => setError(errorMessage(err)),
-  });
 
   return (
     <Dialog
       open={!!item}
       onOpenChange={(open) => {
-        if (!open && !add.isPending) {
-          setError(null);
-          onClose();
-        }
+        if (!open) onClose();
       }}
     >
       <DialogContent className="sm:max-w-lg">
@@ -92,17 +74,17 @@ export function ClassicDialog({ item, rights, onClose }: { item: ExploreItem | n
                 <ExternalLinkIcon className="size-3" />
               </a>
             </p>
-            {error && (
-              <p role="alert" className="text-destructive text-sm">
-                {error}
-              </p>
-            )}
             <DialogFooter>
-              <Button variant="ghost" onClick={onClose} disabled={add.isPending}>
+              <Button variant="ghost" onClick={onClose}>
                 Close
               </Button>
-              <Button onClick={() => add.mutate(work.id)} disabled={add.isPending}>
-                {add.isPending ? <Loader2Icon className="animate-spin" /> : <BookPlusIcon />}
+              <Button
+                onClick={() => {
+                  adder.add(item);
+                  onClose();
+                }}
+              >
+                <BookPlusIcon />
                 Add to library
               </Button>
             </DialogFooter>

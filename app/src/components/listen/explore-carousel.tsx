@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { ChevronLeftIcon, ChevronRightIcon, PlayIcon } from "lucide-react";
+import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, Loader2Icon, PlayIcon, PlusIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -17,10 +17,19 @@ import { cn } from "@/lib/utils";
 
 import { lengthLabel } from "./explore-card";
 import { ListenCover } from "./listen-cover";
+import type { AddState } from "./use-add-classic";
 
 const SHOWN = 2; // neighbours on each side
 
-export function ExploreCarousel({ items, onPickClassic }: { items: ExploreItem[]; onPickClassic: (it: ExploreItem) => void }) {
+export function ExploreCarousel({
+  items,
+  onPickClassic,
+  adder,
+}: {
+  items: ExploreItem[];
+  onPickClassic: (it: ExploreItem) => void;
+  adder?: { add: (it: ExploreItem) => void; stateOf: (it: ExploreItem) => AddState | null };
+}) {
   const [index, setIndex] = useState(Math.min(1, items.length - 1));
   const open = useListenPlayer((s) => s.open);
   if (items.length === 0) return null;
@@ -104,9 +113,23 @@ export function ExploreCarousel({ items, onPickClassic }: { items: ExploreItem[]
               <PlayIcon className="fill-current" /> Play
             </Button>
           ) : current.status === "classic" ? (
-            <Button size="sm" variant="secondary" onClick={() => onPickClassic(current)}>
-              Details
-            </Button>
+            <div className="flex gap-2">
+              {adder && (
+                <Button size="sm" disabled={adder.stateOf(current) !== null} onClick={() => adder.add(current)}>
+                  {adder.stateOf(current) === "adding" ? (
+                    <Loader2Icon className="animate-spin" />
+                  ) : adder.stateOf(current) === "added" ? (
+                    <CheckIcon />
+                  ) : (
+                    <PlusIcon />
+                  )}
+                  {adder.stateOf(current) === "added" ? "In library" : "Add to library"}
+                </Button>
+              )}
+              <Button size="sm" variant="secondary" onClick={() => onPickClassic(current)}>
+                Details
+              </Button>
+            </div>
           ) : current.book ? (
             <Button size="sm" variant="secondary" asChild>
               <Link to={`/audiobooks/${current.book.id}`}>Voice it</Link>

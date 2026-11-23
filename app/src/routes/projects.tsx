@@ -6,14 +6,6 @@ import { FolderIcon, FolderPlusIcon, Trash2Icon } from "lucide-react";
 
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShelfTile } from "@/components/library-shelves";
@@ -30,7 +22,6 @@ export function ProjectsPage() {
 
   const [creating, setCreating] = useState(false);
   const [draftName, setDraftName] = useState("");
-  const [pendingDelete, setPendingDelete] = useState<Project | null>(null);
   const [query, setQuery] = useState("");
 
   // Client-side: the whole list is already here (there is no paged projects
@@ -131,7 +122,7 @@ export function ProjectsPage() {
                 size="icon-sm"
                 aria-label={`Delete project ${p.name}`}
                 className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-                onClick={() => setPendingDelete(p)}
+                onClick={() => deleteProject(p, { description: unfiledNote(p.sound_count) })}
               >
                 <Trash2Icon />
               </Button>
@@ -140,39 +131,11 @@ export function ProjectsPage() {
         </div>
       )}
 
-      <Dialog open={pendingDelete !== null} onOpenChange={(o) => !o && setPendingDelete(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete this project?</DialogTitle>
-            <DialogDescription>
-              {pendingDelete && (
-                <>
-                  &ldquo;{pendingDelete.name}&rdquo; will be removed. The {pendingDelete.sound_count}{" "}
-                  sound{pendingDelete.sound_count === 1 ? "" : "s"} in it stay in the library, just
-                  unfiled.
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPendingDelete(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={deleteProject.isPending}
-              onClick={() => {
-                if (!pendingDelete) return;
-                deleteProject.mutate(pendingDelete.id, {
-                  onSuccess: () => setPendingDelete(null),
-                });
-              }}
-            >
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
+}
+
+function unfiledNote(n: number): string | undefined {
+  if (n === 0) return undefined;
+  return `Its ${n} sound${n === 1 ? "" : "s"} stay in the library, unfiled.`;
 }

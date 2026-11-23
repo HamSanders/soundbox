@@ -21,6 +21,7 @@ import { FilterChip } from "@/components/filter-chip";
 import { languageName } from "@/lib/format";
 import { ClassicDialog } from "@/components/listen/classic-dialog";
 import { ExploreCard } from "@/components/listen/explore-card";
+import { useAddClassic } from "@/components/listen/use-add-classic";
 import { ExploreCarousel } from "@/components/listen/explore-carousel";
 import { ListenTabs } from "@/components/listen/listen-tabs";
 import { Button } from "@/components/ui/button";
@@ -46,11 +47,13 @@ import {
 } from "@/lib/listen-explore";
 import { useShelf } from "@/lib/listen-queries";
 
-function Grid({ items, onPick }: { items: ExploreItem[]; onPick: (it: ExploreItem) => void }) {
+type Adder = ReturnType<typeof useAddClassic>;
+
+function Grid({ items, onPick, adder }: { items: ExploreItem[]; onPick: (it: ExploreItem) => void; adder: Adder }) {
   return (
     <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
       {items.map((it) => (
-        <ExploreCard key={it.key} item={it} onPickClassic={onPick} />
+        <ExploreCard key={it.key} item={it} onPickClassic={onPick} onAddClassic={adder.add} addState={adder.stateOf(it)} />
       ))}
     </div>
   );
@@ -63,6 +66,7 @@ export function ListenExplorePage() {
   const view = params.get("view");
   const [f, setF] = useState<ExploreFilters>(NO_FILTERS);
   const [picked, setPicked] = useState<ExploreItem | null>(null);
+  const adder = useAddClassic();
   const set = <K extends keyof ExploreFilters>(k: K, v: ExploreFilters[K]) => setF((cur) => ({ ...cur, [k]: v }));
 
   const items = useMemo(() => mergeExplore(shelf.data ?? [], library.data?.works ?? []), [shelf.data, library.data]);
@@ -169,7 +173,7 @@ export function ListenExplorePage() {
           ) : results.length === 0 ? (
             <EmptyState title="No matches">Nothing here matches those filters.</EmptyState>
           ) : (
-            <Grid items={results} onPick={setPicked} />
+            <Grid items={results} onPick={setPicked} adder={adder} />
           )}
         </section>
       ) : filtering ? (
@@ -177,13 +181,13 @@ export function ListenExplorePage() {
           <h2 className="text-muted-foreground text-sm">
             {results.length} {results.length === 1 ? "match" : "matches"}
           </h2>
-          {results.length === 0 ? <EmptyState title="No matches">Nothing matches those filters.</EmptyState> : <Grid items={results} onPick={setPicked} />}
+          {results.length === 0 ? <EmptyState title="No matches">Nothing matches those filters.</EmptyState> : <Grid items={results} onPick={setPicked} adder={adder} />}
         </section>
       ) : (
         <div className="space-y-10">
           <section className="space-y-2">
             <h2 className="font-heading text-lg font-semibold tracking-tight">Top picks</h2>
-            <ExploreCarousel items={top} onPickClassic={setPicked} />
+            <ExploreCarousel items={top} onPickClassic={setPicked} adder={adder} />
           </section>
 
           {cols.length > 0 && (
@@ -220,14 +224,21 @@ export function ListenExplorePage() {
               }
             >
               {r.items.slice(0, 12).map((it) => (
-                <ExploreCard key={it.key} item={it} onPickClassic={setPicked} className="w-36 shrink-0 snap-start sm:w-40" />
+                <ExploreCard
+                  key={it.key}
+                  item={it}
+                  onPickClassic={setPicked}
+                  onAddClassic={adder.add}
+                  addState={adder.stateOf(it)}
+                  className="w-36 shrink-0 snap-start sm:w-40"
+                />
               ))}
             </CoverRow>
           ))}
         </div>
       )}
 
-      <ClassicDialog item={picked} rights={library.data?.rights ?? null} onClose={() => setPicked(null)} />
+      <ClassicDialog item={picked} rights={library.data?.rights ?? null} adder={adder} onClose={() => setPicked(null)} />
     </div>
   );
 }

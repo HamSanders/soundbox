@@ -35,7 +35,6 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -127,7 +126,6 @@ export function SoundCard({
   // only, so a re-render later never replays it.
   const [fresh] = useState(() => Date.now() - Date.parse(sound.created_at) < FRESH_MS);
   const [draftName, setDraftName] = useState(sound.name);
-  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const update = useUpdateSound();
   const remove = useDeleteSound();
@@ -255,34 +253,6 @@ export function SoundCard({
             <Button variant="outline">Cancel</Button>
           </DialogClose>
           <Button onClick={commitName}>Save</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-
-  const confirmDialog = (
-    <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Delete this sound?</DialogTitle>
-          <DialogDescription>
-            &ldquo;{sound.name}&rdquo; and its audio file will be removed from disk. This
-            cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
-          </DialogClose>
-          <Button
-            variant="destructive"
-            onClick={() => {
-              remove.mutate(sound.id);
-              setConfirmOpen(false);
-            }}
-          >
-            Delete sound
-          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -612,7 +582,7 @@ export function SoundCard({
                   Split into stems…
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem variant="destructive" onClick={() => setConfirmOpen(true)}>
+              <DropdownMenuItem variant="destructive" onClick={() => remove(sound)}>
                 <Trash2Icon />
                 Delete
               </DropdownMenuItem>
@@ -781,7 +751,6 @@ export function SoundCard({
         </span>
         <div className="flex items-center">{actions}</div>
         {renameDialog}
-        {confirmDialog}
         {stemDialog}
       </li>
     );
@@ -799,7 +768,6 @@ export function SoundCard({
       >
         {row}
         {renameDialog}
-        {confirmDialog}
         {stemDialog}
       </div>
     );
@@ -817,7 +785,6 @@ export function SoundCard({
     >
       {row}
       {renameDialog}
-      {confirmDialog}
       {stemDialog}
     </Card>
   );

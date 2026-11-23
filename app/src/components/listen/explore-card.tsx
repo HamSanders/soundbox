@@ -1,16 +1,20 @@
 /**
  * One card in Explore: cover, title, author, length and where it stands. A
- * book of yours opens its listen page; a classic opens its details, where it
- * can be added to the library.
+ * book of yours opens its listen page; a classic opens its details. A
+ * classic's "+" adds it to the library without leaving Explore.
  */
 
+import { CheckIcon, Loader2Icon, PlusIcon } from "lucide-react";
 import { Link } from "react-router-dom";
+
+import { Button } from "@/components/ui/button";
 
 import { formatShort, listenedPercent } from "@/lib/listen-api";
 import type { ExploreItem } from "@/lib/listen-explore";
 import { cn } from "@/lib/utils";
 
 import { ListenCover } from "./listen-cover";
+import type { AddState } from "./use-add-classic";
 
 const BADGE: Record<ExploreItem["status"], string | null> = {
   voiced: null,
@@ -24,9 +28,21 @@ export function lengthLabel(it: ExploreItem): string {
   return it.status === "voiced" ? t : `about ${t}`;
 }
 
-export function ExploreCard({ item, onPickClassic, className }: { item: ExploreItem; onPickClassic: (it: ExploreItem) => void; className?: string }) {
+export function ExploreCard({
+  item,
+  onPickClassic,
+  onAddClassic,
+  addState = null,
+  className,
+}: {
+  item: ExploreItem;
+  onPickClassic: (it: ExploreItem) => void;
+  onAddClassic?: (it: ExploreItem) => void;
+  addState?: AddState | null;
+  className?: string;
+}) {
   const percent = item.book ? listenedPercent(item.book) : null;
-  const badge = BADGE[item.status];
+  const badge = addState === "added" ? "In library" : BADGE[item.status];
   const body = (
     <>
       <div className="relative">
@@ -59,13 +75,33 @@ export function ExploreCard({ item, onPickClassic, className }: { item: ExploreI
     );
   }
   return (
-    <button
-      type="button"
-      onClick={() => onPickClassic(item)}
-      aria-label={`${item.title}: details`}
-      className={cn("group block min-w-0 text-left", className)}
-    >
-      {body}
-    </button>
+    <div className={cn("group relative min-w-0", className)}>
+      <button
+        type="button"
+        onClick={() => onPickClassic(item)}
+        aria-label={`${item.title}: details`}
+        className="block w-full min-w-0 text-left"
+      >
+        {body}
+      </button>
+      {onAddClassic && (
+        <Button
+          size="icon-sm"
+          variant={addState ? "secondary" : "default"}
+          aria-label={addState === "added" ? `${item.title} is in your library` : `Add ${item.title} to your library`}
+          title={addState === "added" ? "In your library" : "Add to library"}
+          disabled={addState !== null}
+          onClick={() => onAddClassic(item)}
+          className={cn(
+            "absolute top-2 right-2 rounded-full shadow-md transition-opacity",
+            // Shown on hover or focus where there's a mouse; always on touch.
+            !addState &&
+              "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100",
+          )}
+        >
+          {addState === "adding" ? <Loader2Icon className="animate-spin" /> : addState === "added" ? <CheckIcon /> : <PlusIcon />}
+        </Button>
+      )}
+    </div>
   );
 }

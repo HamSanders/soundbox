@@ -29,14 +29,6 @@ import { CheckIcon, RotateCcwIcon, SearchIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
 import {
@@ -502,50 +494,3 @@ export function Embedded({ children }: { children: ReactNode }) {
 
 // ------------------------------------------------------------------- danger
 
-/** A button that asks first. For the Reset group. */
-export function ConfirmAction({
-  label,
-  title,
-  description,
-  confirmLabel,
-  disabled,
-  onConfirm,
-}: {
-  label: string;
-  title: string;
-  description: string;
-  confirmLabel: string;
-  disabled?: boolean;
-  onConfirm: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <Button variant="outline" size="sm" disabled={disabled} onClick={() => setOpen(true)}>
-        {label}
-      </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
-            <DialogDescription>{description}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setOpen(false);
-                onConfirm();
-              }}
-            >
-              {confirmLabel}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}

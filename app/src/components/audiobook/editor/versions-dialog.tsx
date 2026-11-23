@@ -6,7 +6,6 @@
 
 import { useMemo, useState } from "react";
 import { ArrowLeftIcon, GitCompareArrowsIcon, RotateCcwIcon, SaveIcon, Trash2Icon } from "lucide-react";
-import { toast } from "sonner";
 
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
@@ -22,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { SnapshotDiff, SnapshotInfo } from "@/lib/audiobook-api";
 import { useSnapshotDiff, useSnapshotOps, useSnapshots } from "@/lib/audiobook-queries";
 import { formatRelative } from "@/lib/format";
+import { reversible } from "@/lib/undo";
 import { cn } from "@/lib/utils";
 
 type Token = { text: string; op: "same" | "add" | "del" };
@@ -162,22 +162,25 @@ export function VersionsDialog({
   const [comparing, setComparing] = useState<SnapshotInfo | null>(null);
   const diff = useSnapshotDiff(bookId, comparing?.id ?? null);
 
-  const restore = (snap: SnapshotInfo) => {
-    if (
-      !window.confirm(
-        `Restore “${snap.label}”? The book goes back to that version. The current state is saved as a version first.`,
-      )
-    ) {
-      return;
-    }
-    ops.restore.mutate(snap.id, {
-      onSuccess: ({ before }) => {
+  // No "Are you sure?": the current state is saved as a version before
+  // restoring, so Undo is restoring that one.
+  const restore = (snap: SnapshotInfo) =>
+    void reversible({
+      run: () => ops.restore.mutateAsync(snap.id),
+      message: `Restored “${snap.label}”`,
+      description: ({ before }) => `Saved the previous state as “${before.label}”.`,
+      undo: async ({ before }) => {
+        await ops.restore.mutateAsync(before.id);
+        onRestored();
+      },
+      undone: "Put the book back as it was",
+    })
+      .then(() => {
         onRestored();
         setComparing(null);
-        toast.success(`Restored “${snap.label}”`, { description: `Saved the previous state as “${before.label}”.` });
-      },
-    });
-  };
+      })
+      .catch(() => {}); // the mutation already showed why
+
 
   return (
     <Dialog

@@ -603,7 +603,6 @@ export function VoiceLabPage() {
   /** The model a clone reads on, or UNPINNED. */
   const [modelDraft, setModelDraft] = useState(UNPINNED);
   const [transcriptDrafts, setTranscriptDrafts] = useState<Record<string, string>>({});
-  const [deleting, setDeleting] = useState<Voice | null>(null);
   /** By id rather than by object, so the dialog follows the voice as its
    *  clip list refetches after an add or remove. */
   const [clipsFor, setClipsFor] = useState<string | null>(null);
@@ -734,7 +733,14 @@ export function VoiceLabPage() {
           <DownloadIcon />
           Export voice file
         </DropdownMenuItem>
-        <DropdownMenuItem variant="destructive" onSelect={() => setDeleting(voice)}>
+        <DropdownMenuItem variant="destructive" onSelect={() =>
+            remove(voice, {
+              description:
+                voice.kind === "clone"
+                  ? "Its reference clip goes too. Sounds already read in it stay."
+                  : "The model keeps the built-in voice itself.",
+            })
+          }>
           <Trash2Icon />
           Delete
         </DropdownMenuItem>
@@ -1070,35 +1076,6 @@ export function VoiceLabPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ------------------------------------------------------------- delete */}
-      <Dialog open={deleting !== null} onOpenChange={(open) => !open && setDeleting(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete “{deleting?.name}”?</DialogTitle>
-            <DialogDescription>
-              {deleting?.kind === "clone"
-                ? "The reference clip is removed too. Sounds already read in this voice are unaffected."
-                : "Removes the saved entry. The model keeps the built-in voice itself."}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleting(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={remove.isPending}
-              onClick={() => {
-                if (!deleting) return;
-                remove.mutate(deleting.id, { onSuccess: () => setDeleting(null) });
-              }}
-            >
-              <Trash2Icon />
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

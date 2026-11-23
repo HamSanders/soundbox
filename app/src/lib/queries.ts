@@ -12,6 +12,9 @@ import { toast } from "sonner";
 
 import { forgetStoryDevices } from "@/hooks/use-track-devices";
 import { followPlacement } from "@/lib/reading-order";
+import { useDetailStore } from "@/lib/detail-store";
+import { useVoiceDetailStore } from "@/lib/voice-detail-store";
+import { undoable, useHiddenFilter, useHiddenStore, type HiddenKind } from "@/lib/undo";
 import {
   api,
   NO_CAPABILITIES,
@@ -403,7 +406,12 @@ export function useImageStatus(): UseQueryResult<ImageStatus> {
 /* ---------------------------------------------------- custom endpoints */
 
 export function useEndpoints(): UseQueryResult<EndpointList> {
-  return useQuery({ queryKey: qk.endpoints, queryFn: () => api.listEndpoints() });
+  const hidden = useHiddenFilter("endpoint");
+  return useQuery({
+    queryKey: qk.endpoints,
+    queryFn: () => api.listEndpoints(),
+    select: hidden && ((d: EndpointList) => ({ ...d, endpoints: hidden(d.endpoints) })),
+  });
 }
 
 /** Saving or deleting an endpoint changes the model list too — each endpoint
@@ -422,15 +430,7 @@ export function useSaveEndpoint() {
 }
 
 export function useDeleteEndpoint() {
-  const qc = useQueryClient();
-  return useMutation<void, Error, string>({
-    mutationFn: (id) => api.deleteEndpoint(id),
-    onError: fail("Could not delete the endpoint"),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: qk.endpoints });
-      void qc.invalidateQueries({ queryKey: qk.models });
-    },
-  });
+  return useDeleteWithUndo("endpoint", (id) => api.deleteEndpoint(id), [qk.endpoints, qk.models], "Could not delete the endpoint");
 }
 
 /** No toast on error: the form shows the failure inline, next to the button
@@ -501,10 +501,17 @@ export function useVoiceArtwork() {
 }
 
 export function useSounds(query: SoundQuery, enabled = true): UseQueryResult<SoundsPage> {
+  const hidden = useHiddenFilter("sound");
   return useQuery({
     queryKey: qk.sounds(query),
     queryFn: () => api.listSounds(query),
     enabled,
+    select:
+      hidden &&
+      ((page: SoundsPage) => {
+        const items = hidden(page.items);
+        return { ...page, items, total: page.total - (page.items.length - items.length) };
+      }),
   });
 }
 
@@ -735,7 +742,8 @@ export function useEditSound() {
 /* ------------------------------------------------------------------ voices */
 
 export function useVoices(): UseQueryResult<Voice[]> {
-  return useQuery({ queryKey: qk.voices, queryFn: () => api.listVoices() });
+  const hidden = useHiddenFilter("voice");
+  return useQuery({ queryKey: qk.voices, queryFn: () => api.listVoices(), select: hidden && ((v: Voice[]) => hidden(v)) });
 }
 
 export function useCreateVoice() {
@@ -786,14 +794,9 @@ export function useUpdateVoice() {
 }
 
 export function useDeleteVoice() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => api.deleteVoice(id),
-    onError: fail("Could not delete the voice"),
-    onSuccess: () => {
-      toast.success("Voice deleted");
-      void qc.invalidateQueries({ queryKey: qk.voices });
-    },
+  return useDeleteWithUndo("voice", (id) => api.deleteVoice(id), [qk.voices], "Could not delete the voice", (id) => {
+    const panel = useVoiceDetailStore.getState();
+    if (panel.voiceId === id) panel.close();
   });
 }
 
@@ -1253,20 +1256,54 @@ export function useExportStory(storyId: string) {
 }
 
 export function useDeleteSound() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => api.deleteSound(id),
-    onError: fail("Could not delete the sound"),
-    onSuccess: () => {
-      toast.success("Sound deleted");
-      void qc.invalidateQueries({ queryKey: ["sounds"] });
-      void qc.invalidateQueries({ queryKey: qk.tags });
-    },
+  return useDeleteWithUndo("sound", (id) => api.deleteSound(id), [["sounds"], qk.tags], "Could not delete the sound", (id) => {
+    const panel = useDetailStore.getState();
+    if (panel.sound?.id === id) panel.close();
   });
 }
 
+/**
+ * Delete with Undo instead of "Are you sure?": the item leaves every list at
+ * once, and the request goes when the toast closes (see lib/undo.ts).
+ */
+function useDeleteWithUndo(
+  kind: HiddenKind,
+  del: (id: string) => Promise<unknown>,
+  keys: QueryKey[],
+  failure: string,
+  /** Close any panel showing the item. */
+  closePanel?: (id: string) => void,
+) {
+  const qc = useQueryClient();
+  return (
+    item: { id: string; name: string },
+    opts?: { description?: string; onUndo?: () => void },
+  ) => {
+    const { hide, show } = useHiddenStore.getState();
+    undoable({
+      message: `Deleted “${item.name}”`,
+      description: opts?.description,
+      apply: () => {
+        hide(kind, item.id);
+        closePanel?.(item.id);
+      },
+      revert: () => {
+        show(kind, item.id);
+        opts?.onUndo?.();
+      },
+      commit: () => del(item.id),
+      done: () =>
+        void Promise.all(keys.map((queryKey) => qc.invalidateQueries({ queryKey }))).finally(() =>
+          show(kind, item.id),
+        ),
+      failure,
+    });
+  };
+}
+
 export function useProjects(): UseQueryResult<Project[]> {
-  return useQuery({ queryKey: qk.projects, queryFn: () => api.listProjects() });
+  const hidden = useHiddenFilter("project");
+  return useQuery({ queryKey: qk.projects, queryFn: () => api.listProjects(), select: hidden && ((p: Project[]) => hidden(p)) });
 }
 
 export function useCreateProject() {
@@ -1281,18 +1318,9 @@ export function useCreateProject() {
 }
 
 export function useDeleteProject() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => api.deleteProject(id),
-    onError: fail("Could not delete the project"),
-    onSuccess: () => {
-      toast.success("Project deleted");
-      // Its sounds are only unfiled, not gone — but any view scoped to this
-      // project (or showing project membership) is stale either way.
-      void qc.invalidateQueries({ queryKey: qk.projects });
-      void qc.invalidateQueries({ queryKey: ["sounds"] });
-    },
-  });
+  // Its sounds are only unfiled, not gone, but any view scoped to this
+  // project (or showing project membership) is stale either way.
+  return useDeleteWithUndo("project", (id) => api.deleteProject(id), [qk.projects, ["sounds"]], "Could not delete the project");
 }
 
 /* --------------------------------------------------------------- profiles */

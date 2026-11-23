@@ -239,12 +239,7 @@ export function EndpointSettingsCard() {
                 variant="ghost"
                 size="icon"
                 aria-label={`Delete ${ep.name}`}
-                disabled={remove.isPending}
-                onClick={() => {
-                  if (window.confirm(`Delete ${ep.name}? Sounds already made with it stay in the library.`)) {
-                    remove.mutate(ep.id);
-                  }
-                }}
+                onClick={() => remove(ep, { description: "Sounds already made with it stay in the library." })}
               >
                 <TrashIcon className="size-4" />
               </Button>

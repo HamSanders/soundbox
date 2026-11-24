@@ -50,6 +50,13 @@ const API = process.env.SOUNDBOX_API ?? "http://127.0.0.1:17494";
 
 /** What a sample renders on when it doesn't name a model of its own. */
 const DEFAULT_MODEL = DEFAULT_SAMPLE_MODEL;
+/**
+ * Ask Stable Audio 3.0 SFX for whole seconds. Measured on this catalogue
+ * (2026-11): samples asked for 1.5 s came back as a steady hum or a wall of
+ * clipped noise more than half the time, and 2.5 s did the same 69% of the
+ * time, against 1-3% at 1, 2 and 3 s. A short sound still comes out short:
+ * the server trims the silence after it.
+ */
 const DEFAULT_DURATION_S = 4;
 
 /**

@@ -76,6 +76,8 @@ import { useSessionStore } from "@/lib/session-store";
 import { api, type Model, type Session, type Sound } from "@/lib/api";
 import { useDetailStore } from "@/lib/detail-store";
 import { cn } from "@/lib/utils";
+import { isDesktop } from "@/lib/desktop";
+import { hidesSidebar, useSidebarPeek } from "@/components/sidebar-peek";
 
 /**
  * `Recent` is a dynamic group, not a nav link, and reads as content you're
@@ -702,6 +704,8 @@ function ThemeToggle() {
 
 export function AppSidebar() {
   const { setOpenMobile } = useSidebar();
+  const { pathname } = useLocation();
+  const peek = useSidebarPeek((s) => s.peek);
   const can = useCan();
   useRailOnImmersivePages();
 
@@ -709,8 +713,23 @@ export function AppSidebar() {
     <>
       {/* pr-2.5: panels sit 8px apart, the same as their margin from the
           window edges. */}
-      <Sidebar collapsible="icon" variant="inset" className="pr-2.5">
-        {/* The logo, top left, on the same line as the header bar beside it. */}
+      {/* A studio hides the sidebar outright ("offcanvas") rather than
+          folding it to the rail; it comes back as a peek over the page.
+          See sidebar-peek.tsx. */}
+      <Sidebar
+        collapsible={hidesSidebar(pathname) ? "offcanvas" : "icon"}
+        variant="inset"
+        className={cn(
+          "pr-2.5",
+          // Peeking: on screen, over the page rather than beside it, so it
+          // needs a fill of its own and a shadow to lift it off the timeline.
+          peek && "bg-sidebar left-0! rounded-r-xl shadow-2xl",
+        )}
+      >
+        {/* The logo, top left, on the same line as the header bar beside it.
+            Not in the desktop app: whoever is looking at that window already
+            installed it, and the window's own title bar sits right above. */}
+        {!isDesktop() && (
         <SidebarHeader className="h-14 justify-center">
           <SidebarMenu>
             <SidebarMenuItem>
@@ -725,6 +744,7 @@ export function AppSidebar() {
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
+        )}
 
         <SidebarContent>
           {/* Create and Library first: making a sound and finding one are

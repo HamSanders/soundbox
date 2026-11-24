@@ -29,17 +29,23 @@ export function SoundDetailPanel() {
 
   // The panel belongs to the page that opened it: leaving that page closes
   // it, so a sound's details never sit beside a page that has nothing to do
-  // with it. Query-string changes (filters) keep it open.
+  // with it. Query-string changes (filters) keep it open. An opener that
+  // navigates first (the sidebar's Recent list) names the page it is opening
+  // the panel for; everyone else gets the page that is showing.
+  //
+  // "Leaving" means the route moving *off* that page, not merely differing
+  // from it: the router commits a navigation in a transition, so a panel
+  // opened for the destination can render a beat before the route arrives.
   const { pathname } = useLocation();
-  const openedOn = useRef(pathname);
+  const path = useDetailStore((s) => s.path);
+  const prevPathname = useRef(pathname);
   useEffect(() => {
-    if (sound) openedOn.current = openedOn.current ?? pathname;
-  }, [sound, pathname]);
-  useEffect(() => {
-    if (sound && pathname !== openedOn.current) close();
-    openedOn.current = pathname;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only a route change should close it
-  }, [pathname]);
+    const prev = prevPathname.current;
+    prevPathname.current = pathname;
+    if (!sound) return;
+    if (path === null) useDetailStore.setState({ path: pathname });
+    else if (prev === path && pathname !== path) close();
+  }, [sound, path, pathname, close]);
 
   useEffect(() => {
     if (!sound) return;

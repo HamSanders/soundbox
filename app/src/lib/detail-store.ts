@@ -11,12 +11,19 @@ import type { Sound } from "@/lib/api";
 
 interface DetailState {
   sound: Sound | null;
-  open: (sound: Sound) => void;
+  /** The route the panel belongs to; leaving it closes the panel. Null
+   *  means "whichever page is showing when the panel renders". */
+  path: string | null;
+  /** Pass `path` when opening the panel for a page you are navigating to in
+   *  the same tick (the sidebar's Recent list does), so the route change
+   *  doesn't count as leaving the page that opened it. */
+  open: (sound: Sound, path?: string) => void;
   close: () => void;
 }
 
 export const useDetailStore = create<DetailState>((set) => ({
   sound: null,
-  open: (sound) => set({ sound }),
-  close: () => set({ sound: null }),
+  path: null,
+  open: (sound, path) => set({ sound, path: path ?? null }),
+  close: () => set({ sound: null, path: null }),
 }));

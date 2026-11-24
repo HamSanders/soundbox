@@ -67,6 +67,13 @@ export const STUDIO_HREF = "/studio";
  *  different build now. */
 export const MODELS_HUB_HREF = "/models";
 
+/** Mirli Cloud, the hosted version, while it takes a waitlist. `src` says
+ *  which page sent the visitor; the waitlist keeps it (lowercase, digits and
+ *  dashes, at most 32 characters). */
+export function cloudWaitlistHref(src: string): string {
+  return `https://cloud.mirli.app/?src=${src}`;
+}
+
 /** Whether an href leaves the site. Replaces the old build-target flag: what
  *  decides between `<a>` and `<Link>` is the destination, not which bundle is
  *  rendering — see `components/marketing-link`. */

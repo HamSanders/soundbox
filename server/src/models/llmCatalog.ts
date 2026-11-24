@@ -10,7 +10,13 @@
 import { rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 
-import { DownloadError, downloadToFile } from "../download.js";
+import {
+  DownloadError,
+  downloadToFile,
+  MODEL_HEADROOM_BYTES,
+  retryLine,
+  TransferRate,
+} from "../download.js";
 import { ModelError } from "../errors.js";
 
 export interface LlmModelSpec {
@@ -104,10 +110,14 @@ export async function downloadWeights(
   progress?: LlmProgressFn,
 ): Promise<void> {
   const url = `https://huggingface.co/${spec.hf_repo}/resolve/main/${spec.filename}`;
+  const rate = new TransferRate();
+  let fraction = 0;
   try {
     await downloadToFile(url, weightsPath(modelsDir, spec), {
       headers: hfToken ? { Authorization: `Bearer ${hfToken}` } : {},
       expectedBytes: spec.size_bytes,
+      headroomBytes: MODEL_HEADROOM_BYTES,
+      onRetry: (notice) => progress?.(fraction, retryLine(notice)),
       checkResponse: (resp) => {
         if (resp.ok) return;
         if (resp.status === 401 || resp.status === 403) {
@@ -120,7 +130,8 @@ export async function downloadWeights(
       },
       onProgress: (done, total) => {
         if (progress && total) {
-          progress(Math.min(0.95, done / total), `Downloading — ${Math.floor(done / 1024 / 1024)} MB`);
+          fraction = Math.min(0.95, done / total);
+          progress(fraction, `Downloading — ${rate.line(done, total)}`);
         }
       },
     });

@@ -33,6 +33,7 @@ import {
 import { registerJobs } from "./routes/jobs.js";
 import { registerSpeakStream } from "./routes/speakStream.js";
 import { registerRender } from "./routes/render.js";
+import { crossSiteRefusal, isOpenAiPath, openAiError, registerOpenAi } from "./routes/openai.js";
 import { registerLlm } from "./routes/llm.js";
 import { registerImage } from "./routes/image.js";
 import { registerEndpoints } from "./routes/endpoints.js";
@@ -187,6 +188,13 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
         });
       }
     }
+    // The OpenAI-compatible routes can't use that rule: their clients send no
+    // custom header and upload as multipart. They refuse what a browser marks
+    // as coming from another site instead (see crossSiteRefusal).
+    if (MUTATING.has(request.method) && isOpenAiPath(request.url)) {
+      const refused = crossSiteRefusal(request);
+      if (refused) return reply.code(403).send(openAiError(403, refused, "cross_site_request"));
+    }
   });
 
   // FastAPI treats a body-less POST to an endpoint with an optional model as
@@ -241,6 +249,8 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
   void app.register(async (scope) => {
     registerRender(scope, svc);
   });
+  // /v1/audio/speech and friends, for clients with an OpenAI base URL setting.
+  registerOpenAi(app, svc);
   registerSounds(app, svc);
   registerVoices(app, svc);
   registerSessions(app, svc);

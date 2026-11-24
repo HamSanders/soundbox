@@ -48,6 +48,17 @@ export function registerModels(app: FastifyInstance, svc: MirliService): void {
     return reply.code(202).send({ job_id: job.id });
   });
 
+  /** Dismiss the remembered failure of this model's last download. */
+  app.delete<IdParams>("/api/models/:model_id/download-failure", async (request, reply) => {
+    try {
+      svc.clearDownloadFailure(request.params.model_id);
+    } catch (exc) {
+      if (exc instanceof ModelError) throw new HttpError(404, exc.message);
+      throw exc;
+    }
+    return reply.code(204).send();
+  });
+
   app.post<IdParams>("/api/models/:model_id/selftest", async (request) =>
     svc.selfTestModel(request.params.model_id),
   );

@@ -243,7 +243,7 @@ function ModelRowBody({ model, entry }: { model: Model; entry?: AudioCppCatalogE
       status={<ModelStatusPill status={model.status} />}
       action={<ModelPrimaryAction model={model} downloading={downloading} />}
       below={
-        downloading && (
+        downloading ? (
           <div className="pointer-events-none relative px-3 pb-2.5 pl-15 @sm:px-4 @sm:pl-16">
             <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs">
               <span className="truncate">{job?.message ?? busyLabel}</span>
@@ -251,6 +251,14 @@ function ModelRowBody({ model, entry }: { model: Model; entry?: AudioCppCatalogE
             </div>
             <Progress value={progressPct} />
           </div>
+        ) : (
+          // The reason the last download stopped, kept by the server. The row
+          // opens the panel, which has the whole card and its actions.
+          model.download_failure && (
+            <p className="text-danger pointer-events-none relative truncate px-3 pb-2.5 pl-15 text-xs @sm:px-4 @sm:pl-16">
+              Last download failed: {model.download_failure.title}
+            </p>
+          )
         )
       }
     />

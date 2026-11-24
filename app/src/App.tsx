@@ -14,6 +14,7 @@ import { AppCommandPalette } from "@/components/app-command-palette";
 import { AppHeader } from "@/components/app-header";
 import { HeaderSlotProvider } from "@/components/header-slot";
 import { AppSidebar } from "@/components/app-sidebar";
+import { AmbientBackground } from "@/components/ambient-background";
 import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog";
 import { NowPlayingBar } from "@/components/now-playing-bar";
 import { CreatePanel, CreateRedirect } from "@/components/create-panel";
@@ -119,7 +120,9 @@ function AppShellReady() {
       // --top-h: the slim header bar above every panel. --panel-h: what is
       // left for a panel between that bar and the player, less the panels'
       // own 8px margins. Every panel's height reads it.
-      className="pt-(--top-h) pb-(--dock-h)"
+      // The ground is see-through so the ambient field behind it shows in
+      // the gaps between panels; the panels keep their own fills.
+      className="pt-(--top-h) pb-(--dock-h) has-data-[variant=inset]:bg-transparent"
       style={
         {
           "--dock-h": nowPlaying ? `${PLAYER_DOCK_HEIGHT_PX}px` : "0px",
@@ -132,6 +135,8 @@ function AppShellReady() {
           own controls into the bar above it — see `header-slot`. The bar is a
           slim strip across the window, above the panels, not inside one. */}
       <HeaderSlotProvider>
+      {/* The moving ground, behind every panel: see ambient-background.tsx. */}
+      <AmbientBackground />
       <AppSidebar />
       {/* Between the sidebar and the page on the kind pages: see create-panel.tsx. */}
       <CreatePanel />

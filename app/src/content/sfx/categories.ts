@@ -136,7 +136,9 @@ const EIGHT_BIT: SfxCategory = {
         prompt:
           "16-bit chiptune dungeon crawl loop, driving square wave lead synth melody, triangle wave bass synth, punchy 8-bit drum machine percussion, dark minor key, 120 BPM, seamless loop",
         source: "model",
-        model: "audiocpp-stable-audio-3-sfx",
+        durationS: 30,
+        seed: 1920403944,
+        model: "audiocpp-ace-step-xl-turbo",
       },
       {
         slug: "boss-battle-sting",
@@ -152,7 +154,9 @@ const EIGHT_BIT: SfxCategory = {
         prompt:
           "chiptune level-complete fanfare, square wave lead synth melody, triangle wave harmony synth, 8-bit noise-channel drum hits, four ascending musical phrases resolving to a bright major chord",
         source: "model",
-        model: "audiocpp-stable-audio-3-sfx",
+        durationS: 8,
+        seed: 257777246,
+        model: "audiocpp-ace-step-xl-turbo",
       },
       {
         slug: "8bit-boss-theme-loop",
@@ -160,7 +164,9 @@ const EIGHT_BIT: SfxCategory = {
         prompt:
           "8-bit boss battle theme, driving square wave bass synth, fast arpeggiated pulse wave lead synth, noise-channel drum machine on the offbeat, tense minor key, 140 BPM, seamless loop",
         source: "model",
-        model: "audiocpp-stable-audio-3-sfx",
+        durationS: 30,
+        seed: 664523550,
+        model: "audiocpp-ace-step-xl-turbo",
       },
     ],
     recipes: [
@@ -266,7 +272,9 @@ const CHIPTUNE_MUSIC: SfxCategory = {
         prompt:
           "Commodore 64 SID chip chiptune loop, MOS 6581 filtered square wave lead synth arpeggio, pulse-width modulation bass synth, gritty analog filter sweep, upbeat major key, 130 BPM, seamless loop",
         source: "model",
-        model: "audiocpp-stable-audio-3-sfx",
+        durationS: 30,
+        seed: 781053744,
+        model: "audiocpp-ace-step-xl-turbo",
       },
       {
         slug: "genesis-fm-synth-theme",
@@ -274,7 +282,9 @@ const CHIPTUNE_MUSIC: SfxCategory = {
         prompt:
           "Sega Genesis YM2612 FM synth action theme, punchy FM bell lead synth melody, driving FM bass synth, crisp PSG noise-channel hi-hats, energetic 16-bit action game score, 140 BPM, seamless loop",
         source: "model",
-        model: "audiocpp-stable-audio-3-sfx",
+        durationS: 30,
+        seed: 225451564,
+        model: "audiocpp-ace-step-xl-turbo",
       },
       {
         slug: "nes-2a03-dungeon-theme",
@@ -282,7 +292,9 @@ const CHIPTUNE_MUSIC: SfxCategory = {
         prompt:
           "NES 2A03 chiptune dungeon theme, triangle wave bass synth ostinato, pulse wave lead synth melody with duty-cycle changes, noise-channel percussion, moody minor key, seamless loop",
         source: "model",
-        model: "audiocpp-stable-audio-3-sfx",
+        durationS: 30,
+        seed: 37858903,
+        model: "audiocpp-ace-step-xl-turbo",
       },
       {
         slug: "opl2-adlib-boss-theme",
@@ -290,7 +302,9 @@ const CHIPTUNE_MUSIC: SfxCategory = {
         prompt:
           "Yamaha OPL2 AdLib FM synthesis boss battle theme, aggressive FM brass stab synth hits, driving FM bass synth line, retro PC soundcard timbre, tense minor key, 145 BPM, seamless loop",
         source: "model",
-        model: "audiocpp-stable-audio-3-sfx",
+        durationS: 30,
+        seed: 1663584529,
+        model: "audiocpp-ace-step-xl-turbo",
       },
       {
         slug: "amiga-modtracker-overworld",
@@ -298,20 +312,22 @@ const CHIPTUNE_MUSIC: SfxCategory = {
         prompt:
           "Amiga ProTracker module overworld theme, sampled square wave lead synth melody, plucked chiptune bass synth, tracker-style drum breaks, bright cheerful major key, seamless loop",
         source: "model",
-        model: "audiocpp-stable-audio-3-sfx",
+        durationS: 30,
+        seed: 739598739,
+        model: "audiocpp-ace-step-xl-turbo",
       },
-      // ACE-Step, not Stable Audio — the other four loops above are instrumental
-      // because Stable Audio has no vocal path at all. ACE-Step is a
-      // lyrics-conditioned vocal music model: `prompt` still sets genre and
-      // instrumentation, but a separate `lyrics` block gives it words to sing,
-      // which is the one thing no other model on this page can do.
+      // Every loop on this page renders on ACE-Step 1.5 XL Turbo, a music
+      // model: an SFX model holds a one-shot together, not a 30-second
+      // arrangement. This one adds a gang-vocal chant to the brief.
       {
         slug: "hero-anthem-vocal-chant",
         title: "8-bit hero anthem (vocal)",
         prompt:
           "8-bit chiptune hero anthem, bright square wave lead synth melody, driving triangle wave bass synth, punchy noise-channel drums, energetic major key, gang-vocal chant",
         source: "model",
-        model: "audiocpp-ace-step",
+        durationS: 15,
+        seed: 76089272,
+        model: "audiocpp-ace-step-xl-turbo",
       },
     ],
     recipes: [
@@ -359,15 +375,15 @@ const CHIPTUNE_MUSIC: SfxCategory = {
       },
       {
         heading: "Use a music model for loops",
-        body: "Stable Audio 3 SFX is tuned for one-shot sound design: a door, a footstep, a laser. A 15-second chiptune loop needs a lead melody, a bass line and percussion that stay in time and in key for the whole length. That is a composition task, and a music model (Stable Audio 3 Small Music or ACE-Step) holds it together better. Use one whenever the result should sound like an instrument performance.",
+        body: "Stable Audio 3 SFX is tuned for one-shot sound design: a door, a footstep, a laser. A 30-second chiptune loop needs a lead melody, a bass line and percussion that stay in time and in key for the whole length. That is a composition task, and a music model holds it together better, which is why every loop on this page was rendered on ACE-Step 1.5 XL Turbo. Use a music model whenever the result should sound like an instrument performance.",
       },
       {
         heading: "Ask for a seamless loop",
         body: "These models can render a loop where the last beat lines up with the first. Ask for it explicitly and write the prompt as a fixed-tempo phrase (\"130 BPM\", \"seamless loop\"). If the loop point still clicks, trim a few milliseconds off the tail or add a short crossfade in an editor.",
       },
       {
-        heading: "Stable Audio plays instruments; ACE-Step sings",
-        body: "The Stable Audio loops above have no voice, because Stable Audio 3 Small SFX has no vocal path. It renders instruments only. ACE-Step is a separate model family built for lyrics-conditioned vocal music: give it a `lyrics` block and it sings those words over the arrangement described in `prompt`. Use it when you need a hook, a chant or a sung line, such as a hero anthem or a victory chorus.",
+        heading: "ACE-Step can also sing",
+        body: "ACE-Step is built for lyrics-conditioned vocal music: give it a `lyrics` block and it sings those words over the arrangement described in `prompt`. Leave `lyrics` empty, as on these loops, and it renders an instrumental. Stable Audio has no vocal path at all. Use ACE-Step with lyrics when you need a hook, a chant or a sung line, such as a hero anthem or a victory chorus.",
       },
     ],
     faqs: [
@@ -379,12 +395,12 @@ const CHIPTUNE_MUSIC: SfxCategory = {
       {
         question: "Can I use AI-generated chiptune music commercially?",
         answer:
-          "It depends on the model that made it. Mirli shows each model's licence before you download its weights. Most samples on this page were made with Stable Audio 3 Small SFX, under the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. The vocal track was made with ACE-Step 1.5, which is MIT. Mirli itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+          "It depends on the model that made it. Mirli shows each model's licence before you download its weights. Every loop on this page was made with ACE-Step 1.5 XL Turbo, which is MIT: commercial use is permitted with no revenue threshold. Mirli itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "Can these loops have vocals?",
         answer:
-          "One can. ACE-Step is a lyrics-conditioned vocal music model, and the hero anthem sample above gives it a short chant to sing. Stable Audio 3 Small SFX, which made the other loops, is instrumental only and cannot produce words. For a sung hook over a chiptune backing, use ACE-Step and its `lyrics` field.",
+          "Yes. ACE-Step, which made every loop here, is a lyrics-conditioned vocal music model, and the hero anthem sample above asks it for a gang-vocal chant. For a sung hook with real words over a chiptune backing, pass them in ACE-Step's `lyrics` field. Stable Audio is instrumental only and cannot produce words.",
       },
       {
         question: "Does this sound like a real SID or YM2612 chip?",
@@ -432,7 +448,9 @@ const EIGHT_BIT_MUSIC: SfxCategory = {
         prompt:
           "Game Boy APU chiptune overworld theme, cheerful square wave lead synth melody, pulse wave harmony synth, triangle wave bass synth, simple noise-channel percussion, bright major key, 125 BPM, seamless loop",
         source: "model",
-        model: "audiocpp-stable-audio-3-sfx",
+        durationS: 30,
+        seed: 1901129307,
+        model: "audiocpp-ace-step-xl-turbo",
       },
       {
         slug: "nes-title-screen-theme",
@@ -440,7 +458,9 @@ const EIGHT_BIT_MUSIC: SfxCategory = {
         prompt:
           "NES-style 8-bit title screen theme, bold square wave lead synth fanfare opening into a looping pulse wave melody, triangle wave bass synth, noise-channel snare hits, heroic major key, seamless loop",
         source: "model",
-        model: "audiocpp-stable-audio-3-sfx",
+        durationS: 30,
+        seed: 467458926,
+        model: "audiocpp-ace-step-xl-turbo",
       },
       {
         slug: "8bit-shop-menu-loop",
@@ -448,7 +468,9 @@ const EIGHT_BIT_MUSIC: SfxCategory = {
         prompt:
           "8-bit shop menu background loop, gentle square wave lead synth melody, soft triangle wave bass synth, sparse noise-channel percussion, relaxed mid-tempo major key, seamless loop",
         source: "model",
-        model: "audiocpp-stable-audio-3-sfx",
+        durationS: 30,
+        seed: 1860503494,
+        model: "audiocpp-ace-step-xl-turbo",
       },
       {
         slug: "8bit-final-boss-theme",
@@ -456,20 +478,19 @@ const EIGHT_BIT_MUSIC: SfxCategory = {
         prompt:
           "8-bit final boss battle theme, fast arpeggiated pulse wave lead synth, driving triangle wave bass synth, aggressive noise-channel drum pattern, dark minor key, 150 BPM, seamless loop",
         source: "model",
-        model: "audiocpp-stable-audio-3-sfx",
+        durationS: 30,
+        seed: 1842105631,
+        model: "audiocpp-ace-step-xl-turbo",
       },
-      // Same instrumental loop territory as the four above, rendered by
-      // ACE-Step instead of Stable Audio — no lyrics on this one, since the
-      // point here is comparing two different models' takes on an
-      // instrumental chiptune loop, not showing off the vocal path (see the
-      // chiptune-music collection for that).
       {
         slug: "ace-victory-loop",
-        title: "Victory loop (ACE-Step)",
+        title: "Victory loop",
         prompt:
           "Game Boy APU chiptune victory loop, cheerful square wave lead synth melody, pulse wave harmony synth, triangle wave bass synth, bright major key, seamless loop",
         source: "model",
-        model: "audiocpp-ace-step",
+        durationS: 30,
+        seed: 486539707,
+        model: "audiocpp-ace-step-xl-turbo",
       },
     ],
     recipes: [
@@ -505,27 +526,27 @@ const EIGHT_BIT_MUSIC: SfxCategory = {
       },
       {
         heading: "Use a music model for background loops",
-        body: "Stable Audio 3 SFX is built for one-shot sound design: coins, jumps, hits. A 15-second background loop needs melody, harmony, bass and drums that stay in key and in time for the full length. That is a composition task, and a music model (Stable Audio 3 Small Music or ACE-Step) holds it together better. Use the SFX model for the coin blip and a music model for the music under it.",
+        body: "Stable Audio 3 SFX is built for one-shot sound design: coins, jumps, hits. A 30-second background loop needs melody, harmony, bass and drums that stay in key and in time for the full length. That is a composition task, and a music model holds it together better, so every loop on this page was rendered on ACE-Step 1.5 XL Turbo. Use the SFX model for the coin blip and a music model for the music under it.",
       },
       {
         heading: "Match the tempo to the scene",
         body: "State a BPM. Overworld and shop themes sound calmer around 100 to 125 BPM; boss and combat themes want 140 to 160. The model follows a stated tempo more reliably than a mood word like \"energetic\". A consistent BPM across a set also helps several tracks sound like the same game.",
       },
       {
-        heading: "The same brief on two models",
-        body: "The victory loop above uses nearly the same instrumental brief as the overworld loop (same voices, same major key, same \"seamless loop\" instruction) but renders it on ACE-Step instead of Stable Audio 3 Small SFX. ACE-Step is mainly a lyrics-conditioned vocal model (the chiptune-music collection has a sung example). With `lyrics` left empty it renders a usable instrumental, which makes it a second option for loops like these.",
+        heading: "Leave the lyrics empty",
+        body: "ACE-Step is mainly a lyrics-conditioned vocal model (the chiptune-music collection has a sung example). With `lyrics` left empty it renders an instrumental, which is how every loop on this page was made. The victory loop and the overworld loop share nearly the same brief (same voices, same major key, same \"seamless loop\" instruction), so they also show how far two seeds of one prompt can drift.",
       },
     ],
     faqs: [
       {
         question: "Can I use this as background music in a commercial game?",
         answer:
-          "It depends on the model that made it. Mirli shows each model's licence before you download its weights. Most samples on this page were made with Stable Audio 3 Small SFX, under the Stability AI Community License: commercial use is free below USD $1M annual revenue, and above that Stability requires an enterprise licence. The victory loop was made with ACE-Step 1.5, which is MIT. Mirli itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
+          "It depends on the model that made it. Mirli shows each model's licence before you download its weights. Every loop on this page was made with ACE-Step 1.5 XL Turbo, which is MIT: commercial use is permitted with no revenue threshold. Mirli itself is MIT, but the audio is governed by the licence of the model that made it. Read that licence before you ship; this summary is not legal advice.",
       },
       {
         question: "How long a loop can I generate?",
         answer:
-          "Stable Audio 3.0 SFX renders 10 seconds by default and up to 120; the samples here run 13 to 18 seconds. For a loop, generate the phrase you want repeated and loop it in your game engine or DAW. That gives a cleaner loop point than one long render.",
+          "ACE-Step 1.5 XL Turbo renders up to 60 seconds in one pass; the samples here asked for 30. For a loop, generate the phrase you want repeated and loop it in your game engine or DAW. That gives a cleaner loop point than one long render.",
       },
       {
         question: "What's the difference between this and the chiptune music collection?",
@@ -1016,7 +1037,9 @@ const POWER_UP: SfxCategory = {
           title: "Triumphant power chant (vocal)",
           prompt: "triumphant orchestral-hybrid power-up theme, uplifting choir vocals, bright brass and strings, ascending major key",
           source: "model",
-          model: "audiocpp-ace-step",
+          durationS: 15,
+          seed: 388232133,
+          model: "audiocpp-ace-step-xl-turbo",
         },
     ],
     recipes: [
@@ -1115,7 +1138,9 @@ const GAME_OVER: SfxCategory = {
           title: "Sung defeat chant",
           prompt: "dark orchestral-hybrid game over theme, slow dirge tempo, mournful choir vocals, deep strings and low brass, minor key, cinematic",
           source: "model",
-          model: "audiocpp-ace-step",
+          durationS: 15,
+          seed: 1107752500,
+          model: "audiocpp-ace-step-xl-turbo",
         },
     ],
     recipes: [
@@ -1301,7 +1326,9 @@ const MAGIC: SfxCategory = {
           title: "Arcane ritual chant",
           prompt: "mystical fantasy ritual theme, ethereal chanting vocals, ancient choir, deep drone, arcane atmosphere",
           source: "model",
-          model: "audiocpp-ace-step",
+          durationS: 15,
+          seed: 1312819138,
+          model: "audiocpp-ace-step-xl-turbo",
         },
     ],
     recipes: [
@@ -1643,7 +1670,9 @@ const HORROR: SfxCategory = {
           title: "Whispered dread chant",
           prompt: "dark ambient horror theme, whispered ghostly vocals, dissonant strings, unsettling drone, slow tempo",
           source: "model",
-          model: "audiocpp-ace-step",
+          durationS: 15,
+          seed: 256283407,
+          model: "audiocpp-ace-step-xl-turbo",
         },
     ],
     recipes: [
@@ -1747,7 +1776,9 @@ const SCI_FI: SfxCategory = {
           title: "Spaceship interior ambience (loop)",
           prompt: "ambient sci-fi spaceship interior theme, slow synth pads, subtle mechanical hum, minimal melodic movement, seamless loop",
           source: "model",
-          model: "audiocpp-ace-step",
+          durationS: 30,
+          seed: 478169083,
+          model: "audiocpp-ace-step-xl-turbo",
         },
     ],
     recipes: [
@@ -2604,7 +2635,9 @@ const AMBIENCE: SfxCategory = {
           title: "Tavern folk music (loop)",
           prompt: "cozy medieval tavern folk music loop, acoustic strummed instrument, warm mellow tone, relaxed tempo, seamless loop",
           source: "model",
-          model: "audiocpp-ace-step",
+          durationS: 30,
+          seed: 1940572636,
+          model: "audiocpp-ace-step-xl-turbo",
         },
     ],
     recipes: [

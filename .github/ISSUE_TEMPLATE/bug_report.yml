@@ -1,0 +1,83 @@
+name: Bug report
+description: Something in Mirli doesn't work once it is installed and running
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. If Mirli would not install or start at all, use the **Install problem** form instead.
+
+        Mirli's installers come only from [mirli.app/download](https://mirli.app/download/) and this repository's [Releases](https://github.com/HamSanders/soundbox/releases). If a reply here tells you to paste a command that downloads something, or to install a "fixed" build from a link, don't run it.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead. Steps that reproduce it help most.
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS (Apple silicon)
+        - macOS (Intel)
+        - Linux
+        - Docker
+        - Other (say which below)
+    validations:
+      required: true
+  - type: dropdown
+    id: backend
+    attributes:
+      label: GPU backend
+      description: The `device` field of `/api/health` shows the one audio.cpp picked. Choose "Not sure" if you can't tell.
+      options:
+        - CUDA (NVIDIA)
+        - HIP (AMD)
+        - Vulkan
+        - Metal (macOS)
+        - CPU only
+        - None (remote models only)
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Mirli version
+      description: The `version` field of `/api/health`, or the version in the installer's file name. For a clone, the commit.
+      placeholder: "0.6.2"
+    validations:
+      required: true
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: How you run it
+      options:
+        - Desktop installer
+        - From a clone (npm)
+        - Docker
+    validations:
+      required: true
+  - type: textarea
+    id: health
+    attributes:
+      label: Output of /api/health
+      description: |
+        With Mirli running, open http://127.0.0.1:17494/api/health in a browser, or run `curl http://127.0.0.1:17494/api/health`, and paste what comes back. It holds the version, device and memory.
+      render: json
+  - type: input
+    id: model
+    attributes:
+      label: Model
+      description: Which model, and its status on the Models screen (not installed, installed, loaded, error).
+  - type: textarea
+    id: log
+    attributes:
+      label: Server log
+      description: |
+        The lines around the failure from the server log: `soundbox-<port>.log` (for example `soundbox-17494.log`) in the data directory, which is `~/.mirli` unless you moved it. The server prints the exact path when it starts. If your Hugging Face token or an API key shows up in it, remove it, and tell us: it should never be logged.
+      render: text

@@ -16,8 +16,8 @@ import type { SfxCategory, SfxFaq, SfxSample } from "./types";
 
 const MODEL = "audiocpp-stable-audio-3-sfx";
 
-function s(slug: string, title: string, prompt: string, durationS: number): SfxSample {
-  return { slug, title, prompt, source: "model", model: MODEL, durationS };
+function s(slug: string, title: string, prompt: string, durationS: number, seed?: number): SfxSample {
+  return { slug, title, prompt, source: "model", model: MODEL, durationS, ...(seed !== undefined && { seed }) };
 }
 
 /** Shared tail questions — see the note in `new-categories.ts`. */
@@ -368,7 +368,7 @@ const BRAAM: SfxCategory = {
     samples: [
       s("braam-classic-brass", "Classic braam", "enormous distorted brass braam, low blaring horn blast with a huge sub underneath and a long decaying tail", 6),
       s("braam-double-hit", "Double braam", "two braam hits in succession, distorted brass blasts a beat apart with overlapping sub tails, enormous space", 8),
-      s("braam-rising-into-hit", "Build into braam", "tension building for three seconds then landing on a massive distorted brass braam with a long tail", 8),
+      s("braam-rising-into-hit", "Build into braam", "tension building for three seconds then landing on a massive distorted brass braam with a long tail", 8, 667194864),
       s("braam-sub-drop-only", "Sub drop", "pure cinematic sub bass drop with no midrange, deep pitch falling and sustaining, felt more than heard", 6),
       s("braam-metallic-impact", "Metallic hit", "trailer impact with a bright metallic transient over a deep distorted boom, long shimmering decay", 5),
       s("braam-choir-hybrid", "Choir braam", "hybrid trailer hit blending a dark male choir with distorted brass and a sub drop, cathedral scale", 6),
@@ -518,10 +518,10 @@ const GUNSHOT: SfxCategory = {
       s("gunshot-pistol-indoor", "Pistol indoors", "9mm pistol fired once inside a concrete stairwell, sharp cracking report with hard slapping echoes, close", 4),
       s("gunshot-pistol-outdoor", "Pistol outdoors", "pistol fired once in an open field, sharp report with a fast dry crack and almost no reflection, distant treeline", 4),
       s("gunshot-rifle-distant-valley", "Distant rifle", "hunting rifle fired far away across a valley, delayed crack with a long rolling echo between hillsides", 6),
-      s("gunshot-shotgun-blast-pump", "Shotgun and pump", "pump-action shotgun fired then racked, heavy blast with a shell ejecting onto concrete, alley reverb", 4),
-      s("gunshot-automatic-burst-street", "Automatic burst", "automatic rifle firing a short burst in a city street, rapid overlapping reports with building echoes", 5),
+      s("gunshot-shotgun-blast-pump", "Shotgun and pump", "pump-action shotgun fired then racked, heavy blast with a shell ejecting onto concrete, alley reverb", 4, 385168906),
+      s("gunshot-automatic-burst-street", "Automatic burst", "automatic rifle firing a short burst in a city street, rapid overlapping reports with building echoes", 5, 462515476),
       s("gunshot-suppressed-shot", "Suppressed shot", "suppressed pistol shot, muted mechanical thump with the slide cycling clearly audible, close and dry", 2),
-      s("gunshot-revolver-single", "Revolver", "revolver fired once, deep booming report with a cylinder ring, open outdoor space with a rolling tail", 4),
+      s("gunshot-revolver-single", "Revolver", "revolver fired once, deep booming report with a cylinder ring, open outdoor space with a rolling tail", 4, 961006527),
       s("gunshot-reload-magazine", "Magazine reload", "pistol magazine released and dropped, a fresh one inserted and the slide released, very close mic, dry", 4),
       s("gunshot-ricochet-metal", "Ricochet", "bullet ricocheting off metal, sharp impact with a whining pitched departure, industrial space, echoing", 3),
       s("gunshot-distant-firefight", "Distant firefight", "distant firefight heard from several streets away, scattered muffled reports with long urban echoes", 10),
@@ -739,11 +739,11 @@ const CARTOON: SfxCategory = {
     "on free libraries.",
   content: {
     samples: [
-      s("cartoon-boing-spring", "Boing", "cartoon boing, comedic metal spring twanging with a wobbling pitch bend, bright and dry", 1.5),
+      s("cartoon-boing-spring", "Boing", "cartoon boing, comedic metal spring twanging with a wobbling pitch bend, bright and dry", 2, 1902747966),
       s("cartoon-pop-bubble", "Pop", "cartoon pop, single bright mouth-like bubble pop with a hollow tone, very close mic, dry", 1),
-      s("cartoon-slide-whistle-up", "Slide whistle up", "slide whistle sweeping quickly upward, bright comedic glissando, dry and close", 1.5),
+      s("cartoon-slide-whistle-up", "Slide whistle up", "slide whistle sweeping quickly upward, bright comedic glissando, dry and close", 1.5, 868139808),
       s("cartoon-slide-whistle-down", "Slide whistle down", "slide whistle sweeping downward like a falling body, comedic glissando ending in a splat, dry", 2),
-      s("cartoon-splat-goo", "Splat", "cartoon splat, wet exaggerated goo impact with a comedic squelch, close and dry", 1.5),
+      s("cartoon-splat-goo", "Splat", "cartoon splat, wet exaggerated goo impact with a comedic squelch, close and dry", 1.5, 1729489364),
       s("cartoon-running-feet-loop", "Running feet", "cartoon running feet, rapid comedic scampering with a rhythmic tumbling patter, dry, seamless loop", 3),
       s("cartoon-anvil-drop-clang", "Anvil drop", "cartoon anvil falling with a descending whistle and landing with a huge comedic clang and a wobble", 3),
       s("cartoon-sad-trombone", "Sad trombone", "comedic sad trombone, four descending muted brass notes with a wah wah bend, dry", 3),
@@ -813,7 +813,7 @@ const ROBOT: SfxCategory = {
     "stop. A servo that only hums sounds like a fan.",
   content: {
     samples: [
-      s("robot-servo-arm-move", "Servo movement", "small robotic servo motor moving an arm and stopping precisely, clean electric whir with a settling click, close mic, dry", 2),
+      s("robot-servo-arm-move", "Servo movement", "small robotic servo motor moving an arm and stopping precisely, clean electric whir with a settling click, close mic, dry", 2, 738135285),
       s("robot-mech-heavy-step", "Mech footstep", "giant mech taking a single heavy step, hydraulic servo whine with an enormous metal foot slamming onto concrete", 3),
       s("robot-transform-sequence", "Transformation", "robot transforming, cascade of servos, hydraulic hisses and metal panels locking into place, close and mechanical", 5),
       s("robot-vocal-beeps", "Robot chatter", "small robot vocalising in expressive electronic beeps and warbles, curious and questioning, dry", 3),

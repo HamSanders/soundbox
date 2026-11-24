@@ -690,7 +690,12 @@ export function useModelAction() {
     },
   });
 
-  return { download, load, unload, remove };
+  const dismissFailure = useMutation({
+    mutationFn: (id: string) => api.clearModelDownloadFailure(id),
+    onSuccess: invalidate,
+  });
+
+  return { download, load, unload, remove, dismissFailure };
 }
 
 export function useUpdateSound() {

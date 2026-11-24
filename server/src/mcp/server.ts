@@ -31,6 +31,8 @@ import { DEFAULT_HOST, DEFAULT_PORT, VERSION } from "../config.js";
 import { allowedHostEntries, isListedHost, isTrustedOrigin } from "../origins.js";
 import type { Job, ModelInfo, McpToolInfo, Origin, Sound, StorySegment } from "../schemas.js";
 import type { MirliService } from "../service.js";
+import { findSections } from "../llm/docs.js";
+import { STUDIO_ACTIONS_HELP, applyToStudio, liveContext, resolveStudio } from "../studio-link.js";
 import type { CallRecord, TrackOptions } from "../telemetry.js";
 import {
   DEVICE_KINDS,
@@ -120,6 +122,19 @@ The story tools answer with a short summary and an \`open_in_studio\` link, not
 with every line. Give the user that link — a timeline is a thing to look at,
 and reciting its clips back at them is not the same as showing it. Call
 soundbox.get_story when you need the lines themselves.
+
+When the user has a studio open in Mirli and talks about "this", "the vocal",
+"here" or "what I've selected", they mean that studio as it is on screen.
+soundbox.studio_context reads it — lanes, clips with ids, playhead, selection,
+voices, each lane's effects — and soundbox.studio_apply edits it through the
+studio's own controls, so every change is on the user's undo stack. One
+studio_apply action can cover many clips with \`select\` (all, selected, a lane,
+or a label match) and can generate a take straight onto a lane. Read the
+context first: only its ids apply. Deletes need \`allow_delete\` and the user's
+say-so.
+
+For questions about Mirli itself — which model, what a licence allows, how a
+feature works — call soundbox.search_docs and answer from what it returns.
 `;
 
 /** A generated sound, with an absolute path the caller can actually open. */
@@ -512,6 +527,42 @@ export const MCP_TOOLS: McpToolInfo[] = [
     description:
       "Mix the whole arrangement to one sound, honouring where each clip sits, " +
       "its trim, its gain, and whether it is muted.",
+    calls: 0,
+  },
+  {
+    name: "soundbox.studio_context",
+    title: "Read the open studio",
+    description:
+      "What the studio open in Mirli shows right now: its lanes (name, mute, " +
+      "solo, effects), every clip with its id, lane, position and label, the " +
+      "playhead, the selection and the voices a line can be cast to. Needs a " +
+      "studio open in the app; omit story_id when there is only one. Read this " +
+      "before soundbox.studio_apply — its ids are the only ones that will apply.",
+    calls: 0,
+  },
+  {
+    name: "soundbox.studio_apply",
+    title: "Edit the open studio",
+    description:
+      "Apply edits to the studio open in Mirli through its own controls, so " +
+      "each one lands on the studio's undo stack like a click. Mute, solo, " +
+      "rename, move, trim, fade, recast, write and read lines, add and turn " +
+      "effects, generate a take onto a lane, show or hide a panel, start " +
+      "recording. One action can cover many clips with `select`. Every id is " +
+      "checked against the live studio first; anything that refers to nothing " +
+      "is dropped and counted. Deletes are held unless `allow_delete` is true — " +
+      "confirm with the user first.\n\n" +
+      STUDIO_ACTIONS_HELP,
+    calls: 0,
+  },
+  {
+    name: "soundbox.search_docs",
+    title: "Search Mirli's documentation",
+    description:
+      "Find the sections of Mirli's own documentation (README and docs/) that " +
+      "answer a question — which model to use, licences, stems, the studio, " +
+      "connecting agents. Returns each section's source file, heading and text. " +
+      "Quote these rather than guessing how Mirli works.",
     calls: 0,
   },
 ];
@@ -1890,6 +1941,131 @@ export function buildMcp(
         return json({
           halves: halves.map(lineView),
           ...storySummary(svc, halves[0].story_id),
+        });
+      }),
+  );
+
+  mcp.registerTool(
+    "soundbox.studio_context",
+    {
+      title: meta["soundbox.studio_context"].title ?? undefined,
+      description: meta["soundbox.studio_context"].description,
+      inputSchema: {
+        story_id: z
+          .string()
+          .optional()
+          .describe("Which studio. Omit when only one is open."),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async ({ story_id }, extra) =>
+      await track(extra, "soundbox.studio_context", { story_id }, async () => {
+        const svc = getService();
+        const id = resolveStudio(svc, story_id);
+        const ctx = await liveContext(svc, id);
+        return json({
+          story_id: id,
+          title: svc.getStory(id)?.title ?? null,
+          ...ctx,
+          open_in_studio: studioUrl(svc, id),
+        });
+      }),
+  );
+
+  mcp.registerTool(
+    "soundbox.studio_apply",
+    {
+      title: meta["soundbox.studio_apply"].title ?? undefined,
+      description: meta["soundbox.studio_apply"].description,
+      inputSchema: {
+        story_id: z
+          .string()
+          .optional()
+          .describe("Which studio. Omit when only one is open."),
+        actions: z
+          .array(z.record(z.string(), z.unknown()))
+          .min(1)
+          .max(50)
+          .describe("The edits, in order. See the description for each action's shape."),
+        summary: z
+          .string()
+          .max(200)
+          .optional()
+          .describe("One line for the studio's toast and history, in the user's terms."),
+        allow_delete: z
+          .boolean()
+          .default(false)
+          .describe("Let delete_clip actions run. Ask the user first."),
+      },
+      annotations: { destructiveHint: true },
+    },
+    async ({ story_id, actions, summary, allow_delete }, extra) =>
+      await track(
+        extra,
+        "soundbox.studio_apply",
+        { story_id, actions: actions.length, allow_delete },
+        async () => {
+          const svc = getService();
+          const id = resolveStudio(svc, story_id);
+          const outcome = await applyToStudio(svc, id, actions, {
+            summary,
+            allowDelete: allow_delete,
+          });
+          const notes: string[] = [];
+          if (outcome.dropped) {
+            notes.push(
+              `${outcome.dropped} action(s) referred to nothing in the studio or were ` +
+                "malformed, and were dropped. Read soundbox.studio_context for the real ids.",
+            );
+          }
+          if (outcome.held_deletes) {
+            notes.push(
+              `${outcome.held_deletes} delete(s) were held. Confirm with the user, then ` +
+                "send them again with allow_delete: true.",
+            );
+          }
+          if (outcome.applied.some((a) => a.type === "generate_clip" || a.type === "speak_lines")) {
+            notes.push(
+              "Generating and reading run in the background in the studio; the clips " +
+                "fill in as they finish. Read soundbox.studio_context again to see them.",
+            );
+          }
+          return json({
+            story_id: id,
+            applied: outcome.applied.length,
+            actions: outcome.applied,
+            dropped: outcome.dropped,
+            held_deletes: outcome.held_deletes,
+            notes,
+            open_in_studio: studioUrl(svc, id),
+          });
+        },
+      ),
+  );
+
+  mcp.registerTool(
+    "soundbox.search_docs",
+    {
+      title: meta["soundbox.search_docs"].title ?? undefined,
+      description: meta["soundbox.search_docs"].description,
+      inputSchema: {
+        query: z.string().min(1).max(500).describe("The question, in plain words."),
+        limit: z.number().int().min(1).max(8).default(4),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async ({ query, limit }, extra) =>
+      await track(extra, "soundbox.search_docs", { query, limit }, () => {
+        const sections = findSections(query, limit);
+        return json({
+          sections: sections.map((s) => ({
+            source: s.source,
+            heading: s.heading,
+            text: s.body.length > 4000 ? `${s.body.slice(0, 4000)}…` : s.body,
+          })),
+          ...(sections.length
+            ? {}
+            : { note: "Nothing in the documentation matched. Try other words." }),
         });
       }),
   );

@@ -4247,7 +4247,7 @@ function hostedCloudModels(): Model[] {
       { unit: "minute", credits_per_unit: 1, min_credits: 1 },
       { task: "vc", requires_voice_reference: true, supports: { ...base.supports, voice_reference: true } }),
   ];
-
+}
 
 // ---------------------------------------------------------------------------
 // Calls (the Call API at /api/calls and /api/characters). The calls client

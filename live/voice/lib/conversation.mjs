@@ -40,6 +40,9 @@ export class Conversation {
   #system = undefined; // the persona for this call; undefined = config default
   #turnSeq = 0;
   #voiceRef = config.tts.voiceRef; // a clip path, or "" for the default voice
+  // With no reference clip VoxCPM2 makes up a new speaker for every sentence. So
+  // the first sentence it says becomes the reference for the rest of the call.
+  #lockedRef = "";
 
   /**
    * @param deps {{ tts, stt, llm, gpu, tap, log: (turn: object) => void }}
@@ -79,7 +82,7 @@ export class Conversation {
     else if (msg.type === "persona") {
       // A new face is a new person: forget the old conversation.
       const text = String(msg.text ?? "").slice(0, 6000).trim();
-      if (text !== this.#system) { this.#system = text || undefined; this.#history = []; }
+      if (text !== this.#system) { this.#system = text || undefined; this.#history = []; this.#unlockVoice(); }
     }
     else if (msg.type === "text") this.#typed(String(msg.text ?? "").trim().slice(0, 2000));
   }
@@ -102,12 +105,33 @@ export class Conversation {
     const v = id ? (await this.#deps.voices()).find((x) => x.id === id) : null;
     if (id && !v) return this.#send({ type: "error", message: "That voice is no longer in Mirli." });
     this.#voiceRef = v ? v.path : "";
+    this.#unlockVoice();
     this.#send({ type: "voice", id: v?.id ?? "", name: v?.name ?? "VoxCPM2 default" });
+  }
+
+  /** The clip this reply speaks with: the chosen voice, else the call's locked one. */
+  #currentRef() {
+    return this.#voiceRef || this.#lockedRef;
+  }
+
+  /** Keep one finished sentence of the default voice as the call's reference clip. */
+  #lockVoice(pcm) {
+    if (this.#voiceRef || this.#lockedRef || !this.#deps.voiceLock) return;
+    const ref = this.#deps.voiceLock.save(pcm);
+    if (!ref) return;
+    this.#lockedRef = ref;
+    console.log(`voice: no voice picked, so this call keeps the voice of its first sentence (${ref})`);
+  }
+
+  #unlockVoice() {
+    if (this.#lockedRef) this.#deps.voiceLock?.drop(this.#lockedRef);
+    this.#lockedRef = "";
   }
 
   close() {
     this.#active?.ac.abort();
     this.#spec?.ac.abort();
+    this.#unlockVoice();
   }
 
   #assistantActive() {
@@ -250,7 +274,7 @@ export class Conversation {
     // Timings belong to this attempt; they are copied to the turn if it wins.
     const t = { replyStart: startedAt };
     const { tts, stt, llm, tap } = this.#deps;
-    const voiceRef = this.#voiceRef; // fixed for the whole reply
+    let voiceRef = this.#currentRef(); // fixed for the reply once a voice is known
     let text = "";
     let userText = "";
 
@@ -278,8 +302,12 @@ export class Conversation {
           const n = utterance++;
           t.ttsRequest ??= now();
           let first = true;
+          voiceRef ||= this.#currentRef();
+          const said = voiceRef ? null : [];
           for await (const ev of speak(tts, piece, ac.signal, voiceRef)) {
+            if (ev.done && said && !ac.signal.aborted) this.#lockVoice(Buffer.concat(said));
             if (!ev.pcm) continue;
+            said?.push(ev.pcm);
             t.firstAudioReady ??= now();
             const isFirst = first;
             first = false;

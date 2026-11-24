@@ -1,7 +1,7 @@
 // Mirli's live voice worker: VAD -> STT -> LLM -> streaming TTS over one WebSocket per call.
 // `npm start`, then call it from Mirli's Calls page or the Discord bot (integrations/discord). See README.md.
 
-import { appendFileSync, mkdirSync } from "node:fs";
+import { appendFileSync, mkdirSync, rmSync } from "node:fs";
 import http from "node:http";
 import { join } from "node:path";
 
@@ -17,6 +17,7 @@ import { AuthError, CallGate, CallRoutes } from "./lib/calls.mjs";
 import { PcmTap } from "./lib/tap.mjs";
 import { probeSampleRate, speak } from "./lib/tts.mjs";
 import { Vad } from "./lib/vad.mjs";
+import { voiceLock } from "./lib/voice-lock.mjs";
 import { listVoices } from "./lib/voices.mjs";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -54,6 +55,11 @@ const llm = await timed("llm", startLlm, async (e) => {
 await Vad.create();
 vram.total = gpu.current - vram.baseline;
 console.log(`all engines: +${vram.total} MiB VRAM; TTS format`, tap.format);
+
+// Clips that keep a voice-less call on one voice (lib/voice-lock.mjs); left over ones go at start.
+const lockDir = join(config.scratch, "voice-lock");
+rmSync(lockDir, { recursive: true, force: true });
+const locks = voiceLock(lockDir, () => (tap.format.channels === 1 ? tap.format.sample_rate : 0));
 
 mkdirSync(join(config.root, "runs"), { recursive: true });
 const turnsLog = join(config.root, "runs", process.env.SPIKE_RUN_LOG ?? "turns.jsonl");
@@ -137,7 +143,7 @@ async function converse(ws, call) {
   routes.attach(call, ws);
   const send = (msg) => ws.readyState === 1 && ws.send(JSON.stringify(msg));
   const sendPcm = (buf) => ws.readyState === 1 && ws.send(buf, { binary: true });
-  const convo = new Conversation({ tts, stt, llm, gpu, tap: routes.tap(call), log: logTurn, voices: listVoices }, send, sendPcm);
+  const convo = new Conversation({ tts, stt, llm, gpu, tap: routes.tap(call), log: logTurn, voices: listVoices, voiceLock: locks }, send, sendPcm);
   await convo.init();
   ws.on("message", (data, isBinary) => {
     if (isBinary) return convo.onMic(data);

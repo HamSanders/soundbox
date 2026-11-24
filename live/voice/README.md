@@ -90,7 +90,7 @@ listens to (`DISCORD_ALLOWED_USERS` in the bot).
 | `MIRLI_ALLOWED_ORIGINS` | any | Comma-separated browser origins allowed to connect. Clients without an `Origin` (the Discord bot) still need a token. |
 | `LLM_PROVIDER`, `LLM_*`, `CLAUDE_BRAIN_*` | `local` | See above. |
 | `LLM_GPU_LAYERS` | `99` | llama-server layers on the GPU; `0` runs the LLM on the CPU. |
-| `SPIKE_VOICE_REF` | unset | A WAV to clone when the call picks no voice. Unset uses VoxCPM2's seeded default voice. |
+| `SPIKE_VOICE_REF` | unset | A WAV to clone when the call picks no voice. Unset uses VoxCPM2's default voice, held steady for the call (see Voices). |
 | `VAD_ENDPOINT_MS` | `400` | Trailing silence that ends your turn. |
 | `VAD_SPECULATE_MS` | `160` (`0` with Claude) | Silence after which a reply starts speculatively. |
 | `VAD_BARGE_FRAMES` | `6` | 32 ms speech frames needed to interrupt (192 ms). |
@@ -104,6 +104,12 @@ voice made on another model works here but sounds like VoxCPM2's take on it.
 A preset voice (a model's built-in speaker) has no clip; Mirli's character
 editor can make one into a clone voice (**Make a call voice from a preset**).
 The worker only accepts ids from that list, never a file path.
+
+A call with no voice (no `voice` control and no `SPIKE_VOICE_REF`) still keeps
+one voice. VoxCPM2 with no clip invents a new speaker on every request, and a
+reply is spoken one sentence per request, so the first finished sentence of the
+call is saved under `<scratch>/voice-lock/` and cloned from then on. A new
+persona or voice clears it (`lib/voice-lock.mjs`).
 
 ## The socket
 

@@ -227,6 +227,21 @@ function SampleBody({
         </p>
       </section>
 
+      {(sample.compare?.length ?? 0) > 0 && (
+        <section aria-labelledby="models" className="border-border/60 border-t py-10">
+          <h2 id="models" className="font-display text-2xl leading-none font-extrabold uppercase">
+            The same prompt on other models
+          </h2>
+          <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-relaxed">
+            Same words, rendered on {(sample.compare?.length ?? 0) + 1} models. Switch under the prompt to hear
+            each one. Takes that came out as hum or hiss were left out rather than shown as a model&rsquo;s best.
+          </p>
+          <SiteTrackList className="mt-4">
+            <SampleRow categorySlug={category.slug} sample={sample} index={0} audio={audio} />
+          </SiteTrackList>
+        </section>
+      )}
+
       {others.length > 0 && (
         <section aria-labelledby="more" className="border-border/60 border-t py-10">
           <h2 id="more" className="font-display text-2xl leading-none font-extrabold uppercase">

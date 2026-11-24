@@ -442,7 +442,7 @@ export function DownloadPage() {
   );
 
   return (
-    <div className="bg-background text-foreground relative min-h-svh overflow-x-clip">
+    <div className="text-foreground relative overflow-x-clip">
       <SeoHead
         title="Download Mirli for Windows and macOS | Mirli"
         description="Download the Mirli desktop app for Windows 10/11 or macOS. Free, open source, no account. Models download from inside the app."

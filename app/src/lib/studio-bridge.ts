@@ -14,6 +14,8 @@
  */
 
 import { create } from "zustand";
+
+import { api } from "./api";
 import type { StudioAction, StudioContext } from "./studio-command";
 
 export interface StudioBridge {
@@ -41,3 +43,55 @@ export const useStudioBridge = create<StudioBridgeState>((set) => ({
   reclaim: (storyId) =>
     set((s) => (s.bridge?.storyId === storyId ? { bridge: null } : {})),
 }));
+
+/**
+ * A question from an agent, sent down this studio's event stream by the
+ * server (`StoryHub.ask`) on behalf of an MCP tool.
+ *
+ * - `context`: the same snapshot the chat plans against.
+ * - `apply`: actions the server has already checked against that snapshot
+ *   (`validateActions`), run through the same `apply` the chat's Apply button
+ *   uses — so they are optimistic, undoable, and recorded in the history like
+ *   any other edit.
+ */
+export interface StudioRequest {
+  id: string;
+  op: "context" | "apply";
+  payload?: unknown;
+}
+
+/**
+ * Answer one request from the bridge the studio has lent.
+ *
+ * The bridge rather than the page directly because it is the one handle on
+ * the studio's handlers that is already shared: whatever the chat can do to
+ * the timeline, an agent now can, through the same code.
+ */
+export async function answerStudioRequest(storyId: string, req: StudioRequest): Promise<void> {
+  const bridge = useStudioBridge.getState().bridge;
+  let reply: { ok: boolean; result?: unknown; error?: string };
+  if (!bridge || bridge.storyId !== storyId) {
+    reply = { ok: false, error: "This studio is still loading. Try again in a moment." };
+  } else {
+    try {
+      if (req.op === "context") {
+        reply = { ok: true, result: bridge.context() };
+      } else if (req.op === "apply") {
+        const payload = (req.payload ?? {}) as { actions?: StudioAction[]; summary?: string };
+        const actions = Array.isArray(payload.actions) ? payload.actions : [];
+        bridge.apply(actions, payload.summary ?? "");
+        reply = { ok: true, result: { applied: actions.length } };
+      } else {
+        reply = { ok: false, error: `Unknown studio request '${String(req.op)}'.` };
+      }
+    } catch (err) {
+      reply = { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+  try {
+    await api.studioReply(storyId, req.id, reply);
+  } catch {
+    // The server gave up on this request (timeout, or another tab answered).
+    // Nothing is waiting for it any more, so there is nothing to tell anyone.
+  }
+}

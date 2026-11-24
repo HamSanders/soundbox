@@ -242,6 +242,7 @@ export const UNGUARDED_ROUTES: readonly string[] = [
   "PATCH /api/stories/:story_id",
   "DELETE /api/stories/:story_id",
   "GET /api/stories/:story_id/events",
+  "POST /api/stories/:story_id/studio/replies/:request_id",
   "POST /api/stories/:story_id/export",
   "GET /api/stories/:story_id/tracks",
   "PATCH /api/stories/:story_id/tracks/:track_index",

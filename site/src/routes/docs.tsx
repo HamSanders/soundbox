@@ -21,7 +21,7 @@ import { SeoHead } from "@/components/seo-head";
 
 export function DocsPage() {
   return (
-    <div className="bg-background text-foreground min-h-svh">
+    <div className="text-foreground">
       <SeoHead
         title="API & MCP Reference | Mirli"
         description="The full HTTP API and MCP tool reference for Mirli, generated from the server's own OpenAPI schema."

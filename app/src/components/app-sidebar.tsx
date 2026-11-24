@@ -73,8 +73,11 @@ import { useUiPrefs, wantsRail } from "@/lib/ui-prefs";
 import { formatMb, formatRelative } from "@/lib/format";
 import { SITE_URL } from "@/lib/marketing-links";
 import { useSessionStore } from "@/lib/session-store";
-import { api, type Session } from "@/lib/api";
+import { api, type Model, type Session, type Sound } from "@/lib/api";
+import { useDetailStore } from "@/lib/detail-store";
 import { cn } from "@/lib/utils";
+import { isDesktop } from "@/lib/desktop";
+import { hidesSidebar, useSidebarPeek } from "@/components/sidebar-peek";
 
 /**
  * `Recent` is a dynamic group, not a nav link, and reads as content you're
@@ -209,12 +212,28 @@ function SidebarSearchInput({
   );
 }
 
+/** The library page a sound of this model category is browsed on. */
+function libraryPathFor(category: Model["category"] | undefined): string {
+  switch (category) {
+    case "music":
+      return "/library/music";
+    case "sfx":
+      return "/library/sfx";
+    case "voice":
+      return "/library/speech";
+    default:
+      return "/library";
+  }
+}
+
 function RecentSessions() {
   const { data: sessions, isLoading } = useSessions(12);
   const activeId = useSessionStore((s) => s.sessionId);
   const navigate = useNavigate();
   const { setOpenMobile } = useSidebar();
   const deleteSession = useDeleteSession();
+  const { data: models } = useModels();
+  const openDetails = useDetailStore((s) => s.open);
   const [pendingDelete, setPendingDelete] = useState<Session | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -237,13 +256,25 @@ function RecentSessions() {
   if (!isLoading && nonEmpty.length === 0) return null;
 
   const open = async (session: Session) => {
-    // Pull the whole thread down and rebuild the turns from it. Ordering
-    // and grouping happen in the store so the page and the Recent list share
-    // one definition of "what a session looks like when reopened".
+    // A session is a thread of generations. Its sounds live in the Library,
+    // so opening one lands on the newest sound's own library page (Music,
+    // SFX or Speech) with its details open, rather than replaying the thread
+    // as a chat. The thread is still loaded into the session store, so the
+    // entry stays highlighted and the page's composer keeps adding to it.
     const page = await api.listSounds({ session_id: session.id, limit: 500 });
     useSessionStore.getState().loadSession(session.id, page.items, session.project_id ?? null);
     setOpenMobile(false);
-    navigate("/chat");
+    const newest = page.items.reduce<Sound | null>(
+      (best, s) => (!best || s.created_at > best.created_at ? s : best),
+      null,
+    );
+    if (!newest) {
+      navigate("/library");
+      return;
+    }
+    const to = libraryPathFor(models?.find((m) => m.id === newest.model)?.category);
+    navigate(to);
+    openDetails(newest, to);
   };
 
   return (
@@ -673,6 +704,8 @@ function ThemeToggle() {
 
 export function AppSidebar() {
   const { setOpenMobile } = useSidebar();
+  const { pathname } = useLocation();
+  const peek = useSidebarPeek((s) => s.peek);
   const can = useCan();
   useRailOnImmersivePages();
 
@@ -680,8 +713,23 @@ export function AppSidebar() {
     <>
       {/* pr-2.5: panels sit 8px apart, the same as their margin from the
           window edges. */}
-      <Sidebar collapsible="icon" variant="inset" className="pr-2.5">
-        {/* The logo, top left, on the same line as the header bar beside it. */}
+      {/* A studio hides the sidebar outright ("offcanvas") rather than
+          folding it to the rail; it comes back as a peek over the page.
+          See sidebar-peek.tsx. */}
+      <Sidebar
+        collapsible={hidesSidebar(pathname) ? "offcanvas" : "icon"}
+        variant="inset"
+        className={cn(
+          "pr-2.5",
+          // Peeking: on screen, over the page rather than beside it, so it
+          // needs a fill of its own and a shadow to lift it off the timeline.
+          peek && "bg-sidebar left-0! rounded-r-xl shadow-2xl",
+        )}
+      >
+        {/* The logo, top left, on the same line as the header bar beside it.
+            Not in the desktop app: whoever is looking at that window already
+            installed it, and the window's own title bar sits right above. */}
+        {!isDesktop() && (
         <SidebarHeader className="h-14 justify-center">
           <SidebarMenu>
             <SidebarMenuItem>
@@ -696,6 +744,7 @@ export function AppSidebar() {
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
+        )}
 
         <SidebarContent>
           {/* Create and Library first: making a sound and finding one are

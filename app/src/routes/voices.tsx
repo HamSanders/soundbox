@@ -303,7 +303,7 @@ function Close() {
 
 export function VoicesPage() {
   return (
-    <div className="bg-background text-foreground min-h-svh overflow-x-clip">
+    <div className="text-foreground overflow-x-clip">
       <SeoHead
         title="Text to speech, voice cloning and scripts | Mirli"
         description={`Text-to-speech, voice cloning and multi-speaker scripts on your own machine. ${VOICE_STATS.count} open-weight voice models, each listed with its licence. Several are non-commercial.`}

@@ -23,6 +23,19 @@ const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 pub const DEFAULT_PORT: u16 = 17494;
 
+/// The port this shell runs (or adopts) its server on.
+///
+/// `DEFAULT_PORT` unless `MIRLI_DESKTOP_PORT` (or the older
+/// `SOUNDBOX_DESKTOP_PORT`) names another. For development: a desktop build of
+/// a branch would otherwise adopt the Mirli already running on the default
+/// port and show *that* server's UI, not the branch's.
+pub fn port() -> u16 {
+    ["MIRLI_DESKTOP_PORT", "SOUNDBOX_DESKTOP_PORT"]
+        .iter()
+        .find_map(|k| std::env::var(k).ok()?.trim().parse().ok())
+        .unwrap_or(DEFAULT_PORT)
+}
+
 /// Where the server lives: a directory holding `server/`, laid out like the
 /// repo. `bundled` is true for the copy installed with the app, which brings
 /// its own Node — and must run on it, because its native modules were built

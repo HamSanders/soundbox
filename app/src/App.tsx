@@ -12,6 +12,9 @@ import {
 import { AccessGate } from "@/components/access-gate";
 import { AppCommandPalette } from "@/components/app-command-palette";
 import { AppHeader } from "@/components/app-header";
+import { WindowTitleBar, WINDOW_TITLE_BAR_HEIGHT_PX } from "@/components/window-title-bar";
+import { isDesktop } from "@/lib/desktop";
+import { SidebarPeekEdge } from "@/components/sidebar-peek";
 import { HeaderSlotProvider } from "@/components/header-slot";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AmbientBackground } from "@/components/ambient-background";
@@ -114,6 +117,10 @@ function AppShellReady() {
   const { pathname } = useLocation();
   const fullBleed = isFullBleed(pathname);
   const nowPlaying = usePlayerStore((s) => s.sound !== null);
+  // The desktop app has no native title bar: it draws its own across the top
+  // of the window, and every panel starts below it.
+  const desktop = isDesktop();
+  const topPx = desktop ? WINDOW_TITLE_BAR_HEIGHT_PX : 0;
   return (
     // Floating shell: the sidebar and the page are two panels on the
     // sidebar's ground (the `inset` variant), and the player runs full width
@@ -130,8 +137,8 @@ function AppShellReady() {
       style={
         {
           "--dock-h": nowPlaying ? `${PLAYER_DOCK_HEIGHT_PX}px` : "0px",
-          "--top-h": "0px",
-          "--panel-h": `calc(100svh - 1rem - ${nowPlaying ? PLAYER_DOCK_HEIGHT_PX : 0}px)`,
+          "--top-h": `${topPx}px`,
+          "--panel-h": `calc(100svh - 1rem - ${topPx + (nowPlaying ? PLAYER_DOCK_HEIGHT_PX : 0)}px)`,
         } as CSSProperties
       }
     >
@@ -141,7 +148,9 @@ function AppShellReady() {
       <HeaderSlotProvider>
       {/* The moving ground, behind every panel: see ambient-background.tsx. */}
       <AmbientBackground />
+      {desktop && <WindowTitleBar />}
       <AppSidebar />
+      <SidebarPeekEdge />
       {/* Between the sidebar and the page on the kind pages: see create-panel.tsx. */}
       <CreatePanel />
       {/* Capped at the viewport for full-bleed pages, and only for them.
@@ -164,7 +173,7 @@ function AppShellReady() {
               " max-md:h-[calc(100svh-var(--dock-h,0px))] overflow-hidden md:bg-transparent! md:ring-0!" : " md:overflow-y-auto"
         }`}
       >
-        <AppHeader />
+        {!desktop && <AppHeader />}
         {/* The full-bleed column is a flex column with `min-h-0`, which is
             what lets a studio page fill the window: `h-full` cannot do it,
             because this element's own height comes from `flex-1` rather than

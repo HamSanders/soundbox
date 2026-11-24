@@ -20,6 +20,7 @@ import { useMemo, useState } from "react";
 import { SearchIcon, XIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { SitePanel } from "@/components/site/site-frame";
 import { Input } from "@/components/ui/input";
 import { MarketingLink } from "@/components/marketing-link";
 import { SeoHead } from "@/components/seo-head";
@@ -136,7 +137,7 @@ export function SfxHubPage() {
   }, [matches]);
 
   return (
-    <div className="bg-background text-foreground min-h-svh">
+    <div className="text-foreground">
       <SeoHead
         title={`AI sound effects generated locally: ${TOTAL_SAMPLES} samples with prompts | Mirli`}
         description={`${TOTAL_SAMPLES} sound effects across ${PUBLISHED.length} categories, each with the exact prompt that made it. Download the MP3 or generate your own on your machine, with no account.`}
@@ -144,8 +145,9 @@ export function SfxHubPage() {
       />
 
 
-      <div className="mx-auto w-full max-w-5xl px-4 pb-16">
-        <header className="py-12">
+      <SitePanel>
+      <div className="mx-auto w-full max-w-5xl px-4 pb-28 md:pb-16">
+        <header className="pt-8 pb-12">
           <span className="label-caps text-muted-foreground">Sound effects</span>
           <h1 className="font-display mt-1.5 text-4xl leading-none font-extrabold tracking-[0.01em] text-balance uppercase sm:text-5xl">
             Sound effect collections
@@ -238,6 +240,7 @@ export function SfxHubPage() {
           );
         })}
       </div>
+      </SitePanel>
     </div>
   );
 }

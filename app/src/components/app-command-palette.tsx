@@ -133,6 +133,10 @@ function modelVerb(model: Model, localModels: boolean): "Load" | "Unload" | null
   }
 }
 
+/** Open the palette from anywhere: the desktop title bar's search button
+ *  fires this rather than reaching into the palette's state. */
+export const OPEN_COMMAND_PALETTE_EVENT = "mirli:open-command-palette";
+
 export function AppCommandPalette() {
   const [open, setOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
@@ -175,6 +179,15 @@ export function AppCommandPalette() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [standDown]);
+
+  useEffect(() => {
+    const openPalette = (): void => {
+      setEverOpened(true);
+      setOpen(true);
+    };
+    window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, openPalette);
+    return () => window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, openPalette);
+  }, []);
 
   const goToSettings = useCallback(
     (section: string) => {

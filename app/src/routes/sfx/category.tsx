@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { SitePanel } from "@/components/site/site-frame";
 import { Separator } from "@/components/ui/separator";
 import { CopyButton } from "@/components/docs-primitives";
 import { SampleList, modelName, sampleFact, sampleQueue, samplesModels } from "@/components/sfx/sample-list";
@@ -143,14 +144,6 @@ function CategoryBody({ category }: { category: PublishedCategory }) {
           ]),
         ]}
       />
-
-      <nav aria-label="Breadcrumb" className="text-muted-foreground pt-8 text-sm">
-        <Link to="/sfx" className="hover:text-foreground underline-offset-4 hover:underline">
-          Sound effects
-        </Link>
-        <span aria-hidden="true"> / </span>
-        <span className="text-foreground">{category.name}</span>
-      </nav>
 
       <SiteCollectionHeader
         tile={
@@ -369,7 +362,7 @@ export function SfxCategoryPage() {
   }
 
   return (
-    <div className="bg-background text-foreground min-h-svh">
+    <div className="text-foreground">
       <SiteRailLayout>
         <SiteRail
           groups={railGroups(category)}
@@ -385,11 +378,13 @@ export function SfxCategoryPage() {
             />
           }
         />
-        <main className="min-w-0 px-4 pb-28 lg:px-8">
+        <SitePanel>
+        <main className="min-w-0 px-4 pb-28 md:pb-12 lg:px-8">
           <div className="mx-auto w-full max-w-5xl">
             <CategoryBody category={category} />
           </div>
         </main>
+        </SitePanel>
       </SiteRailLayout>
     </div>
   );

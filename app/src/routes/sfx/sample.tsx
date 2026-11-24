@@ -14,6 +14,7 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { DownloadIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { SitePanel } from "@/components/site/site-frame";
 import { CopyButton } from "@/components/docs-primitives";
 import { MarketingLink } from "@/components/marketing-link";
 import { SeoHead, breadcrumbJsonLd } from "@/components/seo-head";
@@ -130,21 +131,6 @@ function SampleBody({
           ]),
         ]}
       />
-
-      <nav aria-label="Breadcrumb" className="text-muted-foreground pt-8 text-sm">
-        <Link to="/sfx" className="hover:text-foreground underline-offset-4 hover:underline">
-          Sound effects
-        </Link>
-        <span aria-hidden="true"> / </span>
-        <Link
-          to={`/sfx/${category.slug}`}
-          className="hover:text-foreground underline-offset-4 hover:underline"
-        >
-          {category.name}
-        </Link>
-        <span aria-hidden="true"> / </span>
-        <span className="text-foreground">{sample.title}</span>
-      </nav>
 
       <SiteCollectionHeader
         tile={
@@ -284,10 +270,10 @@ export function SfxSamplePage() {
   }
 
   return (
-    <div className="bg-background text-foreground min-h-svh">
-      <div className="mx-auto w-full max-w-3xl px-4 pb-12">
+    <SitePanel>
+      <div className="mx-auto w-full max-w-3xl px-4 pb-28 md:pb-12">
         <SampleBody key={`${category.slug}/${sample.slug}`} category={category} sample={sample} />
       </div>
-    </div>
+    </SitePanel>
   );
 }

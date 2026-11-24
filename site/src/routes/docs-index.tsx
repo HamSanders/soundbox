@@ -16,7 +16,7 @@ import { DOC_SECTIONS } from "../docs/pages";
 
 export function DocsIndexPage() {
   return (
-    <div className="bg-background text-foreground min-h-svh">
+    <div className="text-foreground">
       <SeoHead
         title="Documentation: install, studio, HTTP API and MCP | Mirli"
         description="How Mirli works: installing it, generating sound, arranging in the studio, the local HTTP API, and the MCP tools an agent gets."

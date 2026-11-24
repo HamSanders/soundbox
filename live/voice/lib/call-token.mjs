@@ -1,12 +1,11 @@
-// Call tokens: short-lived, HMAC-SHA256 signed, the same format in Node
-// (this file) and Python (spikes/realtime-face/call_token.py).
+// Call tokens: short-lived, HMAC-SHA256 signed, the same format the Mirli
+// server signs (server/src/calls/token.ts).
 //
 //   token = base64url(JSON payload) + "." + base64url(HMAC-SHA256(secret, first part))
-//   payload = { v: 1, call: "c_…", aud: ["voice", "face"], iat, exp }   (seconds)
+//   payload = { v: 1, call: "c_…", aud: ["voice"], iat, exp }   (seconds)
 //
-// The Call API signs one per call; the voice and face workers verify it on
-// connect. Locally the API and workers share a secret file; in the cloud the
-// gateway holds the secret and hands it to each pod it starts.
+// The Call API signs one per call; the worker verifies it on connect. The
+// Mirli server and the worker share a secret file (~/.mirli-live/call-secret).
 
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";

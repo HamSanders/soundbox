@@ -48,7 +48,7 @@ export class CallRegistry {
     this.now = opts.now ?? (() => Date.now() / 1000);
   }
 
-  /** `id` is given when another service (the cloud gateway) already named the call. */
+  /** `id` is given when another service already named the call. */
   create(mode: CallMode, character: string | null, id?: string): Call {
     this.assertFree();
     const t = this.now();

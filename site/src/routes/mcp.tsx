@@ -218,7 +218,7 @@ function ExampleTranscript() {
 
 export function McpPage() {
   return (
-    <div className="bg-background text-foreground min-h-svh">
+    <div className="text-foreground">
       <SeoHead
         title="MCP server for local sound generation | Mirli"
         description="Connect Claude Code, Claude Desktop, Cursor or any MCP client to Mirli in one line. Sound effects, music and speech are generated on your own GPU and returned as absolute file paths. No API key, no account, no per-generation billing."

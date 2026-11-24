@@ -31,7 +31,7 @@ export function BlogShell({
       <div className="min-w-0 flex-1">{children}</div>
       {hasContents && (
         <aside className="hidden w-56 shrink-0 xl:block">
-          <div className="sticky top-24">
+          <div className="sticky top-24 md:top-16">
             <OnThisPage headings={headings!} />
           </div>
         </aside>

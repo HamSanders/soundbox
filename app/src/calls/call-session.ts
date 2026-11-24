@@ -1,17 +1,16 @@
 /**
- * One live call, outside React: microphone, the voice worker's WebSocket, the
- * face worker's WebSocket, audio playback and frame timing. Ported from the
- * spike's call pages (spikes/realtime-voice/public/index.html, voice.html).
- *
- * In a video call the page plays the audio that comes back WITH the frames
- * from the face worker, so mouth and sound share one clock; the voice worker's
- * own speech is only played when there is no face.
+ * One live voice call, outside React: microphone, the voice worker's
+ * WebSocket and audio playback. Ported from the spike's call pages
+ * (spikes/realtime-voice/public/voice.html).
  *
  * `start()` must run inside a click handler: Chrome keeps an AudioContext made
  * outside a user gesture suspended, and then nothing is captured.
  */
 
-import { type CallGrant, type CallsClient, wsProtocols } from "./live-client";
+import { type CallCharacter, type CallGrant, type CallsClient, wsProtocols } from "./live-client";
+// Served as files, never inlined as data: URLs (a script-src 'self' CSP, as in the desktop app, refuses those).
+import captureWorklet from "./worklets/capture-worklet.js?url&no-inline";
+import playbackWorklet from "./worklets/playback-worklet.js?url&no-inline";
 
 export type CallState = "starting" | "idle" | "listening" | "thinking" | "speaking" | "error" | "closed";
 
@@ -38,26 +37,24 @@ export interface CallHandlers {
   /** Barge-in: the reply was cut off. */
   flush?: () => void;
   turn?: (t: TurnStats) => void;
-  /** Notes for the log: voice changed, face busy, errors. */
+  /** Notes for the log: voice changed, errors. */
   note?: (text: string, isError?: boolean) => void;
-  /** Video is on when frames are flowing from the face worker. */
-  video?: (on: boolean) => void;
   info?: (text: string) => void;
+  /** Someone else is on the call now (a mid-call switch). */
+  character?: (c: CallCharacter) => void;
   /** The call is over (hung up here, ended by the server, or lapsed). */
   ended?: (reason: string) => void;
 }
 
 const MIC_CONSTRAINTS: MediaTrackConstraints = { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 };
-/** Close codes the workers use (4000-4999 are ours). */
-const CLOSE = { replaced: 4000, ended: 4001, busy: 4409 } as const;
-
-interface Frame { t: number; bm: ImageBitmap }
+/** Close codes the worker uses (4000-4999 are ours). */
+const CLOSE = { replaced: 4000, ended: 4001 } as const;
 
 export class CallSession {
   ctx: AudioContext | null = null;
-  /** Mirli's voice, for the pen line. */
+  /** The reply's voice, for the pen line. */
   analyser: AnalyserNode | null = null;
-  /** The caller's mic, for the voice page's line. */
+  /** The caller's mic, for the pen line. */
   micAnalyser: AnalyserNode | null = null;
   micLevel = 0;
   muted = false;
@@ -66,26 +63,20 @@ export class CallSession {
   startedAt = 0;
   replies = 0;
   lastReply = "";
-  videoOn = false;
 
   #ws: WebSocket | null = null;
-  #faceWs: WebSocket | null = null;
   #player: AudioWorkletNode | null = null;
   #mic: MediaStream | null = null;
   #token: string;
   #beat: number | undefined;
   #ending = false;
-  #canvas: HTMLCanvasElement | null = null;
-  #sink: ((frame: ImageBitmap) => void) | null = null;
-  #raf = 0;
-  #face = { gen: 0, next: 0, frames: [] as Frame[], sources: [] as AudioBufferSourceNode[], speechFrom: Infinity, speechUntil: 0, playing: false, lastStart: 0 };
   #firstChunkAt: number | null = null;
   #lastHeard: number | null = null;
   #reply = "";
 
   client: CallsClient;
   grant: CallGrant;
-  opts: { voiceId?: string; persona?: string; worklets?: string };
+  opts: { voiceId?: string; persona?: string };
   on: CallHandlers;
 
   constructor(client: CallsClient, grant: CallGrant, opts: CallSession["opts"], on: CallHandlers = {}) {
@@ -115,13 +106,6 @@ export class CallSession {
     this.#beat = window.setInterval(() => void this.#heartbeat(), Math.max(2, this.grant.heartbeat_s) * 1000);
   }
 
-  /** Where the face's frames are drawn. */
-  setCanvas(c: HTMLCanvasElement | null) { this.#canvas = c; }
-  /** Draw frames yourself instead (an avatar pack pastes them into its talk still). */
-  setFrameSink(fn: ((frame: ImageBitmap) => void) | null) { this.#sink = fn; }
-  /** When the face last delivered a frame (performance.now()), for "is the live face up". */
-  lastFrameAt = 0;
-
   sendText(text: string) {
     if (this.#ws?.readyState !== 1) return false;
     this.#ws.send(JSON.stringify({ type: "text", text }));
@@ -137,16 +121,29 @@ export class CallSession {
   }
   setMuted(m: boolean) { this.muted = m; }
 
+  /**
+   * Put someone else on the call: the API records the switch and hands back
+   * their persona and voice, which go out on the socket (the worker starts a
+   * fresh conversation). Anything still playing is cut.
+   */
+  async switchCharacter(character: string): Promise<CallCharacter> {
+    const c = await this.client.setCharacter(this.callId, character);
+    this.grant = { ...this.grant, character: c.character, name: c.name, persona: c.persona, voice_id: c.voice_id };
+    this.#player?.port.postMessage("flush");
+    this.#reply = "";
+    this.setPersona(c.persona);
+    if (c.voice_id) this.setVoice(c.voice_id);
+    this.on.character?.(c);
+    return c;
+  }
+
   /** Hang up here: stop the mic and the audio, tell the API. */
   async hangUp(reason = "hangup") {
     if (this.#ending) return;
     this.#ending = true;
     window.clearInterval(this.#beat);
-    cancelAnimationFrame(this.#raf);
     try { this.#ws?.close(1000); } catch { /* already closed */ }
-    try { this.#faceWs?.close(1000); } catch { /* already closed */ }
     this.#mic?.getTracks().forEach((t) => t.stop());
-    this.#faceFlush();
     try { await this.ctx?.close(); } catch { /* already closed */ }
     this.on.state?.("closed");
     this.on.ended?.(reason);
@@ -163,7 +160,7 @@ export class CallSession {
       if (typeof e.data !== "string") return this.#onPcm(e.data as ArrayBuffer);
       this.#onJson(JSON.parse(e.data)).catch((err) => this.#fail(err));
     };
-    ws.onerror = () => { if (!this.startedAt) this.#fail(new Error("Couldn't reach the call server.")); };
+    ws.onerror = () => { if (!this.startedAt) this.#fail(new Error("Couldn't reach the live voice worker.")); };
     ws.onclose = (e) => {
       if (this.#ending) return;
       if (e.code === CLOSE.replaced) return void this.hangUp("replaced");
@@ -195,7 +192,6 @@ export class CallSession {
       }
       case "flush":
         this.#player?.port.postMessage("flush");
-        this.#faceFlush();
         return this.on.flush?.();
       case "turn": {
         const t = m as unknown as TurnStats;
@@ -212,9 +208,8 @@ export class CallSession {
     const ws = this.#ws!;
     if (this.opts.voiceId) ws.send(JSON.stringify({ type: "voice", id: this.opts.voiceId }));
     if (this.opts.persona) ws.send(JSON.stringify({ type: "persona", text: this.opts.persona }));
-    const base = this.opts.worklets ?? `${import.meta.env.BASE_URL}calls/`;
-    await ctx.audioWorklet.addModule(`${base}capture-worklet.js`);
-    await ctx.audioWorklet.addModule(`${base}playback-worklet.js`);
+    await ctx.audioWorklet.addModule(captureWorklet);
+    await ctx.audioWorklet.addModule(playbackWorklet);
     // No microphone (refused, missing, or a browser that blocks it): the call
     // goes on as a typed one. Silence still flows so the server's clock and VAD carry on.
     let src: AudioNode;
@@ -247,19 +242,16 @@ export class CallSession {
     this.analyser = ctx.createAnalyser();
     this.analyser.fftSize = 1024;
     this.#player = new AudioWorkletNode(ctx, "playback", { outputChannelCount: [1] });
-    this.#player.port.onmessage = (e: MessageEvent<{ playing: boolean }>) => { if (!this.videoOn) this.#reportPlaying(e.data.playing); };
+    this.#player.port.onmessage = (e: MessageEvent<{ playing: boolean }>) => this.#reportPlaying(e.data.playing);
     this.#player.connect(this.analyser);
     this.#player.connect(ctx.destination);
     if (ctx.state !== "running") await ctx.resume();
     this.on.info?.(`TTS ${m.tts.sample_rate} Hz${m.vram?.total != null ? ` · engines +${m.vram.total} MiB` : ""}${m.vad?.endpointMs ? ` · endpoint ${m.vad.endpointMs} ms` : ""}`);
     this.startedAt = Date.now();
     this.on.state?.("idle");
-    if (this.grant.face_ws_url) this.#connectFace();
-    this.#raf = requestAnimationFrame(this.#tick);
   }
 
   #onPcm(buf: ArrayBuffer) {
-    if (this.videoOn) return; // in a video call the face worker sends the audio back with its frames
     const i16 = new Int16Array(buf);
     const f32 = new Float32Array(i16.length);
     for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 32768;
@@ -283,104 +275,7 @@ export class CallSession {
     void this.hangUp("error");
   }
 
-  // ---- Face worker ------------------------------------------------------------
-  #connectFace() {
-    if (this.#ending || !this.ctx || this.ctx.state === "closed" || !this.grant.face_ws_url) return;
-    const s = (this.#faceWs = new WebSocket(this.grant.face_ws_url, wsProtocols(this.#token)));
-    s.binaryType = "arraybuffer";
-    s.onopen = () => this.#setVideo(true);
-    s.onmessage = (e) => this.#onFace(e).catch(() => {});
-    s.onclose = (e) => {
-      this.#setVideo(false);
-      if (this.#ending) return;
-      if (e.code === CLOSE.busy) return this.on.note?.("The face is on another call. Carrying on as a voice call.", true);
-      if (e.code === CLOSE.ended || e.code === CLOSE.replaced) return;
-      window.setTimeout(() => this.#connectFace(), 4000);
-    };
-  }
-
-  #setVideo(on: boolean) {
-    if (this.videoOn === on) return;
-    this.videoOn = on;
-    this.#player?.port.postMessage("flush");
-    this.#faceFlush();
-    if (!on && this.#face.playing) { this.#face.playing = false; this.#reportPlaying(false); }
-    this.on.video?.(on);
-  }
-
-  #faceFlush() {
-    const f = this.#face;
-    f.gen++;
-    for (const s of f.sources) try { s.stop(); } catch { /* not started */ }
-    for (const fr of f.frames) fr.bm.close();
-    f.sources = []; f.frames = []; f.next = 0; f.speechFrom = Infinity; f.speechUntil = 0;
-  }
-
-  async #onFace(ev: MessageEvent) {
-    if (typeof ev.data === "string") {
-      const m = JSON.parse(ev.data);
-      if (m.type === "flush") this.#faceFlush();
-      if (m.type === "engine") this.on.note?.("Switching the face model. Voice keeps going; the face is back in about 20 s.");
-      return;
-    }
-    const ctx = this.ctx;
-    if (!ctx || ctx.state === "closed") return;
-    const data = ev.data as ArrayBuffer;
-    const dv = new DataView(data), hl = dv.getUint32(0, true);
-    const h = JSON.parse(new TextDecoder().decode(new Uint8Array(data, 4, hl))) as { samples: number; rate: number; fps: number; frames: number[]; kind?: string; cont?: boolean; start_i?: number };
-    let off = 4 + hl;
-    const pcm = new Int16Array(data.slice(off, off + h.samples * 2));
-    off += h.samples * 2;
-    const blobs = h.frames.map((n) => { const b = new Blob([new Uint8Array(data, off, n)], { type: "image/jpeg" }); off += n; return b; });
-    const f = this.#face, gen = f.gen;
-    const bitmaps = await Promise.all(blobs.map((b) => createImageBitmap(b)));
-    if (gen !== f.gen || !this.videoOn) return bitmaps.forEach((b) => b.close());
-    if (h.cont) {
-      // More frames for the chunk whose audio already went out (Ditto's fast first frame).
-      const first = h.start_i ?? 0;
-      bitmaps.forEach((bm, i) => f.frames.push({ t: f.lastStart + (first + i) / h.fps, bm }));
-      f.frames.sort((x, y) => x.t - y.t);
-      return;
-    }
-    const buf = ctx.createBuffer(1, h.samples, h.rate), ch = buf.getChannelData(0);
-    for (let i = 0; i < pcm.length; i++) ch[i] = pcm[i] / 32768;
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    if (this.analyser) src.connect(this.analyser);
-    src.connect(ctx.destination);
-    if (f.next < ctx.currentTime + 0.03) f.next = ctx.currentTime + 0.06;
-    src.start(f.next);
-    f.sources.push(src);
-    src.onended = () => { const i = f.sources.indexOf(src); if (i >= 0) f.sources.splice(i, 1); };
-    f.lastStart = f.next;
-    bitmaps.forEach((bm, i) => f.frames.push({ t: f.next + i / h.fps, bm }));
-    const end = f.next + h.samples / h.rate;
-    if (h.kind === "speech") {
-      if (f.speechUntil < f.next - 0.01) f.speechFrom = f.next;
-      f.speechUntil = end;
-    }
-    f.next = end;
-  }
-
-  #tick = () => {
-    this.#raf = requestAnimationFrame(this.#tick);
-    const ctx = this.ctx;
-    if (!ctx || ctx.state === "closed" || !this.videoOn) return;
-    const f = this.#face;
-    const t = ctx.currentTime - (ctx.outputLatency || 0);
-    let fr: Frame | null = null;
-    while (f.frames.length && f.frames[0].t <= t) { fr?.bm.close(); fr = f.frames.shift()!; }
-    if (fr) {
-      const c = this.#canvas;
-      if (this.#sink) this.#sink(fr.bm);
-      else if (c) c.getContext("2d")?.drawImage(fr.bm, 0, 0, c.width, c.height);
-      fr.bm.close();
-      this.lastFrameAt = performance.now();
-    }
-    const playing = ctx.currentTime >= f.speechFrom && ctx.currentTime < f.speechUntil;
-    if (playing !== f.playing) { f.playing = playing; this.#reportPlaying(playing); }
-  };
-
+  /** Tell the worker when speech is actually audible (it times barge-in from this), and time "heard". */
   #reportPlaying(playing: boolean) {
     if (this.#ws?.readyState === 1) this.#ws.send(JSON.stringify({ type: "playback", playing }));
     if (playing && this.#firstChunkAt !== null) {

@@ -52,6 +52,9 @@ const ModelsPage = lazy(() => import("@/routes/models").then((m) => ({ default: 
 const AgentsPage = lazy(() => import("@/routes/agents").then((m) => ({ default: m.AgentsPage })));
 const SettingsPage = lazy(() => import("@/routes/settings").then((m) => ({ default: m.SettingsPage })));
 const ActivityPage = lazy(() => import("@/routes/activity").then((m) => ({ default: m.ActivityPage })));
+const CallsHomePage = lazy(() => import("@/routes/calls/calls-home").then((m) => ({ default: m.CallsHomePage })));
+const VoiceCallPage = lazy(() => import("@/routes/calls/voice-call").then((m) => ({ default: m.VoiceCallPage })));
+const CharacterEditorPage = lazy(() => import("@/routes/calls/character-editor").then((m) => ({ default: m.CharacterEditorPage })));
 const SoundDetailPage = lazy(() => import("@/routes/sound-detail").then((m) => ({ default: m.SoundDetailPage })));
 
 const queryClient = new QueryClient({
@@ -81,7 +84,8 @@ function ScrollToTop() {
  *  for reading and for grids, but an editor with a timeline beside it wants
  *  every pixel — capping it at 1152px wastes half a wide monitor. */
 function isFullBleed(pathname: string): boolean {
-  return pathname.startsWith("/studio/");
+  // A call fills the window: the reply's big type wants every pixel.
+  return pathname.startsWith("/studio/") || pathname.startsWith("/calls/voice");
 }
 
 /** The app shell: sidebar, header, and the routes that live inside them. */
@@ -211,6 +215,14 @@ function AppShellReady() {
             <Route path="/voice/new" element={<VoiceCreatePage />} />
             <Route path="/voice/new/clone" element={<VoiceCloneCreatePage />} />
             <Route path="/voice/new/builtin" element={<VoiceBuiltinCreatePage />} />
+            {/* Calls: real-time voice calls with characters (Santa built in,
+                your own from /calls/new). The live voice worker is a
+                separate process; see routes/calls.ts on the server. */}
+            <Route path="/calls" element={<CallsHomePage />} />
+            <Route path="/calls/new" element={<CharacterEditorPage />} />
+            <Route path="/calls/characters/:characterId" element={<CharacterEditorPage />} />
+            <Route path="/calls/voice" element={<VoiceCallPage />} />
+            <Route path="/calls/voice/:characterId" element={<VoiceCallPage />} />
             {/* The unfiltered library still exists, unlinked from the nav —
                 it's where a Projects sidebar/list entry deep-links to
                 (`/library?project=…`), spanning every category rather than

@@ -21,6 +21,7 @@ import {
   LibraryIcon,
   MessagesSquareIcon,
   MicIcon,
+  PhoneIcon,
   MoonIcon,
   PlusIcon,
   SearchIcon,
@@ -111,6 +112,8 @@ const NAV_STUDIO: NavItem[] = [
     hue: "studio",
   },
   { to: "/voice/lab", label: "Voice Lab", icon: MicIcon, end: false, hue: "voice" },
+  // Calls: talking with a character in real time, by voice.
+  { to: "/calls", label: "Calls", icon: PhoneIcon, end: false, hue: "voice" },
   // A project is a folder over many samples, not a single kind of one — so
   // unlike Samples below it isn't category-scoped, and it isn't a browse
   // surface either (it's where you organize what Studio work produced). That

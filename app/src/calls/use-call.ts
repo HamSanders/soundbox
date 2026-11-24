@@ -2,17 +2,18 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CallSession, type CallHandlers, type CallState } from "./call-session";
-import { CallApiError, calls, type CallMode } from "./live-client";
+import { CallApiError, calls, type CallCharacter } from "./live-client";
 import { bookCallNo, nextCallNo } from "./prefs";
+import { callKeys } from "./queries";
 
 export interface EndedInfo { seconds: number; replies: number; last: string; reason: string }
 
 /**
- * Starting, running and ending one call from a React screen. `begin` must be
- * called from a click: it makes the AudioContext before asking the Call API
- * for a call, because Chrome won't let audio start after an await otherwise.
+ * Starting, running and ending one voice call from a React screen. `begin`
+ * must be called from a click: it makes the AudioContext before asking the
+ * Call API for a call, because Chrome won't let audio start after an await otherwise.
  */
-export function useCall(mode: CallMode, handlers: CallHandlers & { persona?: () => string | undefined; voiceId?: () => string | undefined }) {
+export function useCall(handlers: CallHandlers & { persona?: () => string | undefined; voiceId?: () => string | undefined }) {
   const live = calls;
   const qc = useQueryClient();
   const [session, setSession] = useState<CallSession | null>(null);
@@ -38,7 +39,7 @@ export function useCall(mode: CallMode, handlers: CallHandlers & { persona?: () 
     }
     let grant;
     try {
-      grant = await live.startCall(mode, character);
+      grant = await live.startCall(character);
     } catch (e) {
       void ctx.close();
       setState("error");
@@ -52,21 +53,28 @@ export function useCall(mode: CallMode, handlers: CallHandlers & { persona?: () 
       ended: (reason) => {
         setEnded({ seconds: s.seconds, replies: s.replies, last: s.lastReply, reason });
         // The hang-up reaches the server just after this; refresh the history once it has.
-        setTimeout(() => void qc.invalidateQueries({ queryKey: ["calls", "history"] }), 300);
+        setTimeout(() => void qc.invalidateQueries({ queryKey: callKeys.history }), 300);
         h.current.ended?.(reason);
       },
     });
     // Forward every handler at call time, so screens can change them between renders.
-    for (const k of ["partial", "final", "replyDelta", "flush", "turn", "video", "info"] as const) {
+    for (const k of ["partial", "final", "replyDelta", "flush", "turn", "info", "character"] as const) {
       s.on[k] = ((...a: unknown[]) => (h.current[k] as ((...x: unknown[]) => void) | undefined)?.(...a)) as never;
     }
     sRef.current = s;
     setSession(s);
     bookCallNo(callNo);
     s.start(ctx);
-  }, [live, mode, callNo, qc]);
+  }, [live, callNo, qc]);
 
   const hangUp = useCallback(() => { void sRef.current?.hangUp(); }, []);
+
+  /** Mid-call: put another character on. Resolves to who is on now, or rejects with the API's message. */
+  const switchCharacter = useCallback(async (character: string): Promise<CallCharacter | null> => {
+    const s = sRef.current;
+    if (!s) return null;
+    return s.switchCharacter(character);
+  }, []);
 
   /** After "call again": a fresh call number for the next one. */
   const reset = useCallback(() => { setEnded(null); setState("off"); setSession(null); sRef.current = null; setCallNo(nextCallNo()); }, []);
@@ -83,5 +91,5 @@ export function useCall(mode: CallMode, handlers: CallHandlers & { persona?: () 
     return () => removeEventListener("pagehide", bye);
   }, [live]);
 
-  return { session, state, error, ended, begin, hangUp, reset, callNo };
+  return { session, state, error, ended, begin, hangUp, switchCharacter, reset, callNo };
 }

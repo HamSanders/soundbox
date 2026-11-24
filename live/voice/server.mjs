@@ -150,7 +150,7 @@ async function converse(ws, call) {
 }
 
 server.listen(config.port, "127.0.0.1", () => {
-  console.log(`\nopen http://127.0.0.1:${config.port}  (PCM tap: /tts.pcm and ws /tap)`);
+  console.log(`\nlive voice worker on ws://127.0.0.1:${config.port}/ws  (Mirli's Calls page and integrations connect here)`);
 });
 process.on("uncaughtException", (e) => {
   console.error(e);

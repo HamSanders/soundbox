@@ -1,0 +1,17 @@
+{
+  "name": "mirli-live-voice",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Mirli live voice worker: VAD -> STT -> LLM -> streaming TTS, one WebSocket per call.",
+  "scripts": {
+    "setup": "node setup.mjs",
+    "start": "node server.mjs",
+    "fake": "node fake-server.mjs",
+    "test": "node --test test/calls.test.mjs test/claude-brain.test.mjs"
+  },
+  "dependencies": {
+    "onnxruntime-node": "^1.20.0",
+    "ws": "^8.18.0"
+  }
+}

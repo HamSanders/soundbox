@@ -21,3 +21,26 @@ export function getBackendHealth(): Promise<boolean> {
 export function restartBackend(): Promise<void> {
   return invoke<void>("restart_backend");
 }
+
+/** Which window frame the desktop shell gave us. Decides the title bar's
+ *  layout: Windows and Linux windows have no native frame, so the bar draws
+ *  its own window buttons on the right; macOS keeps its traffic lights, laid
+ *  over the bar's left end. */
+export type DesktopPlatform = "windows" | "macos" | "linux";
+
+export function desktopPlatform(): DesktopPlatform {
+  const ua = navigator.userAgent;
+  if (/Mac/i.test(ua)) return "macos";
+  if (/Windows/i.test(ua)) return "windows";
+  return "linux";
+}
+
+/**
+ * The window this page is in, for the title bar's buttons and drag region.
+ * Loaded on demand so the web build never pulls the window module in.
+ * Every call needs a permission in src-tauri/capabilities/app-window.json.
+ */
+export async function appWindow() {
+  const { getCurrentWindow } = await import("@tauri-apps/api/window");
+  return getCurrentWindow();
+}

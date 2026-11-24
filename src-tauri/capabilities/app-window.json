@@ -1,0 +1,19 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "app-window",
+  "description": "The app's own title bar. The main window has no native frame (see `decorations` in src/lib.rs), so the page served by the local backend moves, minimizes, maximizes and closes it itself. Granted to that origin and nothing else, and only the window calls the bar makes: any script on that origin gets exactly what is listed here.",
+  "windows": ["main"],
+  "remote": {
+    "urls": ["http://127.0.0.1:*/*"]
+  },
+  "permissions": [
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-internal-toggle-maximize",
+    "core:window:allow-is-maximized",
+    "core:window:allow-start-dragging",
+    "core:window:allow-close",
+    "core:event:allow-listen",
+    "core:event:allow-unlisten"
+  ]
+}

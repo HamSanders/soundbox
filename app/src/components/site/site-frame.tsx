@@ -1,11 +1,15 @@
 /**
- * The public /music and /sfx pages, drawn as the app draws a page: a floating
- * panel on the moving ground, with the app's slim bar along its top (back and
+ * A page of the public site, drawn as the app draws a page: a floating panel
+ * on the moving ground, with the app's slim bar along its top (back and
  * forward, then where you are as `Mirli / Sound effects / Video game`).
  *
  * The ground, the icon rail and the ambient field around these panels are the
- * site's layout (site/src/components/app-frame.tsx). What lives here is the
- * panel itself, because the pages that render it live in app/src.
+ * site's layout (site/src/components/app-frame.tsx), which also wraps the
+ * site's own pages in this panel. /sfx and /music render it themselves, since
+ * their rail panel sits beside it, so it lives here with them in app/src.
+ *
+ * `--site-dock` is the height of the player docked along the bottom (set by
+ * the frame: 72px on /sfx and /music, 0 elsewhere); panels stop 8px above it.
  *
  * Unlike the app, the page scrolls the document rather than the panel: the
  * prerendered HTML stays one long page for crawlers and for `#anchor` links,
@@ -23,7 +27,7 @@ import { trackBySlug } from "@/content/music/tracks";
 import { cloudWaitlistHref } from "@/lib/marketing-links";
 import { cn } from "@/lib/utils";
 
-interface Crumb {
+export interface Crumb {
   label: string;
   to: string;
 }
@@ -50,10 +54,11 @@ function siteCrumbs(pathname: string): Crumb[] {
   return [];
 }
 
-/** The app's header bar, for a site panel. */
-export function SitePanelBar() {
+/** The app's header bar, for a site panel. `trail` names the page for paths
+ *  outside /sfx and /music, whose names this side of the build cannot see. */
+export function SitePanelBar({ trail: given }: { trail?: Crumb[] }) {
   const { pathname } = useLocation();
-  const trail = siteCrumbs(pathname);
+  const trail = given ?? siteCrumbs(pathname);
   return (
     <div className="bg-background/85 supports-[backdrop-filter]:bg-background/70 z-30 md:sticky md:top-0 flex h-12 items-center gap-1 px-3 backdrop-blur-md md:rounded-t-xl">
       <div className="hidden items-center sm:flex">
@@ -67,9 +72,15 @@ export function SitePanelBar() {
       <nav aria-label="Breadcrumb" className="min-w-0 flex-1 px-1">
         <ol className="flex min-w-0 items-center gap-1.5 text-sm">
           <li className="text-muted-foreground shrink-0">
-            <Link to="/" className="hover:text-foreground focus-visible:ring-ring/50 rounded-sm outline-none focus-visible:ring-3">
-              Mirli
-            </Link>
+            {trail.length === 0 ? (
+              <span aria-current="page" className="text-foreground font-medium">
+                Mirli
+              </span>
+            ) : (
+              <Link to="/" className="hover:text-foreground focus-visible:ring-ring/50 rounded-sm outline-none focus-visible:ring-3">
+                Mirli
+              </Link>
+            )}
           </li>
           {trail.map((c, i) => {
             const last = i === trail.length - 1;
@@ -119,15 +130,23 @@ export function SitePanelBar() {
  * A page panel: the app's `SidebarInset` look (solid fill, rounded, a hairline
  * ring) from `md` up, edge to edge below it, with the bar along its top.
  */
-export function SitePanel({ children, className }: { children: ReactNode; className?: string }) {
+export function SitePanel({
+  children,
+  className,
+  trail,
+}: {
+  children: ReactNode;
+  className?: string;
+  trail?: Crumb[];
+}) {
   return (
     <div
       className={cn(
-        "bg-background text-foreground min-w-0 md:min-h-[calc(100svh-1rem-72px)] md:rounded-xl md:ring-1 md:ring-border",
+        "bg-background text-foreground min-w-0 md:min-h-[calc(100svh-1rem-var(--site-dock,0px))] md:rounded-xl md:ring-1 md:ring-border",
         className,
       )}
     >
-      <SitePanelBar />
+      <SitePanelBar trail={trail} />
       {children}
     </div>
   );

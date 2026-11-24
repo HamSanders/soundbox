@@ -473,7 +473,7 @@ export function SiteRail({ groups, cta }: { groups: SiteRailGroup[]; cta?: React
   return (
     <nav
       aria-label="On this page"
-      className="bg-background ring-border sticky top-2 hidden h-[calc(100svh-1rem-72px)] flex-col gap-7 overflow-y-auto rounded-xl px-3 py-5 ring-1 lg:flex"
+      className="bg-background ring-border sticky top-2 hidden h-[calc(100svh-1rem-var(--site-dock,0px))] flex-col gap-7 overflow-y-auto rounded-xl px-3 py-5 ring-1 lg:flex"
     >
       {groups.map((group) => (
         <div key={group.heading}>

@@ -1,9 +1,10 @@
 /**
- * The app's frame, for the site pages that show what Mirli makes (/sfx and
- * /music): the moving ground behind everything, a slim icon rail down the
- * left as the app's collapsed sidebar, and the pages' own panels floating on
- * the ground beside it (`SitePanel` and `SiteRail` in
- * app/src/components/site/). The rest of the site keeps the top nav.
+ * The app's frame, around every page of the site: the moving ground behind
+ * everything, a slim icon rail down the left as the app's collapsed sidebar,
+ * and the page floating on the ground beside it in a panel (`SitePanel` in
+ * app/src/components/site/). /sfx and /music draw their own panels, with a
+ * rail panel beside the page and the player docked along the bottom; every
+ * other page is put in one here, by `FramedPage`.
  *
  * The ground is the app's own `AmbientBackground`, so it follows the same
  * per-browser preference (`ui-prefs`; Smoke by default), draws one still frame
@@ -14,23 +15,72 @@
  * panels run edge to edge, as the app does on a phone.
  */
 
-import type { ReactNode } from "react";
-import { Link, useLocation } from "react-router-dom";
+import type { CSSProperties, ReactNode } from "react";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { CloudIcon, DownloadIcon, MoonIcon, NewspaperIcon, SlidersHorizontalIcon, SunIcon, type LucideIcon } from "lucide-react";
 
 import { AmbientBackground } from "@/components/ambient-background";
 import { BrandMark } from "@/components/brand-mark";
+import { SitePanel, type Crumb } from "@/components/site/site-frame";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getModel } from "@/content/models/models";
 import { cloudWaitlistHref } from "@/lib/marketing-links";
 import { cn } from "@/lib/utils";
 
+import { postBySlug } from "../blog/posts";
+import { docBySlug } from "../docs/pages";
+import { getLander } from "../landers/content";
 import { GROUPS, SiteHeader } from "./site-header";
 
-/** Paths drawn in the app's frame rather than under the top nav. */
-export function wantsAppFrame(pathname: string): boolean {
-  const clean = pathname.replace(/\/+$/, "");
-  return /^\/(sfx|music)(\/|$)/.test(clean);
+/** /sfx and /music: pages that draw their own panels and dock a player. */
+function drawsOwnPanel(pathname: string): boolean {
+  return /^\/(sfx|music)(\/|$)/.test(pathname);
+}
+
+// The top-level pages' names, as the nav names them.
+const PAGE_NAMES: Record<string, string> = {
+  ...Object.fromEntries(GROUPS.flatMap((g) => g.items.map((i) => [i.to.slice(1), i.label]))),
+  studio: "Studio",
+  blog: "Blog",
+  press: "Press",
+  download: "Download",
+};
+
+/** Where a site page sits, for the panel bar: `Mirli / Docs / Install`. */
+function pageCrumbs(pathname: string): Crumb[] {
+  const clean = pathname.replace(/^\/+|\/+$/g, "");
+  if (!clean) return [];
+  const lander = getLander(clean);
+  if (lander) return [{ label: lander.eyebrow, to: `/${clean}` }];
+  const [root, slug] = clean.split("/");
+  const trail: Crumb[] = [{ label: PAGE_NAMES[root] ?? root, to: `/${root}` }];
+  if (!slug) return trail;
+  const leaf =
+    root === "docs"
+      ? slug === "reference"
+        ? "Reference"
+        : docBySlug(slug)?.title
+      : root === "blog"
+        ? postBySlug(slug)?.title
+        : root === "models"
+          ? getModel(slug)?.name
+          : undefined;
+  if (leaf) trail.push({ label: leaf, to: `/${root}/${slug}` });
+  return trail;
+}
+
+/** The routed page, in a panel unless it draws its own. */
+export function FramedPage() {
+  const pathname = useLocation().pathname.replace(/\/+$/, "") || "/";
+  if (drawsOwnPanel(pathname)) return <Outlet />;
+  // Clipped so a page's full-bleed band keeps to the panel's rounded corners;
+  // `clip` makes no scroll box, so the bar and the docs' sidebars still stick.
+  return (
+    <SitePanel trail={pageCrumbs(pathname)} className="md:overflow-clip">
+      <Outlet />
+    </SitePanel>
+  );
 }
 
 interface RailItem {
@@ -105,7 +155,7 @@ function IconRail() {
   return (
     <nav
       aria-label="Mirli"
-      className="fixed top-0 bottom-[72px] left-0 z-30 hidden w-14 flex-col items-center gap-1 py-3 md:flex"
+      className="fixed top-0 bottom-(--site-dock) left-0 z-30 hidden w-14 flex-col items-center gap-1 py-3 md:flex"
     >
       <Link
         to="/"
@@ -149,8 +199,12 @@ function IconRail() {
 }
 
 export function AppFrame({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
+  // The docked player's height, which the rail and the panels stop above.
+  const dock = drawsOwnPanel(pathname.replace(/\/+$/, "")) ? "72px" : "0px";
   return (
     <TooltipProvider delayDuration={200}>
+      <div style={{ "--site-dock": dock } as CSSProperties} className="contents">
       {/* The flat ground, under the moving one: what a browser without WebGL
           (or with the background turned off) sees between the panels. */}
       <div aria-hidden="true" className="fixed inset-0 -z-20 bg-(--ambient-ground)" />
@@ -159,9 +213,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
         <SiteHeader />
       </div>
       <IconRail />
-      {/* 8px of ground around the panels, as the app's inset shell; the dock
-          is fixed over the bottom, so each page pads its own foot. */}
-      <div className="min-h-svh md:pt-2 md:pr-2 md:pb-[80px] md:pl-14">{children}</div>
+      {/* 8px of ground around the panels, as the app's inset shell, and room
+          for the dock where there is one. */}
+      <div className="min-h-svh md:pt-2 md:pr-2 md:pb-[calc(var(--site-dock)+0.5rem)] md:pl-14">{children}</div>
+      </div>
     </TooltipProvider>
   );
 }

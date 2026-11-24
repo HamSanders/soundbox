@@ -115,7 +115,7 @@ export function DocsShell({
     <div className="mx-auto flex w-full max-w-7xl gap-12 px-4 py-10 lg:py-16">
       {/* ------------------------------------------------------- contents */}
       <div className="hidden w-56 shrink-0 lg:block">
-        <div className="sticky top-24 space-y-7">
+        <div className="sticky top-24 md:top-16 space-y-7">
           <DocSearch />
           <Sidebar current={current} />
         </div>
@@ -148,7 +148,7 @@ export function DocsShell({
       {/* --------------------------------------------------- on this page */}
       {page && page.headings.length > 0 && (
         <div className="hidden w-56 shrink-0 xl:block">
-          <div className="sticky top-24">
+          <div className="sticky top-24 md:top-16">
             <OnThisPage headings={page.headings} />
           </div>
         </div>

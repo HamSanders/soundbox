@@ -36,7 +36,6 @@ import {
   WifiOffIcon,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { SitePanel } from "@/components/site/site-frame";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/docs-primitives";
@@ -71,7 +70,7 @@ import {
   tracksIn,
   trendingTracks,
 } from "@/content/music/tracks";
-import { LABEL, MUSIC_ARTISTS, catalogNumber } from "@/content/music/artists";
+import { MUSIC_ARTISTS, catalogNumber } from "@/content/music/artists";
 import type { MusicArtist } from "@/content/music/artists";
 import { MUSIC_MODEL_LICENSES, MUSIC_MODEL_NAMES } from "@/content/music/types";
 import type { MusicTrack } from "@/content/music/types";
@@ -152,7 +151,7 @@ const RAIL = [
       { href: "#instrumental", label: "Instrumental", icon: MusicIcon },
       { href: "#vocal", label: "Sung with lyrics", icon: MicVocalIcon },
       { href: "#game-music", label: "Game music", icon: Gamepad2Icon },
-      { href: "#artists", label: LABEL.name, icon: Disc3Icon },
+      { href: "#artists", label: "More samples", icon: Disc3Icon },
     ],
   },
   {
@@ -549,10 +548,10 @@ export function MusicHubPage() {
     })),
     ...(artistsFailed
       ? []
-      : MUSIC_ARTISTS.map((artist, i) => ({
+      : MUSIC_ARTISTS.map((artist) => ({
           id: `artist-${artist.slug}`,
           title: artist.name,
-          sub: `${LABEL.name} · ${catalogNumber(i)} · ${artist.genre}`,
+          sub: `More samples · ${artist.genre}`,
           tile: (
             <MusicCover
               track={{ title: artist.name, cover: artist.cover }}
@@ -740,31 +739,16 @@ export function MusicHubPage() {
               data-section="artists"
               className="scroll-mt-20 pt-14"
             >
-              <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
-                <div className="min-w-0">
-                  <p className="label-caps text-muted-foreground">
-                    {LABEL.tagline}
-                  </p>
-                  <h2
-                    id="artists"
-                    className="font-display mt-1 text-3xl leading-none font-extrabold uppercase sm:text-4xl"
-                  >
-                    {LABEL.name}
-                  </h2>
-                </div>
-                <Badge
-                  variant="outline"
-                  className="label-caps ml-auto shrink-0"
-                >
-                  Fictional roster
-                </Badge>
-              </div>
+              <h2
+                id="artists"
+                className="font-display text-3xl leading-none font-extrabold uppercase sm:text-4xl"
+              >
+                More samples
+              </h2>
               <p className="text-muted-foreground mt-2.5 max-w-2xl text-sm leading-relaxed">
-                Twenty fictional acts, each with a house style. To a generative
-                model an artist identity is a vocabulary held constant, so every
-                act on this roster is a persona string, and its signature track
-                was rendered from that string. Press play to hear the act. Copy
-                the persona and append your own brief to render in its style.
+                Twenty more tracks, each in its own style. Press play to hear
+                one, or copy its prompt and add your own brief to make
+                something like it.
               </p>
               <ul className="-mx-2.5 mt-6 grid grid-cols-2 gap-y-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
                 {MUSIC_ARTISTS.map((artist, i) => (

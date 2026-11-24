@@ -632,7 +632,7 @@ function Footer() {
 
 export function WelcomePage() {
   return (
-    <div className="bg-background text-foreground min-h-svh overflow-x-clip">
+    <div className="text-foreground overflow-x-clip">
       {/* A new name says nothing on its own, so the title carries what it
           is as well as what it is called. */}
       <SeoHead

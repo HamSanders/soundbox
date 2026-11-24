@@ -14,7 +14,7 @@
 import { existsSync } from "node:fs";
 import { copyFile, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export interface Character {
@@ -95,7 +95,11 @@ export class CharacterStore {
 
   folder(id: string): string {
     if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(id)) throw new CharacterNotFound();
-    return join(this.dir, id);
+    // The id is already a plain slug; this also proves the folder stays inside the characters directory.
+    const root = resolve(this.dir);
+    const folder = resolve(root, id);
+    if (!folder.startsWith(root + sep)) throw new CharacterNotFound();
+    return folder;
   }
 
   /** Built-ins get a folder (and their shipped portrait) on first use. */

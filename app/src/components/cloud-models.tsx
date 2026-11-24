@@ -36,7 +36,7 @@ export function CloudModelsPage({ cloud }: { cloud: CloudStatus }) {
       <div>
         <h1 className="font-heading text-2xl font-semibold tracking-tight">Models</h1>
         <p className="text-muted-foreground text-sm">
-          These run on Mirli Cloud. Each render costs credits, and a failed render is never charged.
+          These run on Mirli Cloud. Each render costs credits.
         </p>
       </div>
 

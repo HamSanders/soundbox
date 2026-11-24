@@ -6,7 +6,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
-import { packId } from "../cloud/contract.js";
 import type { MirliService } from "../service.js";
 
 export function registerCloud(app: FastifyInstance, svc: MirliService): void {
@@ -29,11 +28,5 @@ export function registerCloud(app: FastifyInstance, svc: MirliService): void {
   app.post("/api/cloud/warm", async (request) => {
     const { model } = z.object({ model: z.string().min(1).max(200) }).parse(request.body ?? {});
     return svc.cloud.warm(model);
-  });
-
-  /** A checkout URL for a credit pack, to open in the browser. */
-  app.post("/api/cloud/checkout", async (request) => {
-    const { pack } = z.object({ pack: packId }).parse(request.body ?? {});
-    return svc.cloud.checkout(pack);
   });
 }

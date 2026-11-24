@@ -209,7 +209,6 @@ export const UNGUARDED_ROUTES: readonly string[] = [
   "DELETE /api/cloud/sign-in",
   "POST /api/cloud/sign-out",
   "POST /api/cloud/warm",
-  "POST /api/cloud/checkout",
   "POST /api/assistant/openers",
   "GET /api/health",
   "GET /api/models",

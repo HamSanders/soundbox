@@ -3972,9 +3972,6 @@ export const mockApi: MirliApi = {
   async cloudWarm() {
     return { state: "skipped" };
   },
-  async cloudCheckout(): Promise<never> {
-    throw new ApiError("Mirli Cloud is not turned on in this build.", 400);
-  },
 
   async listEndpoints() {
     await wait(60);
@@ -4196,6 +4193,7 @@ const MOCK_HOSTED = import.meta.env.VITE_MOCK_HOSTED === "1";
  *  gateway's /v1/models returned it on 2026-11-20. */
 function hostedCloudModels(): Model[] {
   const base = models[0]!;
+  // Demo prices only (1 credit each). Real ones come from the gateway at runtime.
   const cloud = (
     id: string,
     name: string,
@@ -4227,21 +4225,20 @@ function hostedCloudModels(): Model[] {
   return [
     cloud("cloud:ace-step-1.5", "ACE-Step 1.5", "music",
       "Songs or instrumentals from a description, with optional lyrics, 10 s to 10 min.",
-      { unit: "minute", credits_per_unit: 5, min_credits: 5 }),
+      { unit: "minute", credits_per_unit: 1, min_credits: 1 }),
     cloud("cloud:cassette-sfx", "CassetteAI Sound Effects", "sfx",
       "Sound effects and foley from a description, 1 to 30 seconds.",
-      { unit: "render", credits_per_unit: 3, min_credits: 3 }),
+      { unit: "render", credits_per_unit: 1, min_credits: 1 }),
     cloud("cloud:kokoro", "Kokoro", "voice",
       "Fast, natural English speech in 20 preset voices.",
-      { unit: "1k_chars", credits_per_unit: 3, min_credits: 1 }),
-    // Voice cloning (gateway contract 2). Placeholder prices: the real ones
-    // come from the gateway at runtime.
+      { unit: "1k_chars", credits_per_unit: 1, min_credits: 1 }),
+    // Voice cloning (gateway contract 2).
     cloud("cloud:chatterbox-turbo", "Chatterbox Turbo", "voice",
       "Fast English speech in 20 preset voices, or in a voice cloned from a 5 to 10 second clip.",
       { unit: "1k_chars", credits_per_unit: 1, min_credits: 1 }, clone(["lucy", "aaron"])),
     cloud("cloud:qwen3-tts", "Qwen3-TTS 1.7B", "voice",
       "Expressive speech in 10 languages, in 9 preset voices or a voice cloned from your clip.",
-      { unit: "1k_chars", credits_per_unit: 2, min_credits: 2 }, clone(["Vivian", "Ryan"])),
+      { unit: "1k_chars", credits_per_unit: 1, min_credits: 1 }, clone(["Vivian", "Ryan"])),
     cloud("cloud:voice-changer", "Chatterbox Voice Changer", "voice",
       "Re-voices a recording in one of your cloned voices, keeping its timing and delivery.",
       { unit: "minute", credits_per_unit: 1, min_credits: 1 },

@@ -9,15 +9,9 @@
 import { CheckCircle2Icon, CloudIcon, ExternalLinkIcon, Loader2Icon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import type { CloudPack, CloudStatus } from "@/lib/api";
+import type { CloudStatus } from "@/lib/api";
 import { creditsLabel } from "@/lib/cloud";
-import { useCloudCancelSignIn, useCloudCheckout, useCloudSignIn, useCloudSignOut } from "@/lib/queries";
-
-const PACKS: { id: CloudPack; label: string; note?: string }[] = [
-  { id: "p10", label: "$10 · 1,000 credits" },
-  { id: "p25", label: "$25 · 2,600 credits", note: "+4%" },
-  { id: "p50", label: "$50 · 5,500 credits", note: "+10%" },
-];
+import { useCloudCancelSignIn, useCloudSignIn, useCloudSignOut } from "@/lib/queries";
 
 const credits = creditsLabel;
 
@@ -25,7 +19,6 @@ export function CloudAccountPanel({ status }: { status: CloudStatus }) {
   const signIn = useCloudSignIn();
   const cancel = useCloudCancelSignIn();
   const signOut = useCloudSignOut();
-  const checkout = useCloudCheckout();
   const pending = status.sign_in.state === "pending" ? status.sign_in : null;
   const problem =
     status.sign_in.state === "denied" || status.sign_in.state === "expired" || status.sign_in.state === "error"
@@ -55,26 +48,13 @@ export function CloudAccountPanel({ status }: { status: CloudStatus }) {
         </div>
         <div className="space-y-1.5">
           <p className="text-muted-foreground text-xs">
-            Buy credits. Checkout opens in your browser. Credits last 12 months, and a failed render is never charged.
+            Buy credits and see your receipts on your Mirli account page, which opens in your browser.
           </p>
-          <div className="flex flex-wrap gap-2">
-            {PACKS.map((p) => (
-              <Button
-                key={p.id}
-                variant="outline"
-                size="sm"
-                disabled={checkout.isPending}
-                onClick={() =>
-                  checkout.mutate(p.id, {
-                    onSuccess: ({ url }) => window.open(url, "_blank", "noopener,noreferrer"),
-                  })
-                }
-              >
-                {p.label}
-                {p.note && <span className="text-muted-foreground">{p.note}</span>}
-              </Button>
-            ))}
-          </div>
+          <Button asChild variant="outline" size="sm">
+            <a href={`${status.base_url.replace(/\/+$/, "")}/account`} target="_blank" rel="noopener noreferrer">
+              Add credits <ExternalLinkIcon className="size-3.5" aria-hidden="true" />
+            </a>
+          </Button>
         </div>
         {!status.hosted && (
           <Button variant="ghost" size="sm" disabled={signOut.isPending} onClick={() => signOut.mutate()}>

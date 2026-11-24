@@ -191,9 +191,3 @@ export type ErrorCode = z.infer<typeof errorCode>;
 export const errorBody = z.object({
   error: z.object({ code: errorCode, message: z.string(), details: z.record(z.string(), z.unknown()).optional() }),
 });
-
-/** Credit packs. Prices are public on the pricing page, so they can live here. */
-export const packId = z.enum(["p10", "p25", "p50"]);
-export type PackId = z.infer<typeof packId>;
-export const checkoutRequest = z.object({ pack: packId });
-export const checkoutResponse = z.object({ url: z.string().url() });

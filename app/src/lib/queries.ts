@@ -24,7 +24,6 @@ import {
   type AudioCppCatalogEntry,
   type AudioEndpoint,
   type AudioEndpointInput,
-  type CloudPack,
   type CloudSignIn,
   type CloudStatus,
   type EndpointList,
@@ -443,8 +442,6 @@ function useCloudMutation<TIn, TOut>(fn: (input: TIn) => Promise<TOut>, failure:
 export const useCloudSignIn = () => useCloudMutation<void, CloudSignIn>(() => api.cloudSignIn(), "Could not start sign-in");
 export const useCloudCancelSignIn = () => useCloudMutation<void, void>(() => api.cloudCancelSignIn(), "Could not cancel");
 export const useCloudSignOut = () => useCloudMutation<void, void>(() => api.cloudSignOut(), "Could not sign out");
-export const useCloudCheckout = () =>
-  useCloudMutation<CloudPack, { url: string }>((pack) => api.cloudCheckout(pack), "Could not open checkout");
 
 /* ---------------------------------------------------- custom endpoints */
 

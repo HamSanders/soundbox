@@ -156,7 +156,6 @@ function fakeGateway() {
       g.uploads.push({ type: new Headers(init?.headers).get("content-type"), seconds });
       return json({ upload_id: `00000000-0000-4000-8000-00000000010${g.uploads.length}`, expires_at: "2030-01-01T00:00:00Z", duration_s: seconds }, 201);
     }
-    if (method === "POST" && url.pathname === "/v1/checkout") return json({ url: `${BASE}/checkout/${body.pack}` });
     const job = (state: string, extra: Record<string, unknown> = {}) => ({
       job_id: "00000000-0000-4000-8000-000000000001",
       state,

@@ -31,7 +31,7 @@ export type { ModelParam, ParamGroup, ParamType } from "./models/params.js";
  */
 export type ModelProvider = "local" | "endpoint" | "cloud";
 
-/** What a Mirli Cloud render costs. 1 credit = $0.01. */
+/** What a Mirli Cloud render costs. Set by the gateway. */
 export interface ModelPrice {
   unit: "render" | "minute" | "1k_chars" | "10s";
   credits_per_unit: number;

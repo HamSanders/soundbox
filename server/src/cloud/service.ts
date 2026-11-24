@@ -25,7 +25,7 @@ import { getLogger } from "../logging.js";
 import { CloudSource } from "./source.js";
 import type { ModelManager } from "../models/manager.js";
 import { CloudClient, CloudError, type FetchFn } from "./client.js";
-import type { CloudModel as CloudModelInfo, PackId } from "./contract.js";
+import type { CloudModel as CloudModelInfo } from "./contract.js";
 import { type CloudCaps, type CloudContext, TRANSCRIBER } from "./model.js";
 
 const log = getLogger("mirli.cloud");
@@ -311,18 +311,6 @@ export class CloudService implements CloudContext {
       return await client.warm(model);
     } catch {
       return { state: "skipped" };
-    }
-  }
-
-  /* -------------------------------------------------------------- buying */
-
-  async checkout(pack: PackId): Promise<{ url: string }> {
-    const client = this.client();
-    if (!client) throw new ModelError("Sign in to Mirli Cloud first.");
-    try {
-      return await client.checkout(pack);
-    } catch (e) {
-      throw new ModelError(e instanceof Error ? e.message : String(e));
     }
   }
 

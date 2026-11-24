@@ -9,14 +9,12 @@ import { z } from "zod";
 import {
   CONTRACT_VERSION,
   accountResponse,
-  checkoutResponse,
   deviceCodeResponse,
   type ErrorCode,
   errorBody,
   type JobParams,
   jobResponse,
   modelsResponse,
-  type PackId,
   quoteResponse,
   type Task,
   uploadResponse,
@@ -186,10 +184,6 @@ export class CloudClient {
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!res.ok && res.status !== 401) throw new CloudError("backend_error", `Mirli Cloud answered ${res.status}.`, res.status);
-  }
-
-  checkout(pack: PackId) {
-    return this.call(checkoutResponse, "POST", "/v1/checkout", { pack });
   }
 
   /** Download one output. The link is on a CDN, so no token goes with it. */

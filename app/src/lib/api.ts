@@ -26,7 +26,7 @@ export type ModelStatus =
  *  endpoint someone else's server answers ("endpoint"). */
 export type ModelProvider = "local" | "endpoint" | "cloud";
 
-/** What a Mirli Cloud render costs. 1 credit = $0.01. */
+/** What a Mirli Cloud render costs. Set by the gateway. */
 export interface ModelPrice {
   unit: "render" | "minute" | "1k_chars" | "10s";
   credits_per_unit: number;
@@ -1390,8 +1390,6 @@ export interface CloudStatus {
   models: number;
 }
 
-export type CloudPack = "p10" | "p25" | "p50";
-
 /** What the daily update check knows. See Settings → Updates. */
 export interface UpdateStatus {
   /** False when the check is off, in Settings or by MIRLI_UPDATE_CHECK=0. */
@@ -1924,7 +1922,6 @@ export interface MirliApi {
   cloudSignIn(): Promise<CloudSignIn>;
   cloudCancelSignIn(): Promise<void>;
   cloudSignOut(): Promise<void>;
-  cloudCheckout(pack: CloudPack): Promise<{ url: string }>;
   /** Start the GPU line a cloud model runs on, ahead of a render. A hint: never throws to the user. */
   cloudWarm(model: string): Promise<{ state: string }>;
   saveEndpoint(id: string, input: AudioEndpointInput): Promise<AudioEndpoint>;
@@ -2555,8 +2552,6 @@ export const httpApi: MirliApi = {
   cloudCancelSignIn: () => request<void>("/api/cloud/sign-in", { method: "DELETE" }),
   cloudSignOut: () => request<void>("/api/cloud/sign-out", { method: "POST" }),
   cloudWarm: (model) => request<{ state: string }>("/api/cloud/warm", { method: "POST", body: JSON.stringify({ model }) }),
-  cloudCheckout: (pack) =>
-    request<{ url: string }>("/api/cloud/checkout", { method: "POST", body: JSON.stringify({ pack }) }),
   saveEndpoint: (id, input) =>
     request<AudioEndpoint>(`/api/endpoints/${encodeURIComponent(id)}`, {
       method: "PUT",

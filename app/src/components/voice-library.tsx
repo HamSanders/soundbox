@@ -1,62 +1,95 @@
 /**
- * The Voice Lab's list, shaped after a music app's voice library: a row of
- * chips, a shelf of compact cards for the voices you use, then a dense table
- * of every voice in the same grid as the Library's track rows.
+ * The Voice Lab's cast: every voice as a square tile, drawn like the Library's
+ * shelf tiles (the name's tint, the name in the title face, a log line under
+ * it), or as a dense table in the same grid as the Library's track rows. The
+ * page holds a switch between the two and remembers it in this browser.
  *
  * Drawn in the Mirli guide: ink and paper, names in the display face, the
- * model and read count as a log line, the kind as a worded outlined pill. The
- * one yellow `signal` marks the voice whose details are open, the same way a
- * track row marks what is playing.
+ * model as a log line, the kind as a worded outlined pill. The one yellow
+ * `signal` marks the voice whose details are open, the same way a track row
+ * marks what is playing.
  */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { PauseIcon, PlayIcon } from "lucide-react";
+import { LayoutGridIcon, ListIcon, PauseIcon, PlayIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { ProjectThumb } from "@/components/project-thumb";
 import { VoiceAvatar } from "@/components/voice-avatar";
+import type { VoiceView } from "@/lib/voice-lab-prefs";
 import { cn } from "@/lib/utils";
 import type { Voice } from "@/lib/api";
 
-/* ------------------------------------------------------------------ chips */
+/* ------------------------------------------------------------- kind tabs */
 
-export interface VoiceChip {
+export interface VoiceKindTab {
   value: string;
   label: string;
   count: number;
 }
 
-/** All / Cloned / Built-in, then one chip per model family the voices use. */
-export function VoiceChips({
-  chips,
+/** All / Cloned / Built-in as underlined tabs, the way the Library splits
+ *  All / Music / SFX / Speech. */
+export function VoiceKindTabs({
+  tabs,
   value,
   onChange,
 }: {
-  chips: VoiceChip[];
+  tabs: VoiceKindTab[];
   value: string;
   onChange: (v: string) => void;
 }) {
   return (
-    <div role="group" aria-label="Filter voices" className="flex flex-wrap gap-1.5">
-      {chips.map((c) => {
-        const on = c.value === value;
-        return (
-          <button
-            key={c.value}
-            type="button"
-            aria-pressed={on}
-            onClick={() => onChange(c.value)}
-            className={cn(
-              "focus-visible:ring-ring/50 inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium outline-none transition-colors focus-visible:ring-3",
-              on
-                ? "bg-primary text-primary-foreground border-primary"
-                : "border-border text-muted-foreground hover:text-foreground hover:bg-muted",
-            )}
-          >
-            {c.label}
-            <span className={cn("tabular-nums", on ? "opacity-70" : "opacity-60")}>{c.count}</span>
-          </button>
-        );
-      })}
+    <div role="tablist" aria-label="Kind" className="border-border flex gap-5 border-b">
+      {tabs.map((t) => (
+        <button
+          key={t.value}
+          type="button"
+          role="tab"
+          aria-selected={value === t.value}
+          onClick={() => onChange(t.value)}
+          className={cn(
+            "focus-visible:ring-ring/50 -mb-px inline-flex items-baseline gap-1.5 border-b-2 pb-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2",
+            value === t.value
+              ? "border-foreground text-foreground"
+              : "text-muted-foreground hover:text-foreground border-transparent",
+          )}
+        >
+          {t.label}
+          <span className="readout opacity-60 tabular-nums">{t.count}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Grid or list, as two icon buttons in one pill. */
+export function VoiceViewSwitch({
+  value,
+  onChange,
+}: {
+  value: VoiceView;
+  onChange: (v: VoiceView) => void;
+}) {
+  const option = (v: VoiceView, label: string, icon: ReactNode) => (
+    <button
+      type="button"
+      aria-pressed={value === v}
+      aria-label={label}
+      title={label}
+      onClick={() => onChange(v)}
+      className={cn(
+        "focus-visible:ring-ring/50 flex h-7 w-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 [&_svg]:size-3.5",
+        value === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {icon}
+    </button>
+  );
+  return (
+    <div role="group" aria-label="View" className="border-border flex h-8 items-center rounded-full border p-0.5">
+      {option("grid", "Cast grid", <LayoutGridIcon />)}
+      {option("list", "List", <ListIcon />)}
     </div>
   );
 }
@@ -143,43 +176,95 @@ function readsLabel(voice: Voice): string {
   return `${n} read${n === 1 ? "" : "s"}`;
 }
 
-/* ------------------------------------------------------------------ shelf */
+/* ------------------------------------------------------------------- grid */
 
-/** A compact card for the "Your voices" shelf: avatar well, name in display
- *  caps, model and reads as a log line. */
-export function VoiceShelfCard({
+/** One voice as a square tile: its picture or its name's tint, the kind in
+ *  the corner, the name set on the tile, a play button for a clone's clip,
+ *  and the model and notes underneath. The tile itself opens the details. */
+export function VoiceTile({
   voice,
   modelName,
   selected,
   onOpen,
+  menu,
 }: {
   voice: Voice;
   modelName: string | null;
   selected: boolean;
   onOpen: () => void;
+  menu: ReactNode;
 }) {
+  const ref = useReferencePlay(voice);
+  const art = Boolean(voice.artwork);
   return (
-    <div
-      data-voice-row
-      className={cn(
-        "bg-card ring-border relative flex min-w-0 items-center gap-3 rounded-md p-2 ring-1 transition-colors duration-(--duration-fast) hover:bg-muted/60",
-        selected &&
-          "bg-muted/60 before:bg-signal before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full",
-      )}
-    >
-      <AvatarButton voice={voice} onOpen={onOpen} className="size-12 rounded-md" />
-      <button
-        type="button"
-        onClick={onOpen}
-        className="focus-visible:ring-ring/50 min-w-0 flex-1 rounded text-left outline-none focus-visible:ring-3"
+    <div data-voice-row className="grid min-w-0 gap-1.5">
+      <div
+        className={cn(
+          "relative aspect-square overflow-hidden rounded-md ring-1 ring-inset transition-shadow duration-(--duration-fast)",
+          selected ? "ring-signal ring-2" : "ring-border hover:ring-border-strong",
+        )}
       >
-        <span className="font-display block truncate text-base leading-tight font-bold tracking-[0.01em] uppercase">
+        {art ? (
+          <VoiceAvatar voice={voice} className="size-full rounded-none" />
+        ) : (
+          <ProjectThumb name={voice.name} className="size-full [&>span]:hidden" />
+        )}
+        {/* A picture needs the dusk scrim under the name to stay legible. */}
+        {art && <span aria-hidden="true" className="from-dusk/80 absolute inset-0 bg-gradient-to-t to-transparent to-60%" />}
+        {/* The whole tile opens the details; the controls on it sit above. */}
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={`Details for ${voice.name}`}
+          className="focus-visible:ring-ring/50 absolute inset-0 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-inset"
+        />
+        <span className={cn("pointer-events-none absolute top-2 left-2 rounded-md", art && "bg-background/85")}>
+          <KindPill voice={voice} />
+        </span>
+        <span
+          aria-hidden="true"
+          className={cn(
+            "font-display pointer-events-none absolute bottom-2 left-2.5 line-clamp-2 text-xl leading-none font-extrabold tracking-[0.01em] text-balance uppercase",
+            ref ? "right-14" : "right-2.5",
+            art && "text-white",
+          )}
+        >
           {voice.name}
         </span>
-        <span className="readout text-muted-foreground block truncate">
-          {[modelName ?? voice.model_id ?? "any model", readsLabel(voice)].join(" · ")}
-        </span>
-      </button>
+        {ref && (
+          <button
+            type="button"
+            onClick={ref.toggle}
+            aria-label={`${ref.playing ? "Pause" : "Play"} ${voice.name}'s reference clip`}
+            className={cn(
+              "focus-visible:ring-ring/50 absolute right-2 bottom-2 flex size-10 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-3 [&_svg]:size-4 [&_svg]:fill-current",
+              ref.playing ? "bg-primary text-primary-foreground" : "bg-background/80 text-foreground hover:bg-background",
+            )}
+          >
+            {ref.playing ? <PauseIcon /> : <PlayIcon />}
+          </button>
+        )}
+      </div>
+      <div className="flex min-w-0 items-start gap-1">
+        <div className="min-w-0 flex-1">
+          <p className="readout truncate" title={voice.model_id ?? undefined}>
+            {modelName ?? voice.model_id ?? "any model"}
+          </p>
+          <p className="text-muted-foreground truncate text-xs" title={voice.notes ?? undefined}>
+            {voice.notes || (voice.kind === "builtin" ? voice.voice_id : null) || readsLabel(voice)}
+          </p>
+        </div>
+        {menu}
+      </div>
+    </div>
+  );
+}
+
+/** The tiles: two across on a phone, as many as fit from there up. */
+export function VoiceGrid({ children }: { children: ReactNode }) {
+  return (
+    <div className="grid grid-cols-2 gap-x-3 gap-y-4 @lg:grid-cols-[repeat(auto-fill,minmax(10rem,1fr))]">
+      {children}
     </div>
   );
 }
@@ -233,13 +318,15 @@ export function VoiceRow({
           "bg-muted/60 before:bg-signal before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full",
       )}
     >
-      <AvatarButton voice={voice} onOpen={onOpen} className="size-10 rounded-sm" />
+      <AvatarButton voice={voice} onOpen={onOpen} className="z-10 size-10 rounded-sm" />
       <div className="min-w-0">
+        {/* Stretched over the row, so the whole row is one target rather than
+            the name's 20px line; the avatar and the actions sit above it. */}
         <button
           type="button"
           onClick={onOpen}
           aria-label={`Details for ${voice.name}`}
-          className="focus-visible:ring-ring/50 block max-w-full truncate rounded text-left font-display text-base leading-tight font-bold tracking-[0.01em] uppercase outline-none focus-visible:ring-3"
+          className="focus-visible:ring-ring/50 block max-w-full truncate rounded text-left font-display text-base leading-tight font-bold tracking-[0.01em] uppercase outline-none after:absolute after:inset-0 after:rounded-md focus-visible:after:ring-3 focus-visible:after:ring-ring/50"
         >
           {voice.name}
         </button>
@@ -261,7 +348,7 @@ export function VoiceRow({
       <span className="readout text-muted-foreground hidden text-right tabular-nums @2xl:block">
         {voice.read_count ?? 0}
       </span>
-      <div className="flex items-center justify-end">{actions}</div>
+      <div className="relative z-10 flex items-center justify-end">{actions}</div>
     </div>
   );
 }

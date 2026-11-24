@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 import { Analytics } from "@vercel/analytics/react";
 
 import { SiteHeader } from "./components/site-header";
+import { AppFrame, wantsAppFrame } from "./components/app-frame";
 
 /**
  * A new page opens at the top, unless the link says where: `/docs/install#gpu`
@@ -42,15 +43,25 @@ function ScrollToTop() {
   return null;
 }
 
-// Wraps every site route (/sfx, /sfx/:slug, /docs) so next-themes' dark/light
-// class lands on <html> the same way it does in the app (WaveformPlayer reads
-// CSS vars off it), and so every route gets the same top nav.
+// Wraps every site route so next-themes' dark/light class lands on <html> the
+// same way it does in the app (WaveformPlayer reads CSS vars off it). /sfx and
+// /music, the pages that show what Mirli makes, are drawn in the app's own
+// frame (components/app-frame.tsx); every other page keeps the top nav.
 export function Layout() {
+  const { pathname } = useLocation();
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
       <ScrollToTop />
-      <SiteHeader />
-      <Outlet />
+      {wantsAppFrame(pathname) ? (
+        <AppFrame>
+          <Outlet />
+        </AppFrame>
+      ) : (
+        <>
+          <SiteHeader />
+          <Outlet />
+        </>
+      )}
       {/* Film grain over the whole page; see `film-grain` in the app's index.css. */}
       <div className="film-grain" aria-hidden="true" />
       <Analytics />

@@ -36,7 +36,7 @@ import { BrandMark, Wordmark } from "@/components/brand-mark";
 import { cloudWaitlistHref } from "@/lib/marketing-links";
 import { cn } from "@/lib/utils";
 
-interface NavItem {
+export interface NavItem {
   to: string;
   label: string;
   blurb: string;
@@ -48,7 +48,7 @@ interface NavGroup {
   items: NavItem[];
 }
 
-const GROUPS: NavGroup[] = [
+export const GROUPS: NavGroup[] = [
   {
     label: "Create",
     items: [

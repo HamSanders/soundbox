@@ -271,7 +271,9 @@ export function SiteInlinePlayer({ audio, id, label }: { audio: SiteAudio; id: s
   );
 }
 
-/** The bottom dock, as the app's: the sound, transport and timeline, extras. */
+/** The bottom dock, as the app's: the sound, transport and timeline, extras,
+ *  on the ground under the panels rather than in a box of its own. Frosted,
+ *  because here the page scrolls behind it. */
 export function SiteDock({ audio, trailing }: { audio: SiteAudio; trailing?: ReactNode }) {
   const { current, playing } = audio;
   if (!current) return null;
@@ -279,7 +281,7 @@ export function SiteDock({ audio, trailing }: { audio: SiteAudio; trailing?: Rea
     <div
       role="region"
       aria-label="Now playing"
-      className="bg-sidebar border-border fixed inset-x-0 bottom-0 z-40 grid h-[72px] grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-t px-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)]"
+      className="bg-sidebar/80 supports-[backdrop-filter]:bg-sidebar/60 fixed inset-x-0 bottom-0 z-40 grid h-[72px] grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 backdrop-blur-xl md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)]"
     >
       {/* Narrow windows: the timeline runs along the dock's top edge. */}
       <SiteScrubber audio={audio} className="absolute inset-x-0 -top-2 md:hidden" />
@@ -460,9 +462,10 @@ export interface SiteRailGroup {
 
 /**
  * The left rail of the public /music and /sfx pages: grouped jump links, then
- * a "make your own" card pinned to the bottom. Sticky under the site header
- * and above the dock, and only from `lg` up; below that the page is one
- * column and the rail's links would only repeat the headings.
+ * a "make your own" card pinned to the bottom. A panel of its own beside the
+ * page, as the app's Create panel sits beside its page: sticky, above the
+ * dock, and only from `lg` up; below that the page is one column and the
+ * rail's links would only repeat the headings.
  *
  * Put it as the first child of `SiteRailLayout`, beside the page's `<main>`.
  */
@@ -470,7 +473,7 @@ export function SiteRail({ groups, cta }: { groups: SiteRailGroup[]; cta?: React
   return (
     <nav
       aria-label="On this page"
-      className="border-border sticky top-14 hidden h-[calc(100svh-3.5rem-72px)] flex-col gap-7 overflow-y-auto border-r px-3 py-6 lg:flex"
+      className="bg-background ring-border sticky top-2 hidden h-[calc(100svh-1rem-72px)] flex-col gap-7 overflow-y-auto rounded-xl px-3 py-5 ring-1 lg:flex"
     >
       {groups.map((group) => (
         <div key={group.heading}>
@@ -506,10 +509,14 @@ export function SiteRailCard({ title, body, action }: { title: string; body: str
   );
 }
 
-/** Rail on the left, page on the right, from `lg` up; one column below. */
+/**
+ * Rail on the left, page on the right, from `lg` up; one column below. Two
+ * panels on the ground with the app's 8px gap between them: put `SiteRail`
+ * first and the page, in a `SitePanel`, second.
+ */
 export function SiteRailLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="mx-auto w-full max-w-[96rem] lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]">{children}</div>
+    <div className="w-full items-start lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-2">{children}</div>
   );
 }
 

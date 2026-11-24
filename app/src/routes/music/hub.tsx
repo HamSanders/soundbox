@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { SitePanel } from "@/components/site/site-frame";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/docs-primitives";
 import { MarketingLink } from "@/components/marketing-link";
@@ -568,7 +569,7 @@ export function MusicHubPage() {
 
   return (
     <PlayerContext.Provider value={player}>
-      <div className="bg-background text-foreground min-h-svh">
+      <div className="text-foreground">
         <SeoHead
           title="AI music generated locally | Mirli"
           description="Thirty-six tracks generated on one desktop GPU, each with the exact prompt that made it: amapiano, drill, hyperpop, corridos, garage and more. Instrumental and sung, from open-weight models, with no account and no per-track billing."
@@ -610,7 +611,8 @@ export function MusicHubPage() {
             }
           />
 
-          <main className="min-w-0 px-4 pt-6 pb-28 lg:px-8">
+          <SitePanel>
+          <main className="min-w-0 px-4 pt-4 pb-28 md:pb-12 lg:px-8">
             {/* ---------------------------------------------------- hero */}
             <section className="relative isolate overflow-hidden rounded-md">
               <img
@@ -928,6 +930,7 @@ export function MusicHubPage() {
               </p>
             </footer>
           </main>
+          </SitePanel>
         </SiteRailLayout>
 
         <SiteDock audio={player} trailing={<DockPrompt queue={queue} />} />

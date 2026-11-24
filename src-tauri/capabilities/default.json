@@ -1,13 +1,16 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "The splash window: it listens for startup events, and, because the window has no native frame, lets itself be dragged and closed. The app that replaces it is served over HTTP by the backend; its own window permissions are in app-window.json.",
+  "description": "The splash window: it listens for startup events and, because the window has no native frame, draws its own top strip, so it can be dragged, maximized, minimized and closed. The app that replaces it is served over HTTP by the backend; its own window permissions are in app-window.json.",
   "windows": [
     "main"
   ],
   "permissions": [
     "core:default",
     "core:event:allow-listen",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-internal-toggle-maximize",
     "core:window:allow-start-dragging",
     "core:window:allow-close",
     "opener:default"

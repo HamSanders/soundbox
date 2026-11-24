@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voice Lab Directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Courier+Prime:wght@400;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Three directions for Voice Lab and comparing voices, each rendered at phone,
+   tablet and desktop size inside a device frame. Mirli's own tokens from
+   app/src/index.css, dark first. The mockups are silent: playback is a moving
+   playhead, not audio. */
+:root{
+  --bg:#181817; --fg:#f1ece0; --card:#20201e; --popover:#262624; --muted:#272725; --muted-fg:#a9a797;
+  --accent:#30302d; --border:#33332f; --border-strong:#7c7b74; --input:#3e3e3a; --field:#121211; --wave:#7c7b74;
+  --primary:#f1ece0; --primary-fg:#181817; --signal:#f2a40c; --ok:#6fcf9f; --warn:#e08a52; --danger:#f08a80;
+  --sidebar:#141413; --sidebar-accent:#242422;
+  --stage:#121211; --frame:#0b0b0a;
+  --font-display:'Big Shoulders Display','Arial Narrow','Roboto Condensed',sans-serif;
+  --font-sans:'Inter',ui-sans-serif,system-ui,sans-serif;
+  --font-log:'Courier Prime','Courier New',ui-monospace,monospace;
+  --radius:.375rem; --lane-l:.75; --lane-c:.13;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#f1ece0; --fg:#14130f; --card:#faf6ec; --popover:#faf6ec; --muted:#e7e0d0; --muted-fg:#5c5850;
+  --accent:#e0d8c6; --border:#d9d2c0; --border-strong:#7d7768; --input:#cbc3af; --field:#faf6ec; --wave:#7d7768;
+  --primary:#14130f; --primary-fg:#f1ece0; --signal:#f2a40c; --ok:#1f6b4a; --warn:#a8501b; --danger:#b3261e;
+  --sidebar:#e9e3d4; --sidebar-accent:#dcd4c1; --stage:#e6e0d2; --frame:#2a2926; --lane-l:.55; --lane-c:.14; color-scheme:light}}
+:root[data-theme="light"]{
+  --bg:#f1ece0; --fg:#14130f; --card:#faf6ec; --popover:#faf6ec; --muted:#e7e0d0; --muted-fg:#5c5850;
+  --accent:#e0d8c6; --border:#d9d2c0; --border-strong:#7d7768; --input:#cbc3af; --field:#faf6ec; --wave:#7d7768;
+  --primary:#14130f; --primary-fg:#f1ece0; --signal:#f2a40c; --ok:#1f6b4a; --warn:#a8501b; --danger:#b3261e;
+  --sidebar:#e9e3d4; --sidebar-accent:#dcd4c1; --stage:#e6e0d2; --frame:#2a2926; --lane-l:.55; --lane-c:.14; color-scheme:light}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-sans);font-size:15px;line-height:1.5;margin:0}
+.wrap{max-width:1500px;margin:0 auto;padding:28px 16px 64px}
+h1,h2,h3{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.01em;margin:0;line-height:1}
+h1{font-size:clamp(34px,5vw,56px);font-weight:800}
+h2{font-size:28px;font-weight:800}
+p{max-width:70ch;margin:.5em 0}
+.lede{color:var(--muted-fg);font-size:17px}
+.log{font-family:var(--font-log);font-size:12px;color:var(--muted-fg)}
+.controls{display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;margin:20px 0 14px;position:sticky;top:0;background:var(--bg);padding:10px 0;z-index:5;border-bottom:1px solid var(--border)}
+.seg{display:flex;gap:4px;background:var(--muted);padding:4px;border-radius:999px;flex-wrap:wrap}
+.seg button{font:500 14px var(--font-sans);color:var(--muted-fg);background:none;border:0;border-radius:999px;padding:8px 14px;min-height:36px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--primary);color:var(--primary-fg)}
+.pitch{display:grid;gap:18px;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);margin:6px 0 18px}
+@media (max-width:900px){.pitch{grid-template-columns:1fr}}
+.pitch ul{margin:.3em 0;padding-left:1.1em}
+.pitch li{margin:.2em 0}
+.card{background:var(--card);border:1px solid var(--border);border-radius:calc(var(--radius)*1.4);padding:14px 16px}
+.card h3{font-size:18px;font-weight:600;margin-bottom:6px}
+.stage{background:var(--stage);border-radius:14px;padding:20px;display:flex;justify-content:center;overflow:hidden}
+.scaler{transform-origin:top left}
+.device{background:var(--frame);border-radius:28px;padding:10px;box-shadow:0 20px 50px -20px rgb(0 0 0/.5)}
+.device.desktop{border-radius:14px;padding:8px}
+.screen{background:var(--bg);color:var(--fg);border-radius:20px;overflow:hidden;position:relative;font-size:14px;line-height:1.45}
+.device.desktop .screen{border-radius:8px}
+.hint{color:var(--muted-fg);font-size:14px;margin:10px 0 0}
+
+/* ---------------------------------------------------- app inside a frame */
+.app{display:flex;height:100%;width:100%}
+.nav-side{width:216px;background:var(--sidebar);border-right:1px solid var(--border);padding:14px 10px;display:flex;flex-direction:column;gap:2px;flex:none}
+.nav-side .brand{font:800 20px var(--font-display);text-transform:uppercase;padding:4px 10px 14px}
+.nav-side a{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:6px;color:var(--muted-fg);text-decoration:none;font-size:13.5px}
+.nav-side a.on{background:var(--sidebar-accent);color:var(--fg)}
+.nav-side .grp{font-family:var(--font-log);font-size:11px;color:var(--muted-fg);padding:12px 10px 4px}
+.nav-rail{width:84px;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex:none}
+.nav-rail a{display:flex;flex-direction:column;align-items:center;gap:2px;width:72px;padding:8px 0;border-radius:12px;color:var(--muted-fg);font-size:11.5px;text-decoration:none;min-height:56px;justify-content:center}
+.nav-rail a.on{background:var(--sidebar-accent);color:var(--fg)}
+.tabs-bottom{position:absolute;left:0;right:0;bottom:0;height:64px;padding-bottom:6px;background:var(--sidebar);border-top:1px solid var(--border);display:flex;z-index:4}
+.tabs-bottom a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--muted-fg);text-decoration:none}
+.tabs-bottom a.on{color:var(--fg)}
+.tabs-bottom a.on svg{color:var(--signal)}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;position:relative}
+.topbar{height:48px;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--border);flex:none;color:var(--muted-fg);font-size:13px}
+.topbar b{color:var(--fg);font-weight:500}
+.body{flex:1;min-height:0;display:flex}
+.scroll{flex:1;min-width:0;overflow:auto;padding:16px 20px 24px}
+.phone .scroll{padding:12px 16px 150px}
+.pane{width:380px;flex:none;border-left:1px solid var(--border);background:var(--card);display:flex;flex-direction:column;min-height:0}
+.tablet .pane{width:340px}
+.pane-head{display:flex;align-items:center;gap:10px;padding:14px 16px 12px;border-bottom:1px solid var(--border)}
+.pane-body{flex:1;overflow:auto;padding:14px 16px 16px;display:flex;flex-direction:column;gap:14px}
+.title{font:800 30px var(--font-display);text-transform:uppercase;letter-spacing:.01em;line-height:1}
+.phone .title{font-size:28px}
+.label{font-family:var(--font-log);font-size:12px;color:var(--muted-fg)}
+.row-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.row-head .sp{flex:1}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font:500 13.5px var(--font-sans);height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--fg);cursor:pointer;white-space:nowrap}
+.btn.primary{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}
+.btn.ghost{border-color:transparent}
+.btn.icon{width:36px;padding:0}
+.btn:disabled{opacity:.45;cursor:default}
+.touch .btn{height:44px}
+.touch .btn.icon{width:44px}
+.btn svg,.ic{width:18px;height:18px;flex:none}
+.search{display:flex;align-items:center;gap:8px;height:40px;border:1px solid var(--input);background:var(--field);border-radius:999px;padding:0 14px;color:var(--muted-fg);font-size:13.5px;flex:1;min-width:0}
+.touch .search{height:44px}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:10px 0 12px}
+.chip{flex:none;height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--border);background:none;color:var(--muted-fg);font:500 12.5px var(--font-sans);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.touch .chip{height:40px}
+.chip.on{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}
+.chip .n{opacity:.6;font-variant-numeric:tabular-nums}
+.list{display:flex;flex-direction:column;gap:2px}
+.vrow{display:flex;align-items:center;gap:12px;padding:6px 8px;border-radius:6px;position:relative;cursor:pointer;min-height:56px}
+.vrow:hover{background:color-mix(in srgb,var(--muted) 60%,transparent)}
+.vrow.sel{background:color-mix(in srgb,var(--muted) 60%,transparent)}
+.vrow.sel::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:2px;border-radius:2px;background:var(--signal)}
+.av{width:44px;height:44px;border-radius:4px;background:var(--muted);box-shadow:inset 0 0 0 1px var(--border);display:flex;align-items:center;justify-content:center;font:800 18px var(--font-display);color:var(--muted-fg);flex:none;position:relative;border:0;cursor:pointer}
+.av.sm{width:28px;height:28px;font-size:13px}
+.av .pl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--bg) 70%,transparent);color:var(--fg);opacity:0;border-radius:4px}
+.vrow:hover .av .pl,.av.playing .pl,.touch .av .pl{opacity:1}
+.touch .av .pl{inset:auto 2px 2px auto;width:18px;height:18px;border-radius:999px;background:var(--fg);color:var(--bg)}
+.touch .av .pl svg{width:10px;height:10px}
+.vname{font:700 17px var(--font-display);text-transform:uppercase;letter-spacing:.01em;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vsub{font-size:12.5px;color:var(--muted-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vmeta{font-family:var(--font-log);font-size:11.5px;color:var(--muted-fg)}
+.grow{flex:1;min-width:0}
+.pill{font-family:var(--font-log);font-size:11px;border:1px solid var(--border-strong);border-radius:4px;padding:0 5px;color:var(--fg);white-space:nowrap}
+.cbox{width:44px;height:44px;flex:none;display:flex;align-items:center;justify-content:center;border:0;background:none;cursor:pointer;color:var(--muted-fg)}
+.cbox span{width:24px;height:24px;border-radius:999px;border:1.5px solid var(--border-strong);display:flex;align-items:center;justify-content:center;font:700 12px var(--font-log)}
+.cbox.on span{background:var(--signal);border-color:var(--signal);color:#181817}
+.letter{width:24px;height:24px;border-radius:999px;background:var(--muted);display:inline-flex;align-items:center;justify-content:center;font:700 12px var(--font-log);flex:none}
+.letter.on{background:var(--signal);color:#181817}
+.tray{position:absolute;left:8px;right:8px;bottom:72px;background:var(--popover);border:1px solid var(--border);border-radius:14px;padding:8px 8px 8px 12px;display:flex;align-items:center;gap:8px;z-index:3;box-shadow:0 10px 30px -12px rgb(0 0 0/.5)}
+.tray.dock{position:sticky;bottom:12px;left:auto;right:auto;margin-top:14px}
+.textarea{width:100%;min-height:56px;border:1px solid var(--input);background:var(--field);color:var(--fg);border-radius:8px;padding:10px 12px;font:14px var(--font-sans);resize:none}
+.wave{display:block;width:100%;height:36px}
+.take{border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;cursor:pointer;background:var(--card)}
+.take.on{border-color:var(--signal);box-shadow:inset 0 0 0 1px var(--signal)}
+.take .hd{display:flex;align-items:center;gap:10px}
+.transport{display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid var(--border);background:var(--popover)}
+.bigplay{width:52px;height:52px;border-radius:999px;background:var(--primary);color:var(--primary-fg);border:0;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+.abseg{display:flex;gap:4px;background:var(--muted);padding:4px;border-radius:999px}
+.abseg button{width:44px;height:40px;border-radius:999px;border:0;background:none;color:var(--fg);font:700 14px var(--font-log);cursor:pointer}
+.abseg button.on{background:var(--signal);color:#181817}
+.toggle{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted-fg);cursor:pointer;min-height:36px;border:0;background:none;padding:0}
+.toggle .sw{width:34px;height:20px;border-radius:999px;background:var(--input);position:relative;flex:none}
+.toggle .sw::after{content:"";position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:999px;background:var(--fg);transition:left .15s}
+.toggle.on .sw{background:var(--signal)}
+.toggle.on .sw::after{left:16px;background:#181817}
+.sheet-scrim{position:absolute;inset:0;background:rgb(0 0 0/.45);z-index:5}
+.sheet{position:absolute;left:0;right:0;bottom:0;top:44px;background:var(--card);border-radius:16px 16px 0 0;z-index:6;display:flex;flex-direction:column;border-top:1px solid var(--border)}
+.sheet .grab{width:40px;height:5px;border-radius:999px;background:var(--border-strong);margin:8px auto 2px;opacity:.6}
+.note{font-size:12.5px;color:var(--muted-fg)}
+.banner{border:1px solid var(--ok);color:var(--fg);background:color-mix(in srgb,var(--ok) 10%,transparent);border-radius:10px;padding:10px 12px;font-size:13px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lineb{display:flex;align-items:center;gap:8px;border:1px solid var(--input);background:var(--field);border-radius:12px;padding:6px 6px 6px 12px}
+.lineb input{flex:1;min-width:0;background:none;border:0;color:var(--fg);font:14px var(--font-sans);outline:none}
+.sticky{position:sticky;top:-12px;z-index:2;background:var(--bg);padding:12px 0 8px;margin-top:-12px}
+.mini{position:absolute;left:8px;right:8px;bottom:72px;background:var(--popover);border:1px solid var(--border);border-radius:14px;padding:8px;display:flex;align-items:center;gap:8px;z-index:3;box-shadow:0 10px 30px -12px rgb(0 0 0/.5)}
+.mini.dock{position:static;border-radius:0;border-width:1px 0 0;box-shadow:none;padding:8px 16px}
+.bench{display:grid;gap:10px}
+.slot{border:1px dashed var(--border-strong);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;min-height:64px}
+.slot.full{border-style:solid;border-color:var(--border);background:var(--card)}
+.segtab{display:flex;gap:4px;background:var(--muted);padding:4px;border-radius:999px;width:max-content;margin:12px 0}
+.segtab button{height:36px;padding:0 16px;border:0;border-radius:999px;background:none;color:var(--muted-fg);font:500 13.5px var(--font-sans);cursor:pointer}
+.touch .segtab button{height:40px}
+.segtab button.on{background:var(--primary);color:var(--primary-fg)}
+.spin{animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.menu{position:absolute;right:12px;top:52px;background:var(--popover);border:1px solid var(--border);border-radius:10px;padding:4px;z-index:7;min-width:220px;box-shadow:0 10px 30px -12px rgb(0 0 0/.6)}
+.menu button{display:flex;width:100%;gap:10px;align-items:center;border:0;background:none;color:var(--fg);font:14px var(--font-sans);padding:0 10px;height:40px;border-radius:6px;cursor:pointer;text-align:left}
+.menu button:hover{background:var(--muted)}
+.menu hr{border:0;border-top:1px solid var(--border);margin:4px 0}
+.cast{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px 12px}
+.phone .cast{grid-template-columns:repeat(2,minmax(0,1fr))}
+.tablet .cast{grid-template-columns:repeat(auto-fill,minmax(132px,1fr))}
+.tilew{display:flex;flex-direction:column;gap:6px;cursor:pointer;min-width:0;position:relative}
+.tile{aspect-ratio:1/1;border-radius:6px;box-shadow:inset 0 0 0 1px var(--border);position:relative;overflow:hidden;background-color:var(--card)}
+.tilew.sel .tile{box-shadow:inset 0 0 0 2px var(--signal)}
+.tilew:hover .tile{filter:brightness(1.06)}
+.tile .tk{position:absolute;left:10px;top:10px}
+.tile .tc{position:absolute;right:2px;top:2px}
+.tile .tn{position:absolute;left:12px;right:58px;bottom:12px;font:800 23px var(--font-display);text-transform:uppercase;letter-spacing:.01em;line-height:.95;text-wrap:balance}
+.phone .tile .tn{font-size:21px;right:54px}
+.tile .tp{position:absolute;right:8px;bottom:8px;width:44px;height:44px;border-radius:999px;border:0;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.tile .tp.off{background:color-mix(in srgb,var(--bg) 60%,transparent);color:var(--fg)}
+.tilew .vmeta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tilew .menu{top:40px}
+.viewsw{display:flex;gap:2px;background:var(--muted);padding:3px;border-radius:999px;flex:none}
+.viewsw button{width:36px;height:34px;border:0;border-radius:999px;background:none;color:var(--muted-fg);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.touch .viewsw button{width:40px;height:38px}
+.viewsw button.on{background:var(--primary);color:var(--primary-fg)}
+.empty{border:1px dashed var(--border-strong);border-radius:10px;padding:16px;color:var(--muted-fg);font-size:13px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="log">docs/voice-lab · Mirli · 2026-11-23</p>
+  <h1>Voice Lab: three directions</h1>
+  <p class="lede">The same five demo voices, drawn three ways at phone, tablet and desktop size. Every direction opens on the cast grid; the switch beside the search box turns it into a list. Every button in the frames works. The mockups are silent: "playing" moves a playhead.</p>
+
+  <div class="controls">
+    <div class="seg" id="dir" role="group" aria-label="Direction"></div>
+    <div class="seg" id="dev" role="group" aria-label="Device"></div>
+    <div class="seg" id="thm" role="group" aria-label="Theme"></div>
+    <button class="btn ghost" id="reset">Reset frame</button>
+  </div>
+
+  <div class="pitch">
+    <div><h2 id="ptitle"></h2><p id="ppitch"></p><p class="hint" id="ptry"></p></div>
+    <div class="card"><h3>Trade-offs</h3><ul id="ppros"></ul></div>
+  </div>
+
+  <div class="stage" id="stage"><div class="scaler" id="scaler"><div class="device" id="device"><div class="screen" id="screen"></div></div></div></div>
+</div>
+
+<script>
+/* ------------------------------------------------------------- data */
+const VOICES=[
+  {id:'narrator',name:'Narrator',kind:'Built-in',model:'Kokoro 82M',notes:'Low, unhurried trailer read.',reads:12,len:3.4},
+  {id:'mara',name:'Mara',kind:'Clone',model:'VibeVoice 1.5B',notes:'The lead. Cloned from a 20 second studio read.',reads:10,len:3.9},
+  {id:'reyes',name:'Captain Reyes',kind:'Clone',model:'VibeVoice 1.5B',notes:'Gravel and patience. Two clips, joined.',reads:6,len:4.3},
+  {id:'juno',name:'Juno',kind:'Built-in',model:'Kokoro 82M',notes:"The ship's computer. Bright, a little too calm.",reads:3,len:3.1},
+  {id:'archivist',name:'The Archivist',kind:'Clone',model:'VibeVoice 1.5B',notes:'Old tapes, read slowly.',reads:2,len:4.8},
+];
+const L='ABCD';
+const byId=id=>VOICES.find(v=>v.id===id);
+
+const DIRS={
+  tray:{label:'A · Shortlist tray',title:'A. Shortlist tray',
+    pitch:'One set of voices, shown as a cast grid of tiles (or a list, from the switch by the search box). Each tile and row has a round compare toggle; ticked voices collect in a tray that sits flush above the tab bar on a phone and at the foot of the list on larger screens. "Compare" opens one line, read in every picked voice, with a single shared player and an A B C D switch, so you flip between voices on the same words instead of starting four separate players. Pick one and it tells you where to use it.',
+    tryit:'Try: tick Mara and Captain Reyes, press Compare, Read, then Play and flip between A and B while it plays.',
+    pros:['Compare stays where the voices are; no separate place to find.','One player and an A/B switch, the way plugin A/B and ABX tools work.','The page itself gets simpler: the shelf grows into the whole page as a cast grid, with no second list of voice chips and no essay.','Costs a new tray component and a compare sheet.']},
+  line:{label:'B · Audition line',title:'B. Audition line',
+    pitch:'Make the line the hero. A sticky line sits above the list; every row\'s play button reads that line in that voice (rendered the first time, then cached). A mini player above the tab bar has previous and next, so stepping through voices on the same words is the comparison. Stars build a shortlist; the Starred chip narrows the list to it. There is no separate compare panel at all.',
+    tryit:'Try: press play on Narrator, wait for the read, then use the mini player\'s next arrow to hear Mara say the same line. Star the ones you like and tap Starred.',
+    pros:['Fewest new parts: a sticky line, a row play button and a mini player.','Feels like browsing music: tap, listen, next.','Switching restarts the next voice from the top; there is no same-position A/B.','Each first play costs a render, one at a time, so scrolling a long list is slow the first time.']},
+  bench:{label:'C · Compare bench',title:'C. Compare bench',
+    pitch:'Give comparing its own tab inside Voice Lab: Voices and Compare. The Voices tab is just the list. The Compare tab is a bench of two to four slots, one line and a shared player with an A/B switch, plus a Blind toggle that hides the names until you pick, the way TTS Arena reveals models after the vote. A voice gets onto the bench from its menu or from the slot picker.',
+    tryit:'Try: open the Compare tab, turn on Blind, Read, flip between the takes, then pick one to see who it was.',
+    pros:['Most capable: blind picking and room for four takes side by side on desktop.','Comparing becomes a destination with its own state that survives leaving the page.','Most new UI, and one more tab to explain; a second level of navigation inside the Voices tab.','Blind mode only matters when names bias you; most people will leave it off.']},
+};
+const DEVS={phone:{label:'Phone 375',w:375,h:780},tablet:{label:'Tablet 768',w:768,h:1024},desktop:{label:'Desktop 1280',w:1280,h:800}};
+
+/* ------------------------------------------------------------- icons */
+const I={
+  play:'<svg viewBox="0 0 24 24" class="ic" fill="currentColor"><path d="M7 5v14l12-7z"/></svg>',
+  pause:'<svg viewBox="0 0 24 24" class="ic" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" class="ic" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  more:'<svg viewBox="0 0 24 24" class="ic" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
+  search:'<svg viewBox="0 0 24 24" class="ic" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="6"/><path d="m20 20-4-4"/></svg>',
+  x:'<svg viewBox="0 0 24 24" class="ic" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  mic:'<svg viewBox="0 0 24 24" class="ic" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
+  star:'<svg viewBox="0 0 24 24" class="ic" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z"/></svg>',
+  starf:'<svg viewBox="0 0 24 24" class="ic" fill="var(--signal)" stroke="var(--signal)" stroke-width="2" stroke-linejoin="round"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z"/></svg>',
+  prev:'<svg viewBox="0 0 24 24" class="ic" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg>',
+  next:'<svg viewBox="0 0 24 24" class="ic" fill="currentColor"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg>',
+  loop:'<svg viewBox="0 0 24 24" class="ic" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>',
+  load:'<svg viewBox="0 0 24 24" class="ic spin" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3a9 9 0 1 0 9 9"/></svg>',
+  home:'<svg viewBox="0 0 24 24" class="ic" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11 12 4l9 7v9H3z"/></svg>',
+  lib:'<svg viewBox="0 0 24 24" class="ic" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4v16M10 4v16M15 4l4 16"/></svg>',
+  studio:'<svg viewBox="0 0 24 24" class="ic" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h10M4 17h13"/></svg>',
+  grid:'<svg viewBox="0 0 24 24" class="ic" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg>',
+  rows:'<svg viewBox="0 0 24 24" class="ic" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
+  check:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5 9-10"/></svg>',
+  back:'<svg viewBox="0 0 24 24" class="ic" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  eye:'<svg viewBox="0 0 24 24" class="ic" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+};
+
+/* ------------------------------------------------------------- state */
+let dir='tray', dev='phone';
+let S;
+function fresh(){S={picked:[],sheet:null,detail:null,menu:null,line:'The airlock opens at dawn. Bring the maps.',
+  takes:null,active:0,playing:false,pos:0,keep:true,loop:false,chosen:null,
+  rendered:{},rendering:null,starred:['mara'],filter:'all',now:null,
+  view:'grid',tab:'voices',bench:['mara','reyes'],blind:false,order:null,reading:false};}
+fresh();
+
+/* ------------------------------------------------------------- pieces */
+function wave(id,progressId){
+  let seed=[...id].reduce((a,c)=>a+c.charCodeAt(0),0);
+  const r=()=>{seed=(seed*9301+49297)%233280;return seed/233280};
+  const n=48;let bars='';
+  for(let i=0;i<n;i++){const h=6+r()*26*(0.4+0.6*Math.sin(Math.PI*i/n));bars+=`<rect x="${i*5}" y="${18-h/2}" width="3" height="${h}" rx="1"/>`;}
+  return `<svg class="wave" viewBox="0 0 240 36" preserveAspectRatio="none"><g fill="var(--wave)">${bars}</g>
+  <g fill="var(--fg)" clip-path="url(#c-${progressId})">${bars}</g>
+  <clipPath id="c-${progressId}"><rect data-prog="${progressId}" x="0" y="0" width="0" height="36"/></clipPath>
+  <rect data-head="${progressId}" x="0" y="0" width="1.5" height="36" fill="var(--signal)"/></svg>`;
+}
+function av(v,{play=false,playing=false,small=false,blindLabel=null}={}){
+  const letter=blindLabel??v.name.replace(/^The /,'')[0];
+  return `<button class="av ${small?'sm':''} ${playing?'playing':''}" data-act="${play?'avplay':'open'}" data-id="${v.id}" aria-label="${play?'Play reference clip of '+v.name:v.name}">${letter}${play?`<span class="pl">${playing?I.pause:I.play}</span>`:''}</button>`;
+}
+function navShell(content,{tabs=true}={}){
+  const items=[['home','Home'],['lib','Library'],['plus','Create'],['studio','Studio'],['mic','Voices']];
+  if(dev==='phone'){
+    return `<div class="app phone touch"><div class="main">${content}</div>${tabs?`<nav class="tabs-bottom">${items.map(([ic,l])=>`<a class="${l==='Voices'?'on':''}">${I[ic]}${l}</a>`).join('')}</nav>`:''}</div>`;
+  }
+  if(dev==='tablet'){
+    return `<div class="app tablet touch"><nav class="nav-rail">${items.map(([ic,l])=>`<a class="${l==='Voices'?'on':''}">${I[ic]}${l}</a>`).join('')}</nav><div class="main">${content}</div></div>`;
+  }
+  const side=[['plus','Create'],['lib','Library'],null,['studio','Studio'],['mic','Voice Lab'],['lib','Projects'],['studio','Models'],['studio','Agents']];
+  return `<div class="app desktop"><nav class="nav-side"><div class="brand">Mirli</div>${side.map(s=>s?`<a class="${s[1]==='Voice Lab'?'on':''}">${I[s[0]]}${s[1]}</a>`:'<div class="grp">Studio</div>').join('')}</nav><div class="main">${content}</div></div>`;
+}
+function topbar(){return dev==='phone'?'':`<div class="topbar">Mirli / <b>Voice Lab</b></div>`;}
+function header(extra=''){
+  return `<div class="row-head"><div class="title">${dev==='phone'?'Voices':'Voice Lab'}</div><span class="sp"></span>${extra}
+    <button class="btn primary ${dev==='phone'?'icon':''}" data-act="new" aria-label="New voice">${I.plus}${dev==='phone'?'':'New voice'}</button>
+    <button class="btn icon ghost" data-act="pagemenu" aria-label="More">${I.more}</button></div>`;
+}
+function filters(withStarred=false){
+  const kinds=[['all','All',5],['Clone','Cloned',3],['Built-in','Built-in',2]];
+  if(withStarred) kinds.push(['starred','Starred',S.starred.length]);
+  return `<div style="display:flex;gap:8px;align-items:center"><div class="search">${I.search}Search voices</div>
+  <div class="viewsw" role="group" aria-label="View"><button class="${S.view==='grid'?'on':''}" data-act="view" data-v="grid" aria-label="Cast grid">${I.grid}</button><button class="${S.view==='list'?'on':''}" data-act="view" data-v="list" aria-label="List">${I.rows}</button></div></div>
+  <div class="chips">${kinds.map(([v,l,n])=>`<button class="chip ${S.filter===v?'on':''}" data-act="filter" data-v="${v}">${l}<span class="n">${n}</span></button>`).join('')}
+  <button class="chip" data-act="noop">Model ▾</button></div>`;
+}
+function visible(){
+  return VOICES.filter(v=>S.filter==='all'||(S.filter==='starred'?S.starred.includes(v.id):v.kind===S.filter));
+}
+function pageMenu(){
+  if(S.menu!=='page') return '';
+  return `<div class="menu"><button data-act="new">${I.plus}New voice</button><button data-act="noop">Import a voice file</button>
+  <button data-act="noop">${I.mic}Change the voice of a sound…</button><hr><button data-act="noop">How voices work</button></div>`;
+}
+function rowMenu(v){
+  if(S.menu!==v.id) return '';
+  return `<div class="menu" style="top:auto;right:8px;margin-top:4px">${dir==='bench'?`<button data-act="tobench" data-id="${v.id}">Add to Compare bench</button>`:''}
+  <button data-act="open" data-id="${v.id}">Details and test read</button><button data-act="noop">Edit</button>${v.kind==='Clone'?'<button data-act="noop">Clips</button>':''}<button data-act="noop">History (${v.reads})</button><hr><button data-act="noop">Export voice file</button><button data-act="noop" style="color:var(--danger)">Delete</button></div>`;
+}
+
+/* ------------------------------------------------------------- cast grid */
+function hue(name){let h=0;for(const c of name)h=(h*31+c.charCodeAt(0))|0;return (((h%300)+300)%300+245)%360}
+function tileBg(name){const u=hue(name);return `linear-gradient(150deg,oklch(var(--lane-l) var(--lane-c) ${u} / .28),oklch(var(--lane-l) var(--lane-c) ${u} / .08) 55%,oklch(var(--lane-l) var(--lane-c) ${(u+40)%360} / .18))`}
+/* corner(v) draws the top-right control; play(v) returns {act,label,icon,on} for the round button */
+function castGrid(vis,corner,play,selId){
+  return `<div class="cast">${vis.map(v=>{const pb=play(v);return `<div class="tilew ${selId===v.id?'sel':''}" data-act="open" data-id="${v.id}">
+    <div class="tile" style="background-image:${tileBg(v.name)}"><span class="pill tk">${v.kind}</span><span class="tc">${corner(v)}</span>
+    <div class="tn">${v.name}</div>${pb?`<button class="tp ${pb.on?'':'off'}" data-act="${pb.act}" data-id="${v.id}" aria-label="${pb.label}">${pb.icon}</button>`:''}</div>
+    <div style="display:flex;align-items:center;gap:4px"><div class="grow" style="min-width:0"><div class="vmeta" style="color:var(--fg)">${v.model}</div><div class="vsub">${v.notes}</div></div><button class="btn icon ghost" style="height:32px;width:32px" data-act="rowmenu" data-id="${v.id}" aria-label="More for ${v.name}">${I.more}</button></div>${rowMenu(v)}</div>`}).join('')}</div>`;
+}
+
+/* ------------------------------------------------------------- details */
+function details(v,asSheet){
+  const head=`<div class="pane-head">${av(v,{play:v.kind==='Clone'})}<div class="grow"><div class="vname" style="font-size:24px">${v.name}</div>
+    <div class="vmeta">${v.kind} · ${v.model} · ${v.reads} reads</div></div><button class="btn icon ghost" data-act="close" aria-label="Close">${I.x}</button></div>`;
+  const body=`<div class="pane-body"><div style="display:flex;gap:6px"><button class="btn">Edit</button>${v.kind==='Clone'?'<button class="btn">Clips</button>':''}<button class="btn">Use in a script</button></div>
+    <p style="margin:0">${v.notes}</p>
+    <div><div class="label" style="margin-bottom:6px">Test read</div><textarea class="textarea" data-line>${S.line}</textarea>
+    <button class="btn primary" style="width:100%;margin-top:8px">${I.mic}Read it</button></div>
+    <div><div class="label" style="margin-bottom:6px">Recent reads</div>${[1,2].map(i=>`<div class="take" style="cursor:default"><span class="vmeta">${v.name} · line ${i}</span>${wave(v.id+i,'d'+i)}</div>`).join('<div style="height:6px"></div>')}</div></div>`;
+  if(asSheet) return `<div class="sheet-scrim" data-act="close"></div><div class="sheet"><div class="grab"></div>${head}${body}</div>`;
+  return `<aside class="pane">${head}${body}</aside>`;
+}
+
+/* ------------------------------------------------------------- compare (shared by A and C) */
+function compareBody({ids,blind}){
+  const order=S.order||ids;
+  const label=(id,i)=>blind&&S.chosen===null?`Voice ${i+1}`:byId(id).name;
+  let h=`<div class="label">Line</div><textarea class="textarea" data-line>${S.line}</textarea>`;
+  if(!S.takes){
+    h+=`<button class="btn primary" data-act="read" ${ids.length<2?'disabled':''} style="width:100%">${I.mic}${ids.length<2?`Pick ${2-ids.length} more`:`Read in ${ids.length} voices`}</button>
+    <p class="note" style="margin:0">Each voice reads through its own model, one after another. The first take is playable while the rest are still reading.</p>`;
+    return h;
+  }
+  if(S.chosen!==null){
+    const w=byId(order[S.chosen]);
+    h+=`<div class="banner">${I.check}<b>${w.name}</b> it is${blind?' (it was Voice '+(S.chosen+1)+')':''}.<span class="grow"></span><button class="btn">Use in a script</button><button class="btn ghost" data-act="again">Compare again</button></div>`;
+  }
+  const cols=dev==='desktop'&&dir==='bench'&&order.length>2?'grid-template-columns:repeat(2,minmax(0,1fr))':'';
+  h+=`<div style="display:grid;gap:8px;${cols}">`+order.map((id,i)=>{
+    const v=byId(id); const ready=S.takes[i]==='done';
+    return `<div class="take ${S.active===i?'on':''}" data-act="switch" data-i="${i}">
+      <div class="hd"><span class="letter ${S.active===i?'on':''}">${L[i]}</span><div class="grow"><div style="font-weight:600;font-size:14px">${label(id,i)}</div>
+      <div class="vmeta">${blind&&S.chosen===null?'hidden until you pick':v.model}${ready?' · '+v.len.toFixed(1)+' s':''}</div></div>
+      ${ready?`<button class="btn ${S.chosen===i?'primary':''}" data-act="choose" data-i="${i}">${S.chosen===i?I.check+'Picked':'Pick'}</button>`:`<span class="vmeta">${S.takes[i]==='reading'?'Reading…':'Queued'}</span>`}</div>
+      ${ready?wave(id,'t'+i):`<div style="height:36px;display:flex;align-items:center;color:var(--muted-fg)">${S.takes[i]==='reading'?I.load:''}</div>`}
+    </div>`;}).join('')+`</div>`;
+  return h;
+}
+function transport(n){
+  return `<div class="transport"><button class="bigplay" data-act="toggleplay" aria-label="${S.playing?'Pause':'Play'}">${S.playing?I.pause:I.play}</button>
+  <div class="abseg" role="group" aria-label="Switch take">${Array.from({length:n},(_,i)=>`<button class="${S.active===i?'on':''}" data-act="switch" data-i="${i}">${L[i]}</button>`).join('')}</div>
+  <span class="grow"></span>
+  <button class="toggle ${S.keep?'on':''}" data-act="keep" title="Keep the playhead's place when switching takes, or restart the new take from the top"><span class="sw"></span>${dev==='desktop'?'Keep place on switch':'Keep place'}</button>
+  <button class="btn icon ${S.loop?'primary':'ghost'}" data-act="loop" aria-label="Loop">${I.loop}</button></div>`;
+}
+
+/* ------------------------------------------------------------- A: shortlist tray */
+function renderTray(){
+  const rows=visible().map(v=>{
+    const at=S.picked.indexOf(v.id);
+    return `<div class="vrow ${S.detail===v.id?'sel':''}" data-act="open" data-id="${v.id}">${av(v,{play:v.kind==='Clone',playing:S.now===v.id})}
+      <div class="grow"><div class="vname">${v.name}</div><div class="vsub">${v.notes}</div>${dev==='phone'?'':''}</div>
+      ${dev==='desktop'?`<span class="pill">${v.kind}</span><span class="vmeta" style="width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.model}</span>`:''}
+      <button class="cbox ${at>=0?'on':''}" data-act="pick" data-id="${v.id}" aria-pressed="${at>=0}" aria-label="Compare ${v.name}"><span>${at>=0?L[at]:''}</span></button>
+      <button class="btn icon ghost" data-act="rowmenu" data-id="${v.id}" aria-label="More for ${v.name}">${I.more}</button>${rowMenu(v)}</div>`;}).join('');
+  const tray=S.picked.length?`<div class="tray ${dev==='phone'?'':'dock'}">
+      <div style="display:flex;gap:6px;flex:1;min-width:0;overflow:hidden;align-items:center">${S.picked.map((id,i)=>`<span style="display:flex;align-items:center;gap:6px;white-space:nowrap"><span class="letter on">${L[i]}</span>${dev==='phone'&&S.picked.length>2?'':`<span style="font-size:13px">${byId(id).name}</span>`}</span>`).join('')}
+      ${S.picked.length<4?`<span class="note" style="white-space:nowrap">${S.picked.length<2?'pick one more':''}</span>`:''}</div>
+      <button class="btn ghost" data-act="clearpick">Clear</button>
+      <button class="btn primary" data-act="opencompare" ${S.picked.length<2?'disabled':''}>Compare ${S.picked.length}</button></div>`:'';
+  const grid=S.view==='grid'?castGrid(visible(),v=>{const at=S.picked.indexOf(v.id);return `<button class="cbox ${at>=0?'on':''}" data-act="pick" data-id="${v.id}" aria-pressed="${at>=0}" aria-label="Compare ${v.name}"><span>${at>=0?L[at]:''}</span></button>`},
+    v=>v.kind==='Clone'?{act:'avplay',label:'Play reference clip of '+v.name,icon:S.now===v.id?I.pause:I.play,on:S.now===v.id}:null,S.detail):'';
+  const list=`${header()}${pageMenu()}${filters()}${grid||`<div class="list">${rows}</div>`}${dev!=='phone'?tray:''}`;
+  let side='';
+  const compareOpen=S.sheet==='compare';
+  if(dev==='phone'){
+    let overlay='';
+    if(compareOpen) overlay=`<div class="sheet-scrim" data-act="close"></div><div class="sheet"><div class="grab"></div>
+      <div class="pane-head"><div class="grow"><div class="vname" style="font-size:22px">Compare</div><div class="vmeta">${S.picked.length} voices · same line, same seed</div></div><button class="btn icon ghost" data-act="close" aria-label="Close">${I.x}</button></div>
+      <div class="pane-body">${compareBody({ids:S.picked})}</div>${S.takes?transport(S.picked.length):''}</div>`;
+    else if(S.detail) overlay=details(byId(S.detail),true);
+    return navShell(`<div class="body"><div class="scroll">${list}</div></div>${compareOpen?'':tray}${overlay}`);
+  }
+  if(compareOpen) side=`<aside class="pane"><div class="pane-head"><div class="grow"><div class="vname" style="font-size:22px">Compare</div><div class="vmeta">${S.picked.length} voices · same line, same seed</div></div><button class="btn icon ghost" data-act="close" aria-label="Close">${I.x}</button></div>
+     <div class="pane-body">${compareBody({ids:S.picked})}</div>${S.takes?transport(S.picked.length):''}</aside>`;
+  else if(S.detail) side=details(byId(S.detail),false);
+  return navShell(`${topbar()}<div class="body"><div class="scroll">${list}</div>${side}</div>`);
+}
+
+/* ------------------------------------------------------------- B: audition line */
+function renderLine(){
+  const vis=visible();
+  const rows=vis.map(v=>{
+    const st=S.rendering===v.id?'rendering':S.rendered[v.id]?'ready':'new';
+    const playing=S.now===v.id&&S.playing;
+    return `<div class="vrow ${S.now===v.id?'sel':''}" data-act="open" data-id="${v.id}">
+      <button class="bigplay" style="width:44px;height:44px;${S.now===v.id?'':'background:var(--muted);color:var(--fg)'}" data-act="lineplay" data-id="${v.id}" aria-label="Play the line as ${v.name}">${st==='rendering'?I.load:playing?I.pause:I.play}</button>
+      <div class="grow"><div class="vname">${v.name}</div><div class="vsub">${st==='rendering'?'Reading the line…':v.notes}</div></div>
+      ${dev==='desktop'?`<span class="pill">${v.kind}</span><span class="vmeta" style="width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.model}</span>`:''}
+      <button class="btn icon ghost" data-act="star" data-id="${v.id}" aria-pressed="${S.starred.includes(v.id)}" aria-label="Star ${v.name}">${S.starred.includes(v.id)?I.starf:I.star}</button>
+      <button class="btn icon ghost" data-act="rowmenu" data-id="${v.id}" aria-label="More for ${v.name}">${I.more}</button>${rowMenu(v)}</div>`;}).join('');
+  const lineBar=`<div class="sticky"><div class="lineb"><input data-linein value="${S.line.replace(/"/g,'&quot;')}" aria-label="Audition line"><button class="btn ghost" data-act="playall">${I.play}${dev==='phone'?'All':S.filter==='starred'?'Play starred in turn':'Play all in turn'}</button></div>
+    <div class="note" style="margin-top:6px">Every play button reads this line. Change it and the reads start fresh.</div></div>`;
+  const grid=S.view==='grid'?castGrid(vis,v=>`<button class="btn icon ghost" data-act="star" data-id="${v.id}" aria-label="Star ${v.name}">${S.starred.includes(v.id)?I.starf:I.star}</button>`,
+    v=>({act:'lineplay',label:'Play the line as '+v.name,icon:S.rendering===v.id?I.load:(S.now===v.id&&S.playing)?I.pause:I.play,on:S.now===v.id}),S.now):'';
+  const list=`${header()}${pageMenu()}${lineBar}${filters(true)}${grid||`<div class="list">${rows}</div>`}`;
+  const cur=S.now?byId(S.now):null;
+  const mini=cur?`<div class="mini ${dev==='phone'?'':'dock'}">${av(cur,{small:true})}<div class="grow" style="min-width:0"><div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${cur.name} <span class="vmeta">· ${cur.model}</span></div>${S.rendered[cur.id]?wave(cur.id,'m'):'<div class="vmeta">Reading…</div>'}</div>
+     <button class="btn icon ghost" data-act="step" data-d="-1" aria-label="Previous voice">${I.prev}</button>
+     <button class="bigplay" style="width:44px;height:44px" data-act="minitoggle" aria-label="Play or pause">${S.playing?I.pause:I.play}</button>
+     <button class="btn icon ghost" data-act="step" data-d="1" aria-label="Next voice">${I.next}</button>
+     <button class="btn icon ghost" data-act="star" data-id="${cur.id}" aria-label="Star">${S.starred.includes(cur.id)?I.starf:I.star}</button></div>`:'';
+  if(dev==='phone'){
+    return navShell(`<div class="body"><div class="scroll">${list}</div></div>${mini}${S.detail?details(byId(S.detail),true):''}`);
+  }
+  return navShell(`${topbar()}<div class="body"><div style="flex:1;min-width:0;display:flex;flex-direction:column"><div class="scroll">${list}</div>${mini}</div>${S.detail?details(byId(S.detail),false):''}</div>`);
+}
+
+/* ------------------------------------------------------------- C: bench */
+function renderBench(){
+  const tabs=`<div class="segtab"><button class="${S.tab==='voices'?'on':''}" data-act="tab" data-v="voices">Voices</button><button class="${S.tab==='compare'?'on':''}" data-act="tab" data-v="compare">Compare <span class="n" style="opacity:.6">${S.bench.length}</span></button></div>`;
+  let content;
+  if(S.tab==='voices'){
+    const rows=visible().map(v=>`<div class="vrow ${S.detail===v.id?'sel':''}" data-act="open" data-id="${v.id}">${av(v,{play:v.kind==='Clone',playing:S.now===v.id})}
+      <div class="grow"><div class="vname">${v.name}</div><div class="vsub">${v.notes}</div></div>
+      ${dev==='desktop'?`<span class="pill">${v.kind}</span><span class="vmeta" style="width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.model}</span>`:''}
+      ${S.bench.includes(v.id)?`<span class="vmeta">on bench</span>`:''}
+      <button class="btn icon ghost" data-act="rowmenu" data-id="${v.id}" aria-label="More for ${v.name}">${I.more}</button>${rowMenu(v)}</div>`).join('');
+    const grid=S.view==='grid'?castGrid(visible(),v=>S.bench.includes(v.id)?`<span class="letter on" style="margin:10px">${L[S.bench.indexOf(v.id)]}</span>`:'',
+      v=>v.kind==='Clone'?{act:'avplay',label:'Play reference clip of '+v.name,icon:S.now===v.id?I.pause:I.play,on:S.now===v.id}:null,S.detail):'';
+    content=`${filters()}${grid||`<div class="list">${rows}</div>`}`;
+  } else {
+    const slots=[0,1,2,3].map(i=>{
+      const id=S.bench[i];
+      if(!id) return i<=S.bench.length?`<div class="slot"><span class="letter">${L[i]}</span><button class="btn" data-act="addslot">${I.plus}Add a voice</button></div>`:'';
+      const v=byId(id);
+      const name=S.blind&&S.chosen===null&&S.takes?`Voice ${i+1}`:v.name;
+      return `<div class="slot full"><span class="letter">${L[i]}</span><div class="grow"><div style="font-weight:600">${name}</div><div class="vmeta">${S.blind&&S.takes&&S.chosen===null?'hidden':v.model}</div></div>${S.takes?'':`<button class="btn icon ghost" data-act="unbench" data-i="${i}" aria-label="Remove">${I.x}</button>`}</div>`;}).join('');
+    const picker=S.menu==='addslot'?`<div class="card" style="margin-top:6px">${VOICES.filter(v=>!S.bench.includes(v.id)).map(v=>`<div class="vrow" data-act="bench" data-id="${v.id}">${av(v,{small:true})}<div class="grow"><div class="vname" style="font-size:15px">${v.name}</div></div></div>`).join('')}</div>`:'';
+    content=`<div class="${dev==='desktop'?'':''}" style="display:grid;gap:14px;${dev==='desktop'?'grid-template-columns:320px minmax(0,1fr);align-items:start':''}">
+      <div><div class="label" style="margin-bottom:6px">Bench</div><div class="bench">${slots}</div>${picker}
+      <button class="toggle ${S.blind?'on':''}" data-act="blind" style="margin-top:10px" ${S.takes?'disabled':''}><span class="sw"></span>Blind: hide names until I pick</button></div>
+      <div style="display:flex;flex-direction:column;gap:10px;${dev==='phone'?'padding-bottom:70px':''}">${compareBody({ids:S.bench,blind:S.blind})}</div></div>`;
+  }
+  const list=`${header()}${pageMenu()}${tabs}${content}`;
+  const tp=S.tab==='compare'&&S.takes?transport(S.bench.length):'';
+  if(dev==='phone'){
+    return navShell(`<div class="body"><div class="scroll">${list}</div></div>${tp?`<div style="position:absolute;left:0;right:0;bottom:64px;z-index:3">${tp}</div>`:''}${S.detail?details(byId(S.detail),true):''}`);
+  }
+  return navShell(`${topbar()}<div class="body"><div style="flex:1;min-width:0;display:flex;flex-direction:column"><div class="scroll">${list}</div>${tp}</div>${S.detail&&S.tab==='voices'?details(byId(S.detail),false):''}</div>`);
+}
+
+/* ------------------------------------------------------------- render + scale */
+const screen=document.getElementById('screen');
+function render(){
+  const d=DEVS[dev];
+  screen.style.width=d.w+'px';screen.style.height=d.h+'px';
+  document.getElementById('device').className='device '+dev;
+  screen.innerHTML=dir==='tray'?renderTray():dir==='line'?renderLine():renderBench();
+  const p=DIRS[dir];
+  document.getElementById('ptitle').textContent=p.title;
+  document.getElementById('ppitch').textContent=p.pitch;
+  document.getElementById('ptry').textContent=p.tryit;
+  document.getElementById('ppros').innerHTML=p.pros.map(x=>`<li>${x}</li>`).join('');
+  fit();tick(true);
+}
+function fit(){
+  const d=DEVS[dev];const stage=document.getElementById('stage');
+  const avail=stage.clientWidth-40;const fw=d.w+(dev==='desktop'?16:20);const fh=d.h+(dev==='desktop'?16:20);
+  const s=Math.min(1,avail/fw);const sc=document.getElementById('scaler');
+  sc.style.transform=`scale(${s})`;sc.style.width=fw+'px';sc.style.height=fh*s+'px';
+}
+addEventListener('resize',fit);
+
+/* playhead */
+let last=performance.now();
+function curLen(){
+  if(dir==='line'){return S.now?byId(S.now).len:3}
+  const ids=dir==='tray'?S.picked:(S.order||S.bench);return ids[S.active]?byId(ids[S.active]).len:3;
+}
+function tick(once){
+  const now=performance.now();const dt=(now-last)/1000;last=now;
+  if(S.playing&&!once){S.pos+=dt/curLen();if(S.pos>=1){
+      if(S.loop||dir!=='line'&&S.loop){S.pos=0}
+      else if(dir==='line'&&S.autoNext){S.pos=1;S.playing=false;stepVoice(1,true)}
+      else{S.pos=1;S.playing=false;render();}
+  }}
+  const key=dir==='line'?'m':'t'+S.active;
+  screen.querySelectorAll('[data-prog]').forEach(el=>{const k=el.getAttribute('data-prog');el.setAttribute('width',k===key?240*S.pos:0)});
+  screen.querySelectorAll('[data-head]').forEach(el=>{const k=el.getAttribute('data-head');el.setAttribute('x',k===key?240*S.pos:-5)});
+  if(!once)requestAnimationFrame(()=>tick(false));
+}
+requestAnimationFrame(()=>tick(false));
+
+/* B: render-on-demand */
+function lineplay(id){
+  if(S.now===id&&S.rendered[id]){S.playing=!S.playing;if(S.pos>=1)S.pos=0;render();return}
+  S.now=id;S.pos=0;S.playing=false;
+  if(S.rendered[id]){S.playing=true;render();return}
+  S.rendering=id;render();
+  setTimeout(()=>{S.rendered[id]=true;if(S.rendering===id)S.rendering=null;if(S.now===id){S.playing=true;S.pos=0}render();},1100);
+}
+function stepVoice(d,auto){
+  const vis=visible();if(!vis.length)return;
+  let i=vis.findIndex(v=>v.id===S.now);i=(i+d+vis.length)%vis.length;
+  if(auto&&i===0){S.autoNext=false;render();return}
+  lineplay(vis[i].id);
+}
+/* A and C: queued reads */
+function startReads(ids){
+  S.takes=ids.map((_,i)=>i===0?'reading':'queued');S.active=0;S.pos=0;S.playing=false;S.chosen=null;
+  if(dir==='bench'&&S.blind){S.order=[...ids].sort(()=>Math.random()-.5)}else S.order=null;
+  render();
+  ids.forEach((_,i)=>setTimeout(()=>{if(!S.takes)return;S.takes[i]='done';if(S.takes[i+1])S.takes[i+1]='reading';render();},900*(i+1)));
+}
+
+/* ------------------------------------------------------------- events */
+screen.addEventListener('click',e=>{
+  const t=e.target.closest('[data-act]');if(!t||!screen.contains(t))return;
+  const a=t.dataset.act,id=t.dataset.id,i=+t.dataset.i;
+  if(a!=='open'||!e.target.closest('button'))e.stopPropagation();
+  if(a==='open'&&e.target.closest('button')&&t.tagName!=='BUTTON')return;
+  switch(a){
+    case 'noop':S.menu=null;break;
+    case 'new':S.menu=null;break; /* goes to /voice/new, the existing hub: Clone, Built-in, Import */
+    case 'pagemenu':S.menu=S.menu==='page'?null:'page';break;
+    case 'rowmenu':S.menu=S.menu===id?null:id;break;
+    case 'open':S.menu=null;S.sheet=null;S.detail=id;break;
+    case 'close':S.detail=null;S.sheet=null;S.playing=false;break;
+    case 'avplay':S.now=S.now===id?null:id;break;
+    case 'filter':S.filter=t.dataset.v;break;
+    case 'view':S.view=t.dataset.v;break;
+    case 'pick':{const at=S.picked.indexOf(id);if(at>=0)S.picked.splice(at,1);else if(S.picked.length<4)S.picked.push(id);S.takes=null;S.playing=false;break;}
+    case 'clearpick':S.picked=[];S.takes=null;break;
+    case 'opencompare':S.detail=null;S.sheet='compare';break;
+    case 'read':startReads(dir==='tray'?S.picked:S.bench);return;
+    case 'switch':{if(S.takes&&S.takes[i]!=='done')return;S.active=i;if(!S.keep)S.pos=0;break;}
+    case 'toggleplay':S.playing=!S.playing;if(S.pos>=1)S.pos=0;break;
+    case 'keep':S.keep=!S.keep;break;
+    case 'loop':S.loop=!S.loop;break;
+    case 'choose':S.chosen=i;S.playing=false;break;
+    case 'again':S.takes=null;S.chosen=null;S.order=null;break;
+    case 'lineplay':S.autoNext=false;lineplay(id);return;
+    case 'minitoggle':S.playing=!S.playing;if(S.pos>=1)S.pos=0;break;
+    case 'step':S.autoNext=false;stepVoice(+t.dataset.d);return;
+    case 'playall':{S.autoNext=true;const vis=visible();if(vis[0])lineplay(vis[0].id);return;}
+    case 'star':{const at=S.starred.indexOf(id);at>=0?S.starred.splice(at,1):S.starred.push(id);break;}
+    case 'tab':S.tab=t.dataset.v;S.detail=null;S.menu=null;break;
+    case 'tobench':if(!S.bench.includes(id)&&S.bench.length<4)S.bench.push(id);S.menu=null;S.tab='compare';S.takes=null;break;
+    case 'addslot':S.menu=S.menu==='addslot'?null:'addslot';break;
+    case 'bench':if(S.bench.length<4)S.bench.push(id);S.menu=null;S.takes=null;break;
+    case 'unbench':S.bench.splice(i,1);break;
+    case 'blind':S.blind=!S.blind;break;
+  }
+  render();
+});
+screen.addEventListener('change',e=>{
+  if(e.target.matches('[data-line],[data-linein]')){S.line=e.target.value;if(dir==='line'){S.rendered={};S.now=null;S.playing=false}else{S.takes=null}render();}
+});
+
+/* ------------------------------------------------------------- controls */
+function seg(el,items,get,set){
+  el.innerHTML=items.map(([k,l])=>`<button data-k="${k}" aria-pressed="${get()===k}">${l}</button>`).join('');
+  el.onclick=e=>{const b=e.target.closest('button');if(!b)return;set(b.dataset.k);seg(el,items,get,set);render();};
+}
+seg(document.getElementById('dir'),Object.entries(DIRS).map(([k,v])=>[k,v.label]),()=>dir,k=>{dir=k;fresh();});
+seg(document.getElementById('dev'),Object.entries(DEVS).map(([k,v])=>[k,v.label]),()=>dev,k=>{dev=k;S.menu=null;});
+let theme=document.documentElement.dataset.theme||'auto';
+seg(document.getElementById('thm'),[['auto','Auto'],['dark','Dark'],['light','Light']],()=>theme,k=>{theme=k;if(k==='auto')delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=k;});
+document.getElementById('reset').onclick=()=>{fresh();render();};
+const h=location.hash.slice(1).split(',');if(DIRS[h[0]])dir=h[0];if(DEVS[h[1]])dev=h[1];
+seg(document.getElementById('dir'),Object.entries(DIRS).map(([k,v])=>[k,v.label]),()=>dir,k=>{dir=k;fresh();});
+seg(document.getElementById('dev'),Object.entries(DEVS).map(([k,v])=>[k,v.label]),()=>dev,k=>{dev=k;S.menu=null;});
+render();
+</script>
+</body>
+</html>

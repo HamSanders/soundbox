@@ -113,18 +113,7 @@ function ModelBody({ model }: { model: ModelContent }) {
         ]}
       />
 
-      <nav aria-label="Breadcrumb" className="text-muted-foreground pt-8 text-sm">
-        <Link
-          to={MODELS_HUB_HREF}
-          className="hover:text-foreground underline-offset-4 hover:underline"
-        >
-          Models
-        </Link>
-        <span aria-hidden="true"> / </span>
-        <span className="text-foreground">{model.name}</span>
-      </nav>
-
-      <header className="py-8">
+      <header className="pt-10 pb-8">
         <div className="flex items-start gap-4">
           {/* A monogram, not a logo. See models-disclaimer.tsx for why we do
               not put vendor marks on a page that disclaims any connection to
@@ -151,9 +140,9 @@ function ModelBody({ model }: { model: ModelContent }) {
 
         <div className="mt-6 flex flex-wrap gap-2">
           {model.sources[0] && (
-            <Button variant="outline" asChild>
+            <Button variant="outline" asChild className="max-w-full shrink">
               <a href={model.sources[0].href} target="_blank" rel="noreferrer noopener">
-                {model.sources[0].label}
+                <span className="truncate">{model.sources[0].label}</span>
                 <ExternalLinkIcon aria-hidden="true" />
               </a>
             </Button>
@@ -420,7 +409,7 @@ export function ModelsDetailPage() {
   }
 
   return (
-    <div className="bg-background text-foreground min-h-svh">
+    <div className="text-foreground">
       <div className="mx-auto w-full max-w-3xl px-4">
         <ModelBody model={model} />
       </div>

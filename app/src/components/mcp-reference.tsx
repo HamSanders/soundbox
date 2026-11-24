@@ -21,7 +21,8 @@
 
 import type { ReactNode } from "react";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { McpClientGuides } from "@/components/mcp-clients";
+import { mcpClients } from "@/content/mcp/clients";
 import {
   C,
   CopyBlock,
@@ -51,11 +52,6 @@ const SOUND_RESULT = `{
 /* --------------------------------------------------------------- connect */
 
 export function McpConnect({ origin }: { origin: string }) {
-  const httpConfig = JSON.stringify(
-    { mcpServers: { soundbox: { type: "http", url: `${origin}/mcp` } } },
-    null,
-    2,
-  );
   // Spawned by absolute path rather than by name. `npx soundbox-mcp` cannot
   // resolve — the package is private — and npm links the bin only into the
   // checkout's own node_modules/.bin, which is not on the PATH an MCP client
@@ -92,116 +88,23 @@ export function McpConnect({ origin }: { origin: string }) {
         <C>soundbox.generate</C> with nothing installed gets an error telling the user to go there.
       </Note>
 
-      <Tabs defaultValue="claude-code">
-        {/* Four triggers do not fit in 375px, and TabsList is `w-fit inline-flex`
-            with non-shrinking children — left alone it widens the whole page
-            rather than clipping. Let the strip scroll inside itself instead. */}
-        {/* overflow-y-hidden as well as -x: the active-tab indicator overshoots
-            the strip by a pixel, and `overflow-x: auto` alone makes the y axis
-            auto too, which draws a vertical scrollbar over a 32px-tall row. */}
-        <TabsList className="max-w-full justify-start overflow-x-auto overflow-y-hidden">
-          <TabsTrigger value="claude-code">Claude Code</TabsTrigger>
-          <TabsTrigger value="claude-desktop">Claude Desktop</TabsTrigger>
-          <TabsTrigger value="http">Other HTTP clients</TabsTrigger>
-          <TabsTrigger value="stdio">stdio bridge</TabsTrigger>
-        </TabsList>
+      <McpClientGuides clients={mcpClients(`${origin}/mcp`)} />
 
-        <TabsContent value="claude-code" className="mt-3 min-w-0 space-y-3">
-          <ol className="ml-4 list-decimal space-y-3 text-sm marker:text-muted-foreground">
-            <li>
-              Leave Mirli running. The MCP endpoint is served by this process, so a client can
-              only reach it while the app is up.
-            </li>
-            <li>
-              In a terminal, in any directory, run:
-              <CopyBlock
-                className="mt-2"
-                code={`claude mcp add --transport http soundbox ${origin}/mcp`}
-                label="Copy the claude mcp add command"
-              />
-              Add <C>--scope user</C> to make it available in every project instead of only this
-              one.
-            </li>
-            <li>
-              Start or restart <C>claude</C>, then type <C>/mcp</C>. Mirli should be listed as{" "}
-              <C>connected</C>, with its {MCP_TOOLS.length} tools.
-            </li>
-            <li>
-              Ask for a sound in plain language, e.g. “make me a heavy wooden door slam for my game”.
-              Claude Code will ask to run <C>soundbox.generate</C>; approve it, and the reply comes
-              back with a file path.
-            </li>
-          </ol>
-          <Note>
-            <C>claude mcp list</C> shows what is registered and whether it connects.{" "}
-            <C>claude mcp remove soundbox</C> undoes step 2.
-          </Note>
-        </TabsContent>
-
-        <TabsContent value="claude-desktop" className="mt-3 min-w-0 space-y-3">
-          <ol className="ml-4 list-decimal space-y-3 text-sm marker:text-muted-foreground">
-            <li>Leave Mirli running.</li>
-            <li>
-              In Claude Desktop, open <strong>Settings → Developer → Edit Config</strong>. That
-              opens <C>claude_desktop_config.json</C>: on Windows in{" "}
-              <C>%APPDATA%\Claude\</C>, on macOS in{" "}
-              <C>~/Library/Application Support/Claude/</C>.
-            </li>
-            <li>
-              Merge this into the file. If <C>mcpServers</C> already exists, add the{" "}
-              <C>soundbox</C> key to it; do not replace the object.
-              <CopyBlock
-                className="mt-2"
-                code={httpConfig}
-                language="json"
-                label="Copy the Claude Desktop config"
-              />
-            </li>
-            <li>
-              Quit Claude Desktop completely and reopen it. Config is read at startup, and closing
-              the window does not quit the app on either platform.
-            </li>
-            <li>
-              Open a new chat and check the tools indicator in the composer: all{" "}
-              {MCP_TOOLS.length} Mirli tools should be listed there.
-            </li>
-          </ol>
-          <Note>
-            If Mirli does not appear, check the config file first. A trailing comma or a
-            duplicated <C>mcpServers</C> key makes the whole file unparseable, and every server
-            in it disappears.
-          </Note>
-        </TabsContent>
-
-        <TabsContent value="http" className="mt-3 min-w-0 space-y-3">
-          <p className="text-muted-foreground text-sm">
-            Cursor, Windsurf, Zed and most other clients accept a streamable-HTTP server directly,
-            with no extra process to run. The key name and file location differ per client; the value is
-            the same.
-          </p>
-          <CopyBlock code={httpConfig} language="json" label="Copy the HTTP MCP config" />
-          <Note>
-            There is <strong className="text-foreground">no trailing slash</strong> on the URL.
-            Mirli rewrites <C>/mcp</C> to the mounted path internally so that clients which do
-            not follow 307 redirects on POST still work.
-          </Note>
-        </TabsContent>
-
-        <TabsContent value="stdio" className="mt-3 min-w-0 space-y-3">
-          <p className="text-muted-foreground text-sm">
-            For clients that only speak stdio. The bridge is a thin proxy onto the running server:
-            it loads no models, so two copies of a diffusion model never compete for one GPU.
-          </p>
-          <CopyBlock code={stdioConfig} language="json" label="Copy the stdio bridge config" />
-          <Note>
-            <C>MIRLI_URL</C> tells the bridge where the server is; it defaults to{" "}
-            <C>http://127.0.0.1:17494</C> and only needs setting if you moved the port. The path in{" "}
-            <C>args</C> must be absolute, and must be the built{" "}
-            <C>server/dist/mcp/stdio.js</C>. The Agents page prints it with the path already
-            resolved for this install.
-          </Note>
-        </TabsContent>
-      </Tabs>
+      <DocSubsection id="mcp-stdio-bridge" title="Mirli's own stdio bridge">
+        <p className="text-muted-foreground text-sm">
+          For stdio-only clients on a machine without Node.js, where <C>mcp-remote</C> is not an
+          option. The bridge is a thin proxy onto the running server: it loads no models, so two
+          copies of a diffusion model never compete for one GPU. It covers the six sound tools,
+          not speech, stories or arrangement.
+        </p>
+        <CopyBlock code={stdioConfig} language="json" label="Copy the stdio bridge config" />
+        <Note>
+          <C>MIRLI_URL</C> tells the bridge where the server is; it defaults to{" "}
+          <C>http://127.0.0.1:17494</C> and only needs setting if you moved the port. The path in{" "}
+          <C>args</C> must be absolute, and must be the built <C>server/dist/mcp/stdio.js</C>. The
+          Agents page prints it with the path already resolved for this install.
+        </Note>
+      </DocSubsection>
     </DocSection>
   );
 }

@@ -12,22 +12,137 @@ separate daemon to start.
 
 ### HTTP (preferred)
 
-```json
-{
-  "mcpServers": {
-    "soundbox": { "type": "http", "url": "http://127.0.0.1:17494/mcp" }
-  }
-}
-```
+Every client below talks to the same URL, `http://127.0.0.1:17494/mcp`, over Streamable HTTP. There
+is no auth to configure. The URL has **no trailing slash**. Mirli rewrites
+`/mcp` to the mounted path internally, so clients that don't follow 307
+redirects on POST work.
 
-Claude Code:
+Each entry was checked against the vendor's own docs on 2026-11-23 (linked).
+The same instructions, with one-click install links, are on the site's MCP
+page.
+
+#### Claude Code ([docs](https://code.claude.com/docs/en/mcp))
 
 ```bash
 claude mcp add --transport http soundbox http://127.0.0.1:17494/mcp
 ```
 
-The URL has **no trailing slash**. Mirli rewrites `/mcp` to the mounted path
-internally, so clients that don't follow 307 redirects on POST work.
+Add `--scope user` for every project. In a hand-written `.mcp.json`, `type` is
+required: `{"mcpServers":{"soundbox":{"type":"http","url":"http://127.0.0.1:17494/mcp"}}}`.
+
+#### Claude Desktop ([docs](https://modelcontextprotocol.io/docs/develop/connect-local-servers))
+
+`claude_desktop_config.json` takes stdio servers only, and Settings →
+Connectors connects from Anthropic's cloud, which cannot reach 127.0.0.1. Use
+the `mcp-remote` bridge (needs Node.js), or Mirli's own bridge below:
+
+```json
+{"mcpServers":{"soundbox":{"command":"npx","args":["-y","mcp-remote","http://127.0.0.1:17494/mcp"]}}}
+```
+
+The file is in `%APPDATA%\Claude\` (Windows),
+`~/Library/Application Support/Claude/` (macOS) or `~/.config/Claude/`
+(Linux). Quit Desktop fully and reopen it after editing.
+
+#### Cursor ([docs](https://cursor.com/docs/context/mcp))
+
+`~/.cursor/mcp.json` (or `.cursor/mcp.json` in a project):
+
+```json
+{"mcpServers":{"soundbox":{"url":"http://127.0.0.1:17494/mcp"}}}
+```
+
+#### VS Code / GitHub Copilot ([docs](https://code.visualstudio.com/docs/copilot/customization/mcp-servers))
+
+```bash
+code --add-mcp '{"name":"soundbox","type":"http","url":"http://127.0.0.1:17494/mcp"}'
+```
+
+Or MCP: Add Server → HTTP. `.vscode/mcp.json` uses a `servers` key, not
+`mcpServers`.
+
+#### Codex ([docs](https://learn.chatgpt.com/docs/extend/mcp?surface=cli))
+
+```bash
+codex mcp add soundbox --url http://127.0.0.1:17494/mcp
+```
+
+Or in `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.soundbox]
+url = "http://127.0.0.1:17494/mcp"
+```
+
+#### Antigravity, formerly Gemini CLI ([docs](https://antigravity.google/docs/mcp?tab=cli))
+
+`~/.gemini/config/mcp_config.json` (or `.agents/mcp_config.json`):
+
+```json
+{"mcpServers":{"soundbox":{"serverUrl":"http://127.0.0.1:17494/mcp"}}}
+```
+
+Antigravity rejects `httpUrl`. The legacy Gemini CLI wants `httpUrl` instead
+(`url` there means SSE): `gemini mcp add --transport http soundbox http://127.0.0.1:17494/mcp`.
+
+#### Devin Desktop, formerly Windsurf ([docs](https://docs.devin.ai/cli/extensibility/mcp/configuration))
+
+```bash
+devin mcp add soundbox http://127.0.0.1:17494/mcp
+```
+
+Or `.devin/mcp_config.json`: `{"mcpServers":{"soundbox":{"url":"http://127.0.0.1:17494/mcp","transport":"http"}}}`.
+
+#### Zed ([docs](https://zed.dev/docs/ai/mcp))
+
+Settings → AI → MCP Servers → Add Remote Server, or in the settings file:
+`"context_servers": {"soundbox": {"url": "http://127.0.0.1:17494/mcp"}}`.
+
+#### Cline ([docs](https://docs.cline.bot/mcp/configuring-mcp-servers))
+
+MCP Servers → Configure. Keep `type`, or Cline falls back to SSE:
+`{"mcpServers":{"soundbox":{"type":"streamableHttp","url":"http://127.0.0.1:17494/mcp"}}}`.
+
+#### Goose ([docs](https://goose-docs.ai/docs/getting-started/using-extensions))
+
+`goose configure` → Add Extension → Remote Extension (Streamable HTTP), or in
+`~/.config/goose/config.yaml` (the key is `uri`):
+
+```yaml
+extensions:
+  soundbox:
+    name: soundbox
+    type: streamable_http
+    uri: http://127.0.0.1:17494/mcp
+    enabled: true
+```
+
+#### LM Studio ([docs](https://lmstudio.ai/docs/app/mcp))
+
+Program tab → Install → Edit mcp.json: `{"mcpServers":{"soundbox":{"url":"http://127.0.0.1:17494/mcp"}}}`.
+
+#### opencode ([docs](https://opencode.ai/docs/mcp-servers/))
+
+```bash
+opencode mcp add soundbox --url http://127.0.0.1:17494/mcp
+```
+
+Remote servers default to OAuth in opencode; Mirli has none, so set
+`"oauth": false` if you write the entry by hand.
+
+#### Continue ([docs](https://docs.continue.dev/customize/deep-dives/mcp))
+
+```yaml
+mcpServers:
+  - name: soundbox
+    type: streamable-http
+    url: http://127.0.0.1:17494/mcp
+```
+
+#### Anything else
+
+Add a remote server with the URL and the Streamable HTTP transport. If the
+client only speaks stdio, wrap it with `npx -y mcp-remote http://127.0.0.1:17494/mcp`.
 
 ### stdio
 
@@ -91,7 +206,7 @@ the server restarted) gets `404`, and the client opens a new session.
 
 ## Tools
 
-Twenty-one tools in four groups: sounds, voices, stories, arrangement. The
+Twenty-seven tools in five groups: sounds, voices, stories, arrangement, and the open studio. The
 authority is `server/src/mcp/server.ts`: the `MCP_TOOLS` table for names and
 descriptions, and the zod `inputSchema` on each `registerTool` call for
 arguments. Where this file and that one disagree, that one is right.
@@ -318,6 +433,48 @@ shows each change as it lands.
 
 > Devices are heard in the studio's timeline playback. `export_story` mixes
 > dry, without them.
+
+### The open studio
+
+These three work on the studio as it is on screen, not on the saved story. They
+need Mirli open in a browser or the desktop app with a studio showing; the
+server asks that tab and waits a few seconds for its answer.
+
+#### `soundbox.studio_context`
+
+Takes an optional `story_id` (omit it when one studio is open; with several
+open, the error lists them). Returns the lanes (name, muted, soloed and the
+effect kinds on the rack), every clip with its `id`, lane, start, length and
+label (the line's words, or the sound's name), the playhead in seconds, the
+selected clip ids and the voices a line can be cast to.
+
+#### `soundbox.studio_apply`
+
+Takes `actions`, and optionally `story_id`, `summary` (shown in the studio's
+toast and history) and `allow_delete`. The actions are the vocabulary the
+studio's own command bar uses: `set_track`, `rename_track`, `move_clip`,
+`set_clip` (mute, text, speaker, voice, gain, fades, length, trim),
+`delete_clip`, `add_clip`, `add_lines`, `speak_lines`, `add_device`,
+`remove_device`, `set_device`, `generate_clip`, `show_panel` and
+`start_recording`. The tool description has the shape of each.
+
+Any clip action can take `select` instead of `clip_id` to mean many clips:
+`{"scope": "all"}`, `{"scope": "selected"}`, `{"from_track": 2}` or
+`{"matching": "vocal"}` (label contains), combined with AND.
+
+Every action is checked against the live studio before anything is sent. An
+action naming a clip, lane, voice or effect that is not there is dropped and
+counted under `dropped`. `delete_clip` is held, and counted under
+`held_deletes`, unless `allow_delete` is true. The studio applies what is left
+through the same handlers a click uses, so each edit is on the user's undo
+stack. Generating and reading lines run in the background: read the context
+again to see the clips fill in.
+
+#### `soundbox.search_docs`
+
+Takes `query` and optionally `limit` (1–8, default 4). Returns the sections of
+Mirli's README and `docs/` that match, each with its `source` file, `heading`
+and `text`.
 
 ### Delivery
 

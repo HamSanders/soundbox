@@ -3025,6 +3025,9 @@ export const mockApi: MirliApi = {
     return { ...s };
   },
 
+  /** The mock has no event stream, so no agent ever asks it anything. */
+  async studioReply() {},
+
   async deleteStory(id, deleteSounds = false) {
     await wait(120);
     const i = stories.findIndex((x) => x.id === id);
@@ -4244,4 +4247,89 @@ function hostedCloudModels(): Model[] {
       { unit: "minute", credits_per_unit: 1, min_credits: 1 },
       { task: "vc", requires_voice_reference: true, supports: { ...base.supports, voice_reference: true } }),
   ];
+
+
+// ---------------------------------------------------------------------------
+// Calls (the Call API at /api/calls and /api/characters). The calls client
+// talks to it with fetch rather than through MirliApi, so the mock answers as
+// a fetch. The live voice worker never runs in mock mode: status says so and
+// starting a call is refused the way the server refuses it.
+
+interface MockCharacter {
+  id: string;
+  name: string;
+  persona: string;
+  voice_id: string | null;
+  builtin: boolean;
+  created_at: string;
+  portrait_url: string | null;
+}
+
+const mockCharacters: MockCharacter[] = [
+  {
+    id: "santa",
+    name: "Santa",
+    persona: "You are Santa Claus, on a live call from your workshop at the North Pole.",
+    voice_id: null,
+    builtin: true,
+    created_at: "2026-11-01T00:00:00.000Z",
+    portrait_url: null,
+  },
+];
+
+export async function mockCallsFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  await wait(80);
+  const url = new URL(String(input), "http://mock");
+  const path = url.pathname.replace(/^\/api/, "");
+  const method = (init?.method ?? "GET").toUpperCase();
+  const body = typeof init?.body === "string" ? (JSON.parse(init.body) as Record<string, unknown>) : {};
+  const json = (status: number, data: unknown) =>
+    new Response(status === 204 ? null : JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
+  const fail = (status: number, code: string, message: string) => json(status, { error: { code, message } });
+  const find = (id: string) => mockCharacters.find((c) => c.id === id || c.name.toLowerCase() === id.toLowerCase());
+
+  if (method === "GET" && path === "/calls/status") return json(200, { voice: false, url: "http://127.0.0.1:17650", active_calls: 0 });
+  if (method === "GET" && path === "/calls/voices") return json(200, { voices: voices.map((v) => ({ id: v.id, name: v.name, model: v.model_id ?? undefined })) });
+  if (method === "GET" && path === "/calls/history") return json(200, { used_seconds: 0, recent_calls: [] });
+  if (method === "POST" && path === "/calls")
+    return fail(503, "worker", "The live voice server isn't running at 127.0.0.1:17650. Start it with: cd live/voice && npm start");
+
+  if (path === "/characters") {
+    if (method === "GET") return json(200, { characters: mockCharacters });
+    if (method === "POST") {
+      const name = String(body.name ?? "").trim();
+      if (!name) return fail(400, "bad_request", "Give the character a name.");
+      const c: MockCharacter = {
+        id: `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now().toString(36)}`,
+        name,
+        persona: typeof body.persona === "string" && body.persona.trim() ? body.persona : `You are ${name}, on a live voice call.`,
+        voice_id: typeof body.voice_id === "string" ? body.voice_id : null,
+        builtin: false,
+        created_at: new Date().toISOString(),
+        // An uploaded picture is kept as its data URL; drawing needs the image engine, which the mock doesn't have.
+        portrait_url: typeof body.image === "string" ? body.image : null,
+      };
+      mockCharacters.push(c);
+      return json(201, c);
+    }
+  }
+  const m = path.match(/^\/characters\/([^/]+)$/);
+  if (m) {
+    const c = find(decodeURIComponent(m[1]!));
+    if (!c) return fail(404, "not_found", "No such character.");
+    if (method === "GET") return json(200, c);
+    if (method === "PATCH") {
+      if (typeof body.name === "string" && body.name.trim()) c.name = body.name.trim();
+      if (typeof body.persona === "string") c.persona = body.persona;
+      if (body.voice_id === null || typeof body.voice_id === "string") c.voice_id = body.voice_id;
+      if (typeof body.image === "string") c.portrait_url = body.image;
+      return json(200, c);
+    }
+    if (method === "DELETE") {
+      if (c.builtin) return fail(409, "builtin", `${c.name} is built in and can't be deleted.`);
+      mockCharacters.splice(mockCharacters.indexOf(c), 1);
+      return json(204, null);
+    }
+  }
+  return fail(404, "not_found", `The mock has no ${method} ${path}.`);
 }

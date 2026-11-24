@@ -76,12 +76,16 @@ import {
   isReady,
 } from "@/components/voice-shared";
 import {
-  VoiceChips,
+  VoiceGrid,
+  VoiceKindTabs,
   VoiceRow,
-  VoiceShelfCard,
   VoiceTableHeader,
-  type VoiceChip,
+  VoiceTile,
+  VoiceViewSwitch,
+  type VoiceKindTab,
 } from "@/components/voice-library";
+import { FilterMenu } from "@/components/filter-pills";
+import { useVoiceLabPrefs } from "@/lib/voice-lab-prefs";
 import { VoiceAvatar } from "@/components/voice-avatar";
 import { WaveformPlayer } from "@/components/waveform-player";
 import { ConsentSwitch, VoiceClipsDialog, VoiceHistoryDialog } from "@/components/voice-clips";
@@ -110,11 +114,8 @@ import { voiceReferenceError } from "@/lib/voice-reference";
  *  at once, so filtering costs a row of UI and saves nothing. */
 const SEARCH_THRESHOLD = 6;
 
-/** "all", "clone", "builtin" or "family:<family>". */
-type VoiceFilter = string;
-
-/** How many voices the "Your voices" shelf holds. */
-const SHELF_SIZE = 8;
+/** "all", "clone" or "builtin". */
+type KindFilter = string;
 
 /** Case-insensitive match against the two fields a voice actually carries any
  *  memorable words in. */
@@ -587,16 +588,6 @@ function VoiceConvertPanel({ models, voices }: { models: Model[]; voices: Voice[
   );
 }
 
-/* --------------------------------------------------------------- details */
-
-/** A voice's model family, or its model id when the catalogue doesn't know
- *  the model (not installed, or still loading). Null for a clone saved
- *  before voices carried a model. */
-function familyOf(voice: Voice, models: Map<string, Model>): string | null {
-  return voice.model_id ? (models.get(voice.model_id)?.family ?? voice.model_id) : null;
-}
-
-
 export function VoiceLabPage() {
   const voices = useVoices();
   const models = useModels();
@@ -633,15 +624,20 @@ export function VoiceLabPage() {
   const importInput = useRef<HTMLInputElement>(null);
 
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<VoiceFilter>("all");
+  const [kind, setKind] = useState<KindFilter>("all");
+  /** A model id, or null for any. */
+  const [modelFilter, setModelFilter] = useState<string | null>(null);
+  const view = useVoiceLabPrefs((st) => st.view);
+  const setView = useVoiceLabPrefs((st) => st.setView);
   /** The voice whose details are open in the docked panel (App renders it). */
   const detailId = useVoiceDetailStore((st) => st.voiceId);
   const setDetailId = useVoiceDetailStore((st) => st.open);
   const setDetailActions = useVoiceDetailStore((st) => st.setActions);
 
-  /** The line shared across every audition. No model: it comes with the
-   *  voice. */
-  const [tryLine, setTryLine] = useState("The quick brown fox jumps over the lazy dog.");
+  /** The line every test read and comparison says, shared with the detail
+   *  panel. No model: it comes with the voice. */
+  const tryLine = useVoiceLabPrefs((st) => st.line);
+  const setTryLine = useVoiceLabPrefs((st) => st.setLine);
 
   const ttsModels = useMemo(
     () => (models.data ?? []).filter((m) => m.task === "tts"),
@@ -661,37 +657,36 @@ export function VoiceLabPage() {
   const modelName = (voice: Voice) =>
     voice.model_id ? (modelsById.get(voice.model_id)?.name ?? null) : null;
 
-  const chips: VoiceChip[] = useMemo(() => {
-    const families = new Map<string, number>();
-    for (const v of all) {
-      const f = familyOf(v, modelsById);
-      if (f) families.set(f, (families.get(f) ?? 0) + 1);
-    }
-    return [
+  const tabs: VoiceKindTab[] = useMemo(
+    () => [
       { value: "all", label: "All", count: all.length },
       { value: "clone", label: "Cloned", count: all.filter((v) => v.kind === "clone").length },
       { value: "builtin", label: "Built-in", count: all.filter((v) => v.kind === "builtin").length },
-      ...[...families.entries()]
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([f, count]) => ({
-          value: `family:${f}`,
-          label: f.charAt(0).toUpperCase() + f.slice(1),
-          count,
-        })),
-    ];
+    ],
+    [all],
+  );
+
+  /** The models the voices speak through, by name, for the Model filter. */
+  const modelOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const v of all) if (v.model_id) counts.set(v.model_id, (counts.get(v.model_id) ?? 0) + 1);
+    return [...counts.entries()]
+      .map(([id, count]) => ({ value: id, label: modelsById.get(id)?.name ?? id, hint: String(count) }))
+      .sort((x, y) => x.label.localeCompare(y.label));
   }, [all, modelsById]);
 
-  const filtered = all.filter((v) => {
-    if (!matchesQuery(v, query)) return false;
-    if (filter === "all") return true;
-    if (filter.startsWith("family:")) return familyOf(v, modelsById) === filter.slice(7);
-    return v.kind === filter;
-  });
-  const showFilters = all.length >= SEARCH_THRESHOLD;
-  /** The most-read voices first: the ones you actually cast. */
-  const shelf = [...all]
-    .sort((a, b) => (b.read_count ?? 0) - (a.read_count ?? 0))
-    .slice(0, SHELF_SIZE);
+  /** Most-read first: the voices you actually cast lead the page, which is
+   *  what the old "Your voices" shelf was for. */
+  const filtered = all
+    .filter((v) => {
+      if (!matchesQuery(v, query)) return false;
+      if (kind !== "all" && v.kind !== kind) return false;
+      if (modelFilter && v.model_id !== modelFilter) return false;
+      return true;
+    })
+    .sort((a, b) => (b.read_count ?? 0) - (a.read_count ?? 0));
+  const showSearch = all.length >= SEARCH_THRESHOLD;
+  const narrowed = Boolean(query.trim()) || kind !== "all" || modelFilter !== null;
 
   const openEdit = (voice: Voice) => {
     setNameDraft(voice.name);
@@ -770,22 +765,13 @@ export function VoiceLabPage() {
   return (
     <div className="@container space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="max-w-2xl">
+        <div>
           <h1 className="font-heading text-2xl font-semibold tracking-tight">Voice Lab</h1>
           <p className="text-muted-foreground text-sm">
-            A voice is a speaker you can point a script at — either cloned from a
-            clip of someone talking, or one of the named voices a model already
-            ships. Make them here, hear them here, then use them in the{" "}
-            <Link
-              to="/studio?builder=script"
-              className="text-foreground underline underline-offset-4"
-            >
-              Script Builder
-            </Link>
-            .
+            {voices.data ? `${all.length} voice${all.length === 1 ? "" : "s"}` : " "}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-1.5">
           {/* A voice file from another machine, or a backup — see
               `voiceExportSchema` on the server for what one holds. */}
           <input
@@ -799,20 +785,28 @@ export function VoiceLabPage() {
               if (picked) importer.mutate(picked);
             }}
           />
-          <Button
-            variant="outline"
-            disabled={importer.isPending}
-            onClick={() => importInput.current?.click()}
-          >
-            <UploadIcon />
-            {importer.isPending ? "Importing…" : "Import"}
-          </Button>
           <Button asChild>
             <Link to="/voice/new">
               <PlusIcon />
-              Add voice
+              New voice
             </Link>
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="More voice actions">
+                <MoreHorizontalIcon />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                disabled={importer.isPending}
+                onSelect={() => importInput.current?.click()}
+              >
+                <UploadIcon />
+                {importer.isPending ? "Importing…" : "Import a voice file"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -835,10 +829,31 @@ export function VoiceLabPage() {
       )}
 
       {all.length > 0 && (
-        <div className="grid gap-3">
-          {showFilters && <SearchInput value={query} onChange={setQuery} placeholder="Search voices…" />}
-          <VoiceChips chips={chips} value={filter} onChange={setFilter} />
-        </div>
+        <>
+          <VoiceKindTabs tabs={tabs} value={kind} onChange={setKind} />
+          {/* One row, as the Library's: search, the Model pill, then the
+              grid/list switch at the far end. */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {showSearch && (
+              <div className="min-w-48 flex-1">
+                <SearchInput value={query} onChange={setQuery} placeholder="Search voices…" />
+              </div>
+            )}
+            {modelOptions.length > 1 && (
+              <FilterMenu
+                label="Model"
+                value={modelFilter}
+                valueLabel={modelOptions.find((o) => o.value === modelFilter)?.label}
+                anyLabel="Any model"
+                options={modelOptions}
+                onChange={setModelFilter}
+              />
+            )}
+            <div className="ml-auto">
+              <VoiceViewSwitch value={view} onChange={setView} />
+            </div>
+          </div>
+        </>
       )}
 
       {voices.isLoading ? (
@@ -876,7 +891,8 @@ export function VoiceLabPage() {
             type="button"
             onClick={() => {
               setQuery("");
-              setFilter("all");
+              setKind("all");
+              setModelFilter(null);
             }}
             className="text-foreground underline underline-offset-4"
           >
@@ -885,30 +901,26 @@ export function VoiceLabPage() {
           .
         </EmptyState>
       ) : (
-        <>
-          {/* The shelf is the browse view: only on the unfiltered page, and
-              only once there are enough voices that a shortlist helps. */}
-          {filter === "all" && !query.trim() && shelf.length >= 2 && (
-            <section className="grid min-w-0 gap-2">
-              <h2 className="label-caps text-muted-foreground">Your voices</h2>
-              <div className="-mx-1 grid auto-cols-[minmax(13rem,15rem)] grid-flow-col gap-2 overflow-x-auto px-1 pb-2">
-                {shelf.map((voice) => (
-                  <VoiceShelfCard
-                    key={voice.id}
-                    voice={voice}
-                    modelName={modelName(voice)}
-                    selected={detailId === voice.id}
-                    onOpen={() => setDetailId(voice.id)}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
+        view === "grid" ? (
+          <VoiceGrid>
+            {filtered.map((voice) => (
+              <VoiceTile
+                key={voice.id}
+                voice={voice}
+                modelName={modelName(voice)}
+                selected={detailId === voice.id}
+                onOpen={() => setDetailId(voice.id)}
+                menu={voiceMenu(voice)}
+              />
+            ))}
+          </VoiceGrid>
+        ) : (
           <section className="@container grid min-w-0 gap-1">
-            <h2 className="label-caps text-muted-foreground mb-1">
-              {filter === "all" && !query.trim() ? "All voices" : `${filtered.length} voice${filtered.length === 1 ? "" : "s"}`}
-            </h2>
+            {narrowed && (
+              <h2 className="label-caps text-muted-foreground mb-1">
+                {`${filtered.length} voice${filtered.length === 1 ? "" : "s"}`}
+              </h2>
+            )}
             <VoiceTableHeader />
             {filtered.map((voice) => (
               <VoiceRow
@@ -934,7 +946,7 @@ export function VoiceLabPage() {
               />
             ))}
           </section>
-        </>
+        )
       )}
 
       {/* Conversion lives here rather than in the Studio because it is a

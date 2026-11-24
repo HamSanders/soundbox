@@ -37,7 +37,7 @@ function Stat({ value, label }: { value: number; label: string }) {
 
 export function ModelsHubPage() {
   return (
-    <div className="bg-background text-foreground min-h-svh">
+    <div className="text-foreground">
       <SeoHead
         title="Open-weight audio models: specs and licences | Mirli"
         description={`${MODEL_STATS.total} open-weight audio models for sound effects, music, speech and stem separation, run locally through audio.cpp with no Python. Licence findings for each, with sources.`}

@@ -7,7 +7,9 @@
  * once.
  *
  * It renders outside the app shell (see App.tsx) for the same reason /welcome
- * does — a marketing page has no business carrying the app's sidebar.
+ * does, but carries the public /music page's own rail (`SiteRail`): jump
+ * links, sibling collections and the "make your own" card, so the two
+ * catalogue pages read as one site.
  *
  * Section order is chosen for the reader, not the crawler: the samples are the
  * first thing on the page because "let me hear one" is the actual reason
@@ -18,17 +20,32 @@ import { useMemo } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import {
   ArrowRightIcon,
+  AudioLinesIcon,
+  BookOpenIcon,
   BotIcon,
+  CircleHelpIcon,
+  LayoutGridIcon,
   ScaleIcon,
+  SparklesIcon,
   TerminalIcon,
   WifiOffIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { SitePanel } from "@/components/site/site-frame";
 import { Separator } from "@/components/ui/separator";
 import { CopyButton } from "@/components/docs-primitives";
-import { SampleList, sampleModelName, sampleQueue } from "@/components/sfx/sample-list";
-import { SiteCollectionHeader, SiteDock, SitePlayButton, useSiteAudio } from "@/components/site/site-tracks";
+import { SampleList, modelName, sampleFact, sampleQueue, samplesModels } from "@/components/sfx/sample-list";
+import {
+  SiteCollectionHeader,
+  SiteDock,
+  SitePlayButton,
+  SiteRail,
+  SiteRailCard,
+  SiteRailLayout,
+  useSiteAudio,
+} from "@/components/site/site-tracks";
+import type { SiteRailGroup } from "@/components/site/site-tracks";
 import { ProjectThumb } from "@/components/project-thumb";
 import { formatDuration } from "@/lib/format";
 import { MarketingLink } from "@/components/marketing-link";
@@ -63,7 +80,7 @@ function Section({
   className?: string;
 }) {
   return (
-    <section aria-labelledby={id} className={cn("border-border/60 border-t py-12", className)}>
+    <section aria-labelledby={id} className={cn("border-border/60 scroll-mt-20 border-t py-12", className)}>
       <h2
         id={id}
         className="font-display text-2xl leading-none font-extrabold text-balance uppercase sm:text-3xl"
@@ -101,8 +118,9 @@ function CategoryBody({ category }: { category: PublishedCategory }) {
   const queue = useMemo(() => sampleQueue(category.slug, content.samples), [category.slug, content.samples]);
   const audio = useSiteAudio(queue);
   const first = queue[0];
-  const totalS = queue.reduce((n, q) => n + (q.durationS ?? 0), 0);
-  const models = [...new Set(content.samples.map(sampleModelName))];
+  // Main takes only: a comparison take is the same sound again, not more of the collection.
+  const totalS = content.samples.reduce((n, s) => n + (sampleFact(category.slug, s.slug)?.[0] ?? 0), 0);
+  const models = samplesModels(content.samples).map(modelName);
 
   return (
     <>
@@ -126,14 +144,6 @@ function CategoryBody({ category }: { category: PublishedCategory }) {
           ]),
         ]}
       />
-
-      <nav aria-label="Breadcrumb" className="text-muted-foreground pt-8 text-sm">
-        <Link to="/sfx" className="hover:text-foreground underline-offset-4 hover:underline">
-          Sound effects
-        </Link>
-        <span aria-hidden="true"> / </span>
-        <span className="text-foreground">{category.name}</span>
-      </nav>
 
       <SiteCollectionHeader
         tile={
@@ -308,6 +318,38 @@ function CategoryBody({ category }: { category: PublishedCategory }) {
   );
 }
 
+/**
+ * The rail beside a collection, in the music page's shape: jump links to this
+ * page's sections, then sibling collections, then the "make your own" card.
+ */
+function railGroups(category: PublishedCategory): SiteRailGroup[] {
+  const related = category.content.related
+    .map((slug) => getCategory(slug))
+    .filter((c): c is NonNullable<typeof c> => Boolean(c && isPublished(c)));
+  return [
+    {
+      heading: "Listen",
+      links: [{ href: "#samples", label: `${category.content.samples.length} samples`, icon: AudioLinesIcon }],
+    },
+    {
+      heading: "Learn",
+      links: [
+        { href: "#recipes", label: "Prompts that work", icon: SparklesIcon },
+        { href: "#craft", label: "Making them fit", icon: BookOpenIcon },
+        { href: "#why-local", label: "Why local", icon: WifiOffIcon },
+        { href: "#faq", label: "Questions", icon: CircleHelpIcon },
+      ],
+    },
+    {
+      heading: "Collections",
+      links: [
+        { href: "/sfx/", label: "All sound effects", icon: LayoutGridIcon },
+        ...related.slice(0, 6).map((c) => ({ href: `/sfx/${c.slug}/`, label: c.name, icon: AudioLinesIcon })),
+      ],
+    },
+  ];
+}
+
 export function SfxCategoryPage() {
   const { slug } = useParams();
   const category = getCategory(slug);
@@ -320,10 +362,30 @@ export function SfxCategoryPage() {
   }
 
   return (
-    <div className="bg-background text-foreground min-h-svh">
-      <div className="mx-auto w-full max-w-4xl px-4 pb-24">
-        <CategoryBody category={category} />
-      </div>
+    <div className="text-foreground">
+      <SiteRailLayout>
+        <SiteRail
+          groups={railGroups(category)}
+          cta={
+            <SiteRailCard
+              title="Make your own"
+              body="Every prompt here is yours to copy, edit and generate again on your own machine."
+              action={
+                <Button size="sm" className="w-full" asChild>
+                  <MarketingLink href={GENERATOR_HREF}>Open the generator</MarketingLink>
+                </Button>
+              }
+            />
+          }
+        />
+        <SitePanel>
+        <main className="min-w-0 px-4 pb-28 md:pb-12 lg:px-8">
+          <div className="mx-auto w-full max-w-5xl">
+            <CategoryBody category={category} />
+          </div>
+        </main>
+        </SitePanel>
+      </SiteRailLayout>
     </div>
   );
 }

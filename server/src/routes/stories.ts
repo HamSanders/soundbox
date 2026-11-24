@@ -23,6 +23,7 @@ import {
   segmentReorderSchema,
   segmentSplitSchema,
   storyFromSoundSchema,
+  studioReplySchema,
   storyPatchSchema,
   trackPatchSchema,
   type Story,
@@ -129,10 +130,16 @@ export function registerStories(app: FastifyInstance, svc: MirliService): void {
    * refresh. The first frame carries current agent activity, since a client
    * that connects mid-call would otherwise not know until the agent finished.
    */
-  app.get<StoryParams>("/api/stories/:story_id/events", async (request, reply) => {
+  app.get<StoryParams & { Querystring: { answer?: string } }>(
+    "/api/stories/:story_id/events",
+    async (request, reply) => {
     const storyId = request.params.story_id;
     if (svc.getStory(storyId) === null) throw new HttpError(404, "Story not found");
-    const queue = svc.stories.subscribe(storyId);
+    // `answer=1` is a mounted studio saying it can be asked things: its live
+    // state, and to apply edits through its own handlers. See
+    // `StoryHub.ask` and the `soundbox.studio_*` MCP tools.
+    const answers = request.query.answer === "1";
+    const queue = svc.stories.subscribe(storyId, { answers });
     await streamSse(request, reply, queue, {
       initial: (): StoryEvent[] => {
         const now = svc.stories.activity(storyId);
@@ -142,7 +149,27 @@ export function registerStories(app: FastifyInstance, svc: MirliService): void {
       },
       cleanup: () => svc.stories.unsubscribe(storyId, queue),
     });
-  });
+    },
+  );
+
+  /**
+   * The studio's answer to a request it was sent down its event stream.
+   * 404 when there is no such request any more — it timed out, or another
+   * reply got there first — which tells the page to drop it quietly.
+   */
+  app.post<{ Params: { story_id: string; request_id: string } }>(
+    "/api/stories/:story_id/studio/replies/:request_id",
+    async (request, reply) => {
+      const body = studioReplySchema.parse(request.body ?? {});
+      const ok = svc.stories.answer(request.params.story_id, request.params.request_id, {
+        ok: body.ok,
+        result: body.result,
+        error: body.error ?? null,
+      });
+      if (!ok) throw new HttpError(404, "No such studio request");
+      return reply.code(204).send();
+    },
+  );
 
   /* ---------------------------------------------------------------- tracks */
 

@@ -21,7 +21,14 @@ export interface StudioVoice {
 }
 
 export interface StudioContext {
-  tracks: { track_index: number; name: string | null; muted: boolean; soloed: boolean }[];
+  tracks: {
+    track_index: number;
+    name: string | null;
+    muted: boolean;
+    soloed: boolean;
+    /** Device kinds on the lane's rack, in chain order. */
+    devices?: string[];
+  }[];
   clips: { id: string; track_index: number; start_s: number; duration_s: number; label: string }[];
   playhead_s: number;
   selected_ids: string[];
@@ -141,7 +148,10 @@ export function panelForAction(action: StudioAction): string | null {
     case "generate_clip":
       return "history";
     case "show_panel":
-      return action.panel;
+      // Only an opened panel is "the work" to show. Returning the panel for a
+      // hide made the apply path reopen what it had just closed, so "hide the
+      // library" never stuck.
+      return action.open ? action.panel : null;
     case "move_clip":
     case "delete_clip":
     case "add_clip":

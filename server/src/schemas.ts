@@ -1479,44 +1479,58 @@ export const skillInstallRequestSchema = z.object({
  * checks every id that comes back against this same list before anything is
  * applied. Tightening it here would only move the same check earlier.
  */
+/** The live studio as a planner sees it: what the command bar sends, and
+ *  what an open studio answers `soundbox.studio_context` with. */
+export const studioContextSchema = z.object({
+  tracks: z
+    .array(
+      z.object({
+        track_index: z.number().int(),
+        name: z.string().nullable().default(null),
+        muted: z.boolean().default(false),
+        soloed: z.boolean().default(false),
+        /** Device kinds on the lane's rack, in chain order, so "take the
+         *  reverb off the vocal" has something to refer to. */
+        devices: z.array(z.string()).max(32).optional(),
+      }),
+    )
+    .max(200),
+  clips: z
+    .array(
+      z.object({
+        id: z.string(),
+        track_index: z.number().int(),
+        start_s: z.number(),
+        duration_s: z.number(),
+        label: z.string().default(""),
+      }),
+    )
+    .max(500),
+  playhead_s: z.number().default(0),
+  selected_ids: z.array(z.string()).max(500).default([]),
+  /** Saved voices a written line may be cast to. The planner may only name
+   *  one of these; see `llm/studio.ts`. */
+  voices: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        kind: z.enum(["clone", "builtin"]),
+        notes: z.string().nullish(),
+      }),
+    )
+    .max(200)
+    .default([]),
+});
+
 export const studioCommandRequestSchema = z.object({
   instruction: z.string().min(1).max(2000),
-  context: z.object({
-    tracks: z
-      .array(
-        z.object({
-          track_index: z.number().int(),
-          name: z.string().nullable().default(null),
-          muted: z.boolean().default(false),
-          soloed: z.boolean().default(false),
-        }),
-      )
-      .max(200),
-    clips: z
-      .array(
-        z.object({
-          id: z.string(),
-          track_index: z.number().int(),
-          start_s: z.number(),
-          duration_s: z.number(),
-          label: z.string().default(""),
-        }),
-      )
-      .max(500),
-    playhead_s: z.number().default(0),
-    selected_ids: z.array(z.string()).max(500).default([]),
-    /** Saved voices a written line may be cast to. The planner may only name
-     *  one of these; see `llm/studio.ts`. */
-    voices: z
-      .array(
-        z.object({
-          id: z.string(),
-          name: z.string(),
-          kind: z.enum(["clone", "builtin"]),
-          notes: z.string().nullish(),
-        }),
-      )
-      .max(200)
-      .default([]),
-  }),
+  context: studioContextSchema,
+});
+
+/** An open studio's answer to a request sent down its event stream. */
+export const studioReplySchema = z.object({
+  ok: z.boolean(),
+  result: z.unknown().optional(),
+  error: z.string().max(2000).nullish(),
 });

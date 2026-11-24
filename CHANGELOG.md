@@ -6,6 +6,8 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-24
+
 ### Added
 - **Calls: talk live with a character, by voice.** The new **Calls** page in the sidebar puts you on a voice call with Mirli or one of your characters: you talk, they answer out loud in one of your saved voices, and you can talk over them. A character is a name, a persona, a voice and an optional portrait (uploaded or drawn); Santa is built in, and **Make a call voice from a preset** turns a model's preset voice into one a call can use. You can switch character in the middle of a call. Calls run on the live voice worker (`live/voice`), a separate process on your GPU; start it with `npm start` there. It can answer with the local model, any OpenAI-compatible endpoint, or your own signed-in Claude Code (`LLM_PROVIDER=claude`, no API key). Voice only for now. See `live/README.md`.
 - **Mirli in Discord.** `integrations/discord` is a bot that brings one of your characters into a Discord voice channel under the character's name: `/mirli join character:`, then switch character, voice or a one-off persona mid-call. It sees the same characters as the app and listens to one person at a time. See `integrations/discord/README.md`.
@@ -384,7 +386,8 @@ Initial public release, MIT-licensed. Everything below is new.
   `SOUNDBOX_ALLOWED_HOSTS`), and requires JSON or an `X-Soundbox` header on
   mutating API requests.
 
-[Unreleased]: https://github.com/HamSanders/soundbox/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/HamSanders/soundbox/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/HamSanders/soundbox/compare/v0.6.2...v0.7.0
 [0.6.2]: https://github.com/HamSanders/soundbox/compare/v0.6.0...v0.6.2
 [0.6.0]: https://github.com/HamSanders/soundbox/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/HamSanders/soundbox/compare/v0.4.1...v0.5.0

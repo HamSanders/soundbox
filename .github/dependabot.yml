@@ -12,6 +12,12 @@ updates:
         patterns: ["@opentelemetry/*"]
       npm-minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # 13.x publishes no native module for the Node the desktop installers
+      # bundle (scripts/desktop-stage.mjs), so the installer build fails.
+      # Drop this when a release has a prebuild for that Node.
+      - dependency-name: better-sqlite3
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: cargo
     directory: /src-tauri
     schedule:

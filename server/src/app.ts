@@ -50,6 +50,7 @@ import { registerProfiles } from "./routes/profiles.js";
 import { registerSettings } from "./routes/settings.js";
 import { registerSounds } from "./routes/sounds.js";
 import { registerVoices } from "./routes/voices.js";
+import { registerCalls } from "./routes/calls.js";
 import { MirliService } from "./service.js";
 
 declare module "fastify" {
@@ -253,6 +254,7 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
   registerOpenAi(app, svc);
   registerSounds(app, svc);
   registerVoices(app, svc);
+  registerCalls(app, svc);
   registerSessions(app, svc);
   registerHistory(app, svc);
   registerStories(app, svc);

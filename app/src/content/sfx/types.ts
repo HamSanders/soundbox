@@ -42,6 +42,11 @@ export interface SfxSample {
    *  generated — the prompt shown on the page is by construction the prompt
    *  that made the clip. Defaults to 4 s when omitted. */
   durationS?: number;
+  /** Seed the clip was rendered with. Set when a take was chosen from several
+   *  (the first seed is not always a usable render), so re-running the render
+   *  script reproduces the clip on the page rather than rolling a new one.
+   *  Omitted means the server picked one at random. */
+  seed?: number;
 }
 
 export interface SfxFaq {

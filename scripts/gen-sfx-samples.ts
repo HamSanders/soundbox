@@ -13,6 +13,12 @@
  *   npx tsx scripts/gen-sfx-samples.ts whoosh glass    # just these categories
  *   npx tsx scripts/gen-sfx-samples.ts --all           # re-render, ignore manifest
  *   npx tsx scripts/gen-sfx-samples.ts --list          # what would run, no calls
+ *   npx tsx scripts/gen-sfx-samples.ts --only=retro-game/retro-pause,8bit/8bit-explosion
+ *                                                       # re-render these, even if present
+ *
+ * A sample with a `seed` renders on that seed, so it comes back as the take on
+ * the page. Afterwards run scripts/level-sfx-samples.py: renders come out of
+ * the model at any level, and the site's MP3s are levelled to one loudness.
  *
  * For each sample: POST /api/generate, poll the job, GET /api/sounds/{id} for
  * the peaks and duration the backend already computed, download the WAV,
@@ -83,6 +89,7 @@ async function generate(sample: SfxSample, projectId: string): Promise<string> {
       model,
       prompt: sample.prompt,
       duration_s: sample.durationS ?? DEFAULT_DURATION_S,
+      ...(sample.seed !== undefined && { seed: sample.seed }),
       steps,
       cfg,
       project_id: projectId,
@@ -119,6 +126,12 @@ async function main() {
   const all = argv.includes("--all");
   const listOnly = argv.includes("--list");
   const only = new Set(argv.filter((a) => !a.startsWith("--")));
+  // `--only=cat/sample,...` names single clips and re-renders them whether or
+  // not they are already in the manifest; it implies their categories.
+  const onlySamples = new Set(
+    argv.filter((a) => a.startsWith("--only=")).flatMap((a) => a.slice("--only=".length).split(",")),
+  );
+  for (const key of onlySamples) only.add(key.split("/")[0]);
 
   const categories = SFX_CATEGORIES.filter(isPublished).filter(
     (c) => only.size === 0 || only.has(c.slug),
@@ -138,7 +151,9 @@ async function main() {
     const manifest: Record<string, ManifestEntry> = existsSync(manifestPath)
       ? JSON.parse(await readFile(manifestPath, "utf8"))
       : {};
-    const todo = all
+    const todo = onlySamples.size > 0
+      ? category.content.samples.filter((s) => onlySamples.has(`${category.slug}/${s.slug}`))
+      : all
       ? category.content.samples
       : category.content.samples.filter(
           (s) => !(s.slug in manifest) || !existsSync(join(outDir, `${s.slug}.mp3`)),

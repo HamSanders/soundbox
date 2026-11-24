@@ -22,6 +22,9 @@ to follow [Semantic Versioning](https://semver.org/).
 - **Two setups: on this computer, or elsewhere.** First-run setup now starts by asking where sounds should be made. "On this computer" is the app as before. "Elsewhere" is a simple setup with nothing to download: renders go to a server you run or a hosted API with your own key, the Models page and pickers list only those models, and the settings for running models locally are hidden. Settings → Setup switches between them, and can keep the models already installed here in the simple setup; switching to it unloads a model left in memory. "On this computer" is preselected, and a server that can't run models itself skips the question.
 - Agents and the app no longer pick a model that may charge you per render unless you choose it. A custom endpoint outside your machine, your local network and a private overlay network such as Tailscale (a hosted API used with your own key) is marked as metered: the composer never lands on it by default, and `soundbox.generate` and `soundbox.speak` without a `model` skip it and say how to name one. A voice made on a metered model is still read on it, since choosing the voice chooses its model.
 
+### Fixed
+- **Sound effect samples on mirli.app play at one loudness, without the noisy ones.** Every sample on the /sfx pages is levelled to the same loudness with a true-peak ceiling, so the list no longer jumps from a whisper to a shout or clips in the browser. Seven synth and UI samples that the model had rendered as hiss or hum (insert coin, shield hit, save chime, token accepted, magic coin, success chime, bright ping) are re-rendered on a pinned seed, and three of their prompts are reworded to the phrasing that renders cleanly.
+
 ## [0.6.2] - 2026-11-20
 
 ### Fixed

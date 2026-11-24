@@ -25,7 +25,7 @@ export function CallsHomePage() {
           <span className="font-log text-xs text-muted-foreground">calls</span>
           <h1 className="font-display text-5xl font-extrabold uppercase tracking-wide">Calls</h1>
           <p className="max-w-[60ch] text-muted-foreground">
-            Real-time voice calls with characters, on your own GPU. You talk, they answer out loud in about half a second, and you can talk over them any time.
+            Real-time voice calls with characters, on your own GPU. You talk, they answer out loud in their own voice, and you can talk over them any time.
           </p>
         </div>
         <ServiceLine loading={status.isLoading} unreachable={status.isError} voice={voiceUp} />

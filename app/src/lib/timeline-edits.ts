@@ -1,6 +1,7 @@
 /**
  * The clip edits a story timeline makes (add, change, move, delete,
- * duplicate, split, and a track's mix), each recorded as one undo step.
+ * duplicate, split, a track's mix, and removing a lane), each recorded as
+ * one undo step.
  *
  * Shared by the studio and the audiobook editor's docked timeline, which
  * edit the same thing: a story's segments. Plain functions over the story's
@@ -8,11 +9,15 @@
  * passes in the mutations it already holds.
  */
 
-import type { EditHistory } from "@/hooks/use-edit-history";
+import { toast } from "sonner";
+
+import type { EditHistory, EditStep } from "@/hooks/use-edit-history";
 import type { SegmentCreate, SegmentPatch, StorySegment, StoryTrack, TrackPatch } from "@/lib/api";
 import type {
   useCreateSegment,
   useDeleteSegment,
+  useDeleteTrack,
+  useInsertTrack,
   useSplitSegment,
   useUpdateSegment,
   useUpdateTrack,
@@ -57,6 +62,8 @@ export interface TimelineEditDeps {
   deleteSegment: ReturnType<typeof useDeleteSegment>;
   splitSegment: ReturnType<typeof useSplitSegment>;
   updateTrack: ReturnType<typeof useUpdateTrack>;
+  deleteTrack: ReturnType<typeof useDeleteTrack>;
+  insertTrack: ReturnType<typeof useInsertTrack>;
 }
 
 export function timelineEdits({
@@ -68,6 +75,8 @@ export function timelineEdits({
   deleteSegment,
   splitSegment,
   updateTrack,
+  deleteTrack,
+  insertTrack,
 }: TimelineEditDeps) {
   const tracks = { data: trackRows };
   /**
@@ -266,6 +275,74 @@ export function timelineEdits({
   };
   const removeLine = (id: string): void => removeLines([id]);
 
+  /**
+   * Remove a lane and its clips, as one edit, with Undo on a toast.
+   *
+   * No "are you sure": the audio stays in the library, and undo puts the
+   * lane back where it was (the lanes above slide up again) with its name,
+   * mix and devices, then recreates its clips in reading order, as an undone
+   * clip delete does. Apple's guidance is to avoid alerts for undoable
+   * actions, even destructive ones
+   * (https://developer.apple.com/design/human-interface-guidelines/alerts).
+   */
+  const removeTrack = (trackIndex: number): void => {
+    const row = tracks.data?.find((t) => t.track_index === trackIndex);
+    const settings: TrackPatch = {
+      name: row?.name ?? null,
+      muted: row?.muted ?? false,
+      soloed: row?.soloed ?? false,
+      gain_db: row?.gain_db ?? 0,
+      devices: row?.devices ?? [],
+    };
+    const clips = lines
+      .filter((l) => l.track_index === trackIndex)
+      .sort((a, b) => a.position - b.position);
+    deleteTrack.mutateAsync(trackIndex).then(
+      () => {
+        const step: EditStep = {
+          label: "remove track",
+          undo: () => {
+            void (async () => {
+              try {
+                await insertTrack.mutateAsync({ trackIndex, patch: settings });
+              } catch {
+                return; // the mutation's own toast says what went wrong
+              }
+              for (const clip of clips) {
+                try {
+                  const created = await createSegment.mutateAsync(
+                    restorable({ ...clip, track_index: trackIndex }),
+                  );
+                  history.remap(history.resolve(clip.id), created.id);
+                } catch {
+                  // the mutation's own toast says what went wrong
+                }
+              }
+            })();
+          },
+          redo: () => deleteTrack.mutate(trackIndex),
+        };
+        history.push(step);
+        if (clips.length === 0) return;
+        const name = row?.name ?? `Track ${trackIndex}`;
+        toast(`Removed ${name} and its ${clips.length} clip${clips.length === 1 ? "" : "s"}`, {
+          description: "The audio stays in your library.",
+          // As long as `undoable`'s toasts offer Undo.
+          duration: 8000,
+          action: {
+            label: "Undo",
+            // Only while it is still the latest edit: undo walks back in order.
+            onClick: () => {
+              if (history.peek() === step) history.undo();
+              else toast.info("Undo the edits after it first (Ctrl+Z).");
+            },
+          },
+        });
+      },
+      () => undefined, // the mutation's own toast says what went wrong
+    );
+  };
+
   const duplicate = (originals: StorySegment[]): void => {
     // Land each copy right after its original in both views, which is where
     // you meant to put it if you are duplicating at all.
@@ -334,5 +411,5 @@ export function timelineEdits({
     });
   };
 
-  return { addClips, addClip, editClip, editTrack, move, applyMoves, removeLines, removeLine, duplicate, split };
+  return { addClips, addClip, editClip, editTrack, move, applyMoves, removeLines, removeLine, removeTrack, duplicate, split };
 }

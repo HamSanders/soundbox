@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEditHistory } from "@/hooks/use-edit-history";
 import { useBook, useBookEvents, useNotes, useParagraphs } from "@/lib/audiobook-queries";
+import { flushPending, undoPending, useHiddenStore } from "@/lib/undo";
 
 export function AudiobookPage() {
   const { id = "" } = useParams();
@@ -42,10 +43,14 @@ export function AudiobookPage() {
   const ops = useBookOps(id, history);
 
   const undo = useCallback(() => {
+    // A chapter deleted a moment ago is still on its toast, and newer than
+    // anything on the history: put it back first.
+    const pending = undoPending(`book:${id}`);
+    if (pending) return announce(`Undid: ${pending}`);
     if (!history.canUndo) return announce("Nothing to undo");
     announce(`Undid ${history.undoLabel ?? "the last edit"}`);
     history.undo();
-  }, [history]);
+  }, [history, id]);
   const redo = useCallback(() => {
     if (!history.canRedo) return announce("Nothing to redo");
     announce("Redone");
@@ -71,7 +76,13 @@ export function AudiobookPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [redo, undo]);
 
-  const chapters = useMemo(() => book.data?.chapters ?? [], [book.data]);
+  // A chapter deleted but still on its Undo toast is left out everywhere.
+  const hidden = useHiddenStore((s) => s.ids);
+  const visible = useMemo(
+    () => (book.data ? { ...book.data, chapters: book.data.chapters.filter((c) => !hidden[`chapter:${c.id}`]) } : undefined),
+    [book.data, hidden],
+  );
+  const chapters = useMemo(() => visible?.chapters ?? [], [visible]);
   const chapterId = params.get("chapter");
   const chapter =
     chapters.find((c) => c.id === chapterId) ??
@@ -101,7 +112,10 @@ export function AudiobookPage() {
     setChecked(new Set());
   }, [history]);
   const reorderChapters = useCallback(
-    (before: string[], after: string[]) => void ops.reorderChapters(before, after),
+    // The server checks the order names every chapter, so a delete still
+    // on its toast is sent first rather than left out of the list.
+    (before: string[], after: string[]) =>
+      void flushPending().then(() => ops.reorderChapters(before, after)),
     [ops],
   );
   const noteCounts = useMemo(
@@ -118,7 +132,7 @@ export function AudiobookPage() {
       </div>
     );
   }
-  if (book.isError || !book.data) {
+  if (book.isError || !visible) {
     return (
       <div className="p-6">
         <EmptyState
@@ -136,7 +150,7 @@ export function AudiobookPage() {
     );
   }
 
-  const data = book.data;
+  const data = visible;
   const panel = "bg-card border-border/70 flex min-h-0 flex-col overflow-hidden rounded-xl border";
 
   return (

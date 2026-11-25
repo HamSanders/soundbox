@@ -69,14 +69,6 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -140,6 +132,7 @@ import {
   useStory,
   useTracks,
   useDeleteTrack,
+  useInsertTrack,
   useUpdateTrack,
   useUpdateSegment,
   useVoices,
@@ -468,10 +461,7 @@ export function StudioEditor({
   const deleteSegment = useDeleteSegment(storyId);
   const updateTrack = useUpdateTrack(storyId);
   const deleteTrack = useDeleteTrack(storyId);
-  const [pendingTrackRemoval, setPendingTrackRemoval] = useState<{
-    trackIndex: number;
-    clips: number;
-  } | null>(null);
+  const insertTrack = useInsertTrack(storyId);
   const splitSegment = useSplitSegment(storyId);
   const separateSound = useSeparateSound();
   const repaintSound = useRepaintSound();
@@ -497,10 +487,6 @@ export function StudioEditor({
    *  chains move with their lanes when one is removed; the server renumbers
    *  the track rows itself. */
   const { devices, setLane, getLane } = useTrackDevices(storyId);
-  const removeTrack = (trackIndex: number): void => {
-    // The mutation's own toast says what went wrong.
-    deleteTrack.mutateAsync(trackIndex).catch(() => undefined);
-  };
   const lanes = useMemo(
     () => lanesFor(segments.data ?? [], tracks.data ?? []),
     [segments.data, tracks.data],
@@ -1717,8 +1703,19 @@ export function StudioEditor({
 
   // The clip edits themselves live in `lib/timeline-edits.ts`, shared with
   // the audiobook editor's docked timeline.
-  const { addClips, addClip, editClip, editTrack, move, removeLines, removeLine, duplicate, split } =
-    timelineEdits({ lines, tracks: tracks.data, history, createSegment, updateSegment, deleteSegment, splitSegment, updateTrack });
+  const { addClips, addClip, editClip, editTrack, move, removeLines, removeLine, removeTrack, duplicate, split } =
+    timelineEdits({
+      lines,
+      tracks: tracks.data,
+      history,
+      createSegment,
+      updateSegment,
+      deleteSegment,
+      splitSegment,
+      updateTrack,
+      deleteTrack,
+      insertTrack,
+    });
 
   /**
    * Split a clip into its stems, in place.
@@ -2148,12 +2145,9 @@ export function StudioEditor({
             // Creating the row *is* creating the track: a lane with defaults
             // and no clips is exactly an empty track.
             onAddTrack={(trackIndex) => updateTrack.mutate({ trackIndex, patch: {} })}
-            onRemoveTrack={(trackIndex, clips) => {
-              // Only worth a confirm when there is something to lose. An empty
-              // lane you just made should not demand a dialog to unmake.
-              if (clips > 0) setPendingTrackRemoval({ trackIndex, clips });
-              else removeTrack(trackIndex);
-            }}
+            // No confirm: the audio stays in the library and undo puts the
+            // lane back with its clips (`timelineEdits.removeTrack`).
+            onRemoveTrack={(trackIndex) => removeTrack(trackIndex)}
             onEditSound={(kind, sound) => musicSession.startEdit(kind, sound)}
             canExtend={canExtendSound}
             canCover={canCoverSound}
@@ -2914,45 +2908,6 @@ export function StudioEditor({
         onOpenChange={setPaletteOpen}
         commands={panelCommands}
       />
-
-      {/* Removing a lane takes its clips with it — Audacity's rule, and the
-          honest one: a lane is where those clips live, not a folder you empty
-          first. Worth a confirm precisely because undo does not cover it. */}
-      <Dialog
-        open={pendingTrackRemoval !== null}
-        onOpenChange={(open) => !open && setPendingTrackRemoval(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Remove this track?</DialogTitle>
-            <DialogDescription>
-              {pendingTrackRemoval && (
-                <>
-                  Track {pendingTrackRemoval.trackIndex} and the{" "}
-                  {pendingTrackRemoval.clips} clip
-                  {pendingTrackRemoval.clips === 1 ? "" : "s"} on it will be removed from
-                  this story. The audio stays in your library. This cannot be undone.
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPendingTrackRemoval(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (!pendingTrackRemoval) return;
-                removeTrack(pendingTrackRemoval.trackIndex);
-                setPendingTrackRemoval(null);
-              }}
-            >
-              Remove track
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <StemPickerDialog
         open={stemTarget !== null}

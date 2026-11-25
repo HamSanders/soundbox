@@ -1776,6 +1776,9 @@ export interface MirliApi {
   /** Upsert — a track's first setting is also its row's creation. */
   updateTrack(storyId: string, trackIndex: number, patch: TrackPatch): Promise<StoryTrack>;
   /** Remove a lane and the clips on it. Lanes above slide down. */
+  /** Open a lane at `trackIndex` (the lanes at and above it slide up) with
+   *  these settings: how an undone lane removal comes back. */
+  insertTrack(storyId: string, trackIndex: number, patch: TrackPatch): Promise<StoryTrack>;
   deleteTrack(storyId: string, trackIndex: number): Promise<{ removed_clips: number }>;
   /** Mix the whole timeline down to one sound. Async: returns a job. */
   exportStory(storyId: string): Promise<JobRef>;
@@ -2284,6 +2287,12 @@ export const httpApi: MirliApi = {
     request<StoryTrack>(
       `/api/stories/${encodeURIComponent(storyId)}/tracks/${trackIndex}`,
       { method: "PATCH", body: JSON.stringify(patch) },
+    ),
+
+  insertTrack: (storyId, trackIndex, patch) =>
+    request<StoryTrack>(
+      `/api/stories/${encodeURIComponent(storyId)}/tracks/${trackIndex}`,
+      { method: "POST", body: JSON.stringify(patch) },
     ),
 
   deleteTrack: (storyId, trackIndex) =>

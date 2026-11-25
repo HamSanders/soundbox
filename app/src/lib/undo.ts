@@ -17,7 +17,9 @@
  *
  * Ctrl+Z (Cmd+Z) undoes the newest toast, unless focus is in a text field
  * or the page has its own undo (the studio timeline and the book editor
- * claim the key first).
+ * claim the key first). A page with its own undo can still reach its own
+ * toasts through `undoPending(scope)`: the book editor does, so Ctrl+Z
+ * brings back a chapter deleted a moment ago.
  */
 
 import { toast } from "sonner";
@@ -28,7 +30,7 @@ import { errorMessage } from "./api";
 /* --------------------------------------------------------- hidden items */
 
 /** Things deleted but not sent yet, so every list can leave them out. */
-export type HiddenKind = "sound" | "project" | "voice" | "endpoint";
+export type HiddenKind = "sound" | "project" | "voice" | "endpoint" | "chapter";
 
 interface HiddenState {
   ids: Record<string, true>;
@@ -65,6 +67,9 @@ export function useHiddenFilter(kind: HiddenKind): (<T extends { id: string }>(i
 interface Pending {
   undo: () => void;
   flush: () => Promise<void>;
+  /** Which page's undo may take this one, e.g. `book:<id>`. */
+  scope?: string;
+  message: string;
 }
 
 const pending: Pending[] = [];
@@ -73,6 +78,18 @@ const drop = (p: Pending) => {
   const i = pending.indexOf(p);
   if (i >= 0) pending.splice(i, 1);
 };
+
+/**
+ * Undo the newest toast in `scope`, for a page whose own Ctrl+Z handler
+ * claims the key. Returns what was undone, or null when nothing in that
+ * scope is waiting.
+ */
+export function undoPending(scope: string): string | null {
+  const entry = pending.findLast((p) => p.scope === scope);
+  if (!entry) return null;
+  entry.undo();
+  return entry.message;
+}
 
 /** Send every delete still waiting on its toast. */
 export function flushPending(): Promise<void[]> {
@@ -112,9 +129,13 @@ export function undoable(opts: {
   /** Error toast title if the request fails. */
   failure?: string;
   windowMs?: number;
+  /** See `undoPending`. */
+  scope?: string;
 }): void {
   let settled = false;
   const entry: Pending = {
+    scope: opts.scope,
+    message: opts.message,
     undo: () => {
       if (settled) return;
       settled = true;
@@ -126,6 +147,9 @@ export function undoable(opts: {
       if (settled) return;
       settled = true;
       drop(entry);
+      // Sent early (a reorder that needs the full list, say): the toast's
+      // Undo would no longer mean anything.
+      toast.dismiss(id);
       try {
         await opts.commit();
         opts.done?.();
@@ -162,6 +186,7 @@ export async function reversible<T>(opts: {
   const result = await opts.run();
   let settled = false;
   const entry: Pending = {
+    message: typeof opts.message === "function" ? opts.message(result) : opts.message,
     undo: () => {
       if (settled) return;
       settled = true;

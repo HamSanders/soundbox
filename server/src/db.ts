@@ -1450,6 +1450,27 @@ export class Database {
     return del();
   }
 
+  /** Open an empty lane at `trackIndex`: the lanes at and above it slide up,
+   *  clips and track rows alike. The inverse of `deleteTrack`'s renumbering,
+   *  so undoing a removed lane can put it back where it was. */
+  insertTrack(storyId: string, trackIndex: number): void {
+    this.conn.transaction(() => {
+      this.prep(
+        "UPDATE story_segments SET track_index = track_index + 1 WHERE story_id=? AND track_index >= ?",
+      ).run(storyId, trackIndex);
+      // Parked first for the same reason as in `deleteTrack`: the primary
+      // key would collide with a row that has not moved yet.
+      const PARK = 100000;
+      this.prep(
+        "UPDATE story_tracks SET track_index = track_index + ? WHERE story_id=? AND track_index >= ?",
+      ).run(PARK, storyId, trackIndex);
+      this.prep(
+        "UPDATE story_tracks SET track_index = track_index - ? WHERE story_id=? AND track_index >= ?",
+      ).run(PARK - 1, storyId, PARK);
+      this.touchStory(storyId, isoNow());
+    })();
+  }
+
   /** Reading order has to stay 0..n-1 after clips are removed wholesale, or
    *  every later reorder is validating against a set with holes in it. */
   private renumberPositions(storyId: string): void {

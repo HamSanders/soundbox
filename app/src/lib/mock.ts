@@ -3255,6 +3255,17 @@ export const mockApi: MirliApi = {
     return { ...track };
   },
 
+  async insertTrack(storyId, trackIndex, patch): Promise<StoryTrack> {
+    await wait(80);
+    for (const s of segments) {
+      if (s.story_id === storyId && s.track_index >= trackIndex) s.track_index += 1;
+    }
+    for (const t of tracks) {
+      if (t.story_id === storyId && t.track_index >= trackIndex) t.track_index += 1;
+    }
+    return this.updateTrack(storyId, trackIndex, patch);
+  },
+
   async deleteTrack(storyId, trackIndex): Promise<{ removed_clips: number }> {
     await wait(80);
     const doomed = segments.filter(

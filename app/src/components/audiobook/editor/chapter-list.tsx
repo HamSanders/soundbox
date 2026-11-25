@@ -5,6 +5,7 @@
  */
 
 import { memo, useState, type DragEvent } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ClipboardPasteIcon,
   EyeIcon,
@@ -28,14 +29,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { CHAPTER_KIND_LABELS, type BookDetail, type ChapterWithStats } from "@/lib/audiobook-api";
-import {
-  useAddChapter,
-  useDeleteChapter,
-  useUpdateChapter,
-} from "@/lib/audiobook-queries";
+import { audiobookApi, CHAPTER_KIND_LABELS, type BookDetail, type ChapterWithStats } from "@/lib/audiobook-api";
+import { abk, useAddChapter, useUpdateChapter } from "@/lib/audiobook-queries";
 import type { ChapterKind, ChapterStatus } from "@/lib/audiobook-types";
 import { formatDuration } from "@/lib/format";
+import { undoable, useHiddenStore } from "@/lib/undo";
 
 import { announce } from "./announce";
 import { ChapterFromTextDialog } from "./chapter-from-text";
@@ -66,7 +64,7 @@ function ChapterListView({
   const add = useAddChapter(book.id);
   const update = useUpdateChapter(book.id);
   const reorder = (ids: string[]) => onReorder(chapters.map((c) => c.id), ids);
-  const remove = useDeleteChapter(book.id);
+  const qc = useQueryClient();
   const [renaming, setRenaming] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);
@@ -89,6 +87,40 @@ function ChapterListView({
     ids.splice(ids.indexOf(target.id) + (chapters.findIndex((c) => c.id === dragId) < chapters.findIndex((c) => c.id === target.id) ? 1 : 0), 0, dragId);
     reorder(ids);
     setDragId(null);
+  };
+
+  /**
+   * Delete a chapter with Undo instead of "are you sure". It goes from the
+   * list at once, and the delete (which takes its voiced audio with it) is
+   * sent when the toast closes, so Undo, or Ctrl+Z in the editor, before
+   * then means it never happened.
+   */
+  const deleteChapter = (chapter: ChapterWithStats, i: number) => {
+    const wasSelected = chapter.id === selectedId;
+    const { hide, show } = useHiddenStore.getState();
+    undoable({
+      message: `Deleted “${chapter.title}”`,
+      description: chapter.stats.voiced > 0 ? "And its voiced audio." : undefined,
+      scope: `book:${book.id}`,
+      apply: () => {
+        hide("chapter", chapter.id);
+        const next = chapters[i + 1] ?? chapters[i - 1];
+        if (wasSelected && next) onSelect(next.id);
+        announce(`Deleted ${chapter.title}`);
+      },
+      revert: () => {
+        show("chapter", chapter.id);
+        if (wasSelected) onSelect(chapter.id);
+      },
+      commit: () => audiobookApi.deleteChapter(book.id, chapter.id),
+      done: () => {
+        void Promise.all([
+          qc.invalidateQueries({ queryKey: abk.book(book.id) }),
+          qc.invalidateQueries({ queryKey: abk.books }),
+        ]).finally(() => show("chapter", chapter.id));
+      },
+      failure: "Could not delete the chapter",
+    });
   };
 
   const addChapter = () =>
@@ -271,16 +303,7 @@ function ChapterListView({
                   <DropdownMenuItem
                     variant="destructive"
                     disabled={chapters.length <= 1}
-                    onSelect={() => {
-                      if (window.confirm(`Delete “${chapter.title}” and its audio?`)) {
-                        remove.mutate(chapter.id, {
-                          onSuccess: () => {
-                            const next = chapters[i + 1] ?? chapters[i - 1];
-                            if (selected && next) onSelect(next.id);
-                          },
-                        });
-                      }
-                    }}
+                    onSelect={() => deleteChapter(chapter, i)}
                   >
                     <Trash2Icon />
                     Delete chapter

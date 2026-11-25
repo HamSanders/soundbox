@@ -365,6 +365,7 @@ export const UNGUARDED_ROUTES: readonly string[] = [
   "POST /api/stories/:story_id/export",
   "GET /api/stories/:story_id/tracks",
   "PATCH /api/stories/:story_id/tracks/:track_index",
+  "POST /api/stories/:story_id/tracks/:track_index",
   "DELETE /api/stories/:story_id/tracks/:track_index",
   "GET /api/stories/:story_id/segments",
   "POST /api/stories/:story_id/segments",

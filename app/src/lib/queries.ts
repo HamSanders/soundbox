@@ -1237,13 +1237,18 @@ export function useDeleteTrack(storyId: string) {
     mutationKey: qk.storyEdits(storyId),
     mutationFn: (trackIndex) => api.deleteTrack(storyId, trackIndex),
     onError: fail("Could not remove the track"),
-    onSuccess: ({ removed_clips }) => {
-      if (removed_clips > 0) {
-        toast.success(
-          `Track removed with ${removed_clips} clip${removed_clips === 1 ? "" : "s"}`,
-        );
-      }
-    },
+    // The caller says what went, with Undo (`timelineEdits.removeTrack`).
+    onSettled: () => settleStory(qc, storyId, [qk.stories]),
+  });
+}
+
+/** Put a removed lane back at its index; see `api.insertTrack`. */
+export function useInsertTrack(storyId: string) {
+  const qc = useQueryClient();
+  return useMutation<StoryTrack, Error, { trackIndex: number; patch: TrackPatch }>({
+    mutationKey: qk.storyEdits(storyId),
+    mutationFn: ({ trackIndex, patch }) => api.insertTrack(storyId, trackIndex, patch),
+    onError: fail("Could not put the track back"),
     onSettled: () => settleStory(qc, storyId, [qk.stories]),
   });
 }

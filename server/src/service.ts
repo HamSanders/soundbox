@@ -981,6 +981,18 @@ export class MirliService {
     return track;
   }
 
+  /** Open a lane at `trackIndex`, sliding the lanes at and above it up, with
+   *  the mix and devices given. How an undone lane removal comes back; its
+   *  clips are recreated one by one after. Null when the story does not exist. */
+  insertTrack(storyId: string, trackIndex: number, patch: TrackPatch): StoryTrack | null {
+    if (this.db.getStory(storyId) === null) return null;
+    if (patch.devices !== undefined) patch = { ...patch, devices: normalizeChain(patch.devices) };
+    this.db.insertTrack(storyId, trackIndex);
+    const track = this.db.updateTrack(storyId, trackIndex, patch);
+    this.stories.changed(storyId);
+    return track;
+  }
+
   /** Remove a lane and the clips on it. Returns how many clips went, or null
    *  when the story does not exist. */
   deleteTrack(storyId: string, trackIndex: number): number | null {

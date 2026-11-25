@@ -184,7 +184,8 @@ rather than failing the import.
 | GET | `/api/stories/{id}/events` | SSE stream of changes to the story |
 | GET | `/api/stories/{id}/tracks` | Track settings |
 | PATCH | `/api/stories/{id}/tracks/{track_index}` | Body `{ name?, muted?, soloed?, gain_db?, devices? }`. `devices` replaces the lane's chain (`[{ kind, id?, bypassed?, params? }]`); unknown knobs are dropped, values are clamped to range and missing knobs take defaults |
-| DELETE | `/api/stories/{id}/tracks/{track_index}` | Delete the lane and everything on it |
+| POST | `/api/stories/{id}/tracks/{track_index}` | Open an empty lane at this index; lanes at and above it move up one. Same body as PATCH. The inverse of DELETE, used to undo it |
+| DELETE | `/api/stories/{id}/tracks/{track_index}` | Delete the lane and everything on it |; lanes above move down one |
 | GET | `/api/stories/{id}/segments` | Lines and clips |
 | POST | `/api/stories/{id}/segments` | Add one. Body `{ text?, kind?: "line" \| "pause", speaker?, voice_id?, track_index?, start_s?, position?, sound_id?, duration_s?, trim_start_s?, fade_in_s?, fade_out_s?, gain_db?, muted?, midi? }`. `midi` is a MIDI take's notes: `{ notes: [{ note, velocity, start_s, duration_s }], bpm?, instrument, cover?: { prompt, strength }, role: "dry" \| "cover", take_id }`; a PATCH with `midi: null` forgets them |
 | PUT | `/api/stories/{id}/segments/reorder` | Body `{ segment_ids }` |

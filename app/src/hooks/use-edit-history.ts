@@ -37,6 +37,10 @@ export interface EditHistory {
   canRedo: boolean;
   /** What the next undo would reverse, or null. */
   undoLabel: string | null;
+  /** The step the next undo would reverse. A toast's Undo checks it is
+   *  still its own step before undoing, so a later edit isn't taken back
+   *  in its place. */
+  peek: () => EditStep | undefined;
   /** Wipe both stacks — used when the ground shifts under them, e.g. an agent
    *  rewrites the story and our inverses no longer describe anything real. */
   clear: () => void;
@@ -159,8 +163,10 @@ export function useEditHistory(): EditHistory {
   }, []);
 
   // Stable while nothing changes, so callers can list it as an effect dep.
+  const peek = useCallback(() => past.current[past.current.length - 1], []);
+
   return useMemo(
-    () => ({ push, undo, redo, clear, remap, resolve, ...state }),
-    [push, undo, redo, clear, remap, resolve, state],
+    () => ({ push, undo, redo, clear, remap, resolve, peek, ...state }),
+    [push, undo, redo, clear, remap, resolve, peek, state],
   );
 }

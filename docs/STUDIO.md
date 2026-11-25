@@ -317,9 +317,11 @@ repeats the first colour.
 **Adding a track**: use the **Add track** row under the last lane, the lane
 right-click menu, or drag a clip down onto the empty lane at the bottom.
 
-**Removing a track removes its clips too** (the same rule as Audacity). You are
-asked to confirm when the lane has clips, and not when it is empty. Undo does
-not cover it.
+**Removing a track removes its clips too** (the same rule as Audacity). It
+happens at once, without a confirmation, and the audio stays in your library.
+When the lane had clips, a toast offers **Undo**; Ctrl+Z works too, as for any
+other edit. Undo puts the lane back where it was, with its name, mix and
+devices, and its clips on it.
 
 **New audio always lands on a new track**, below all existing tracks. This
 applies to a generated clip, a recording, and a drop onto a lane that already

@@ -33,6 +33,7 @@ import {
   useCreateSegment,
   useDeleteSegment,
   useDeleteTrack,
+  useInsertTrack,
   useSegments,
   useSplitSegment,
   useTracks,
@@ -134,11 +135,23 @@ export function ChapterTimeline({
   const splitSegment = useSplitSegment(storyId);
   const updateTrack = useUpdateTrack(storyId);
   const deleteTrack = useDeleteTrack(storyId);
+  const insertTrack = useInsertTrack(storyId);
   const { devices } = useTrackDevices(storyId);
 
   const lines = useMemo(() => segments.data ?? [], [segments.data]);
   const narration = useMemo(() => new Set(paragraphs.map((p) => p.id)), [paragraphs]);
-  const edits = timelineEdits({ lines, tracks: tracks.data, history, createSegment, updateSegment, deleteSegment, splitSegment, updateTrack });
+  const edits = timelineEdits({
+    lines,
+    tracks: tracks.data,
+    history,
+    createSegment,
+    updateSegment,
+    deleteSegment,
+    splitSegment,
+    updateTrack,
+    deleteTrack,
+    insertTrack,
+  });
 
   const refresh = useCallback(() => {
     void qc.invalidateQueries({ queryKey: abk.paragraphs(book.id, chapter.id) });
@@ -301,10 +314,10 @@ export function ChapterTimeline({
       devices={devices}
       onTrack={edits.editTrack}
       onAddTrack={(trackIndex) => updateTrack.mutate({ trackIndex, patch: {} })}
-      onRemoveTrack={(trackIndex, clips) => {
+      onRemoveTrack={(trackIndex) => {
         if (trackIndex === NARRATION) return toast.info("The narration lane stays.");
-        if (clips > 0 && !window.confirm(`Remove this lane and its ${clips} clip${clips === 1 ? "" : "s"}?`)) return;
-        deleteTrack.mutateAsync(trackIndex).catch(() => undefined);
+        // No confirm: undo puts the lane back with its clips.
+        edits.removeTrack(trackIndex);
       }}
     />
   );

@@ -22,18 +22,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import {
-  AudioLinesIcon,
-  DownloadIcon,
-  HistoryIcon,
-  ImageIcon,
-  Loader2Icon,
   MicIcon,
-  MoreHorizontalIcon,
-  PencilIcon,
   PlusIcon,
-  Settings2Icon,
   SquareIcon,
-  Trash2Icon,
   UploadIcon,
   UserRoundIcon,
   UsersRoundIcon,
@@ -41,21 +32,6 @@ import {
 
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { SearchInput } from "@/components/search-input";
 import { Label } from "@/components/ui/label";
 import {
@@ -66,7 +42,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useVoiceDetailStore } from "@/lib/voice-detail-store";
+import { keepDetail, useDock, useDockId } from "@/lib/dock";
 import { Textarea } from "@/components/ui/textarea";
 
 import {
@@ -84,21 +60,16 @@ import {
 } from "@/components/voice-library";
 import { VoiceAvatar } from "@/components/voice-avatar";
 import { WaveformPlayer } from "@/components/waveform-player";
-import { VoiceClipsDialog, VoiceHistoryDialog } from "@/components/voice-clips";
+import { VoiceMenu } from "@/components/voice-menu";
 import { useJobStream, useJobStreams } from "@/hooks/use-job-stream";
 import {
   useCancelJob,
   useConvertVoice,
-  useDeleteVoice,
-  useExportVoice,
   useImportVoice,
   useModels,
   useSound,
   useSounds,
   useSpeak,
-  useUpdateVoice,
-  useImageStatus,
-  useVoiceArtwork,
   useVoices,
   qk,
 } from "@/lib/queries";
@@ -565,10 +536,6 @@ function VoiceConvertPanel({ models, voices }: { models: Model[]; voices: Voice[
   );
 }
 
-/* --------------------------------------------------------------- details */
-
-const UNPINNED = "__unpinned__";
-
 /** A voice's model family, or its model id when the catalogue doesn't know
  *  the model (not installed, or still loading). Null for a clone saved
  *  before voices carried a model. */
@@ -581,13 +548,6 @@ export function VoiceLabPage() {
   const voices = useVoices();
   const models = useModels();
 
-  const update = useUpdateVoice();
-  const remove = useDeleteVoice();
-  const drawing = useVoiceArtwork();
-  // `ready` already folds in mode, engine and model — the card asks one
-  // question rather than re-deriving the rule the server settled.
-  const imageReady = useImageStatus().data?.ready ?? false;
-
   const [addOpen, setAddOpen] = useState(false);
   // "Make a voice from this" on a library sound arrives as ?from=<id>: the
   // add dialog opens on that sound and the parameter goes once it closes.
@@ -597,25 +557,16 @@ export function VoiceLabPage() {
   useEffect(() => {
     if (fromId && fromSound.data) setAddOpen(true);
   }, [fromId, fromSound.data]);
-  const [editing, setEditing] = useState<Voice | null>(null);
-  /** The model a clone reads on, or UNPINNED. */
-  const [modelDraft, setModelDraft] = useState(UNPINNED);
-  const [transcriptDrafts, setTranscriptDrafts] = useState<Record<string, string>>({});
-  /** By id rather than by object, so the dialog follows the voice as its
-   *  clip list refetches after an add or remove. */
-  const [clipsFor, setClipsFor] = useState<string | null>(null);
-  const [historyFor, setHistoryFor] = useState<Voice | null>(null);
-
-  const exporter = useExportVoice();
   const importer = useImportVoice();
   const importInput = useRef<HTMLInputElement>(null);
 
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<VoiceFilter>("all");
-  /** The voice whose details are open in the docked panel (App renders it). */
-  const detailId = useVoiceDetailStore((st) => st.voiceId);
-  const setDetailId = useVoiceDetailStore((st) => st.open);
-  const setDetailActions = useVoiceDetailStore((st) => st.setActions);
+  /** The voice whose details are open in the docked panel (the shell
+   *  renders it; see detail-dock.tsx). */
+  const detailId = useDockId("voice");
+  const openDock = useDock((st) => st.open);
+  const setDetailId = (id: string) => openDock({ kind: "voice", id });
 
   /** The line shared across every audition. No model: it comes with the
    *  voice. */
@@ -626,9 +577,6 @@ export function VoiceLabPage() {
     [models.data],
   );
   const readyTts = useMemo(() => ttsModels.filter(isReady), [ttsModels]);
-  /** Ready models that read from a reference clip: what a clone can be
-   *  pinned to. */
-  const cloningModels = useMemo(() => readyTts.filter((m) => m.supports.voice_reference), [readyTts]);
   const vcModels = useMemo(
     () => (models.data ?? []).filter((m) => m.task === "vc"),
     [models.data],
@@ -674,103 +622,6 @@ export function VoiceLabPage() {
     .sort((a, b) => (b.read_count ?? 0) - (a.read_count ?? 0))
     .slice(0, SHELF_SIZE);
 
-  /** The voice whose Rename was picked, to open once its menu has closed. */
-  const renameAfterMenu = useRef<string | null>(null);
-  /** A clone's settings: the model it reads on and its clips' transcripts.
-   *  The name and notes are edited in the voice's panel, where they show. */
-  const openEdit = (voice: Voice) => {
-    setModelDraft(voice.model_id ?? UNPINNED);
-    setTranscriptDrafts(Object.fromEntries(
-      (voice.samples ?? []).map((s) => [s.id, s.reference_text ?? ""]),
-    ));
-    setEditing(voice);
-  };
-
-  /** The less-used actions, as the track rows keep them: one ··· menu. */
-  const voiceMenu = (voice: Voice) => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label={`More for ${voice.name}`}>
-          <MoreHorizontalIcon />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="end"
-        // Rename opens the panel with its name as a field, once the menu has
-        // closed and let go of focus.
-        onCloseAutoFocus={(e) => {
-          if (renameAfterMenu.current !== voice.id) return;
-          renameAfterMenu.current = null;
-          e.preventDefault();
-          setDetailId(voice.id, { rename: true });
-        }}
-      >
-        <DropdownMenuItem onSelect={() => setDetailId(voice.id)}>
-          <MicIcon />
-          Try it
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => (renameAfterMenu.current = voice.id)}>
-          <PencilIcon />
-          Rename
-        </DropdownMenuItem>
-        {voice.kind === "clone" && (
-          <DropdownMenuItem onSelect={() => openEdit(voice)}>
-            <Settings2Icon />
-            Settings
-          </DropdownMenuItem>
-        )}
-        {voice.kind === "clone" && (
-          <DropdownMenuItem onSelect={() => setClipsFor(voice.id)}>
-            <AudioLinesIcon />
-            Clips
-          </DropdownMenuItem>
-        )}
-        <DropdownMenuItem onSelect={() => setHistoryFor(voice)}>
-          <HistoryIcon />
-          History{voice.read_count ? ` (${voice.read_count})` : ""}
-        </DropdownMenuItem>
-        {/* Only offered when artwork is configured — a button that always
-            fails is worse than none. The avatar is drawn from the notes. */}
-        {imageReady && (
-          <DropdownMenuItem
-            disabled={drawing.isPending}
-            onSelect={() => drawing.mutate(voice.id)}
-          >
-            {drawing.isPending && drawing.variables === voice.id ? (
-              <Loader2Icon className="animate-spin" />
-            ) : (
-              <ImageIcon />
-            )}
-            {voice.artwork ? "Redraw avatar" : "Draw avatar"}
-          </DropdownMenuItem>
-        )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => exporter.mutate(voice)}>
-          <DownloadIcon />
-          Export voice file
-        </DropdownMenuItem>
-        <DropdownMenuItem variant="destructive" onSelect={() =>
-            remove(voice, {
-              description:
-                voice.kind === "clone"
-                  ? "Its reference clip goes too. Sounds already read in it stay."
-                  : "The model keeps the built-in voice itself.",
-            })
-          }>
-          <Trash2Icon />
-          Delete
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-
-  // The docked panel lives in the shell; it opens this page's dialogs
-  // through these. Re-registered every render so it never holds a stale
-  // closure, and dropped when the page goes.
-  useEffect(() => {
-    setDetailActions({ edit: openEdit, clips: (v) => setClipsFor(v.id), menu: voiceMenu });
-  });
-  useEffect(() => () => setDetailActions(null), [setDetailActions]);
 
 
   return (
@@ -934,7 +785,7 @@ export function VoiceLabPage() {
                       <MicIcon />
                       Try it
                     </Button>
-                    {voiceMenu(voice)}
+                    <VoiceMenu voice={voice} />
                   </>
                 }
               />
@@ -966,110 +817,12 @@ export function VoiceLabPage() {
         open={addOpen}
         onOpenChange={(next) => {
           setAddOpen(next);
-          if (!next && fromId) setSearchParams({}, { replace: true });
+          if (!next && fromId) setSearchParams(keepDetail({}), { replace: true });
         }}
         ttsModels={ttsModels}
         sourceSound={fromId ? (fromSound.data ?? null) : null}
       />
 
-      <VoiceClipsDialog
-        voice={all.find((v) => v.id === clipsFor) ?? null}
-        onOpenChange={(open) => !open && setClipsFor(null)}
-      />
-      <VoiceHistoryDialog
-        voice={historyFor}
-        onOpenChange={(open) => !open && setHistoryFor(null)}
-      />
-
-      {/* ------------------------------------------- voice details */}
-      <Dialog open={editing !== null} onOpenChange={(open) => !open && setEditing(null)}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editing ? `${editing.name} settings` : "Voice settings"}</DialogTitle>
-            <DialogDescription>
-              The model that reads this clone and what its clips say. Rename it
-              or add notes in its panel.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            {editing?.kind === "clone" && (
-              <div className="space-y-1.5">
-                <Label htmlFor="voice-lab-model">Reads on</Label>
-                <Select value={modelDraft} onValueChange={setModelDraft}>
-                  <SelectTrigger id="voice-lab-model" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={UNPINNED}>Not set: the first ready model</SelectItem>
-                    {editing.model_id && !cloningModels.some((m) => m.id === editing.model_id) && (
-                      <SelectItem value={editing.model_id}>
-                        {modelsById.get(editing.model_id)?.name ?? editing.model_id} (not installed)
-                      </SelectItem>
-                    )}
-                    {cloningModels.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-muted-foreground text-xs">
-                  The model that reads this voice everywhere: scripts, stories and
-                  audiobooks. Only models that clone from a clip are listed.
-                </p>
-              </div>
-            )}
-            {editing?.kind === "clone" && (editing.samples ?? []).map((sample, i) => (
-              <div key={sample.id} className="space-y-1.5">
-                <Label htmlFor={`transcript-${sample.id}`}>
-                  Reference Transcript{(editing.samples?.length ?? 0) > 1 ? ` — clip ${i + 1}` : ""}
-                </Label>
-                <audio controls preload="none" src={sample.file} className="h-8 w-full" />
-                <Textarea
-                  id={`transcript-${sample.id}`}
-                  value={transcriptDrafts[sample.id] ?? ""}
-                  maxLength={20000}
-                  placeholder="The exact words spoken in this clip"
-                  onChange={(e) => setTranscriptDrafts((drafts) => ({
-                    ...drafts, [sample.id]: e.target.value,
-                  }))}
-                />
-                <p className="text-muted-foreground text-xs">
-                  Required for Fish Audio. Clips are read in the order shown here.
-                </p>
-              </div>
-            ))}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditing(null)}>
-              Cancel
-            </Button>
-            <Button
-              disabled={update.isPending}
-              onClick={() => {
-                if (!editing) return;
-                update.mutate(
-                  {
-                    id: editing.id,
-                    patch: {
-                      model_id:
-                        editing.kind === "clone" && modelDraft !== (editing.model_id ?? UNPINNED)
-                          ? modelDraft === UNPINNED ? null : modelDraft
-                          : undefined,
-                      samples: editing.kind === "clone" ? (editing.samples ?? []).map((s) => ({
-                        id: s.id, reference_text: transcriptDrafts[s.id]?.trim() || null,
-                      })) : undefined,
-                    },
-                  },
-                  { onSuccess: () => setEditing(null) },
-                );
-              }}
-            >
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
     </div>
   );

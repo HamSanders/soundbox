@@ -42,6 +42,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useJobStream } from "@/hooks/use-job-stream";
 import { formatBytes, formatMb } from "@/lib/format";
+import { useDockId } from "@/lib/dock";
 import { useModelDetailStore } from "@/lib/model-detail-store";
 import {
   useAudioCppCatalog,
@@ -305,8 +306,7 @@ export function ModelsPage() {
   const { data: settings } = useSettings();
   const { data: health } = useHealth();
   const can = useCan();
-  const selectedId = useModelDetailStore((s) => s.modelId);
-  const closePanel = useModelDetailStore((s) => s.close);
+  const selectedId = useDockId("model");
 
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<ModelKind | null>(null);
@@ -314,10 +314,6 @@ export function ModelsPage() {
   const [commercialOnly, setCommercialOnly] = useState(false);
   const [fitsOnly, setFitsOnly] = useState(false);
   const vramTotal = health?.vram_total_mb ?? null;
-
-  // Leaving the page closes the panel (it closes itself on a route change,
-  // but the page can also unmount another way).
-  useEffect(() => () => closePanel(), [closePanel]);
 
   const rows = useMemo<Row[]>(() => {
     const byId = new Map((catalog ?? []).map((e) => [e.id, e]));

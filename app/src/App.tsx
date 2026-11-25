@@ -19,9 +19,7 @@ import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog";
 import { NowPlayingBar } from "@/components/now-playing-bar";
 import { ListenPlayerHost } from "@/components/listen/mini-player"; // [audiobooks:listen]
 import { CreatePanel, CreateRedirect } from "@/components/create-panel";
-import { SoundDetailPanel } from "@/components/sound-detail-panel";
-import { VoiceDetailPanel } from "@/components/voice-detail-panel";
-import { ModelDetailPanel } from "@/components/model-detail-panel";
+import { DetailDock } from "@/components/detail-dock";
 import { Button } from "@/components/ui/button";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { PLAYER_DOCK_HEIGHT_PX } from "@/components/player-dock";
@@ -247,10 +245,8 @@ function AppShellReady() {
         <NowPlayingBar />
         <ListenPlayerHost /> {/* [audiobooks:listen] */}
       </SidebarInset>
-      {/* Docked beside the page, in the shell's row: see sound-detail-panel.tsx. */}
-      <SoundDetailPanel />
-      <VoiceDetailPanel />
-      <ModelDetailPanel />
+      {/* Docked beside the page, in the shell's row: see detail-dock.tsx. */}
+      <DetailDock />
       {/* Inside the shell, not the app root: it offers the shell's pages and
           reads the route to know when to stand down. */}
       <AppCommandPalette />

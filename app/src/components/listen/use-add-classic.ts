@@ -7,12 +7,15 @@
  * ElevenLabs' Voice Library saves a voice the same way, with a "+" that
  * doesn't take you out of the library
  * (https://elevenlabs.io/docs/eleven-creative/voices/voice-library).
+ *
+ * Where each add stands is shared, so a card and the classic's details panel
+ * show the same thing whichever one started it.
  */
 
-import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { create } from "zustand";
 
 import { importApi } from "@/components/audiobook/import/api";
 import { errorMessage } from "@/lib/api";
@@ -24,16 +27,20 @@ import { reversible } from "@/lib/undo";
 
 export type AddState = "adding" | "added";
 
+/** Work id → where its add stands, until the shelf refetch shows the book. */
+const useAddStates = create<{ states: Record<string, AddState> }>(() => ({ states: {} }));
+
+function mark(id: string, s: AddState | null) {
+  useAddStates.setState((cur) => {
+    const { [id]: _old, ...rest } = cur.states;
+    return { states: s ? { ...rest, [id]: s } : rest };
+  });
+}
+
 export function useAddClassic() {
   const qc = useQueryClient();
   const navigate = useNavigate();
-  /** Work id → where its add stands, until the shelf refetch shows the book. */
-  const [states, setStates] = useState<Record<string, AddState>>({});
-  const mark = (id: string, s: AddState | null) =>
-    setStates((cur) => {
-      const { [id]: _old, ...rest } = cur;
-      return s ? { ...rest, [id]: s } : rest;
-    });
+  const states = useAddStates((s) => s.states);
   const refresh = () =>
     Promise.all([qc.invalidateQueries({ queryKey: abk.books }), qc.invalidateQueries({ queryKey: lk.shelf })]);
 

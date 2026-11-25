@@ -12,8 +12,7 @@ import { toast } from "sonner";
 
 import { forgetStoryDevices } from "@/hooks/use-track-devices";
 import { followPlacement } from "@/lib/reading-order";
-import { useDetailStore } from "@/lib/detail-store";
-import { useVoiceDetailStore } from "@/lib/voice-detail-store";
+import { useDock } from "@/lib/dock";
 import { undoable, useHiddenFilter, useHiddenStore, type HiddenKind } from "@/lib/undo";
 import {
   api,
@@ -711,9 +710,8 @@ export function useUpdateSound() {
     mutationFn: ({ id, patch }) => api.updateSound(id, patch),
     onError: fail("Could not save the sound"),
     onSuccess: (sound, { patch }) => {
-      // The docked panel holds its own copy of the sound; keep it current.
-      const panel = useDetailStore.getState();
-      if (panel.sound?.id === sound.id) panel.open(sound);
+      // The docked panel reads this sound's own query: show the change now.
+      qc.setQueryData(qk.sound(sound.id), sound);
       void qc.invalidateQueries({ queryKey: ["sounds"] });
       void qc.invalidateQueries({ queryKey: qk.sound(sound.id) });
       void qc.invalidateQueries({ queryKey: qk.tags });
@@ -798,8 +796,7 @@ export function useUpdateVoice() {
 
 export function useDeleteVoice() {
   return useDeleteWithUndo("voice", (id) => api.deleteVoice(id), [qk.voices], "Could not delete the voice", (id) => {
-    const panel = useVoiceDetailStore.getState();
-    if (panel.voiceId === id) panel.close();
+    if (useDock.getState().isOpen("voice", id)) useDock.getState().close();
   });
 }
 
@@ -1260,8 +1257,7 @@ export function useExportStory(storyId: string) {
 
 export function useDeleteSound() {
   return useDeleteWithUndo("sound", (id) => api.deleteSound(id), [["sounds"], qk.tags], "Could not delete the sound", (id) => {
-    const panel = useDetailStore.getState();
-    if (panel.sound?.id === id) panel.close();
+    if (useDock.getState().isOpen("sound", id)) useDock.getState().close();
   });
 }
 

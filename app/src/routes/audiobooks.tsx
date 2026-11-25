@@ -8,6 +8,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { keepDetail } from "@/lib/dock";
 import { BookOpenIcon, FileUpIcon, FolderIcon, LibraryIcon, PlusIcon, SearchIcon, XIcon } from "lucide-react";
 
 import { ImportWizard } from "@/components/audiobook/import";
@@ -77,7 +78,7 @@ export function AudiobooksPage() {
     const next = new URLSearchParams(params);
     if (value === null) next.delete(key);
     else next.set(key, value);
-    setParams(next, { replace: true });
+    setParams(keepDetail(next), { replace: true });
   };
   const setImporting = (open: boolean) => setParam("import", open ? "1" : null);
   const openClassics = () => setParam("import", "classics");

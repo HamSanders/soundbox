@@ -16,6 +16,7 @@
 
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { keepDetail } from "@/lib/dock";
 import { PlusIcon, SearchIcon } from "lucide-react";
 
 import { EmptyState } from "@/components/empty-state";
@@ -70,8 +71,8 @@ export function StudioIndexPage() {
   const raw = params.get("builder");
   const filter: BuilderFilter = raw === "script" || raw === "music" ? raw : "all";
   const setFilter = (next: BuilderFilter): void => {
-    if (next === "all") setParams({}, { replace: true });
-    else setParams({ builder: next }, { replace: true });
+    if (next === "all") setParams(keepDetail({}), { replace: true });
+    else setParams(keepDetail({ builder: next }), { replace: true });
   };
 
   // Counted from the unfiltered list so a tab's count never drifts with the

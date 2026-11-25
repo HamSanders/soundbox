@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MessageSquareTextIcon, Redo2Icon, Undo2Icon } from "lucide-react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import { keepDetail } from "@/lib/dock";
 
 import { BookHeader } from "@/components/audiobook/editor/book-header";
 import { ChapterList } from "@/components/audiobook/editor/chapter-list";
@@ -83,7 +84,7 @@ export function AudiobookPage() {
 
   const selectChapter = useCallback(
     (cid: string) => {
-      setParams({ chapter: cid }, { replace: true });
+      setParams(keepDetail({ chapter: cid }), { replace: true });
       setSelectedId(null);
       setChecked(new Set());
       setFollowId(null);

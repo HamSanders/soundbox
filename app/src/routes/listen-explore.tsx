@@ -19,7 +19,6 @@ import { CoverRow } from "@/components/cover-row";
 import { EmptyState } from "@/components/empty-state";
 import { FilterChip } from "@/components/filter-chip";
 import { languageName } from "@/lib/format";
-import { ClassicDialog } from "@/components/listen/classic-dialog";
 import { ExploreCard } from "@/components/listen/explore-card";
 import { useAddClassic } from "@/components/listen/use-add-classic";
 import { ExploreCarousel } from "@/components/listen/explore-carousel";
@@ -46,6 +45,7 @@ import {
   type SortKey,
 } from "@/lib/listen-explore";
 import { useShelf } from "@/lib/listen-queries";
+import { useDock } from "@/lib/dock";
 
 type Adder = ReturnType<typeof useAddClassic>;
 
@@ -65,7 +65,9 @@ export function ListenExplorePage() {
   const [params, setParams] = useSearchParams();
   const view = params.get("view");
   const [f, setF] = useState<ExploreFilters>(NO_FILTERS);
-  const [picked, setPicked] = useState<ExploreItem | null>(null);
+  const openDock = useDock((s) => s.open);
+  /** A classic's details open in the docked panel, beside Explore. */
+  const setPicked = (it: ExploreItem) => it.work && openDock({ kind: "classic", id: it.work.id });
   const adder = useAddClassic();
   const set = <K extends keyof ExploreFilters>(k: K, v: ExploreFilters[K]) => setF((cur) => ({ ...cur, [k]: v }));
 
@@ -237,8 +239,6 @@ export function ListenExplorePage() {
           ))}
         </div>
       )}
-
-      <ClassicDialog item={picked} rights={library.data?.rights ?? null} adder={adder} onClose={() => setPicked(null)} />
     </div>
   );
 }

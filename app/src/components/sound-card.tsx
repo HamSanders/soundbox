@@ -64,7 +64,7 @@ import {
 } from "@/lib/queries";
 import { api } from "@/lib/api";
 import { usePlayerStore } from "@/lib/player-store";
-import { useDetailStore } from "@/lib/detail-store";
+import { useDock } from "@/lib/dock";
 import { instrumentIcon } from "@/lib/instrument-icons";
 import { recipeLine } from "@/lib/recipe";
 import { cn } from "@/lib/utils";
@@ -155,7 +155,8 @@ export function SoundCard({
   const playSound = usePlayerStore((s) => s.play);
   const setNowPlaying = usePlayerStore((s) => s.setSound);
   const playing = usePlayerStore((s) => s.sound?.id === sound.id);
-  const openDetails = useDetailStore((s) => s.open);
+  const openDock = useDock((s) => s.open);
+  const openDetails = (s: Sound) => openDock({ kind: "sound", id: s.id }, { seed: s });
   const [opening, setOpening] = useState(false);
   const navigate = useNavigate();
   const [separating, setSeparating] = useState(false);

@@ -100,7 +100,13 @@ describe("route coverage", () => {
     const { buildApp: build } = await import("../src/app.js");
     const { Config: Cfg } = await import("../src/config.js");
     const dataDir = await mkdtemp(join(tmpdir(), "mirli-routes-test-"));
+    // Calls are off in releases (MIRLI_CALLS); build with them on so their
+    // routes stay covered for when they come back.
+    const savedEnv = { calls: process.env.MIRLI_CALLS, secret: process.env.MIRLI_CALL_SECRET };
+    Object.assign(process.env, { MIRLI_CALLS: "1", MIRLI_CALL_SECRET: savedEnv.secret ?? "route-coverage-test" });
     const app = build(new Cfg(dataDir), { serveUi: false });
+    if (savedEnv.calls === undefined) delete process.env.MIRLI_CALLS; else process.env.MIRLI_CALLS = savedEnv.calls;
+    if (savedEnv.secret === undefined) delete process.env.MIRLI_CALL_SECRET; else process.env.MIRLI_CALL_SECRET = savedEnv.secret;
     await app.ready();
     try {
       expect(routes.length).toBeGreaterThan(100);

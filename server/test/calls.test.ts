@@ -108,7 +108,7 @@ describe("/api/calls and /api/characters", () => {
   beforeAll(async () => {
     await new Promise<void>((r) => w.srv.listen(0, "127.0.0.1", r));
     const url = `http://127.0.0.1:${(w.srv.address() as AddressInfo).port}`;
-    Object.assign(process.env, { MIRLI_CALL_SECRET: SECRET, MIRLI_CALL_VOICE_URL: url });
+    Object.assign(process.env, { MIRLI_CALLS: "1", MIRLI_CALL_SECRET: SECRET, MIRLI_CALL_VOICE_URL: url });
     dataDir = await mkdtemp(join(tmpdir(), "mirli-calls-"));
     app = buildApp(new Config(dataDir), { serveUi: false });
     await app.ready();
@@ -174,5 +174,23 @@ describe("/api/calls and /api/characters", () => {
     expect((await app.inject({ method: "POST", url: "/api/calls", headers: h, payload: { character: "nobody" } })).statusCode).toBe(404);
     expect((await app.inject({ method: "DELETE", url: `/api/characters/${dale.id}`, headers: h })).statusCode).toBe(204);
     expect((await app.inject({ method: "DELETE", url: "/api/characters/santa", headers: h })).statusCode).toBe(409);
+  });
+});
+
+describe("calls are off unless MIRLI_CALLS=1", () => {
+  it("serves no Call API by default", async () => {
+    const saved = process.env.MIRLI_CALLS;
+    delete process.env.MIRLI_CALLS;
+    const dir = await mkdtemp(join(tmpdir(), "mirli-nocalls-"));
+    const app = buildApp(new Config(dir), { serveUi: false });
+    try {
+      await app.ready();
+      expect((await app.inject({ method: "GET", url: "/api/calls/status" })).statusCode).toBe(404);
+      expect((await app.inject({ method: "POST", url: "/api/calls", headers: h, payload: {} })).statusCode).toBe(404);
+    } finally {
+      await app.close();
+      await rm(dir, { recursive: true, force: true });
+      if (saved !== undefined) process.env.MIRLI_CALLS = saved;
+    }
   });
 });

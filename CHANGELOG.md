@@ -6,6 +6,13 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **Theme opens a dialog.** The sidebar's **Theme** item now opens a dialog where you pick light or dark, the background behind the panels (Pixel, Smoke, Liquid, Gradient or None, each with a swatch), and whether it moves with your pointer and sound. Changes apply as you pick them. Settings → Interface still has the same choices.
+- **Pixel is the default background** for new installs. If you already picked a background, or changed another interface setting, you keep what you had.
+
+### Removed
+- **Calls are off for now.** Live voice calls aren't ready, so the Calls tab is gone and the server no longer serves the Call API. That also covers the Discord bot's calls. The code stays in the repo, and developers can turn calls back on with `VITE_CALLS=1` (app build) and `MIRLI_CALLS=1` (server).
+
 ## [0.6.3] - 2026-11-24
 
 ### Added

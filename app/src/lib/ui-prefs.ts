@@ -33,7 +33,7 @@ function load(): Omit<UiPrefs, "set"> {
   const defaults: Omit<UiPrefs, "set"> = {
     sidebarKeepExpanded: false,
     studioLayout: "columns",
-    background: "smoke",
+    background: "pixel",
     backgroundReactive: true,
   };
   try {

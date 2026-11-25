@@ -65,12 +65,12 @@ const PROMPTS = [
 ];
 
 const HEADLINE = [
-  ["Every", "sound", "you", "need,"],
-  ["on", "your", "own", "machine."],
+  ["Sound", "effects,", "music"],
+  ["and", "voices", "on", "your", "GPU"],
 ];
 
 const INSIDE = [
-  ["The desktop app", "and its local server. Nothing leaves your machine."],
+  ["The desktop app", "and its local server. Your prompts and files stay on your machine."],
   ["audio.cpp", "the native engine. No Python to install."],
   ["An MCP server", "so Claude Code and Cursor can make sound too."],
 ] as const;
@@ -505,8 +505,8 @@ export function DownloadPage() {
             className="text-muted-foreground dl-rise mt-7 max-w-xl px-4 text-lg leading-relaxed text-pretty sm:text-xl"
             style={{ "--d": "0.8s" } as CSSProperties}
           >
-            Sound effects, music and voices from open models, generated on your
-            GPU. No account, no credits, no cloud.
+            Open-weight models run inside the app, with no account to make and
+            nothing to pay per sound.
           </p>
 
           <div
@@ -718,10 +718,10 @@ export function DownloadPage() {
             index="02"
             label="In the box"
             id="proof-heading"
-            title="See it. Count it."
+            title="The film and the numbers"
           >
-            Thirty seconds of the app at work, and what the repository says
-            today.
+            A 30-second promo film, beside stars, downloads and forks read live
+            from GitHub.
           </SectionHead>
 
           <div className="bg-border border-border mt-10 grid gap-px border lg:grid-cols-3">
@@ -775,11 +775,11 @@ export function DownloadPage() {
             id="github-heading"
             className="text-[clamp(3.5rem,13vw,10.5rem)] leading-[0.84] text-balance uppercase"
           >
-            Built in the open.
+            Source on GitHub
           </h2>
           <p className="text-muted-foreground mt-7 max-w-md text-lg leading-relaxed">
-            Read the code, file an issue, send a pull request. A star helps the
-            next person find it.
+            The code is MIT licensed. Issues and pull requests are welcome, and
+            a star helps other people find the project.
           </p>
           <div className="mt-9 flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row">
             <ButtonLink

@@ -642,8 +642,8 @@ export function MusicHubPage() {
                   <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/75 sm:text-base">
                     Tracks rendered on a single desktop GPU by open-weight
                     models, each with the exact prompt behind it to copy, edit
-                    and re-render. No account, no API key, no per-track billing,
-                    and nothing leaves your machine.
+                    and re-render. Render as many as you like without an account
+                    or a bill, and keep every file on your own disk.
                   </p>
                 </div>
               </div>

@@ -173,7 +173,7 @@ function ModelBody({ model }: { model: ModelContent }) {
         <Section
           id="listen"
           title="Hear it"
-          lede="A real file made with this model, not a mock-up."
+          lede="Made with this model, from the prompt shown."
         >
           <div className="border-border max-w-xl rounded-md border p-4">
             <SamplePlay id={exampleForModel(model.catalogId)!} />
@@ -308,7 +308,7 @@ function ModelBody({ model }: { model: ModelContent }) {
       <Section
         id="sources"
         title="Sources"
-        lede="Primary sources: the model's own repository, the project it came from, and the conversion audio.cpp actually downloads. Never invented — an entry with nothing findable says so instead."
+        lede="Primary sources: the model's own repository, the project it came from, and the conversion audio.cpp actually downloads. Where nothing could be found, the entry says so."
       >
         <ul className="max-w-2xl space-y-2">
           {model.sources.map((source) => (

@@ -133,7 +133,7 @@ interface Video {
 
 const VIDEOS: Video[] = [
   {
-    title: "The 30-second tour",
+    title: "Promo film, 30 seconds",
     src: "/media/soundbox-vibe.mp4",
     poster: "/press/poster-vibe.jpg",
     seconds: 29.6,
@@ -157,7 +157,7 @@ const VIDEOS: Video[] = [
     goodFor: "An agent asks for a door slam over MCP and gets back the path to a WAV. Suits coverage of AI coding tools.",
   },
   {
-    title: "Bring your games to life",
+    title: "Sound pass on a Godot game",
     src: "/media/soundbox-games.mp4",
     poster: "/press/poster-games.jpg",
     seconds: 33.1,
@@ -165,7 +165,7 @@ const VIDEOS: Video[] = [
     goodFor: "Claude Code makes six sounds and wires them into a small Godot game.",
   },
   {
-    title: "Bring your 3D models to life",
+    title: "Sounds for a Blender creature",
     src: "/media/soundbox-3d-models.mp4",
     poster: "/press/poster-3d-models.jpg",
     seconds: 28.6,
@@ -173,7 +173,7 @@ const VIDEOS: Video[] = [
     goodFor: "A silent Blender creature wakes up, chatters and roars.",
   },
   {
-    title: "Bring your playlist to life",
+    title: "Filling a playlist",
     src: "/media/soundbox-playlist.mp4",
     poster: "/press/poster-playlist.jpg",
     seconds: 32.2,
@@ -181,7 +181,7 @@ const VIDEOS: Video[] = [
     goodFor: "Six tracks from three models fill an empty playlist. Two of them are songs with lyrics.",
   },
   {
-    title: "Bring your haunted house to life",
+    title: "Sound for a haunted house",
     src: "/media/soundbox-haunted-house.mp4",
     poster: "/press/poster-haunted-house.jpg",
     seconds: 30.5,
@@ -189,7 +189,7 @@ const VIDEOS: Video[] = [
     goodFor: "A silent haunted house gets seven sound effects and a music bed, for Halloween.",
   },
   {
-    title: "Bring your games to life (vertical)",
+    title: "Sound pass on a Godot game (vertical)",
     src: "/media/soundbox-games-vertical.mp4",
     poster: "/press/poster-games-vertical.jpg",
     seconds: 33.1,
@@ -198,7 +198,7 @@ const VIDEOS: Video[] = [
     goodFor: "The same film, cut for Shorts, Reels and TikTok.",
   },
   {
-    title: "Bring your playlist to life (vertical)",
+    title: "Filling a playlist (vertical)",
     src: "/media/soundbox-playlist-vertical.mp4",
     poster: "/press/poster-playlist-vertical.jpg",
     seconds: 32.2,
@@ -536,8 +536,8 @@ export function PressPage() {
         <Section id="videos" title="Videos">
           <p className="text-muted-foreground mt-3 max-w-2xl leading-relaxed">
             Use them whole or cut down in coverage of Mirli, and a credit is appreciated. Each
-            is an H.264 MP4 under 10 MB, which X accepts as it is. In the "Bring your ___ to life"
-            films, every sound was generated in Mirli from the prompt shown on screen.
+            is an H.264 MP4 under 10 MB, which X accepts as it is. In the game, creature, playlist and
+            haunted-house films, every sound was generated in Mirli from the prompt shown on screen.
           </p>
           <ul className="mt-6 grid gap-5 sm:grid-cols-2">
             {landscape.map((video) => (
@@ -554,7 +554,7 @@ export function PressPage() {
 
           <div className="mt-8">
             <Note>
-              The tour, under-the-hood and agents films end on the project's previous address,{" "}
+              The promo, under-the-hood and agents films end on the project's previous address,{" "}
               <C>github.com/Gadurp1/soundbox</C>, which redirects to{" "}
               <C>github.com/HamSanders/soundbox</C>. The under-the-hood film was cut at v0.2.0, so
               its version label is older than the current release.

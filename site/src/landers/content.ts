@@ -53,7 +53,7 @@ export const LANDERS: Lander[] = [
       "Sound effects, speech and voice cloning from open-weight models on your own machine. No account, no credits, works offline. MIT licensed.",
     eyebrow: "Alternatives · ElevenLabs",
     headline: "A free, local alternative to ElevenLabs",
-    lede: "Describe a sound and get a WAV. Read a script in a cloned voice. Everything runs on your own GPU, so there is no account, no credits and nothing to upload.",
+    lede: "Describe a sound and get a WAV. Read a script in a cloned voice. Everything runs on your own GPU, so your scripts and voice clips are never uploaded.",
     hero: "chip-ambience",
     shot: {
       src: "/product/app-studio.webp",
@@ -108,7 +108,7 @@ export const LANDERS: Lander[] = [
       "Make instrumentals and songs with lyrics from open-weight music models on your own GPU. No account, no credits, works offline. MIT licensed.",
     eyebrow: "Alternatives · Suno",
     headline: "A free, local alternative to Suno",
-    lede: "Write a style prompt for an instrumental, or add a lyric sheet for a song. The models run on your own machine, so there is no account, no credit meter and no queue.",
+    lede: "Write a style prompt for an instrumental, or add a lyric sheet for a song. The models run on your own machine, so you never wait in a queue or watch a credit balance.",
     hero: "song-own-machine",
     shot: {
       src: "/product/app-music.webp",
@@ -165,7 +165,7 @@ export const LANDERS: Lander[] = [
       "Describe a sound and get a WAV, generated on your own machine. Hundreds of real examples with the exact prompts. No account, no credits. MIT licensed.",
     eyebrow: "Make · Sound effects",
     headline: "Generate sound effects on your own machine",
-    lede: "Describe the sound and get a WAV file. No account, no credits, no upload. Every example on this site shows the exact prompt that made it, so you can learn what works before you install.",
+    lede: "Describe the sound and get a WAV file, made on your own machine. Every example on this site shows the exact prompt that made it, so you can learn what works before you install.",
     hero: "chip-impact",
     shot: {
       src: "/product/app-sfx.webp",

@@ -9,6 +9,7 @@ to follow [Semantic Versioning](https://semver.org/).
 ### Changed
 - **Theme opens a dialog.** The sidebar's **Theme** item now opens a dialog where you pick light or dark, the background behind the panels (Pixel, Smoke, Liquid, Gradient or None, each with a swatch), and whether it moves with your pointer and sound. Changes apply as you pick them. Settings → Interface still has the same choices.
 - **Pixel is the default background** for new installs. If you already picked a background, or changed another interface setting, you keep what you had.
+- **The Smoke background is calmer while music plays.** It still swells and speeds up with the sound, but less, and it eases into each beat instead of jumping. The smoke used to lurch on every kick once the app had been open a while. Its look when nothing is playing is unchanged.
 
 ### Removed
 - **Calls are off for now.** Live voice calls aren't ready, so the Calls tab is gone and the server no longer serves the Call API. That also covers the Discord bot's calls. The code stays in the repo, and developers can turn calls back on with `VITE_CALLS=1` (app build) and `MIRLI_CALLS=1` (server).

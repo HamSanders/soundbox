@@ -42,6 +42,54 @@ export interface SfxSample {
    *  generated — the prompt shown on the page is by construction the prompt
    *  that made the clip. Defaults to 4 s when omitted. */
   durationS?: number;
+  /** Seed the clip was rendered with. Set when a take was chosen from several
+   *  (the first seed is not always a usable render), so re-running the render
+   *  script reproduces the clip on the page rather than rolling a new one.
+   *  Omitted means the server picked one at random. */
+  seed?: number;
+  /** The same prompt rendered on other models, so a reader can hear which
+   *  model suits the sound rather than take one model's word for it. Each
+   *  take lands beside the main clip as `<slug>--<model>.mp3` (see
+   *  `takeSlug`) and renders at this sample's `durationS`. Takes that came
+   *  out as hum or hiss are left out rather than shown as a model's best. */
+  compare?: SfxTake[];
+}
+
+/** One extra render of a sample's prompt on another model. */
+export interface SfxTake {
+  model: string;
+  seed?: number;
+}
+
+/** What a sample renders on when it doesn't name a model of its own. */
+export const DEFAULT_SAMPLE_MODEL = "audiocpp-stable-audio-3-sfx";
+
+/** File basename of a sample's take on `model`. The main take keeps the bare
+ *  slug, so existing URLs and files are untouched. */
+export function takeSlug(sampleSlug: string, model: string, primary = false): string {
+  return primary ? sampleSlug : `${sampleSlug}--${model.replace(/^audiocpp-/, "")}`;
+}
+
+export interface SampleTakeRef {
+  /** File basename, as `takeSlug`. */
+  slug: string;
+  model: string;
+  seed?: number;
+  primary: boolean;
+}
+
+/** Every rendered take of a sample, the main one first. */
+export function sampleTakes(sample: SfxSample): SampleTakeRef[] {
+  const model = sample.model ?? DEFAULT_SAMPLE_MODEL;
+  return [
+    { slug: sample.slug, model, seed: sample.seed, primary: true },
+    ...(sample.compare ?? []).map((t) => ({
+      slug: takeSlug(sample.slug, t.model),
+      model: t.model,
+      seed: t.seed,
+      primary: false,
+    })),
+  ];
 }
 
 export interface SfxFaq {

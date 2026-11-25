@@ -1,7 +1,7 @@
 /**
- * Top nav for the public site — every route under `site/` renders this
- * (see `Layout` in `../layout.tsx`), so it lives above `<Outlet />` rather
- * than inside any one page.
+ * Top nav for the public site on a phone. From `md` up the app frame's icon
+ * rail takes its place (see `AppFrame` in `./app-frame.tsx`); below that every
+ * page renders this above it.
  *
  * The mark is the app's own (`BrandMark`, the M, and the display-face
  * `Wordmark`, as in `app/src/components/app-sidebar.tsx`) rather than a
@@ -36,7 +36,7 @@ import { BrandMark, Wordmark } from "@/components/brand-mark";
 import { cloudWaitlistHref } from "@/lib/marketing-links";
 import { cn } from "@/lib/utils";
 
-interface NavItem {
+export interface NavItem {
   to: string;
   label: string;
   blurb: string;
@@ -48,7 +48,7 @@ interface NavGroup {
   items: NavItem[];
 }
 
-const GROUPS: NavGroup[] = [
+export const GROUPS: NavGroup[] = [
   {
     label: "Create",
     items: [

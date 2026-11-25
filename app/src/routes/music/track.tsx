@@ -27,6 +27,7 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { DownloadIcon, MicVocalIcon, MusicIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { SitePanel } from "@/components/site/site-frame";
 import { CopyButton } from "@/components/docs-primitives";
 import {
   SiteCollectionHeader,
@@ -133,14 +134,6 @@ function TrackBody({ track }: { track: MusicTrack }) {
       {/* Bottom padding clears the dock, which is fixed and would otherwise
           sit on top of the last section. */}
       <div className="mx-auto w-full max-w-3xl px-4 pb-36">
-        <nav aria-label="Breadcrumb" className="text-muted-foreground pt-8 text-sm">
-          <Link to="/music" className="hover:text-foreground underline-offset-4 hover:underline">
-            Music
-          </Link>
-          <span aria-hidden="true"> / </span>
-          <span className="text-foreground">{track.title}</span>
-        </nav>
-
         <SiteCollectionHeader
           tile={<MusicCover track={track} className="bg-muted size-full object-cover" fallbackTextClassName="text-5xl" />}
           kicker={
@@ -330,10 +323,10 @@ export function MusicTrackPage() {
   if (!track) return <Navigate to="/music" replace />;
 
   return (
-    <div className="bg-background text-foreground min-h-svh">
+    <SitePanel>
       {/* Keyed so switching tracks via the sibling links resets the script
           highlight and remounts the player on the new peaks. */}
       <TrackBody key={track.slug} track={track} />
-    </div>
+    </SitePanel>
   );
 }

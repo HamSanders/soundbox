@@ -14,6 +14,9 @@ import {
 import { AccessGate } from "@/components/access-gate";
 import { AppCommandPalette } from "@/components/app-command-palette";
 import { AppHeader } from "@/components/app-header";
+import { WindowTitleBar, WINDOW_TITLE_BAR_HEIGHT_PX } from "@/components/window-title-bar";
+import { isDesktop } from "@/lib/desktop";
+import { SidebarPeekEdge } from "@/components/sidebar-peek";
 import { HeaderSlotProvider } from "@/components/header-slot";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AmbientBackground } from "@/components/ambient-background";
@@ -31,6 +34,7 @@ import { useCapabilities } from "@/lib/queries";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { DashboardPage } from "@/routes/dashboard";
+import { CALLS_ENABLED } from "@/lib/features";
 
 /*
  * Every page but the landing one loads on first visit. As one bundle the app
@@ -54,6 +58,9 @@ const ModelsPage = lazy(() => import("@/routes/models").then((m) => ({ default: 
 const AgentsPage = lazy(() => import("@/routes/agents").then((m) => ({ default: m.AgentsPage })));
 const SettingsPage = lazy(() => import("@/routes/settings").then((m) => ({ default: m.SettingsPage })));
 const ActivityPage = lazy(() => import("@/routes/activity").then((m) => ({ default: m.ActivityPage })));
+const CallsHomePage = lazy(() => import("@/routes/calls/calls-home").then((m) => ({ default: m.CallsHomePage })));
+const VoiceCallPage = lazy(() => import("@/routes/calls/voice-call").then((m) => ({ default: m.VoiceCallPage })));
+const CharacterEditorPage = lazy(() => import("@/routes/calls/character-editor").then((m) => ({ default: m.CharacterEditorPage })));
 const SoundDetailPage = lazy(() => import("@/routes/sound-detail").then((m) => ({ default: m.SoundDetailPage })));
 
 const queryClient = new QueryClient({
@@ -83,7 +90,8 @@ function ScrollToTop() {
  *  for reading and for grids, but an editor with a timeline beside it wants
  *  every pixel — capping it at 1152px wastes half a wide monitor. */
 function isFullBleed(pathname: string): boolean {
-  return pathname.startsWith("/studio/");
+  // A call fills the window: the reply's big type wants every pixel.
+  return pathname.startsWith("/studio/") || pathname.startsWith("/calls/voice");
 }
 
 /** The app shell: sidebar, header, and the routes that live inside them. */
@@ -112,6 +120,10 @@ function AppShellReady() {
   const { pathname } = useLocation();
   const fullBleed = isFullBleed(pathname);
   const nowPlaying = usePlayerStore((s) => s.sound !== null);
+  // The desktop app has no native title bar: it draws its own across the top
+  // of the window, and every panel starts below it.
+  const desktop = isDesktop();
+  const topPx = desktop ? WINDOW_TITLE_BAR_HEIGHT_PX : 0;
   return (
     // Floating shell: the sidebar and the page are two panels on the
     // sidebar's ground (the `inset` variant), and the player runs full width
@@ -128,8 +140,8 @@ function AppShellReady() {
       style={
         {
           "--dock-h": nowPlaying ? `${PLAYER_DOCK_HEIGHT_PX}px` : "0px",
-          "--top-h": "0px",
-          "--panel-h": `calc(100svh - 1rem - ${nowPlaying ? PLAYER_DOCK_HEIGHT_PX : 0}px)`,
+          "--top-h": `${topPx}px`,
+          "--panel-h": `calc(100svh - 1rem - ${topPx + (nowPlaying ? PLAYER_DOCK_HEIGHT_PX : 0)}px)`,
         } as CSSProperties
       }
     >
@@ -139,7 +151,9 @@ function AppShellReady() {
       <HeaderSlotProvider>
       {/* The moving ground, behind every panel: see ambient-background.tsx. */}
       <AmbientBackground />
+      {desktop && <WindowTitleBar />}
       <AppSidebar />
+      <SidebarPeekEdge />
       {/* Between the sidebar and the page on the kind pages: see create-panel.tsx. */}
       <CreatePanel />
       {/* Capped at the viewport for full-bleed pages, and only for them.
@@ -162,7 +176,7 @@ function AppShellReady() {
               " max-expanded:h-[calc(100svh-var(--dock-h,0px)-var(--tabbar-h,0px))] overflow-hidden expanded:bg-transparent! expanded:ring-0!" : " expanded:overflow-y-auto"
         }`}
       >
-        <AppHeader />
+        {!desktop && <AppHeader />}
         {/* The full-bleed column is a flex column with `min-h-0`, which is
             what lets a studio page fill the window: `h-full` cannot do it,
             because this element's own height comes from `flex-1` rather than
@@ -213,6 +227,20 @@ function AppShellReady() {
             <Route path="/voice/new" element={<VoiceCreatePage />} />
             <Route path="/voice/new/clone" element={<VoiceCloneCreatePage />} />
             <Route path="/voice/new/builtin" element={<VoiceBuiltinCreatePage />} />
+            {/* Calls: real-time voice calls with characters. Pulled from
+                releases until they are ready (lib/features.ts); without the
+                flag an old /calls link lands on the home page. */}
+            {CALLS_ENABLED ? (
+              <>
+              <Route path="/calls" element={<CallsHomePage />} />
+              <Route path="/calls/new" element={<CharacterEditorPage />} />
+              <Route path="/calls/characters/:characterId" element={<CharacterEditorPage />} />
+              <Route path="/calls/voice" element={<VoiceCallPage />} />
+              <Route path="/calls/voice/:characterId" element={<VoiceCallPage />} />
+              </>
+            ) : (
+              <Route path="/calls/*" element={<Navigate to="/" replace />} />
+            )}
             {/* The unfiltered library still exists, unlinked from the nav —
                 it's where a Projects sidebar/list entry deep-links to
                 (`/library?project=…`), spanning every category rather than

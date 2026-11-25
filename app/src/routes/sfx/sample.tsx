@@ -14,6 +14,7 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { DownloadIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { SitePanel } from "@/components/site/site-frame";
 import { CopyButton } from "@/components/docs-primitives";
 import { MarketingLink } from "@/components/marketing-link";
 import { SeoHead, breadcrumbJsonLd } from "@/components/seo-head";
@@ -131,21 +132,6 @@ function SampleBody({
         ]}
       />
 
-      <nav aria-label="Breadcrumb" className="text-muted-foreground pt-8 text-sm">
-        <Link to="/sfx" className="hover:text-foreground underline-offset-4 hover:underline">
-          Sound effects
-        </Link>
-        <span aria-hidden="true"> / </span>
-        <Link
-          to={`/sfx/${category.slug}`}
-          className="hover:text-foreground underline-offset-4 hover:underline"
-        >
-          {category.name}
-        </Link>
-        <span aria-hidden="true"> / </span>
-        <span className="text-foreground">{sample.title}</span>
-      </nav>
-
       <SiteCollectionHeader
         tile={
           category.coverImage ? (
@@ -227,6 +213,21 @@ function SampleBody({
         </p>
       </section>
 
+      {(sample.compare?.length ?? 0) > 0 && (
+        <section aria-labelledby="models" className="border-border/60 border-t py-10">
+          <h2 id="models" className="font-display text-2xl leading-none font-extrabold uppercase">
+            The same prompt on other models
+          </h2>
+          <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-relaxed">
+            Same words, rendered on {(sample.compare?.length ?? 0) + 1} models. Switch under the prompt to hear
+            each one. Takes that came out as hum or hiss were left out rather than shown as a model&rsquo;s best.
+          </p>
+          <SiteTrackList className="mt-4">
+            <SampleRow categorySlug={category.slug} sample={sample} index={0} audio={audio} />
+          </SiteTrackList>
+        </section>
+      )}
+
       {others.length > 0 && (
         <section aria-labelledby="more" className="border-border/60 border-t py-10">
           <h2 id="more" className="font-display text-2xl leading-none font-extrabold uppercase">
@@ -269,10 +270,10 @@ export function SfxSamplePage() {
   }
 
   return (
-    <div className="bg-background text-foreground min-h-svh">
-      <div className="mx-auto w-full max-w-3xl px-4 pb-12">
+    <SitePanel>
+      <div className="mx-auto w-full max-w-3xl px-4 pb-28 md:pb-12">
         <SampleBody key={`${category.slug}/${sample.slug}`} category={category} sample={sample} />
       </div>
-    </div>
+    </SitePanel>
   );
 }

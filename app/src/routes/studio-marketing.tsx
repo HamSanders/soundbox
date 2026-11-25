@@ -100,7 +100,7 @@ function Close() {
 
 export function StudioMarketingPage() {
   return (
-    <div className="bg-background text-foreground min-h-svh overflow-x-clip">
+    <div className="text-foreground overflow-x-clip">
       <SeoHead
         title="Multi-track studio for generated audio | Mirli"
         description="Cast a script across speakers, lay music and sound effects on a timeline, add per-track effects and mix down to one file. Everything is generated and arranged on your own machine."

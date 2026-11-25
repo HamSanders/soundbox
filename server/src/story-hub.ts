@@ -17,6 +17,8 @@
  * that dies mid-agent-call leaves no work in flight to report.
  */
 
+import { randomUUID } from "node:crypto";
+
 import { AsyncQueue } from "./jobs.js";
 import { getLogger } from "./logging.js";
 
@@ -25,7 +27,48 @@ const log = getLogger("mirli.stories");
 export type StoryEvent =
   | { type: "changed" }
   /** `label` is what the agent is doing, in words a person can read. */
-  | { type: "agent"; active: boolean; label: string; count: number };
+  | { type: "agent"; active: boolean; label: string; count: number }
+  /**
+   * A question for the open studio, answered by POSTing to
+   * `/api/stories/:id/studio/replies/:request_id`. Only sent to a stream that
+   * said it can answer (`?answer=1`), and only to one of them.
+   */
+  | { type: "request"; id: string; op: StudioOp; payload?: unknown };
+
+/**
+ * What an agent can ask the open studio for.
+ *
+ * - `context`: the live snapshot the command bar plans against — lanes, clips,
+ *   playhead, selection, voices, each lane's rack.
+ * - `apply`: run a list of already-validated `StudioAction`s through the
+ *   studio's own handlers, so they land on its undo stack like clicks.
+ */
+export type StudioOp = "context" | "apply";
+
+/** No studio has this story open, so there is nobody to ask. */
+export class StudioNotOpenError extends Error {}
+
+/** The studio was asked and did not answer in time, or said no. */
+export class StudioRequestError extends Error {}
+
+export interface StudioReply {
+  ok: boolean;
+  result?: unknown;
+  error?: string | null;
+}
+
+interface PendingRequest {
+  storyId: string;
+  queue: AsyncQueue<StoryEvent>;
+  resolve: (value: unknown) => void;
+  reject: (err: Error) => void;
+  timer: NodeJS.Timeout;
+}
+
+/** How long a studio gets to answer. Context is instant; apply only starts the
+ *  studio's mutations, it does not wait for them, so a few seconds is plenty
+ *  and anything longer means the tab is asleep or gone. */
+export const STUDIO_REQUEST_TIMEOUT_MS = 8_000;
 
 /** One agent's claim on a story. */
 interface Claim {
@@ -37,22 +80,109 @@ export class StoryHub {
   /** Claims per story, keyed by an opaque token so overlapping calls from the
    *  same agent release independently. */
   private readonly claims = new Map<string, Map<symbol, Claim>>();
+  /**
+   * Streams that belong to a mounted studio and will answer requests, in the
+   * order they connected. A subset of `subscribers`: other watchers of a
+   * story only refetch and must never be asked to apply anything.
+   */
+  private readonly answerers = new Map<string, AsyncQueue<StoryEvent>[]>();
+  private readonly pending = new Map<string, PendingRequest>();
 
-  subscribe(storyId: string): AsyncQueue<StoryEvent> {
+  /**
+   * Watch a story. `answers` marks the stream as a mounted studio that can be
+   * asked for its live state and to apply edits — see `ask`.
+   */
+  subscribe(storyId: string, options: { answers?: boolean } = {}): AsyncQueue<StoryEvent> {
     const q = new AsyncQueue<StoryEvent>();
     const subs = this.subscribers.get(storyId);
     if (subs) subs.push(q);
     else this.subscribers.set(storyId, [q]);
+    if (options.answers) {
+      const list = this.answerers.get(storyId);
+      if (list) list.push(q);
+      else this.answerers.set(storyId, [q]);
+    }
     return q;
   }
 
   unsubscribe(storyId: string, q: AsyncQueue<StoryEvent>): void {
     const subs = this.subscribers.get(storyId);
-    if (!subs) return;
-    const i = subs.indexOf(q);
-    if (i !== -1) subs.splice(i, 1);
-    if (!subs.length) this.subscribers.delete(storyId);
+    if (subs) {
+      const i = subs.indexOf(q);
+      if (i !== -1) subs.splice(i, 1);
+      if (!subs.length) this.subscribers.delete(storyId);
+    }
+    const list = this.answerers.get(storyId);
+    if (list) {
+      const i = list.indexOf(q);
+      if (i !== -1) list.splice(i, 1);
+      if (!list.length) this.answerers.delete(storyId);
+    }
+    // A question put to a tab that has just closed will never be answered;
+    // say so now rather than when the timer runs out.
+    for (const [id, req] of this.pending) {
+      if (req.queue !== q) continue;
+      this.pending.delete(id);
+      clearTimeout(req.timer);
+      req.reject(new StudioNotOpenError("The studio was closed before it answered."));
+    }
     q.close();
+  }
+
+  /** Stories that have a studio open right now and can be asked things. */
+  openStudios(): string[] {
+    return [...this.answerers.keys()];
+  }
+
+  /**
+   * Ask the open studio for something and wait for its answer.
+   *
+   * Sent to one studio only — the most recently opened — because `apply` is
+   * not idempotent: two tabs on the same story would each run the edits. The
+   * newest tab is the likeliest to be the one in front of the person.
+   */
+  ask(
+    storyId: string,
+    op: StudioOp,
+    payload?: unknown,
+    timeoutMs: number = STUDIO_REQUEST_TIMEOUT_MS,
+  ): Promise<unknown> {
+    const list = this.answerers.get(storyId);
+    const queue = list?.[list.length - 1];
+    if (!queue) {
+      return Promise.reject(
+        new StudioNotOpenError(`No studio has story ${storyId} open.`),
+      );
+    }
+    const id = randomUUID();
+    return new Promise<unknown>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        if (!this.pending.delete(id)) return;
+        reject(
+          new StudioRequestError(
+            "The studio did not answer. Its tab may be asleep in the background; " +
+              "ask the user to bring it forward.",
+          ),
+        );
+      }, timeoutMs);
+      timer.unref();
+      this.pending.set(id, { storyId, queue, resolve, reject, timer });
+      queue.push({ type: "request", id, op, payload });
+    });
+  }
+
+  /**
+   * The studio's answer to `ask`. False when there is no such request — it
+   * timed out, was answered already, or belongs to another story.
+   */
+  answer(storyId: string, requestId: string, reply: StudioReply): boolean {
+    const req = this.pending.get(requestId);
+    if (!req || req.storyId !== storyId) return false;
+    this.pending.delete(requestId);
+    clearTimeout(req.timer);
+    if (reply.ok) req.resolve(reply.result);
+    else req.reject(new StudioRequestError(reply.error || "The studio refused the request."));
+    return true;
   }
 
   /** The story's contents moved. Cheap enough to call from every mutation —

@@ -23,8 +23,8 @@ import type { SfxCategory, SfxFaq, SfxSample } from "./types";
 
 const MODEL = "audiocpp-stable-audio-3-sfx";
 
-function s(slug: string, title: string, prompt: string, durationS: number): SfxSample {
-  return { slug, title, prompt, source: "model", model: MODEL, durationS };
+function s(slug: string, title: string, prompt: string, durationS: number, seed?: number): SfxSample {
+  return { slug, title, prompt, source: "model", model: MODEL, durationS, ...(seed !== undefined && { seed }) };
 }
 
 /**
@@ -92,7 +92,7 @@ const GLASS: SfxCategory = {
       s("glass-car-window-shatter", "Car window", "car side window shattering into thousands of small tempered pebbles, dense granular collapse onto a road", 3),
       s("glass-crack-slow-spread", "Slow crack", "glass cracking slowly under pressure, fine splintering fractures spreading with tiny ticks, very close mic, quiet", 5),
       s("glass-jar-drop-floor", "Jar drop", "glass jar dropped onto a tiled kitchen floor, hard burst with a wet contents splash and shards spinning", 3),
-      s("glass-lightbulb-pop", "Lightbulb pop", "lightbulb filament popping and the thin glass envelope bursting, delicate high shatter, close and dry", 1.5),
+      s("glass-lightbulb-pop", "Lightbulb pop", "lightbulb filament popping and the thin glass envelope bursting, delicate high shatter, close and dry", 2, 998468995),
       s("glass-shard-sweep-up", "Sweeping shards", "broom sweeping broken glass across a tile floor, continuous granular scraping with shards tumbling", 6),
       s("glass-greenhouse-collapse", "Greenhouse collapse", "greenhouse roof collapsing, sequence of large panes failing one after another with a long debris tail", 6),
     ],
@@ -165,9 +165,9 @@ const METAL: SfxCategory = {
       s("metal-hull-groan", "Hull groan", "ship hull groaning under pressure, low metallic strain with creaking rivets, enormous enclosed space", 8),
       s("metal-scrape-rust", "Rust scrape", "rusted metal scraping against rusted metal, harsh grinding rasp with a squealing high edge, close mic", 4),
       s("metal-anvil-forge", "Forge hammering", "blacksmith hammering hot steel on an anvil, rhythmic bright strikes with a ringing tail, stone forge", 6),
-      s("metal-can-crush", "Can crush", "aluminium can crushed in a fist, thin buckling metal with a crinkling collapse, very close mic, dry", 1.5),
+      s("metal-can-crush", "Can crush", "aluminium can crushed in a fist, thin buckling metal with a crinkling collapse, very close mic, dry", 1.5, 59787164),
       s("metal-girder-drop", "Girder drop", "steel girder dropped onto concrete, enormous low clang with a slow decaying wobble, construction site", 5),
-      s("metal-wire-twang", "Wire twang", "taut steel wire plucked hard, sharp descending twang with a long metallic decay, close and dry", 3),
+      s("metal-wire-twang", "Wire twang", "taut steel wire plucked hard, sharp descending twang with a long metallic decay, close and dry", 3, 1985670538),
       s("metal-shutter-roll", "Shutter roll", "corrugated metal shop shutter rolled down fast and slamming, rattling ribs with a hard final clang, street", 4),
     ],
     recipes: [
@@ -237,7 +237,7 @@ const WOOD: SfxCategory = {
       s("wood-floorboard-creak", "Floorboard creak", "old floorboard creaking under slow shifting weight, dry timber groaning with a small tick at the end, quiet empty house", 4),
       s("wood-branch-snap", "Branch snap", "dry tree branch snapping in half, sharp crack with splintering fibres tearing, forest floor, outdoor", 2),
       s("wood-plank-break-knee", "Plank break", "wooden plank broken over a knee, loud cracking split with long splinters tearing apart, close mic", 2),
-      s("wood-knock-hollow-door", "Hollow knock", "knuckles knocking three times on a hollow wooden door, dull resonant thumps, hallway reverb", 2.5),
+      s("wood-knock-hollow-door", "Hollow knock", "knuckles knocking three times on a hollow wooden door, dull resonant thumps, hallway reverb", 3, 2131884217),
       s("wood-chopping-axe-log", "Axe chopping", "axe splitting a log on a chopping block, heavy bite into wood with fibres tearing and halves falling", 3),
       s("wood-furniture-drag", "Furniture drag", "heavy wooden chair dragged across a hardwood floor, juddering stick-slip scrape, medium room", 4),
       s("wood-ship-timbers", "Ship timbers", "wooden ship timbers creaking and working against each other in a swell, slow rhythmic groaning, enclosed hold", 10),
@@ -308,9 +308,9 @@ const PAPER: SfxCategory = {
     "(thickness, speed, dryness) can be described in plain words, and none of it depends on a room.",
   content: {
     samples: [
-      s("paper-page-turn-book", "Page turn", "single page of a hardback book turned at reading speed, soft paper flutter with a light settle, very close mic, quiet room", 2),
+      s("paper-page-turn-book", "Page turn", "single page of a hardback book turned at reading speed, soft paper flutter with a light settle, very close mic, quiet room", 2, 96267359),
       s("paper-tear-slow", "Slow tear", "sheet of paper torn slowly in half, fibres separating with a continuous ragged rip, very close mic, dry", 3),
-      s("paper-crumple-ball", "Crumple", "sheet of paper crushed into a ball in one hand, dense crackling collapse, very close mic, dry", 2.5),
+      s("paper-crumple-ball", "Crumple", "sheet of paper crushed into a ball in one hand, dense crackling collapse, very close mic, dry", 3, 251030367),
       s("paper-newspaper-rustle", "Newspaper", "large newspaper being folded and shaken open, broad thin rustling with sharp snaps, close mic", 3),
       s("paper-stack-shuffle", "Shuffling a stack", "stack of loose documents tapped square on a desk then shuffled, crisp edges sliding, office room tone", 3),
       s("paper-envelope-open", "Envelope", "paper envelope torn open along the top and a letter pulled out, close mic, quiet interior", 3),
@@ -383,14 +383,14 @@ const CLOTH: SfxCategory = {
   content: {
     samples: [
       s("cloth-jacket-movement", "Jacket movement", "person shifting in a cotton jacket, soft fabric friction with seams stretching, very close mic, quiet room", 3),
-      s("cloth-leather-creak", "Leather creak", "leather jacket flexing as someone turns, taut creaking with a dry grain, very close mic", 3),
-      s("cloth-zip-fast", "Zip", "metal zip pulled quickly up a jacket, rapid buzzing teeth engaging with a stop at the top, close mic, dry", 1.5),
-      s("cloth-cape-swirl", "Cape swirl", "heavy woollen cape swept around, broad low fabric whoosh with a settling drape, medium room", 2.5),
+      s("cloth-leather-creak", "Leather creak", "leather jacket flexing as someone turns, taut creaking with a dry grain, very close mic", 3, 1490402075),
+      s("cloth-zip-fast", "Zip", "metal zip pulled quickly up a jacket, rapid buzzing teeth engaging with a stop at the top, close mic, dry", 1.5, 1773746023),
+      s("cloth-cape-swirl", "Cape swirl", "heavy woollen cape swept around, broad low fabric whoosh with a settling drape, medium room", 3, 1514237512),
       s("cloth-sheet-flap-line", "Sheet on a line", "bedsheet flapping on a washing line in a breeze, sharp fabric cracks with a continuous flutter, outdoor garden", 6),
       s("cloth-armour-strap", "Armour strap", "leather armour straps tightened and buckled, creaking leather with metal buckle clicks, close mic", 3),
       s("cloth-backpack-shift", "Backpack shift", "hiking backpack shifted on shoulders, nylon straps sliding with buckles knocking, close mic, outdoor", 3),
       s("cloth-curtain-draw", "Curtain draw", "heavy curtains drawn across a rail, fabric sliding with rings clicking along metal, medium room", 3),
-      s("cloth-towel-snap", "Towel snap", "damp towel snapped hard through the air, sharp cracking whip with an airy tail, tiled room", 1.5),
+      s("cloth-towel-snap", "Towel snap", "damp towel snapped hard through the air, sharp cracking whip with an airy tail, tiled room", 1.5, 465635437),
       s("cloth-tent-canvas-wind", "Canvas in wind", "canvas tent walls buffeting in strong wind, deep fabric booming with rope creaks, outdoor, seamless loop", 8),
     ],
     recipes: [
@@ -458,14 +458,14 @@ const KEYBOARD: SfxCategory = {
     "search for \"typing\" mixes them together.",
   content: {
     samples: [
-      s("keyboard-mechanical-typing", "Mechanical typing", "typing steadily on a mechanical keyboard with tactile switches, distinct clacking key presses, close mic, quiet office", 8),
+      s("keyboard-mechanical-typing", "Mechanical typing", "typing steadily on a mechanical keyboard with tactile switches, distinct clacking key presses, close mic, quiet office", 8, 446047123),
       s("keyboard-laptop-typing", "Laptop typing", "typing on a laptop membrane keyboard, soft muted key taps at a steady pace, close mic, quiet room", 8),
-      s("keyboard-single-key-press", "Single key", "single mechanical keyboard key pressed and released, crisp click with a bottom-out thock, very close mic, dry", 1),
-      s("keyboard-enter-slam", "Enter key", "enter key struck hard on a mechanical keyboard, deep decisive clack, very close mic, dry", 1),
-      s("keyboard-typewriter-line", "Typewriter", "vintage manual typewriter typing a line then the carriage return bell and lever, close mic, small office", 6),
-      s("keyboard-mouse-click-double", "Mouse click", "computer mouse clicked twice in quick succession, tiny sharp plastic clicks, very close mic, dry", 1),
-      s("keyboard-mouse-scroll", "Scroll wheel", "mouse scroll wheel turned through its detents, fine ratcheting ticks, very close mic, dry", 2),
-      s("keyboard-desk-pen-click", "Pen click", "retractable ballpoint pen clicked repeatedly, sharp plastic snaps, very close mic, quiet room", 3),
+      s("keyboard-single-key-press", "Single key", "single mechanical keyboard key pressed and released, crisp click with a bottom-out thock, very close mic, dry", 1, 1530963237),
+      s("keyboard-enter-slam", "Enter key", "enter key struck hard on a mechanical keyboard, deep decisive clack, very close mic, dry", 1, 1986677841),
+      s("keyboard-typewriter-line", "Typewriter", "vintage manual typewriter typing a line then the carriage return bell and lever, close mic, small office", 6, 508908082),
+      s("keyboard-mouse-click-double", "Mouse click", "computer mouse clicked twice in quick succession, tiny sharp plastic clicks, very close mic, dry", 1, 1219898037),
+      s("keyboard-mouse-scroll", "Scroll wheel", "mouse scroll wheel turned through its detents, fine ratcheting ticks, very close mic, dry", 2, 1985130084),
+      s("keyboard-desk-pen-click", "Pen click", "retractable ballpoint pen clicked repeatedly, sharp plastic snaps, very close mic, quiet room", 3, 1679489291),
       s("keyboard-frantic-typing", "Frantic typing", "someone typing very fast and erratically on a mechanical keyboard, dense overlapping key presses, close mic", 6),
       s("keyboard-office-desk-ambience", "Desk ambience", "quiet open-plan office ambience, distant typing, a phone ringing far away and low ventilation hum, seamless loop", 12),
     ],
@@ -537,7 +537,7 @@ const CLOCK: SfxCategory = {
       s("clock-grandfather-chime", "Hour chime", "grandfather clock striking the hour, deep resonant chimes with a long decay in a wood-panelled hall", 10),
       s("clock-alarm-bell-ringing", "Alarm clock", "vintage twin-bell alarm clock ringing violently, hammer striking metal bells, bedside close mic", 5),
       s("clock-digital-alarm-beep", "Digital alarm", "digital alarm clock beeping in short insistent triplets, thin piezo tone, close mic, quiet bedroom", 5),
-      s("clock-stopwatch-click", "Stopwatch", "mechanical stopwatch button clicked to start, then fine rapid ticking, very close mic, dry", 5),
+      s("clock-stopwatch-click", "Stopwatch", "mechanical stopwatch button clicked to start, then fine rapid ticking, very close mic, dry", 5, 593397185),
       s("clock-kitchen-timer-wind", "Kitchen timer", "mechanical kitchen timer wound up and released, ratcheting then a fine ticking countdown, close mic", 6),
       s("clock-timer-final-bell", "Timer bell", "kitchen timer reaching zero and striking a single bright bell, close mic, kitchen reverb", 2),
       s("clock-tick-accelerating", "Accelerating tick", "clock ticking and gradually accelerating in tempo, mechanical ticks growing frantic, dry and close", 10),
@@ -690,7 +690,7 @@ const CAR: SfxCategory = {
       s("car-interior-driving", "Interior driving", "interior of a car driving at motorway speed, muffled engine drone with tyre roar and wind, seamless loop", 12),
       s("car-gear-shift-rev", "Rev and shift", "sports car revving hard and shifting up through two gears, throaty exhaust bark, exterior close", 6),
       s("car-indicator-tick", "Indicator", "car indicator relay ticking steadily, dry mechanical clicks, interior close mic, seamless loop", 6),
-      s("car-crash-head-on", "Crash", "car crashing head-on into a barrier, huge metal impact with glass shattering and debris scattering, street", 4),
+      s("car-crash-head-on", "Crash", "car crashing head-on into a barrier, huge metal impact with glass shattering and debris scattering, street", 4, 1879955679),
       s("car-engine-fail-start", "Failing to start", "car engine failing to start, starter motor cranking repeatedly and dying, battery weakening, exterior close", 8),
     ],
     recipes: [

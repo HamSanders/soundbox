@@ -11,29 +11,31 @@
  * lists the tools at a glance, and hands off to the reference for the detail.
  *
  * Everything factual here is sourced: the port from `server/src/config.ts`, the
- * tool list from `@/content/mcp/tools.ts`, the model licences from
+ * tool list from `@/content/mcp/tools.ts`, the per-client setup from
+ * `@/content/mcp/clients.ts`, the model licences from
  * `@/content/models/models.ts`. Nothing on this page should be a claim you
  * cannot follow back to one of those.
  *
  * Site-only, so no `AppTopNav` — the site's own `SiteHeader` wraps it.
  */
 
-import type { ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { CheckIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { SeoHead, faqJsonLd } from "@/components/seo-head";
 import { C, CopyBlock, Disclosure, Note } from "@/components/docs-primitives";
 import { SamplePlay } from "@/components/sample-play";
+import { McpClientGuides, McpQuickConnect } from "@/components/mcp-clients";
+import { mcpClients } from "@/content/mcp/clients";
 import { MCP_TOOLS, MCP_TOOL_GROUPS } from "@/content/mcp/tools";
 import { MODELS } from "@/content/models/models";
 import type { CommercialUse } from "@/content/models/types";
 
 const MCP_URL = "http://127.0.0.1:17494/mcp";
 
-const CLIENTS = ["Claude Code", "Claude Desktop", "Cursor", "Any MCP client"];
-
-const CLIENT_JSON = `{"mcpServers":{"soundbox":{"type":"http","url":"${MCP_URL}"}}}`;
+const HERO_FACTS = ["No API key or account", "Free per generation", "Runs on your GPU", "Returns file paths"];
 
 /* Keyed by `CommercialUse`, which carries a fourth value the app's own
    `LicenseInfo` does not: "unknown" means nobody here has read a licence for
@@ -67,7 +69,7 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: "Which clients work with it?",
     answer:
-      "Anything that speaks MCP. Claude Code takes the HTTP URL as a single command; Claude Desktop, Cursor and the rest take a JSON config block with the same URL. Clients that only speak stdio can use the bundled stdio bridge, which proxies onto the running server and loads no models itself.",
+      "Anything that speaks MCP. Claude Code, Codex, Devin and opencode take the URL in a single command; Cursor, VS Code, Zed, Cline, Goose, LM Studio, Continue and Antigravity take it in a config file, and Cursor, VS Code, Goose and LM Studio also have one-click install links. Claude Desktop only runs stdio servers from its config, so it connects through the mcp-remote bridge. The setup section on this page has the exact steps for each.",
   },
   {
     question: "Do I need an API key?",
@@ -107,36 +109,6 @@ const FAQS: { question: string; answer: string }[] = [
 ];
 
 /* ------------------------------------------------------------------ parts */
-
-function Pill({ children }: { children: ReactNode }) {
-  return (
-    <span className="bg-muted text-muted-foreground shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium">
-      {children}
-    </span>
-  );
-}
-
-function Step({
-  n,
-  title,
-  children,
-}: {
-  n: number;
-  title: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <li className="min-w-0">
-      <div className="flex items-baseline gap-2.5">
-        <span className="bg-primary/10 text-primary flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
-          {n}
-        </span>
-        <h3 className="font-heading text-base font-semibold tracking-tight">{title}</h3>
-      </div>
-      <div className="mt-2.5 min-w-0 space-y-2.5 sm:pl-[2.125rem]">{children}</div>
-    </li>
-  );
-}
 
 /**
  * The worked example.
@@ -217,8 +189,26 @@ function ExampleTranscript() {
 /* ------------------------------------------------------------------- page */
 
 export function McpPage() {
+  const clients = useMemo(() => mcpClients(MCP_URL), []);
+  const [client, setClient] = useState(clients[0].id);
+
+  /* `/mcp#setup-cursor` opens on Cursor, so a support answer can link
+     straight to one client. Read after mount: the static HTML is Claude Code. */
+  useEffect(() => {
+    const pick = () => {
+      const id = window.location.hash.match(/^#setup-(.+)$/)?.[1];
+      if (id && clients.some((c) => c.id === id)) {
+        setClient(id);
+        document.getElementById("setup")?.scrollIntoView();
+      }
+    };
+    pick();
+    window.addEventListener("hashchange", pick);
+    return () => window.removeEventListener("hashchange", pick);
+  }, [clients]);
+
   return (
-    <div className="bg-background text-foreground min-h-svh">
+    <div className="text-foreground">
       <SeoHead
         title="MCP server for local sound generation | Mirli"
         description="Connect Claude Code, Claude Desktop, Cursor or any MCP client to Mirli in one line. Sound effects, music and speech are generated on your own GPU and returned as absolute file paths. No API key, no account, no per-generation billing."
@@ -228,100 +218,77 @@ export function McpPage() {
         jsonLd={[faqJsonLd(FAQS)]}
       />
 
+      {/* -------------------------------------------------------------- hero
+          One screen tall, never more: the pitch on the left and the thing to
+          copy on the right, so a visitor can connect without scrolling. */}
+      <section className="mx-auto flex w-full max-w-6xl items-center px-4 py-10 lg:min-h-[calc(100svh-3.5rem)] lg:py-8">
+        <div className="grid w-full min-w-0 items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-14">
+          <div className="min-w-0">
+            <p className="label-caps text-primary">MCP server</p>
+            <h1 className="font-heading mt-3 text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+              Give your agent a sound studio
+            </h1>
+            <p className="text-muted-foreground mt-4 max-w-xl text-lg leading-relaxed text-pretty">
+              Sound effects, music and speech, generated on your own machine and handed back as
+              file paths your agent can use. One line connects Claude, Cursor, VS Code, Codex or
+              any MCP client.
+            </p>
+            <ul className="mt-6 grid max-w-md grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              {HERO_FACTS.map((fact) => (
+                <li key={fact} className="flex items-center gap-2">
+                  <CheckIcon className="text-primary size-4 shrink-0" />
+                  {fact}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-8 flex flex-wrap gap-2">
+              <Button asChild size="lg">
+                <Link to="/download">Download Mirli</Link>
+              </Button>
+              <Button variant="outline" size="lg" asChild>
+                <Link to="/docs/mcp">Tool reference</Link>
+              </Button>
+            </div>
+          </div>
+
+          <div className="min-w-0">
+            <McpQuickConnect
+              clients={clients}
+              url={MCP_URL}
+              value={client}
+              onChange={setClient}
+              guideHref="#setup"
+            />
+            <p className="text-muted-foreground mt-3 px-1 text-xs leading-relaxed">
+              Mirli has to be running: the server lives inside the app, on{" "}
+              <C>127.0.0.1:17494</C>. Nothing leaves your machine.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <div className="mx-auto w-full max-w-3xl px-4">
-        {/* ------------------------------------------------------------ hero */}
-        <header className="py-12">
-          <p className="label-caps text-primary">
-            MCP Server
-          </p>
-          <h1 className="font-heading mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-            A local sound studio your agent can call
-          </h1>
-          <p className="text-muted-foreground mt-4 max-w-2xl leading-relaxed text-pretty sm:text-lg">
-            Mirli runs an MCP server inside its own process, so the agent writing your code can
-            also generate the sound effects, music and speech that go with it. Generation runs on
-            your GPU from open-weight models, and the tools return absolute paths to WAVs on your
-            disk. No cloud service is involved, so there is no key, no account and no
-            per-generation bill.
-          </p>
-
-          <div className="mt-6 flex flex-wrap gap-1.5">
-            {CLIENTS.map((client) => (
-              <Pill key={client}>{client}</Pill>
-            ))}
-          </div>
-
-          <div className="mt-6 flex flex-wrap gap-2">
-            <Button asChild>
-              <a href="#connect">Connect it in one line</a>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link to="/docs/mcp">Read the tool reference</Link>
-            </Button>
-          </div>
-        </header>
-
-        {/* --------------------------------------------------------- connect */}
-        <section id="connect" className="scroll-mt-20 border-t pt-12">
+        {/* ----------------------------------------------------------- setup */}
+        <section id="setup" className="scroll-mt-20 border-t pt-12">
           <h2 className="font-heading text-2xl font-semibold tracking-tight">
-            Connect it in one line
+            Set up your client
           </h2>
           <p className="text-muted-foreground mt-3 max-w-2xl leading-relaxed">
-            The MCP server runs inside the main Mirli process. There is no separate daemon to
-            start: if the app is running, the server is up.
+            Install and start Mirli first (
+            <Link to="/docs/install" className="text-primary underline underline-offset-4">
+              the install guide
+            </Link>{" "}
+            covers downloading model weights). There is no separate daemon: if the app is
+            running, the server is up. Then pick your client. Every entry was checked against
+            that vendor's own MCP docs, linked at the bottom of each.
           </p>
-
-          <ol className="mt-8 space-y-8">
-            <Step
-              n={1}
-              title="Start Mirli"
-            >
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                Install and run it. The full walkthrough, including downloading model weights, is
-                in <Link to="/docs/install" className="text-primary underline underline-offset-4">the install guide</Link>.
-                The server listens on <C>127.0.0.1:17494</C>.
-              </p>
-            </Step>
-
-            <Step n={2} title="Point your client at it">
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                In Claude Code, that is one command:
-              </p>
-              <CopyBlock
-                code={`claude mcp add --transport http soundbox ${MCP_URL}`}
-                label="Copy the claude mcp add command"
-              />
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                Clients that take a JSON config file, such as Claude Desktop and Cursor, use the
-                same URL:
-              </p>
-              <CopyBlock
-                code={CLIENT_JSON}
-                language="json"
-                label="Copy the MCP client config"
-              />
-              <Note>
-                The URL has no trailing slash. Mirli rewrites <C>/mcp</C> onto the mounted path
-                internally and does not answer a POST with a redirect, so the URL works as pasted.
-              </Note>
-            </Step>
-
-            <Step n={3} title="Ask for a sound">
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                There is nothing else to configure. Ask in your current conversation:
-              </p>
-              <CopyBlock
-                code="Generate a heavy wooden door slamming in a stone corridor, about 3 seconds, and put it in assets/audio/."
-                language="text"
-                label="Copy the example prompt"
-              />
-            </Step>
-          </ol>
-
+          <div className="mt-8">
+            <McpClientGuides clients={clients} value={client} onChange={setClient} />
+          </div>
           <div className="mt-8">
             <Note>
-              There is no key and no account, because there is no auth and no cloud. The agent and
-              the server run on the same machine and talk over a loopback socket.
+              Then ask for a sound in plain language, for example: “Generate a heavy wooden door
+              slamming in a stone corridor, about 3 seconds, and put it in assets/audio/.”
             </Note>
           </div>
         </section>
@@ -479,7 +446,7 @@ export function McpPage() {
 
           <div className="mt-10 flex flex-wrap gap-2">
             <Button asChild>
-              <a href="#connect">Connect it</a>
+              <a href="#setup">Set up your client</a>
             </Button>
             <Button variant="outline" asChild>
               <Link to="/docs/mcp">Read the tool reference</Link>

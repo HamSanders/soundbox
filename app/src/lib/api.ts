@@ -1759,6 +1759,13 @@ export interface MirliApi {
   /** `deleteSounds` decides whether the story's generated audio goes with it
    *  or stays in the library unfiled. */
   deleteStory(id: string, deleteSounds?: boolean): Promise<void>;
+  /** The open studio's answer to a request an agent sent down its event
+   *  stream (see `lib/studio-bridge.ts`, `answerStudioRequest`). */
+  studioReply(
+    storyId: string,
+    requestId: string,
+    reply: { ok: boolean; result?: unknown; error?: string | null },
+  ): Promise<void>;
   listSegments(storyId: string): Promise<StorySegment[]>;
   createSegment(storyId: string, req?: SegmentCreate): Promise<StorySegment>;
   updateSegment(storyId: string, segmentId: string, patch: SegmentPatch): Promise<StorySegment>;
@@ -2234,6 +2241,12 @@ export const httpApi: MirliApi = {
     request<void>(
       `/api/stories/${encodeURIComponent(id)}${deleteSounds ? "?delete_sounds=true" : ""}`,
       { method: "DELETE" },
+    ),
+
+  studioReply: (storyId, requestId, reply) =>
+    request<void>(
+      `/api/stories/${encodeURIComponent(storyId)}/studio/replies/${encodeURIComponent(requestId)}`,
+      { method: "POST", body: JSON.stringify(reply) },
     ),
 
   listSegments: (storyId) =>

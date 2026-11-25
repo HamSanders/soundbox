@@ -108,7 +108,7 @@ export function DocPageRoute() {
   const page = docBySlug(slug ?? "");
   if (!page) return <Navigate to="/docs" replace />;
   return (
-    <div className="bg-background text-foreground min-h-svh">
+    <div className="text-foreground">
       <DocsShell current={page.slug} page={page}>
         <DocBody page={page} />
       </DocsShell>

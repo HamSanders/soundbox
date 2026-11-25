@@ -33,7 +33,7 @@ export function NavRail() {
   return (
     <nav
       aria-label="Main"
-      className="bg-sidebar border-border fixed inset-y-0 left-0 z-40 hidden w-(--rail-w) flex-col items-center gap-3 border-r pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left,0px)] medium:flex expanded:hidden"
+      className="bg-sidebar border-border fixed top-(--top-h,0px) bottom-0 left-0 z-40 hidden w-(--rail-w) flex-col items-center gap-3 border-r pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left,0px)] medium:flex expanded:hidden"
     >
       <button
         type="button"

@@ -1,6 +1,8 @@
 /**
  * Slim top bar inside the content pane: sidebar trigger + current page title.
- * Navigation, device status and theme live in the sidebar now.
+ * Navigation, device status and theme live in the sidebar now. In the desktop
+ * app the same pieces live in the window's own title bar instead
+ * (`window-title-bar.tsx`).
  */
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -10,8 +12,9 @@ import { Button } from "@/components/ui/button";
 
 import { HeaderSlot } from "@/components/header-slot";
 import { QueueIndicator } from "@/components/queue-indicator";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarButton } from "@/components/sidebar-peek";
 import { useSound } from "@/lib/queries";
+import { cn } from "@/lib/utils";
 
 const TITLES: Record<string, string> = {
   "/dashboard": "Home",
@@ -51,18 +54,49 @@ function SoundCrumb({ id }: { id: string }) {
   );
 }
 
-export function AppHeader() {
+/** Where you are: "Mirli / Library / Rain on tin". Shared by the page
+ *  header (web) and the window title bar (desktop). */
+export function Breadcrumb({ className }: { className?: string }) {
   const { pathname } = useLocation();
-  // AppHeader sits beside <Routes>, not inside the matched Route, so
+  // The header sits beside <Routes>, not inside the matched Route, so
   // useParams() can't see :id here — read it off the pathname directly.
   const soundId = pathname.startsWith("/sounds/") ? pathname.slice("/sounds/".length) : null;
   // A story drills into the Studio the way a sound drills into the Library,
-  // and it names itself: the builder puts its own title in the slot below, so
-  // the crumb stops at the shelf and doubles as the way back. Which builder
-  // you are in is worth saying — it is the difference between the two tools —
-  // and the crumb links to that half of the shelf.
+  // and it names itself: the builder puts its own title in the slot beside
+  // it, so the crumb stops at the shelf and doubles as the way back. Which
+  // builder you are in is worth saying — it is the difference between the two
+  // tools — and the crumb links to that half of the shelf.
   const builder = /^\/studio\/(script|music)\//.exec(pathname)?.[1] ?? null;
 
+  return (
+    <nav
+      aria-label="Breadcrumb"
+      className={cn("text-muted-foreground flex min-w-0 items-center gap-1.5 text-sm", className)}
+    >
+      <span>Mirli</span>
+      {soundId ? (
+        <SoundCrumb id={soundId} />
+      ) : builder !== null ? (
+        <>
+          <span aria-hidden="true">/</span>
+          <Link to={`/studio?builder=${builder}`} className="hover:text-foreground">
+            {builder === "script" ? "Script Builder" : "Music Builder"}
+          </Link>
+          <span aria-hidden="true">/</span>
+        </>
+      ) : (
+        <>
+          <span aria-hidden="true">/</span>
+          <span className="text-foreground font-medium">{TITLES[pathname] ?? "Mirli"}</span>
+        </>
+      )}
+    </nav>
+  );
+}
+
+/** The page panel's first row, in a browser. The desktop app draws
+ *  `WindowTitleBar` across the window instead and leaves this out. */
+export function AppHeader() {
   return (
     // The first row of the page panel, not a bar across the window: the
     // sidebar keeps the logo, and each panel carries its own controls.
@@ -75,28 +109,12 @@ export function AppHeader() {
     >
       <div className="-ml-1 flex items-center">
         {/* On a tablet the rail carries this button; phones and desktops keep it here. */}
-        <SidebarTrigger className="medium:max-expanded:hidden" />
+        <span className="contents medium:max-expanded:hidden">
+          <SidebarButton />
+        </span>
         <HistoryButtons />
       </div>
-      <nav aria-label="Breadcrumb" className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-sm">
-        <span>Mirli</span>
-        {soundId ? (
-          <SoundCrumb id={soundId} />
-        ) : builder !== null ? (
-          <>
-            <span aria-hidden="true">/</span>
-            <Link to={`/studio?builder=${builder}`} className="hover:text-foreground">
-              {builder === "script" ? "Script Builder" : "Music Builder"}
-            </Link>
-            <span aria-hidden="true">/</span>
-          </>
-        ) : (
-          <>
-            <span aria-hidden="true">/</span>
-            <span className="text-foreground font-medium">{TITLES[pathname] ?? "Mirli"}</span>
-          </>
-        )}
-      </nav>
+      <Breadcrumb />
 
       {/* Whatever the open page wants in this bar: a title, the tools that act
           on it. Empty on most pages, which costs nothing. */}
@@ -106,7 +124,6 @@ export function AppHeader() {
           beside a composer because a job outlives the page it was submitted
           from — see `queue-indicator.tsx`. */}
       <QueueIndicator />
-
     </header>
   );
 }
@@ -120,7 +137,7 @@ export function AppHeader() {
  * webview has it (WebView2 and WebKitGTK do), and from React Router's own
  * history index otherwise. Re-read on every location change.
  */
-function HistoryButtons() {
+export function HistoryButtons() {
   const navigate = useNavigate();
   useLocation();
   const nav = (window as unknown as { navigation?: { canGoBack: boolean; canGoForward: boolean } })

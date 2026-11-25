@@ -117,6 +117,31 @@ resize it, or fold it away with the arrow; both are remembered in this browser.
 **Open in timeline** still opens the chapter in the full studio, with the
 library, prompt and device panels.
 
+## The assistant
+
+With the prompt assistant on (Settings → Prompt assistant), the right-hand
+panel has an **Assistant** tab beside the Inspector. Ask it about the book, or
+say what to change: "make Ada the narrator", "pronounce Marlow as MAR-low",
+"put rain under this chapter", "voice this chapter".
+
+It works through the same tools an agent gets over MCP (`soundbox.*`, listed
+in [MCP.md](MCP.md)), so it can do what they do and nothing else. It is shown
+the book, its chapters and characters, the open chapter's first paragraphs,
+what you have selected and your voices, and it may only name those.
+
+What it wants to do comes back as a card, one row per step:
+
+- Reading (listing voices, reading the book) runs straight away.
+- Everything else waits. **Accept** runs the steps in order and stops at the
+  first that fails; each row also has its own accept and reject. Steps that
+  make audio are marked, and a step that deletes is red.
+- **Reject** runs nothing. **Tweak** puts your request back in the box.
+- Once run, **Undo** puts back what it can: a character's voice, a lane's
+  mix, a paragraph's text, an effect. The card names the steps it can't undo,
+  such as a new pronunciation or voiced audio.
+
+Runs are logged in the MCP activity as the "Mirli assistant" client.
+
 ## Pronounce
 
 The **Pronounce** tab holds rules for words the model gets wrong: names,

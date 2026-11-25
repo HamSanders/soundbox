@@ -28,7 +28,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { AssistantLink, AssistantTurn } from "./api";
+import type { AgentCall, AgentRisk, AssistantLink, AssistantTurn } from "./api";
 import type { StudioAction, StudioContext } from "./studio-command";
 
 /** The thread that belongs to no story: the Chat page's own. */
@@ -38,6 +38,11 @@ export const DEFAULT_THREAD = "chat";
  *  with {@link DEFAULT_THREAD} or anything keyed later. */
 export function studioThread(storyId: string): string {
   return `story:${storyId}`;
+}
+
+/** The thread beside one audiobook in its editor. */
+export function bookThread(bookId: string): string {
+  return `book:${bookId}`;
 }
 
 /** How many threads to keep on disk, newest first, and how much of each. A
@@ -73,6 +78,31 @@ export interface AssistantMessage extends AssistantTurn {
   thinking?: { classified?: string; actions?: number; dropped?: number } | null;
   /** A turn that never got its answer — shown in place, with a retry. */
   error?: string | null;
+  /**
+   * MCP tool calls this turn proposed for the open book (see
+   * `components/agent-proposal.tsx`), each with how far it got and, once
+   * run, the calls that undo it. Kept with the message so a reload still
+   * shows what was done and what was turned down.
+   */
+  proposal?: AgentProposal | null;
+}
+
+export type AgentStepStatus = "proposed" | "applying" | "applied" | "rejected" | "failed" | "undone";
+
+export interface AgentProposal {
+  /** The instruction it answers, for Tweak. */
+  instruction: string;
+  steps: {
+    id: string;
+    call: AgentCall;
+    risk: AgentRisk;
+    status: AgentStepStatus;
+    /** Why it failed, or a short note on what it returned. */
+    note?: string | null;
+    undo?: AgentCall[] | null;
+  }[];
+  /** Calls the planner threw away, and why. */
+  dropped: { tool: string; reason: string }[];
 }
 
 interface Thread {
@@ -97,11 +127,14 @@ interface AssistantState {
           sources?: string[];
           edits?: AssistantMessage["edits"];
           thinking?: AssistantMessage["thinking"];
+          proposal?: AssistantMessage["proposal"];
         }
       | { error: string },
   ) => void;
   /** A waiting plan was applied (or thrown away). */
   markEdits: (key: string, id: string, applied: boolean | null) => void;
+  /** Change a turn's proposal, e.g. mark a step run. */
+  updateProposal: (key: string, id: string, update: (p: AgentProposal) => AgentProposal) => void;
   setPending: (key: string, pending: boolean) => void;
   /** Drop this message and everything after it. What a retry does before it
    *  asks the question again, so the failed pair is replaced rather than
@@ -168,8 +201,19 @@ export const useAssistantStore = create<AssistantState>()(
                       sources: result.sources ?? [],
                       edits: result.edits ?? null,
                       thinking: result.thinking ?? null,
+                      proposal: result.proposal ?? null,
                       error: null,
                     },
+            ),
+          })),
+        ),
+
+      updateProposal: (key, id, update) =>
+        set((s) =>
+          edit(s, key, (t) => ({
+            ...t,
+            messages: t.messages.map((m) =>
+              m.id !== id || !m.proposal ? m : { ...m, proposal: update(m.proposal) },
             ),
           })),
         ),

@@ -20,6 +20,7 @@ import {
   type LlmProgressFn,
 } from "../models/llmCatalog.js";
 import * as llamaBinary from "../models/llamaServerBinary.js";
+import { buildAgentMessages, parseAgentPlan, type AgentContext, type AgentPlan, type AgentTool } from "./agent.js";
 import { chatCompletion } from "./client.js";
 import type { ChatMessage } from "./client.js";
 import {
@@ -287,6 +288,26 @@ export class LlmService {
   /** One chat call with this service's standing options. Thinking is off on
    *  every one of them: the assistant's job here is to answer, and a model
    *  that reasons first spends the token budget before writing anything. */
+  /**
+   * An instruction answered with MCP tool calls for the page to propose —
+   * see `agent.ts`. Deterministic: which tool and which chapter has a right
+   * answer, and the reply is a sentence about it.
+   */
+  async agentPlan(
+    instruction: string,
+    history: { role: "user" | "assistant"; content: string }[],
+    tools: AgentTool[],
+    context: AgentContext,
+  ): Promise<AgentPlan> {
+    const endpoint = await this.resolveEndpoint();
+    const text = await this.complete(endpoint, buildAgentMessages(instruction, history, tools, context), {
+      temperature: 0,
+      maxTokens: 900,
+    });
+    this.runtime.touch();
+    return parseAgentPlan(text, tools, context);
+  }
+
   private async complete(
     endpoint: { baseUrl: string; apiKey: string | null; model: string },
     messages: ChatMessage[],

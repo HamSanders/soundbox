@@ -211,6 +211,8 @@ rather than failing the import.
 | POST | `/api/enhance/lyrics` | Write lyrics. Body `{ theme, style? }` |
 | POST | `/api/assistant/chat` | One turn of the assistant. Body `{ messages, studio?, draft? }` |
 | POST | `/api/assistant/openers` | Suggested first messages. Body `{ studio? }` |
+| POST | `/api/agent/plan` | Turn an instruction about an open book into MCP tool calls to propose. Body `{ instruction, messages?, scope: { book_id, chapter_id?, selected_ids? } }`. Returns `{ reply, calls: [{ tool, arguments, risk }], dropped }`; `risk` is `read`, `write`, `costly` or `destructive` |
+| POST | `/api/agent/run` | Run one MCP tool call through Mirli's own MCP server. Body `{ tool, arguments }`. Returns `{ result, undo }`, where `undo` is the calls that reverse it or null. A tool's refusal is a 422 with its message |
 | POST | `/api/studio/command` | Turn a studio instruction into a plan of edits. Body `{ instruction, context: { tracks, clips, playhead_s?, selected_ids?, voices? } }` |
 | GET | `/api/llm/status` | Engine and model install state, detected local endpoints |
 | POST | `/api/llm/engine/install` | Install `llama-server` → job |

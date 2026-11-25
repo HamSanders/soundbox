@@ -330,8 +330,9 @@ function openerStudioKey(studio: AssistantOpenersRequest["studio"]): string {
 }
 
 /** Empty-thread chips. No toast: the chat falls back to static openers. */
-export function useAssistantOpeners(studio: AssistantOpenersRequest["studio"]) {
+export function useAssistantOpeners(studio: AssistantOpenersRequest["studio"], enabled = true) {
   return useQuery<AssistantOpenersResponse, Error>({
+    enabled,
     queryKey: qk.assistantOpeners(openerStudioKey(studio)),
     queryFn: () => api.assistantOpeners({ studio: studio ?? null }),
     retry: 1,

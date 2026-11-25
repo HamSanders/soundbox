@@ -5,7 +5,8 @@
  * the header. `?chapter=` keeps the open chapter in the URL.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { MessageSquareTextIcon, Redo2Icon, Undo2Icon } from "lucide-react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { keepDetail } from "@/lib/dock";
@@ -20,11 +21,16 @@ import { announce } from "@/components/audiobook/editor/announce";
 import { LiveRegion } from "@/components/audiobook/editor/announcer";
 import { useBookOps } from "@/components/audiobook/editor/use-book-ops";
 import { RenderBar } from "@/components/audiobook/render";
+import { AssistantChat } from "@/components/assistant-chat";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEditHistory } from "@/hooks/use-edit-history";
+import { useAgentScope } from "@/lib/agent-scope";
+import { bookThread } from "@/lib/assistant-store";
 import { useBook, useBookEvents, useNotes, useParagraphs } from "@/lib/audiobook-queries";
+import { useAssistantEnabled, useVoices } from "@/lib/queries";
+import { cn } from "@/lib/utils";
 import { flushPending, undoPending, useHiddenStore } from "@/lib/undo";
 
 export function AudiobookPage() {
@@ -92,6 +98,55 @@ export function AudiobookPage() {
 
   const paragraphs = useParagraphs(id, chapter?.id ?? null);
   const paragraph = paragraphs.data?.find((p) => p.id === selectedId) ?? null;
+
+  /**
+   * The assistant beside the book. It works through the MCP toolkit (see
+   * `lib/agent-scope.ts`), so this page lends it what is open, read fresh on
+   * each turn, and names for the ids its proposals mention.
+   */
+  const [side, setSide] = useState<"inspector" | "assistant">("inspector");
+  const assistantOn = useAssistantEnabled();
+  const voices = useVoices();
+  const qc = useQueryClient();
+  const names = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of book.data?.chapters ?? []) map.set(c.id, `“${c.title}”`);
+    for (const c of book.data?.characters ?? []) map.set(c.id, c.name);
+    for (const v of voices.data ?? []) map.set(v.id, v.name);
+    for (const p of paragraphs.data ?? []) {
+      const words = p.text.trim().split(/\s+/).slice(0, 6).join(" ");
+      map.set(p.id, words ? `“${words}…”` : "an empty paragraph");
+    }
+    return map;
+  }, [book.data, voices.data, paragraphs.data]);
+  const live = useRef({ chapterId: null as string | null, selected: [] as string[], names });
+  useEffect(() => {
+    live.current = {
+      chapterId: chapter?.id ?? null,
+      selected: checked.size ? [...checked] : selectedId ? [selectedId] : [],
+      names,
+    };
+  });
+  const lendScope = useAgentScope((s) => s.lend);
+  const reclaimScope = useAgentScope((s) => s.reclaim);
+  useEffect(() => {
+    lendScope({
+      bookId: id,
+      chapterId: () => live.current.chapterId,
+      selectedIds: () => live.current.selected,
+      nameOf: (x) => live.current.names.get(x),
+      // A tool may have changed anything in the book, its stories or the
+      // library: refetch what this page shows. The editor's own undo steps
+      // were written against the book as it was.
+      changed: () => {
+        void qc.invalidateQueries({ queryKey: ["audiobook", id] });
+        void qc.invalidateQueries({ queryKey: ["audiobooks"] });
+        void qc.invalidateQueries({ queryKey: ["stories"] });
+        void qc.invalidateQueries({ queryKey: ["story"] });
+      },
+    });
+    return () => reclaimScope(id);
+  }, [id, lendScope, qc, reclaimScope]);
 
   const selectChapter = useCallback(
     (cid: string) => {
@@ -244,18 +299,43 @@ export function AudiobookPage() {
             <EmptyState className="m-4">This book has no chapters. Add one on the left.</EmptyState>
           )}
         </section>
-        <aside className={`${panel} md:w-80 md:shrink-0`} aria-label="Inspector">
-          <Inspector
-            book={data}
-            chapter={chapter}
-            paragraph={paragraph}
-            selectedCount={checked.size}
-            ops={ops}
-            paragraphNumber={(paragraphs.data ?? []).findIndex((p) => p.id === selectedId) + 1}
-            onLockSelection={(locked) =>
-              void ops.setLocked((paragraphs.data ?? []).filter((p) => checked.has(p.id)), locked)
-            }
-          />
+        <aside className={`${panel} md:w-80 md:shrink-0`} aria-label={side === "assistant" && assistantOn ? "Assistant" : "Inspector"}>
+          {assistantOn && (
+            <div role="tablist" aria-label="Side panel" className="border-border/60 flex shrink-0 gap-1 border-b px-2 pt-2">
+              {(["inspector", "assistant"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  role="tab"
+                  aria-selected={side === tab}
+                  className={cn(
+                    "-mb-px border-b-2 px-2.5 pb-1.5 text-xs font-medium capitalize transition-colors",
+                    side === tab
+                      ? "border-primary text-foreground"
+                      : "text-muted-foreground hover:text-foreground border-transparent",
+                  )}
+                  onClick={() => setSide(tab)}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+          )}
+          {side === "assistant" && assistantOn ? (
+            <AssistantChat threadKey={bookThread(data.id)} className="min-h-0 flex-1" inset />
+          ) : (
+            <Inspector
+              book={data}
+              chapter={chapter}
+              paragraph={paragraph}
+              selectedCount={checked.size}
+              ops={ops}
+              paragraphNumber={(paragraphs.data ?? []).findIndex((p) => p.id === selectedId) + 1}
+              onLockSelection={(locked) =>
+                void ops.setLocked((paragraphs.data ?? []).filter((p) => checked.has(p.id)), locked)
+              }
+            />
+          )}
         </aside>
       </div>
       {chapter && (

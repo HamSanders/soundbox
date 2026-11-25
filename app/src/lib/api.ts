@@ -667,6 +667,35 @@ export interface AssistantLink {
   label: string;
 }
 
+/** How much a proposed tool call asks of the person: reads run at once,
+ *  the rest wait for Accept. See `server/src/llm/agent.ts`. */
+export type AgentRisk = "read" | "write" | "costly" | "destructive";
+
+/** One MCP tool call, by the tool's own name and arguments. */
+export interface AgentCall {
+  tool: string;
+  arguments: Record<string, unknown>;
+}
+
+export interface AgentPlanRequest {
+  instruction: string;
+  messages: { role: "user" | "assistant"; content: string }[];
+  /** What is open: the server reads the rest itself. */
+  scope: { book_id: string; chapter_id?: string | null; selected_ids?: string[] };
+}
+
+export interface AgentPlan {
+  reply: string;
+  calls: (AgentCall & { risk: AgentRisk })[];
+  dropped: { tool: string; reason: string }[];
+}
+
+export interface AgentRunResult {
+  result: unknown;
+  /** The calls that put it back, or null when MCP has no inverse. */
+  undo: AgentCall[] | null;
+}
+
 export interface AssistantChatResponse {
   reply: string;
   /** Where to go next. Empty when the answer does not point anywhere. */
@@ -1872,6 +1901,11 @@ export interface MirliApi {
   /** Empty-thread chips from the prompt assistant. Throws when the LLM is
    *  off, same as `assistantChat` — the chat falls back silently. */
   assistantOpeners(req: AssistantOpenersRequest): Promise<AssistantOpenersResponse>;
+  /** An instruction about the open book, answered with MCP tool calls to
+   *  propose. Needs the prompt assistant on. */
+  agentPlan(req: AgentPlanRequest): Promise<AgentPlan>;
+  /** Run one accepted tool call through Mirli's own MCP server. */
+  agentRun(call: AgentCall): Promise<AgentRunResult>;
   getLlmStatus(): Promise<LlmStatus>;
   installLlmEngine(): Promise<JobRef>;
   downloadLlmModel(id: string): Promise<JobRef>;
@@ -2463,6 +2497,12 @@ export const httpApi: MirliApi = {
       method: "POST",
       body: JSON.stringify(req),
     }),
+
+  agentPlan: (req) =>
+    request<AgentPlan>("/api/agent/plan", { method: "POST", body: JSON.stringify(req) }),
+
+  agentRun: (call) =>
+    request<AgentRunResult>("/api/agent/run", { method: "POST", body: JSON.stringify(call) }),
 
   assistantOpeners: (req) =>
     request<AssistantOpenersResponse>("/api/assistant/openers", {

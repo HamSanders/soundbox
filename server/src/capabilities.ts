@@ -321,6 +321,8 @@ export const UNGUARDED_ROUTES: readonly string[] = [
   "POST /api/auth/login",
   "POST /api/auth/logout",
   "POST /api/assistant/chat",
+  "POST /api/agent/plan",
+  "POST /api/agent/run",
   "POST /api/assistant/openers",
   "GET /api/health",
   "GET /api/models",

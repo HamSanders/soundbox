@@ -159,7 +159,7 @@ function LanderPage({ lander }: { lander: Lander }) {
       ) : null}
 
       {/* ------------------------------------------------------------- faq */}
-      <Block id="questions" label="Questions" title="Questions">
+      <Block id="questions" label="Questions" title="What people ask first">
         <dl className="max-w-3xl space-y-7">
           {lander.faq.map((f) => (
             <div key={f.question}>

@@ -161,23 +161,22 @@ function useStars(): number | null {
 }
 
 /**
- * The running app, beside the headline: the Music page with its Create panel,
- * the takes it made and the player. A capture from the 0.6 app in mock mode
- * (the same set as `ProductShots`), not a drawing.
+ * The running app, large and centred under the buttons: the Music page with
+ * its Create panel, the takes it made and the player. A capture of the 0.6 app
+ * in mock mode (the same set as `ProductShots`), not a drawing.
  *
- * Hidden on phones. At 375px a desktop window is too small to read, and the
- * Studio section further down shows the same screens with tabs.
+ * Hidden on phones, where a desktop window is too small to read; the Studio
+ * section further down shows the same screens with tabs. The source sits
+ * behind a min-width media query, so a phone fetches only the 1px placeholder.
  */
 function HeroShot() {
   return (
-    <figure className="relative mx-auto hidden w-full max-w-3xl sm:block lg:max-w-none">
+    <figure className="relative mx-auto mt-12 hidden w-full max-w-5xl sm:block">
       <div
         aria-hidden="true"
         className="bg-primary/10 pointer-events-none absolute inset-x-[8%] top-[10%] bottom-[-4%] blur-3xl"
       />
-      {/* The source sits behind a min-width media query, so phones, where the
-          figure is hidden, fetch only the 1px placeholder and not the shot. */}
-      <picture>
+      <picture className="relative block">
         <source media="(min-width: 640px)" srcSet={assetUrl("/product/app-music.webp")} />
         <img
           src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
@@ -187,12 +186,9 @@ function HeroShot() {
           loading="eager"
           fetchPriority="high"
           decoding="async"
-          className="ring-border/70 relative aspect-[16/10] w-full rounded-xl object-cover object-top shadow-2xl ring-1"
+          className="ring-border/70 aspect-[16/10] w-full rounded-xl object-cover object-top shadow-2xl ring-1"
         />
       </picture>
-      <figcaption className="text-muted-foreground mt-3 text-center text-xs lg:text-left">
-        The Music page in Mirli 0.6.
-      </figcaption>
     </figure>
   );
 }
@@ -204,8 +200,8 @@ function HeroShot() {
  * output with a play button in the first screen, labelled with the prompt
  * that made it. This hero used to hold a decorative timeline and a prompt box
  * that could only open the download page; both are gone. What is left is one
- * headline, one sentence, two buttons, a screenshot of the running app and
- * six renders, each playable without installing anything.
+ * headline, one sentence, two buttons, a large screenshot of the running app
+ * and six renders, each playable without installing anything.
  */
 function Hero() {
   const stars = useStars();
@@ -219,57 +215,49 @@ function Hero() {
         className="bg-primary/12 pointer-events-none absolute -top-48 left-1/2 size-[34rem] -translate-x-1/2 rounded-full blur-3xl"
       />
 
-      <div className="relative mx-auto w-full max-w-6xl py-16 sm:py-24">
-        <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:gap-10">
-          <div className="mx-auto max-w-3xl text-center lg:mx-0 lg:text-left">
-            <span className="text-muted-foreground ring-border bg-card inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ring-1">
-              <span className="bg-primary size-1.5 rounded-full" aria-hidden="true" />
-              Free · Open source · Runs on your GPU
-            </span>
+      <div className="relative mx-auto w-full max-w-5xl py-16 sm:py-24">
+        <div className="mx-auto max-w-3xl text-center">
+          <h1
+            id="hero-heading"
+            className="font-heading text-4xl font-semibold tracking-tight text-balance sm:text-5xl"
+          >
+            A free, open-source alternative to ElevenLabs and Suno
+          </h1>
 
-            <h1
-              id="hero-heading"
-              className="font-heading mt-5 text-4xl font-semibold tracking-tight text-balance sm:text-5xl"
-            >
-              Sound effects, music and voices, made on your own GPU
-            </h1>
+          <p className="text-muted-foreground mx-auto mt-5 max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
+            Sound effects, music and voices.
+          </p>
 
-            <p className="text-muted-foreground mx-auto mt-5 max-w-xl text-base leading-relaxed text-pretty sm:text-lg lg:mx-0">
-              A free, open-source alternative to ElevenLabs and Suno. No account,
-              no credits, works offline.
-            </p>
-
-            <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row sm:items-start lg:justify-start">
-              <DownloadButton pickerHref="#install" />
-              <Button size="lg" variant="outline" asChild>
-                <a href={REPO_URL} target="_blank" rel="noreferrer noopener">
-                  <StarIcon aria-hidden="true" />
-                  Star on GitHub
-                  {stars !== null ? (
-                    <span className="text-muted-foreground tabular-nums">
-                      {stars.toLocaleString("en")}
-                    </span>
-                  ) : null}
-                </a>
-              </Button>
-            </div>
-            <p className="text-muted-foreground mt-4 text-sm">
-              No graphics card?{" "}
-              <a
-                href={cloudWaitlistHref("home-hero")}
-                className="text-foreground underline underline-offset-4"
-              >
-                Join the Mirli Cloud waitlist
+          <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row sm:items-start">
+            <DownloadButton pickerHref="#install" />
+            <Button size="lg" variant="outline" asChild>
+              <a href={REPO_URL} target="_blank" rel="noreferrer noopener">
+                <StarIcon aria-hidden="true" />
+                Star on GitHub
+                {stars !== null ? (
+                  <span className="text-muted-foreground tabular-nums">
+                    {stars.toLocaleString("en")}
+                  </span>
+                ) : null}
               </a>
-            </p>
+            </Button>
           </div>
-
-          <HeroShot />
+          <p className="text-muted-foreground mt-4 text-sm">
+            No graphics card?{" "}
+            <a
+              href={cloudWaitlistHref("home-hero")}
+              className="text-foreground underline underline-offset-4"
+            >
+              Join the Mirli Cloud waitlist
+            </a>
+          </p>
         </div>
+
+        <HeroShot />
 
         <ul
           aria-label="Sounds made with Mirli"
-          className="mt-12 grid sm:mt-16 gap-3 sm:grid-cols-2 lg:grid-cols-3"
+          className="mt-16 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
         >
           {/* Four on a phone, where each tile is a full row; all six once the
               grid has columns. */}
@@ -412,7 +400,7 @@ function Compare() {
   return (
     <Section id="compare" labelledBy="compare-heading">
       <SectionHead id="compare-heading" eyebrow="Compare" title="Mirli or a hosted service">
-        A hosted service gives more consistent results. Mirli keeps the models and the files on your machine.
+        Open models trade consistency for ownership.
       </SectionHead>
       <div className="border-border mt-8 overflow-x-auto rounded-md border">
         <table className="w-full min-w-[32rem] text-left text-sm">

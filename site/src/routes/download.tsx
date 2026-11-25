@@ -65,12 +65,12 @@ const PROMPTS = [
 ];
 
 const HEADLINE = [
-  ["Sound", "effects,", "music"],
-  ["and", "voices", "on", "your", "GPU"],
+  ["A", "free,", "open-source", "alternative"],
+  ["to", "ElevenLabs", "and", "Suno"],
 ];
 
 const INSIDE = [
-  ["The desktop app", "and its local server. Your prompts and files stay on your machine."],
+  ["The desktop app", "and its local server. Nothing leaves your machine."],
   ["audio.cpp", "the native engine. No Python to install."],
   ["An MCP server", "so Claude Code and Cursor can make sound too."],
 ] as const;
@@ -479,7 +479,7 @@ export function DownloadPage() {
 
           <h1
             id="download-heading"
-            className="mt-4 px-4 text-[clamp(3.1rem,11.4vw,9.25rem)] leading-[0.84] text-balance uppercase"
+            className="mt-4 px-4 text-[clamp(2.3rem,7.9vw,6.5rem)] leading-[0.84] text-balance uppercase"
           >
             {HEADLINE.map((line, l) => (
               <span key={l} className="block">
@@ -505,8 +505,7 @@ export function DownloadPage() {
             className="text-muted-foreground dl-rise mt-7 max-w-xl px-4 text-lg leading-relaxed text-pretty sm:text-xl"
             style={{ "--d": "0.8s" } as CSSProperties}
           >
-            Open-weight models run inside the app, with no account to make and
-            nothing to pay per sound.
+            Sound effects, music and voices.
           </p>
 
           <div
@@ -718,10 +717,10 @@ export function DownloadPage() {
             index="02"
             label="In the box"
             id="proof-heading"
-            title="The film and the numbers"
+            title="See it. Count it."
           >
-            A 30-second promo film, beside stars, downloads and forks read live
-            from GitHub.
+            Thirty seconds of the app at work, and what the repository says
+            today.
           </SectionHead>
 
           <div className="bg-border border-border mt-10 grid gap-px border lg:grid-cols-3">
@@ -775,11 +774,11 @@ export function DownloadPage() {
             id="github-heading"
             className="text-[clamp(3.5rem,13vw,10.5rem)] leading-[0.84] text-balance uppercase"
           >
-            Source on GitHub
+            Built in the open.
           </h2>
           <p className="text-muted-foreground mt-7 max-w-md text-lg leading-relaxed">
-            The code is MIT licensed. Issues and pull requests are welcome, and
-            a star helps other people find the project.
+            Read the code, file an issue, send a pull request. A star helps the
+            next person find it.
           </p>
           <div className="mt-9 flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row">
             <ButtonLink

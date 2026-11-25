@@ -1,0 +1,508 @@
+<title>Mirli Navigation Models</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a page of notes around a stage of three device frames (phone, tablet, desktop) that render one navigation model at real pixel size, scaled to fit. Mirli's own tokens (app/src/index.css), dark-first. */
+:root{
+  --bg:#181817; --fg:#f1ece0; --card:#20201e; --popover:#262624; --muted:#272725; --muted-fg:#a9a797;
+  --accent:#30302d; --border:#34332f; --border-strong:#4a4843; --signal:#f2a40c; --ok:#6fcf9f; --warn:#e8a05a; --danger:#f08a80;
+  --stage:#121211; --frame:#0b0b0a;
+  --font-display:'Big Shoulders Display','Arial Narrow','Roboto Condensed',sans-serif;
+  --font-sans:'Inter',ui-sans-serif,system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#f1ece0; --fg:#14130f; --card:#faf6ec; --popover:#faf6ec; --muted:#e7e0d0; --muted-fg:#5c5850;
+  --accent:#e0d8c6; --border:#d9d2c0; --border-strong:#bfb6a1; --signal:#c98500; --ok:#1f6b4a; --warn:#a8501b; --danger:#b3261e;
+  --stage:#e6e0d2; --frame:#2a2926; color-scheme:light}}
+:root[data-theme="light"]{
+  --bg:#f1ece0; --fg:#14130f; --card:#faf6ec; --popover:#faf6ec; --muted:#e7e0d0; --muted-fg:#5c5850;
+  --accent:#e0d8c6; --border:#d9d2c0; --border-strong:#bfb6a1; --signal:#c98500; --ok:#1f6b4a; --warn:#a8501b; --danger:#b3261e;
+  --stage:#e6e0d2; --frame:#2a2926; color-scheme:light}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-sans);font-size:15px;line-height:1.5;margin:0}
+.wrap{max-width:1500px;margin:0 auto;padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.01em;text-wrap:balance;margin:0;line-height:1}
+h1{font-size:clamp(34px,5vw,56px);font-weight:800}
+h2{font-size:30px;font-weight:800}
+h3{font-size:20px;font-weight:600}
+p{max-width:68ch;margin:.5em 0}
+.lede{color:var(--muted-fg);font-size:17px}
+.mono{font-family:var(--font-mono);font-size:12px;letter-spacing:.02em}
+.controls{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;margin:24px 0 16px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding-block:10px;z-index:5;border-bottom:1px solid var(--border)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.seg{display:flex;gap:4px;background:var(--muted);padding:4px;border-radius:999px;flex-wrap:wrap}
+.seg button{font:500 14px var(--font-sans);color:var(--muted-fg);background:none;border:0;border-radius:999px;padding:10px 16px;min-height:44px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.seg button:focus-visible,button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+.label{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted-fg)}
+.model-intro{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:24px;margin:12px 0 20px}
+@media (max-width:860px){.model-intro{grid-template-columns:1fr}}
+.pc{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:520px){.pc{grid-template-columns:1fr}}
+.pc ul{margin:6px 0 0;padding-left:18px}.pc li{margin:4px 0}
+.stage{background:var(--stage);border-radius:14px;padding:20px;display:flex;gap:24px;align-items:flex-start;justify-content:center;flex-wrap:wrap;overflow:hidden}
+.dev{display:flex;flex-direction:column;gap:8px;align-items:center;min-width:0}
+.dev .cap{display:flex;gap:8px;align-items:baseline}
+.shell{background:var(--frame);border-radius:28px;padding:10px;box-shadow:0 20px 40px -20px rgb(0 0 0 / .5)}
+.shell.desk{border-radius:12px;padding:8px}
+.viewport{overflow:hidden;border-radius:20px;position:relative}
+.shell.desk .viewport{border-radius:6px}
+.screen{transform-origin:0 0;position:absolute;left:0;top:0}
+.notes{margin-top:28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:20px}
+.note{border-top:1px solid var(--border-strong);padding-top:12px}
+.note p,.note li{color:var(--muted-fg);font-size:14px}
+.note ul{padding-left:18px;margin:6px 0}
+a{color:var(--signal)}
+.src{font-size:13px;color:var(--muted-fg)}
+.src li{margin:3px 0;word-break:break-word}
+
+/* ---------- the mini app inside each frame (real px) ---------- */
+.app{width:100%;height:100%;background:var(--bg);color:var(--fg);font-family:var(--font-sans);font-size:15px;display:flex;position:relative;overflow:hidden}
+.app button{font-family:inherit;color:inherit;cursor:pointer}
+.col{display:flex;flex-direction:column;min-width:0;flex:1;position:relative}
+.topbar{display:flex;align-items:center;gap:6px;padding:8px 12px;min-height:56px;border-bottom:1px solid var(--border)}
+.topbar .crumb{font-size:15px;color:var(--muted-fg);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar .crumb b{color:var(--fg);font-weight:600}
+.ib{width:44px;height:44px;border-radius:10px;border:0;background:none;display:grid;place-items:center;flex:none}
+.ib:hover{background:var(--accent)}
+.ib svg{width:22px;height:22px}
+.page{flex:1;overflow:auto;padding:18px 16px 24px;min-height:0}
+.page h4{font-family:var(--font-display);text-transform:uppercase;font-size:34px;font-weight:800;margin:4px 0 6px;line-height:1}
+.sub{color:var(--muted-fg);font-size:14px;margin:0 0 16px}
+.pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:0 18px;min-height:44px;border:1px solid var(--border-strong);background:none;font-size:15px}
+.pill.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
+.tile{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;min-height:76px;display:flex;flex-direction:column;justify-content:space-between;text-align:left}
+.tile svg{width:20px;height:20px;color:var(--muted-fg)}
+.row{display:flex;align-items:center;gap:12px;min-height:64px;border-bottom:1px solid var(--border);position:relative}
+.wave{width:48px;height:48px;border-radius:8px;background:var(--card);border:1px solid var(--border);display:grid;place-items:center;flex:none}
+.wave i{display:block;width:26px;height:20px;background:repeating-linear-gradient(90deg,var(--fg) 0 2px,transparent 2px 5px);mask:linear-gradient(0deg,transparent 0,#000 30%,#000 70%,transparent 100%);opacity:.75}
+.row .meta{flex:1;min-width:0}
+.row .t{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .m{font-family:var(--font-mono);font-size:12px;color:var(--muted-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .hoverOnly{opacity:0;transition:opacity .15s}
+.row:hover .hoverOnly{opacity:1}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px}
+.chip{flex:none;border:1px solid var(--border-strong);border-radius:999px;padding:0 14px;min-height:40px;background:none;font-size:14px;color:var(--muted-fg)}
+.chip.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+/* nav: bottom tab bar */
+.tabbar{display:flex;border-top:1px solid var(--border);background:var(--bg);padding-bottom:14px}
+.tabbar button{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 4px;min-height:56px;font-size:11px;color:var(--muted-fg)}
+.tabbar button svg{width:24px;height:24px}
+.tabbar button.on{color:var(--fg)}
+.tabbar button.on svg{color:var(--signal)}
+.tabbar .create span.dot{width:44px;height:36px;border-radius:12px;background:var(--fg);color:var(--bg);display:grid;place-items:center}
+/* mini player */
+.mini{display:flex;align-items:center;gap:10px;padding:8px 10px 8px 12px;background:var(--popover);border-top:1px solid var(--border);min-height:60px}
+.mini .t{flex:1;min-width:0;font-size:14px}
+.mini .t small{display:block;font-family:var(--font-mono);font-size:11px;color:var(--muted-fg)}
+.mini .bar{position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,var(--signal) 38%,transparent 38%)}
+.desk-player{display:flex;align-items:center;gap:12px;padding:6px 14px;border-top:1px solid var(--border);background:var(--popover);min-height:52px;font-size:13px}
+.desk-player .track{flex:1;height:4px;background:var(--border-strong);border-radius:4px;position:relative}
+.desk-player .track:after{content:"";position:absolute;left:0;top:0;bottom:0;width:38%;background:var(--signal);border-radius:4px}
+/* rail + sidebar */
+.rail{width:84px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 0;flex:none;background:var(--bg)}
+.rail button{width:72px;border:0;background:none;border-radius:14px;padding:8px 0;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;color:var(--muted-fg);min-height:56px}
+.rail button svg{width:22px;height:22px}
+.rail button.on{color:var(--fg)}
+.rail button.on .ic{background:var(--accent)}
+.rail .ic{width:56px;height:32px;border-radius:16px;display:grid;place-items:center}
+.rail .grow{flex:1}
+.side{width:232px;border-right:1px solid var(--border);display:flex;flex-direction:column;padding:12px 10px;gap:2px;flex:none}
+.side .brand{font-family:var(--font-display);font-size:22px;font-weight:800;padding:6px 10px 14px;letter-spacing:.02em}
+.side .brand b{color:var(--signal)}
+.side button{border:0;background:none;display:flex;align-items:center;gap:10px;padding:0 10px;height:34px;border-radius:8px;font-size:14px;color:var(--muted-fg);text-align:left}
+.side button svg{width:17px;height:17px}
+.side button.on{background:var(--accent);color:var(--fg)}
+.side .grp{font-family:var(--font-mono);font-size:11px;color:var(--muted-fg);padding:14px 10px 4px}
+.side .grow{flex:1}
+.side .gpu{font-size:12px;color:var(--muted-fg);padding:8px 10px;display:flex;gap:8px;align-items:center}
+.side .gpu i{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+/* drawer */
+.scrim{position:absolute;inset:0;background:rgb(0 0 0 / .5);z-index:20}
+.drawer{position:absolute;left:0;top:0;bottom:0;width:84%;max-width:320px;background:var(--bg);z-index:21;border-right:1px solid var(--border);padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+.drawer button{border:0;background:none;display:flex;align-items:center;gap:14px;padding:0 12px;min-height:48px;border-radius:10px;font-size:16px;text-align:left;color:var(--fg)}
+.drawer button.on{background:var(--accent)}
+.drawer button svg{width:22px;height:22px;color:var(--muted-fg)}
+/* sheets & popovers */
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--popover);border-radius:18px 18px 0 0;z-index:21;padding:8px 12px 24px;border-top:1px solid var(--border-strong);max-height:85%;overflow:auto}
+.sheet .grab{width:40px;height:5px;border-radius:3px;background:var(--border-strong);margin:2px auto 10px}
+.sheet .sh{display:flex;gap:12px;align-items:center;padding:4px 4px 12px;border-bottom:1px solid var(--border);margin-bottom:6px}
+.sheet .act{display:flex;align-items:center;gap:14px;width:100%;border:0;background:none;min-height:52px;padding:0 8px;font-size:16px;text-align:left;border-radius:10px}
+.sheet .act svg{width:22px;height:22px;color:var(--muted-fg)}
+.sheet .act.dis{color:var(--muted-fg)}
+.sheet .act.dis small{margin-left:auto;font-family:var(--font-mono);font-size:11px}
+.sheet .act.danger{color:var(--danger)}
+.sheet .act.danger svg{color:var(--danger)}
+.pop{position:absolute;z-index:21;background:var(--popover);border:1px solid var(--border-strong);border-radius:8px;padding:4px;width:210px;box-shadow:0 10px 30px -10px rgb(0 0 0 / .6)}
+.pop button{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;height:32px;padding:0 10px;font-size:13px;border-radius:5px;text-align:left}
+.pop button:hover{background:var(--accent)}
+.pop button svg{width:15px;height:15px;color:var(--muted-fg)}
+.pop kbd{margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--muted-fg)}
+/* composer */
+.composer{margin:8px 10px 10px;background:var(--card);border:1px solid var(--border-strong);border-radius:16px;padding:10px 10px 10px 14px;display:flex;flex-direction:column;gap:8px}
+.composer .in{color:var(--muted-fg);font-size:15px;min-height:24px}
+.composer .cr{display:flex;align-items:center;gap:8px}
+.composer .kind{display:flex;gap:6px;flex:1;overflow:auto}
+.composer .go{width:44px;height:44px;border-radius:50%;background:var(--fg);color:var(--bg);border:0;display:grid;place-items:center}
+.composer .go svg{width:20px;height:20px}
+/* timeline */
+.tl{border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden}
+.tl .hd{display:flex;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid var(--border);font-size:14px;flex-wrap:nowrap;overflow-x:auto}
+.tl .hd .time{font-family:var(--font-mono);font-size:12px;color:var(--muted-fg);white-space:nowrap}
+.lane{display:flex;border-bottom:1px solid var(--border);min-height:72px}
+.lane .head{width:var(--head,150px);flex:none;padding:8px 10px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:6px;justify-content:center}
+.lane .head .nm{display:flex;gap:8px;align-items:center;font-size:14px}
+.lane .head .sw{width:14px;height:14px;border-radius:4px}
+.lane .head .ms{display:flex;gap:4px}
+.lane .head .ms button{min-width:36px;height:30px;border-radius:6px;border:1px solid var(--border-strong);background:none;font:600 12px var(--font-mono)}
+.lane .body{flex:1;position:relative;background:repeating-linear-gradient(90deg,transparent 0 79px,var(--border) 79px 80px)}
+.clip{position:absolute;top:10px;bottom:10px;border-radius:6px;padding:4px 8px;font-size:12px;overflow:hidden;white-space:nowrap;color:#14130f}
+.clip.sel{outline:2px solid var(--signal);outline-offset:1px}
+.playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--signal);left:38%}
+.toolbar{display:flex;gap:4px;overflow-x:auto;padding:6px 8px;border-top:1px solid var(--border);background:var(--popover)}
+.toolbar button{flex:none;min-width:60px;min-height:52px;border:0;background:none;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--muted-fg)}
+.toolbar button svg{width:22px;height:22px;color:var(--fg)}
+.banner{border:1px dashed var(--border-strong);border-radius:12px;padding:12px 14px;font-size:14px;color:var(--muted-fg);display:flex;gap:10px;align-items:flex-start;margin:12px 0}
+.banner svg{width:20px;height:20px;flex:none;color:var(--signal)}
+.badge{font-family:var(--font-mono);font-size:10px;border:1px solid var(--border-strong);border-radius:4px;padding:1px 5px;color:var(--muted-fg);margin-left:auto}
+.split{display:flex;flex:1;min-height:0}
+.split .listpane{width:46%;border-right:1px solid var(--border);overflow:auto;padding:14px}
+.split .detail{flex:1;overflow:auto;padding:18px}
+.toptabs{display:flex;justify-content:center;gap:4px;padding:8px;border-bottom:1px solid var(--border)}
+.toptabs .seg2{display:flex;gap:2px;background:var(--muted);padding:4px;border-radius:999px}
+.toptabs button{border:0;background:none;border-radius:999px;padding:0 16px;min-height:40px;font-size:14px;color:var(--muted-fg)}
+.toptabs button.on{background:var(--fg);color:var(--bg)}
+.hint{position:absolute;right:10px;top:64px;z-index:30;background:var(--signal);color:#14130f;font:600 11px var(--font-mono);padding:4px 8px;border-radius:6px;pointer-events:none}
+</style>
+
+<div class="wrap">
+  <span class="label">Mirli · navigation per device · draft for discussion</span>
+  <h1 style="margin-top:8px">Three ways to get around Mirli</h1>
+  <p class="lede">Each model below covers a phone (375 px), an iPad in portrait (768 px) and a desktop window (1280 px). The frames are drawn at their real pixel sizes and scaled to fit. They are clickable: tap the nav, a sound row's <b>⋯</b>, the Create button, and open a studio project. The visual style is Mirli's current one; only the navigation and menus change.</p>
+
+  <div class="controls" role="toolbar" aria-label="Mockup controls">
+    <div><div class="label">Model</div>
+      <div class="seg" id="modelSeg">
+        <button data-m="A" aria-pressed="true">A · Adaptive tabs</button>
+        <button data-m="B" aria-pressed="false">B · One composer</button>
+        <button data-m="C" aria-pressed="false">C · Phone companion</button>
+      </div></div>
+    <div><div class="label">Devices</div>
+      <div class="seg" id="devSeg">
+        <button data-d="all" aria-pressed="true">All three</button>
+        <button data-d="phone" aria-pressed="false">Phone</button>
+        <button data-d="tablet" aria-pressed="false">Tablet</button>
+        <button data-d="desktop" aria-pressed="false">Desktop</button>
+      </div></div>
+  </div>
+
+  <div class="model-intro" id="intro"></div>
+  <div class="stage" id="stage"></div>
+
+  <div class="notes">
+    <div class="note"><h3>Common to all three</h3>
+      <ul>
+        <li>Every tap target is at least 44 px on touch screens, chosen by <span class="mono">(pointer: coarse)</span>, not by screen width. A touch laptop or an iPad with a trackpad gets the right size either way.</li>
+        <li>Context menus become bottom sheets on touch, opened by the visible <b>⋯</b> button or by long-press. Every item stays reachable without the gesture.</li>
+        <li>Hover-only controls (row actions that fade in) always show on touch.</li>
+        <li>Items that can't work in the browser studio stay visible but say why ("Desktop app only"), as Apple asks for tabs: explain the state, don't hide or grey it without a reason.</li>
+        <li>The mini player sits flush on top of the bottom bar, with no gap that lets taps fall through.</li>
+      </ul></div>
+    <div class="note"><h3>Breakpoints</h3>
+      <p>Material's width classes: under 600 px is a phone layout, 600 to 839 is medium (iPad portrait), 840 and up is expanded (iPad landscape, laptop). Mirli today switches only at Tailwind's <span class="mono">md</span> (768 px), so an iPad mini in portrait (744 px) gets the phone layout and a 768 px iPad gets the desktop one.</p></div>
+    <div class="note"><h3>Sources</h3>
+      <ul class="src">
+        <li>Apple HIG, tab bars and the iPad tab bar that turns into a sidebar: developer.apple.com/design/human-interface-guidelines/tab-bars</li>
+        <li>Apple HIG, sheets and detents; context menus; layout and size classes</li>
+        <li>Android adaptive navigation (bar when compact, rail otherwise) and window size classes: developer.android.com/develop/ui/compose/layouts/adaptive</li>
+        <li>Android canonical layouts, list-detail and supporting pane: developer.android.com/guide/topics/large-screens/large-screen-canonical-layouts</li>
+        <li>WCAG 2.2 target size, 2.5.8 and 2.5.5: w3.org/WAI/WCAG22/Understanding/target-size-minimum.html</li>
+        <li>Figma mobile app is view, comment and present only: help.figma.com/hc/en-us/articles/1500007537281</li>
+        <li>BandLab mobile mix view and track view: blog.bandlab.com/studio-faq/</li>
+        <li>GarageBand hides track headers on iPhone and iPad: support.apple.com/guide/garageband-iphone/chsb34b9a7c/ios</li>
+        <li>Spotify Now Playing bar above the menu bar: support.spotify.com/article/now-playing/</li>
+        <li>Full list with notes in docs/device-nav/DESIGN.md</li>
+      </ul></div>
+  </div>
+</div>
+
+<script>
+const I = {
+  home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
+  lib:'<path d="M4 4v16M8 4v16M12 4v16M15 5l4 15"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  studio:'<path d="M4 6h10M4 12h16M4 18h7"/><circle cx="18" cy="6" r="2"/><circle cx="15" cy="18" r="2"/>',
+  mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+  folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  cpu:'<rect x="6" y="6" width="12" height="12" rx="1"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/>',
+  bot:'<rect x="4" y="8" width="16" height="11" rx="2"/><path d="M12 4v4M9 13h.01M15 13h.01"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/>',
+  pulse:'<path d="M3 12h4l3 8 4-16 3 8h4"/>',
+  menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
+  dots:'<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
+  play:'<path d="M7 4l13 8-13 8z"/>',
+  pause:'<path d="M7 4h4v16H7zM14 4h4v16h-4z"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+  up:'<path d="M12 19V5M5 12l7-7 7 7"/>',
+  star:'<path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z"/>',
+  dl:'<path d="M12 4v12M6 11l6 6 6-6M4 20h16"/>',
+  share:'<path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M12 3v13M7 8l5-5 5 5"/>',
+  tag:'<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/>',
+  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  reveal:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v5M9.5 13.5L12 11l2.5 2.5"/>',
+  drag:'<path d="M5 9l-3 3 3 3M19 9l3 3-3 3M2 12h20"/>',
+  scissors:'<circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="M8.5 8.5L20 19M8.5 15.5L20 5"/>',
+  copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
+  vol:'<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6"/>',
+  undo:'<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>',
+  panel:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>',
+  laptop:'<rect x="4" y="5" width="16" height="11" rx="1"/><path d="M2 19h20"/>',
+  wand:'<path d="M15 4V2M15 10V8M11 6h2M17 6h2M4 20L14 10"/>',
+  x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  queue:'<path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="16" r="3"/>',
+  back:'<path d="M15 5l-7 7 7 7"/>'
+};
+const ic = (n,extra='') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" ${extra}>${I[n]}</svg>`;
+const SOUNDS = [
+  ['Door slam 01','5h ago · 207 KB · door · impact'],
+  ['UI confirm blip','10h ago · 69 KB · ui · synth'],
+  ['Gravel footstep','by claude-code · 15h ago'],
+  ['Rain on tin roof','20h ago · 818 KB · ambience'],
+  ['Sword unsheath','by cursor · 1d ago · metal'],
+  ['Distant explosion','1d ago · 517 KB · explosion'],
+  ['Server room hum','2d ago · 1.2 MB · ambience'],
+];
+const MODELS = {
+  A:{name:'Adaptive tabs',
+     pitch:'One app everywhere. A bottom tab bar on the phone, a rail with labels on the tablet, the current sidebar on desktop: the pattern Apple and Android both ship by default. Everything you can do on desktop is reachable on a phone; dense surfaces like the timeline get a phone-sized version rather than being cut.',
+     pros:['Closest to platform convention: Apple\'s adaptable tab bar and Android\'s bar-then-rail.','Same five destinations on every device, so muscle memory carries over.','Fits the existing sidebar groups with little reshuffling.'],
+     cons:['Five tabs is the ceiling; Models, Agents, Projects, Activity and Settings sit behind the profile button.','The phone timeline is real work to build well (track focus view, bottom toolbar).']},
+  B:{name:'One composer',
+     pitch:'Make the prompt the navigation. On phone and tablet a composer is always docked at the bottom (pick SFX, Music or Speech and type), and the library is the home feed above it, the way Suno and the ElevenLabs app lead with creating. Everything else lives in a drawer. The tablet becomes a list and detail split.',
+     pros:['Fastest path to the thing people most want on a phone: describe a sound, hear it.','Builds on the Create panel and composer Mirli already has.','Very little chrome: one docked bar instead of a tab bar plus a player.'],
+     cons:['Drawers hide navigation; Material is moving away from them.','Studio, Voice Lab and Models are two taps deep on phone.','The composer and the mini player share one strip, which needs care.']},
+  C:{name:'Phone companion',
+     pitch:'Decide that the phone is for making and listening, not arranging, the way Figma\'s mobile app views and comments but does not edit designs. The phone gets three tabs: Make, Library and Queue. Studio projects open as a listen-and-comment view with a "Continue on a larger screen" handoff. From tablet size up you get the full studio, with an iPad-style top tab bar that turns into a sidebar.',
+     pros:['Honest scope: no cramped timeline on a 375 px screen.','Least build work on phone; effort goes into making the tablet studio great.','Three big tabs are easy to learn.'],
+     cons:['Some people will want to nudge a clip on the bus; they cannot.','Tablet and phone diverge more, so two layouts to maintain.','Voice Lab cloning moves inside Make rather than having its own place.']}
+};
+let model='A', devices='all';
+const state = {}; // per frame: {route, sheet, drawer, playing}
+const DEV = {
+  phone:{w:375,h:812,label:'Phone · 375 × 812',cls:'compact'},
+  tablet:{w:768,h:1024,label:'iPad portrait · 768 × 1024',cls:'medium'},
+  desktop:{w:1280,h:800,label:'Desktop · 1280 × 800',cls:'expanded'}
+};
+function key(d){return model+'-'+d}
+function st(d){return state[key(d)] ||= {route:'home',sheet:null,drawer:false,playing:true,sel:1}}
+
+// ---------- shared screens ----------
+function libraryRows(d){
+  const touch = d!=='desktop';
+  return SOUNDS.map((s,i)=>`<div class="row">
+    <button class="ib" data-act="play" data-i="${i}" aria-label="Play ${s[0]}" style="width:48px;height:48px;padding:0"><span class="wave"><i></i></span></button>
+    <div class="meta"><div class="t">${s[0]}</div><div class="m">${s[1]}</div></div>
+    ${touch?'':`<button class="ib hoverOnly" aria-label="Open in Finder" style="width:32px;height:32px">${ic('reveal','style="width:17px;height:17px"')}</button>`}
+    <button class="ib" data-act="more" data-i="${i}" aria-label="More for ${s[0]}" ${touch?'':'style="width:32px;height:32px"'}>${ic('dots',touch?'':'style="width:17px;height:17px"')}</button>
+  </div>`).join('');
+}
+function homeScreen(d){
+  return `<div class="page"><h4>Welcome back</h4><p class="sub">Pick up where you left off, or start something new.</p>
+  <button class="pill primary" data-act="create">${ic('plus','style="width:18px;height:18px"')} New sound</button>
+  <div class="tiles"><button class="tile" data-go="studio">${ic('studio')}<span>Studio</span></button><button class="tile" data-act="create">${ic('wand')}<span>Music</span></button><button class="tile" data-act="create">${ic('pulse')}<span>SFX</span></button></div>
+  <div class="label" style="margin:18px 0 4px">Recent</div>${libraryRows(d).split('</div>\n  <div class="row">').slice(0,4).join('</div>\n  <div class="row">')}</div>`;
+}
+function libraryScreen(d){
+  return `<div class="page"><h4>Library</h4><p class="sub">42 sounds</p>
+  <div class="chips"><button class="chip on">All</button><button class="chip">SFX</button><button class="chip">Music</button><button class="chip">Speech</button><button class="chip">${'★'} Favourites</button><button class="chip">By agents</button></div>
+  ${libraryRows(d)}</div>`;
+}
+function voicesScreen(){
+  return `<div class="page"><h4>Voices</h4><p class="sub">Clone a voice from a clip, or design one.</p>
+  <div class="tiles" style="grid-template-columns:1fr 1fr"><button class="tile">${ic('mic')}<span>Record a clip</span></button><button class="tile">${ic('dl')}<span>Upload a clip</span></button></div>
+  ${['Narrator (warm)','Rosa','Kid, excited','Old sailor'].map(v=>`<div class="row"><span class="wave" style="border-radius:50%"></span><div class="meta"><div class="t">${v}</div><div class="m">cloned · 12 s reference</div></div><button class="ib">${ic('play')}</button></div>`).join('')}</div>`;
+}
+function moreScreen(d){
+  const hosted = true;
+  const items=[['folder','Projects','projects'],['cpu','Models','models'],['bot','Agents','agents'],['pulse','Activity','activity'],['gear','Settings','settings']];
+  return `<div class="page"><h4>You</h4><p class="sub">Default profile · Mirli Cloud</p>
+  ${items.map(([i,l,r])=>`<button class="row" data-go="${r}" style="width:100%;border-left:0;border-right:0;border-top:0;background:none;text-align:left;min-height:56px;font-size:16px">${ic(i,'style="width:22px;height:22px;color:var(--muted-fg)"')}<span style="flex:1">${l}</span>${r==='models'?'<span class="badge">CLOUD</span>':''}</button>`).join('')}
+  <div class="banner">${ic('laptop')}<div>Running in the browser studio. Local models, project folders and the MCP server for local agents live in the desktop app. Agents reach this studio through its remote MCP link instead.</div></div></div>`;
+}
+function simplePage(title,sub){return `<div class="page"><h4>${title}</h4><p class="sub">${sub}</p><div class="banner">${ic('laptop')}<div>Placeholder page for the mockup.</div></div></div>`}
+function modelsScreen(){
+  return `<div class="page"><h4>Models</h4><p class="sub">In the browser studio these run on Mirli Cloud GPUs. Nothing to download.</p>
+  ${[['Stable Audio Open Small','SFX'],['ACE-Step 1.5','Music'],['Chatterbox Turbo','Speech · cloning'],['Demucs','Stems']].map(m=>`<div class="row"><span class="wave" style="font:800 16px var(--font-display)">${m[0].slice(0,2).toUpperCase()}</span><div class="meta"><div class="t">${m[0]}</div><div class="m">${m[1]} · ready</div></div></div>`).join('')}
+  <div class="banner">${ic('cpu')}<div><b>Download and load local models</b> is a desktop-app feature. It needs this computer's disk and GPU.</div></div></div>`;
+}
+function clipLanes(touch){
+  const lanes=[['Narrator','oklch(0.75 0.13 230)',[[2,30,'Once upon a…'],[40,22,'The door…']]],['Rosa','oklch(0.75 0.13 20)',[[18,26,'Who\'s there?']]],['SFX','oklch(0.75 0.13 120)',[[34,10,'Door slam'],[60,18,'Rain']]]];
+  return lanes.map(([n,c,cl],li)=>`<div class="lane" style="min-height:${touch?84:64}px"><div class="head"><div class="nm"><span class="sw" style="background:${c}"></span>${n}</div><div class="ms"><button style="${touch?'min-width:44px;height:36px':''}">M</button><button style="${touch?'min-width:44px;height:36px':''}">S</button></div></div>
+   <div class="body">${cl.map(([l,w,t],ci)=>`<div class="clip ${li===0&&ci===1?'sel':''}" style="left:${l}%;width:${w}%;background:${c}">${t}</div>`).join('')}${li===0?'<div class="playhead"></div>':''}</div></div>`).join('');
+}
+
+// ---------- per model chrome ----------
+function render(d){
+  const s=st(d), m=model, touch=d!=='desktop';
+  let body='';
+  const route=s.route;
+  const screen = {home:()=>homeScreen(d),library:()=>libraryScreen(d),studio:()=>studioScreen(d),voices:voicesScreen,more:()=>moreScreen(d),models:modelsScreen,
+     projects:()=>simplePage('Projects','Folders of related sounds.'),agents:()=>simplePage('Agents','Connect Claude, Cursor or ChatGPT.'),activity:()=>simplePage('Activity','Generation queue and history.'),settings:()=>simplePage('Settings','Theme, ambient background, profile.'),queue:()=>simplePage('Queue','3 generating · 12 done today')}[route]||(()=>homeScreen(d));
+  const titles={home:'Home',library:'Library',studio:'Studio',voices:'Voices',more:'You',models:'Models',projects:'Projects',agents:'Agents',activity:'Activity',settings:'Settings',queue:'Queue'};
+  const top = (left)=>`<div class="topbar">${left}<div class="crumb">Mirli / <b>${titles[route]}</b></div>${d==='phone'&&m==='A'?`<button class="ib" data-go="more" aria-label="You">${ic('user')}</button>`:`<button class="ib" aria-label="Search">${ic('search')}</button>`}</div>`;
+  const mini = s.playing?`<div class="mini" style="position:relative"><span class="bar"></span><span class="wave" style="width:40px;height:40px"><i></i></span><div class="t">Rain on tin roof<small>0:07 / 0:18</small></div><button class="ib" aria-label="Pause">${ic('pause')}</button></div>`:'';
+  const deskPlayer = `<div class="desk-player"><button class="ib" style="width:32px;height:32px">${ic('pause','style="width:16px;height:16px"')}</button><span>Rain on tin roof</span><div class="track"></div><span class="mono">0:07 / 0:18</span></div>`;
+  const sideItems=[['plus','Create','create'],['lib','Library','library'],null,['studio','Studio','studio'],['mic','Voice Lab','voices'],['folder','Projects','projects'],['cpu','Models','models'],['bot','Agents','agents']];
+  const sidebar = ()=>`<nav class="side" aria-label="Main"><div class="brand">MIRLI<b>.</b></div>${sideItems.map(x=>x?`<button class="${route===x[2]?'on':''}" ${x[2]==='create'?'data-act="create"':`data-go="${x[2]}"`}>${ic(x[0])}${x[1]}</button>`:'<div class="grp">Studio</div>').join('')}<div class="grow"></div><button data-go="settings" class="${route==='settings'?'on':''}">${ic('gear')}Settings</button><button data-go="activity" class="${route==='activity'?'on':''}">${ic('pulse')}Activity</button><div class="gpu"><i></i>Mirli Cloud · ready</div></nav>`;
+
+  if(d==='desktop'){
+    // all models keep today's desktop sidebar
+    body = `${sidebar()}<div class="col">${top(`<button class="ib" aria-label="Toggle sidebar">${ic('panel')}</button>`)}${screen()}${deskPlayer}</div>`;
+  } else if(m==='A'){
+    if(d==='phone'){
+      const tabs=[['home','Home','home'],['lib','Library','library'],['plus','Create','create'],['studio','Studio','studio'],['mic','Voices','voices']];
+      body = `<div class="col">${top('')}${screen()}${mini}<nav class="tabbar" aria-label="Main">${tabs.map(t=>t[2]==='create'?`<button class="create" data-act="create"><span class="dot">${ic('plus')}</span></button>`:`<button class="${route===t[2]?'on':''}" data-go="${t[2]}">${ic(t[0])}${t[1]}</button>`).join('')}</nav></div>`;
+    } else {
+      const r=[['home','Home','home'],['lib','Library','library'],['studio','Studio','studio'],['mic','Voices','voices'],['folder','Projects','projects']];
+      body = `<nav class="rail" aria-label="Main"><button data-act="create" style="margin-bottom:8px"><span class="ic" style="background:var(--fg);color:var(--bg);width:56px;height:56px;border-radius:16px">${ic('plus')}</span></button>${r.map(t=>`<button class="${route===t[2]?'on':''}" data-go="${t[2]}"><span class="ic">${ic(t[0])}</span>${t[1]}</button>`).join('')}<div class="grow"></div><button class="${['more','models','agents','activity','settings'].includes(route)?'on':''}" data-go="more"><span class="ic">${ic('user')}</span>You</button></nav><div class="col">${top('')}${screen()}${mini}</div>`;
+    }
+  } else if(m==='B'){
+    const composer = `<div class="composer"><div class="in" data-act="create">Describe a sound… heavy wooden door slam</div><div class="cr"><div class="kind"><button class="chip on" style="min-height:36px">SFX</button><button class="chip" style="min-height:36px">Music</button><button class="chip" style="min-height:36px">Speech</button></div><button class="go" data-act="create" aria-label="Generate">${ic('up')}</button></div></div>`;
+    const miniB = s.playing?`<div class="mini" style="position:relative;margin:0 10px;border-radius:12px;border:1px solid var(--border)"><span class="bar"></span><div class="t">Rain on tin roof<small>0:07 / 0:18</small></div><button class="ib">${ic('pause')}</button></div>`:'';
+    if(d==='phone'){
+      const scr = route==='home'?libraryScreen(d).replace('<h4>Library</h4>','<h4>Your sounds</h4>'):screen();
+      body = `<div class="col">${top(`<button class="ib" data-act="drawer" aria-label="Menu">${ic('menu')}</button>`)}${scr}${route==='studio'?'':miniB+composer}</div>`;
+    } else {
+      const left = `<div class="listpane">${libraryScreen(d).replace('<div class="page">','<div>')}</div>`;
+      const right = route==='home'||route==='library'?`<div class="detail"><span class="label">Selected</span><h4 style="font-family:var(--font-display);font-size:34px;text-transform:uppercase;margin:6px 0">Rain on tin roof</h4><p class="sub">Stable Audio Open Small · 18 s · ambience</p><div class="tl" style="height:120px;margin:12px 0;display:grid;place-items:center"><span class="wave" style="width:90%;height:80px;border:0;background:none"><i style="width:100%;height:60px"></i></span></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="pill primary">${ic('play','style="width:16px;height:16px"')}Play</button><button class="pill">${ic('star','style="width:16px;height:16px"')}Favourite</button><button class="pill" data-act="more" data-i="3">${ic('dots','style="width:16px;height:16px"')}More</button></div></div>`:`<div class="detail" style="padding:0">${screen()}</div>`;
+      body = `<nav class="rail" aria-label="Main"><button data-act="drawer"><span class="ic">${ic('menu')}</span>Menu</button><button class="${route==='home'||route==='library'?'on':''}" data-go="home"><span class="ic">${ic('lib')}</span>Sounds</button><button class="${route==='studio'?'on':''}" data-go="studio"><span class="ic">${ic('studio')}</span>Studio</button><button class="${route==='voices'?'on':''}" data-go="voices"><span class="ic">${ic('mic')}</span>Voices</button></nav><div class="col">${top('')}${route==='studio'?screen():`<div class="split">${left}${right}</div>`}${route==='studio'?'':miniB+composer}</div>`;
+    }
+  } else { // C
+    if(d==='phone'){
+      const tabs=[['wand','Make','home'],['lib','Library','library'],['queue','Queue','queue']];
+      const scr = route==='home'?makeScreen():screen();
+      body = `<div class="col">${top('')}${scr}${mini}<nav class="tabbar" aria-label="Main">${tabs.map(t=>`<button class="${route===t[2]||(t[2]==='home'&&['voices'].includes(route))?'on':''}" data-go="${t[2]}">${ic(t[0])}${t[1]}</button>`).join('')}</nav></div>`;
+    } else {
+      const tabs=[['Home','home'],['Library','library'],['Studio','studio'],['Voices','voices'],['Models','models']];
+      const sideOpen = s.drawer;
+      body = `${sideOpen?sidebar():''}<div class="col"><div class="topbar"><button class="ib" data-act="drawer" aria-label="Show sidebar">${ic('panel')}</button><div style="flex:1;display:flex;justify-content:center"><div class="toptabs" style="border:0;padding:0"><div class="seg2">${tabs.map(t=>`<button class="${route===t[1]?'on':''}" data-go="${t[1]}">${t[0]}</button>`).join('')}</div></div></div><button class="ib" data-act="create" aria-label="Create">${ic('plus')}</button></div>${screen()}${mini}</div>`;
+    }
+  }
+  // overlays
+  let ov='';
+  if(s.drawer && !(m==='C'&&d!=='phone')){
+    const it=[['home','Home','home'],['lib','Library','library'],['studio','Studio','studio'],['mic','Voice Lab','voices'],['folder','Projects','projects'],['cpu','Models','models'],['bot','Agents','agents'],['pulse','Activity','activity'],['gear','Settings','settings']];
+    ov+=`<div class="scrim" data-act="close"></div><nav class="drawer" aria-label="Menu"><div class="brand" style="font:800 24px var(--font-display);padding:6px 12px 12px">MIRLI<b style="color:var(--signal)">.</b></div>${it.map(x=>`<button class="${route===x[2]?'on':''}" data-go="${x[2]}">${ic(x[0])}${x[1]}</button>`).join('')}</nav>`;
+  }
+  if(s.sheet==='more'){
+    const snd=SOUNDS[s.sel]||SOUNDS[0];
+    if(touch){
+      ov+=`<div class="scrim" data-act="close"></div><div class="sheet" role="dialog" aria-label="Sound actions"><div class="grab"></div><div class="sh"><span class="wave"><i></i></span><div class="meta"><div class="t" style="font-weight:600">${snd[0]}</div><div class="m mono" style="color:var(--muted-fg)">${snd[1]}</div></div></div>
+      ${[['play','Play'],['star','Favourite'],['tag','Edit tags'],['studio','Add to a studio project'],['share','Share or download'],['wand','Make variations']].map(a=>`<button class="act" data-act="close">${ic(a[0])}${a[1]}</button>`).join('')}
+      <button class="act dis" disabled>${ic('reveal')}Open in Finder<small>DESKTOP APP</small></button>
+      <button class="act danger" data-act="close">${ic('trash')}Delete</button></div>`;
+    } else {
+      ov+=`<div class="scrim" data-act="close" style="background:transparent"></div><div class="pop" style="right:20px;top:${150+s.sel*64}px">${[['play','Play','Space'],['star','Favourite',''],['tag','Edit tags',''],['studio','Add to studio',''],['reveal','Open in Finder',''],['dl','Download',''],['trash','Delete','Del']].map(a=>`<button data-act="close">${ic(a[0])}${a[1]}<kbd>${a[2]}</kbd></button>`).join('')}</div>`;
+    }
+  }
+  if(s.sheet==='create'){
+    if(touch){
+      ov+=`<div class="scrim" data-act="close"></div><div class="sheet" role="dialog" aria-label="Create"><div class="grab"></div><h3 style="margin:4px 4px 12px">What are you making?</h3>
+      <div class="chips"><button class="chip on">Sound effect</button><button class="chip">Music</button><button class="chip">Speech</button><button class="chip">Stems</button></div>
+      <div class="composer" style="margin:8px 0"><div class="in">heavy wooden door slam, dry room, close mic</div><div class="cr"><div class="kind"><button class="chip" style="min-height:36px">${ic('cpu','style="width:14px;height:14px"')} Stable Audio Small</button><button class="chip" style="min-height:36px">4 takes</button></div><button class="go" data-act="close">${ic('up')}</button></div></div>
+      <p class="sub" style="margin:8px 4px">Medium detent: half the screen, the library stays visible above. Drag the grabber up for model settings.</p></div>`;
+    } else {
+      ov+=`<div class="scrim" data-act="close"></div><div class="pop" style="left:50%;top:18%;transform:translateX(-50%);width:520px;padding:18px"><h3 style="margin-bottom:12px">New sound</h3><div class="composer" style="margin:0"><div class="in">heavy wooden door slam, dry room, close mic</div><div class="cr"><div class="kind"><button class="chip on" style="min-height:32px">SFX</button><button class="chip" style="min-height:32px">Music</button><button class="chip" style="min-height:32px">Speech</button></div><button class="go" data-act="close">${ic('up')}</button></div></div><p class="sub" style="margin:10px 0 0">Desktop keeps today's Create panel; ⌘K and the command palette still work.</p></div>`;
+    }
+  }
+  return `<div class="app ${DEV[d].cls}" data-dev="${d}">${body}${ov}</div>`;
+}
+function makeScreen(){
+  return `<div class="page"><h4>Make</h4><p class="sub">Describe it, pick a kind, and Mirli generates it on Mirli Cloud.</p>
+   <div class="chips"><button class="chip on">Sound effect</button><button class="chip">Music</button><button class="chip">Speech</button><button class="chip">Clone a voice</button></div>
+   <div class="composer" style="margin:6px 0 14px"><div class="in">heavy wooden door slam, dry room, close mic</div><div class="cr"><div class="kind"><button class="chip" style="min-height:36px">4 takes</button></div><button class="go">${ic('up')}</button></div></div>
+   <div class="label" style="margin:10px 0 4px">Studio projects</div>
+   ${['The lighthouse keeper','Podcast intro','Game menu loop'].map(p=>`<button class="row" data-go="studio" style="width:100%;background:none;border-left:0;border-right:0;border-top:0;text-align:left"><span class="wave">${ic('studio','style="width:20px;height:20px"')}</span><div class="meta"><div class="t">${p}</div><div class="m">3 tracks · 1:42 · listen</div></div></button>`).join('')}</div>`;
+}
+function studioScreen(d){
+  const touch=d!=='desktop';
+  if(d==='phone' && model==='C'){
+    return `<div class="page"><button class="pill" data-go="home" style="margin-bottom:10px">${ic('back','style="width:16px;height:16px"')} Make</button><h4>The lighthouse keeper</h4><p class="sub">3 tracks · 1:42 · edited yesterday on desktop</p>
+    <div class="tl" style="--head:96px">${clipLanes(true)}</div>
+    <div style="display:flex;gap:8px;margin:14px 0;flex-wrap:wrap"><button class="pill primary">${ic('play','style="width:16px;height:16px"')}Play mix</button><button class="pill">${ic('share','style="width:16px;height:16px"')}Export</button><button class="pill">Regenerate a line</button></div>
+    <div class="banner">${ic('laptop')}<div><b>Arranging needs a bigger screen.</b> Open this project on a tablet or computer to move clips, add tracks or mix. Here you can listen, export, and redo a single line.</div></div></div>`;
+  }
+  if(d==='phone'){
+    // A and B: track-focus phone timeline
+    return `<div class="col" style="flex:1;min-height:0"><div class="page" style="padding:12px 10px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><b style="flex:1">The lighthouse keeper</b><button class="ib">${ic('play')}</button><span class="mono" style="color:var(--muted-fg)">0:38 / 1:42</span></div>
+    <div class="tl" style="--head:86px">${clipLanes(true)}</div>
+    <p class="sub" style="margin-top:10px">Pinch to zoom the timeline. Tap a clip to select it; its tools appear below. Long-press a clip to move it. Track headers slide away when you scroll sideways, as in GarageBand.</p>
+    <div class="chips" style="margin-top:8px"><button class="chip on">Timeline</button><button class="chip">Script</button><button class="chip">Library</button><button class="chip">Mixer</button></div></div>
+    <div class="toolbar" aria-label="Clip tools">${[['scissors','Split'],['copy','Duplicate'],['vol','Volume'],['wand','Redo take'],['undo','Undo'],['trash','Delete']].map(t=>`<button>${ic(t[0])}${t[1]}</button>`).join('')}</div></div>`;
+  }
+  // tablet & desktop studio
+  const side = d==='tablet'
+    ? `<div class="sheet" style="position:relative;border-radius:16px 16px 0 0;max-height:none;margin-top:12px;z-index:1"><div class="grab"></div><div class="chips"><button class="chip on">Prompt</button><button class="chip">Script</button><button class="chip">Library</button><button class="chip">Mixer</button></div><div class="composer" style="margin:6px 0"><div class="in">slow ambient pad under the narrator, sea wind</div><div class="cr"><div class="kind"><button class="chip" style="min-height:36px">ACE-Step 1.5</button><button class="chip" style="min-height:36px">30 s</button></div><button class="go">${ic('up')}</button></div></div><p class="sub" style="margin:6px 2px 0">Supporting pane as a bottom sheet in portrait (Android's supporting-pane layout); in landscape it moves to a side column, about 30 percent.</p></div>`
+    : '';
+  const tb = touch?[['play','Play'],['plus','Track'],['scissors','Split'],['copy','Copy'],['vol','Gain'],['undo','Undo'],['trash','Delete']]:[];
+  return `<div class="page" style="padding:14px;display:flex;flex-direction:column">
+    <div class="tl" style="--head:${touch?120:160}px"><div class="hd"><b>Timeline</b><span class="time">0:38 / 1:42</span>${touch?'':`<span style="flex:1"></span>${['play','plus','scissors','copy','vol','undo','trash'].map(n=>`<button class="ib" style="width:30px;height:30px">${ic(n,'style="width:16px;height:16px"')}</button>`).join('')}`}</div>${clipLanes(touch)}</div>
+    ${touch?`<div class="toolbar" style="border:1px solid var(--border);border-top:0;border-radius:0 0 10px 10px">${tb.map(t=>`<button>${ic(t[0])}${t[1]}</button>`).join('')}</div>`:'<p class="sub" style="margin-top:10px">Desktop keeps today\'s studio: dockable panels, pop-out windows, keyboard shortcuts, right-click menus and drag from the library.</p>'}
+    ${side}</div>`;
+}
+
+// ---------- stage ----------
+function layout(){
+  const stage=document.getElementById('stage');
+  const list = devices==='all'?['phone','tablet','desktop']:[devices];
+  const avail = Math.max(280, stage.clientWidth - 40);
+  // scale so all fit in one row when possible
+  const gap=24, pad=20;
+  const totalW = list.reduce((a,d)=>a+DEV[d].w+pad,0)+gap*(list.length-1);
+  let scale = Math.min(1, avail/totalW);
+  const oneRowScale = scale;
+  if(list.length>1 && oneRowScale<0.42){ scale = Math.min(1,(avail)/(DEV.desktop.w+pad)); }
+  stage.innerHTML = list.map(d=>{
+    let sc = scale;
+    if(list.length>1 && oneRowScale<0.42){ sc = Math.min(1,(avail)/(DEV[d].w+pad), d==='phone'?0.9:1); }
+    const w=DEV[d].w*sc, h=DEV[d].h*sc;
+    return `<div class="dev"><div class="cap"><span class="label">${DEV[d].label}</span><span class="mono" style="color:var(--muted-fg)">${Math.round(sc*100)}%</span></div>
+      <div class="shell ${d==='desktop'?'desk':''}"><div class="viewport" style="width:${w}px;height:${h}px"><div class="screen" id="scr-${d}" style="width:${DEV[d].w}px;height:${DEV[d].h}px;transform:scale(${sc})">${render(d)}</div></div></div></div>`;
+  }).join('');
+}
+function rerender(d){const el=document.getElementById('scr-'+d); if(el) el.innerHTML=render(d);}
+function intro(){
+  const M=MODELS[model];
+  document.getElementById('intro').innerHTML = `<div><span class="label">Model ${model}</span><h2 style="margin:6px 0 8px">${M.name}</h2><p>${M.pitch}</p></div>
+   <div class="pc"><div><span class="label" style="color:var(--ok)">For</span><ul>${M.pros.map(x=>`<li>${x}</li>`).join('')}</ul></div><div><span class="label" style="color:var(--warn)">Against</span><ul>${M.cons.map(x=>`<li>${x}</li>`).join('')}</ul></div></div>`;
+}
+document.getElementById('stage').addEventListener('click',e=>{
+  const app=e.target.closest('.app'); if(!app) return;
+  const d=app.dataset.dev, s=st(d);
+  const go=e.target.closest('[data-go]'), act=e.target.closest('[data-act]');
+  if(go){ s.route=go.dataset.go; s.sheet=null; s.drawer=false; rerender(d); return; }
+  if(act){ const a=act.dataset.act;
+    if(a==='more'){ s.sheet='more'; s.sel=+act.dataset.i||0; }
+    else if(a==='create'){ s.sheet='create'; s.drawer=false; }
+    else if(a==='drawer'){ s.drawer=!s.drawer; }
+    else if(a==='close'){ s.sheet=null; s.drawer=false; }
+    else if(a==='play'){ s.playing=true; }
+    rerender(d);
+  }
+});
+// long-press on rows opens the same sheet
+let lp; document.getElementById('stage').addEventListener('pointerdown',e=>{const row=e.target.closest('.row');const app=e.target.closest('.app');if(!row||!app||app.dataset.dev==='desktop')return;const btn=row.querySelector('[data-act="more"]');if(!btn)return;lp=setTimeout(()=>{const s=st(app.dataset.dev);s.sheet='more';s.sel=+btn.dataset.i||0;rerender(app.dataset.dev)},500)});
+['pointerup','pointerleave','pointercancel'].forEach(t=>document.getElementById('stage').addEventListener(t,()=>clearTimeout(lp)));
+document.getElementById('stage').addEventListener('contextmenu',e=>{const row=e.target.closest('.row');const app=e.target.closest('.app');if(!row||!app||app.dataset.dev!=='desktop')return;e.preventDefault();const btn=row.querySelector('[data-act="more"]');const s=st('desktop');s.sheet='more';s.sel=+btn.dataset.i||0;rerender('desktop')});
+function seg(id,attr,fn){document.getElementById(id).addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;[...b.parentElement.children].forEach(x=>x.setAttribute('aria-pressed',x===b));fn(b.dataset[attr]);})}
+seg('modelSeg','m',v=>{model=v;intro();layout();try{localStorage.setItem('mirli-nav-model',v)}catch(e){}});
+seg('devSeg','d',v=>{devices=v;layout();});
+try{const v=localStorage.getItem('mirli-nav-model'); if(v&&MODELS[v]){model=v;[...document.querySelectorAll('#modelSeg button')].forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===v));}}catch(e){}
+if(innerWidth<700){devices='phone';[...document.querySelectorAll('#devSeg button')].forEach(b=>b.setAttribute('aria-pressed',b.dataset.d==='phone'));}
+intro(); layout(); addEventListener('resize',()=>layout());
+</script>

@@ -51,6 +51,7 @@ import { registerSettings } from "./routes/settings.js";
 import { registerSounds } from "./routes/sounds.js";
 import { registerVoices } from "./routes/voices.js";
 import { registerCalls } from "./routes/calls.js";
+import { envVar } from "./env.js";
 import { MirliService } from "./service.js";
 
 declare module "fastify" {
@@ -254,7 +255,9 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
   registerOpenAi(app, svc);
   registerSounds(app, svc);
   registerVoices(app, svc);
-  registerCalls(app, svc);
+  // Live voice calls are pulled from releases until they are ready: the Call
+  // API (and the call secret it writes) only exists with MIRLI_CALLS=1.
+  if (envVar("MIRLI_CALLS") === "1") registerCalls(app, svc);
   registerSessions(app, svc);
   registerHistory(app, svc);
   registerStories(app, svc);

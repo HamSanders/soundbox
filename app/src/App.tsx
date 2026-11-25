@@ -32,6 +32,7 @@ import { useCapabilities } from "@/lib/queries";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { DashboardPage } from "@/routes/dashboard";
+import { CALLS_ENABLED } from "@/lib/features";
 
 /*
  * Every page but the landing one loads on first visit. As one bundle the app
@@ -224,14 +225,20 @@ function AppShellReady() {
             <Route path="/voice/new" element={<VoiceCreatePage />} />
             <Route path="/voice/new/clone" element={<VoiceCloneCreatePage />} />
             <Route path="/voice/new/builtin" element={<VoiceBuiltinCreatePage />} />
-            {/* Calls: real-time voice calls with characters (Santa built in,
-                your own from /calls/new). The live voice worker is a
-                separate process; see routes/calls.ts on the server. */}
-            <Route path="/calls" element={<CallsHomePage />} />
-            <Route path="/calls/new" element={<CharacterEditorPage />} />
-            <Route path="/calls/characters/:characterId" element={<CharacterEditorPage />} />
-            <Route path="/calls/voice" element={<VoiceCallPage />} />
-            <Route path="/calls/voice/:characterId" element={<VoiceCallPage />} />
+            {/* Calls: real-time voice calls with characters. Pulled from
+                releases until they are ready (lib/features.ts); without the
+                flag an old /calls link lands on the home page. */}
+            {CALLS_ENABLED ? (
+              <>
+              <Route path="/calls" element={<CallsHomePage />} />
+              <Route path="/calls/new" element={<CharacterEditorPage />} />
+              <Route path="/calls/characters/:characterId" element={<CharacterEditorPage />} />
+              <Route path="/calls/voice" element={<VoiceCallPage />} />
+              <Route path="/calls/voice/:characterId" element={<VoiceCallPage />} />
+              </>
+            ) : (
+              <Route path="/calls/*" element={<Navigate to="/" replace />} />
+            )}
             {/* The unfiltered library still exists, unlinked from the nav —
                 it's where a Projects sidebar/list entry deep-links to
                 (`/library?project=…`), spanning every category rather than

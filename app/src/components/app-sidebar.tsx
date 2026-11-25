@@ -78,6 +78,8 @@ import { api, type Model, type Session, type Sound } from "@/lib/api";
 import { useDetailStore } from "@/lib/detail-store";
 import { cn } from "@/lib/utils";
 import { isDesktop } from "@/lib/desktop";
+import { CALLS_ENABLED } from "@/lib/features";
+import { ThemeDialog } from "@/components/theme-dialog";
 import { hidesSidebar, useSidebarPeek } from "@/components/sidebar-peek";
 
 /**
@@ -114,8 +116,9 @@ const NAV_STUDIO: NavItem[] = [
     hue: "studio",
   },
   { to: "/voice/lab", label: "Voice Lab", icon: MicIcon, end: false, hue: "voice" },
-  // Calls: talking with a character in real time, by voice.
-  { to: "/calls", label: "Calls", icon: PhoneIcon, end: false, hue: "voice" },
+  // Calls: talking with a character in real time, by voice. Pulled from
+  // releases until they are ready (lib/features.ts).
+  ...(CALLS_ENABLED ? [{ to: "/calls", label: "Calls", icon: PhoneIcon, end: false, hue: "voice" } as NavItem] : []),
   // A project is a folder over many samples, not a single kind of one — so
   // unlike Samples below it isn't category-scoped, and it isn't a browse
   // surface either (it's where you organize what Studio work produced). That
@@ -690,18 +693,24 @@ function DeviceStatus() {
 }
 
 
-function ThemeToggle() {
-  const { resolvedTheme, setTheme } = useTheme();
+/** Theme: opens a dialog for light or dark and the background behind the
+ *  panels. The icon shows the mode you are in. */
+function ThemeButton() {
+  const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme !== "light";
+  const [open, setOpen] = useState(false);
   return (
-    <SidebarMenuButton
-      tooltip={isDark ? "Light theme" : "Dark theme"}
-      onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="[&_svg]:transition-transform [&_svg]:duration-300 hover:[&_svg]:rotate-45"
-    >
-      {isDark ? <SunIcon /> : <MoonIcon />}
-      <span>{isDark ? "Light theme" : "Dark theme"}</span>
-    </SidebarMenuButton>
+    <>
+      <SidebarMenuButton
+        tooltip="Theme"
+        onClick={() => setOpen(true)}
+        className="[&_svg]:transition-transform [&_svg]:duration-300 hover:[&_svg]:rotate-45"
+      >
+        {isDark ? <MoonIcon /> : <SunIcon />}
+        <span>Theme</span>
+      </SidebarMenuButton>
+      <ThemeDialog open={open} onOpenChange={setOpen} />
+    </>
   );
 }
 
@@ -778,7 +787,7 @@ export function AppSidebar() {
             </SidebarMenuItem>
             {can.updates && <UpdateNotice />}
             <SidebarMenuItem>
-              <ThemeToggle />
+              <ThemeButton />
             </SidebarMenuItem>
             {can.gpu_status && (
               <SidebarMenuItem>

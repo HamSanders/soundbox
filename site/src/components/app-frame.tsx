@@ -7,7 +7,7 @@
  * other page is put in one here, by `FramedPage`.
  *
  * The ground is the app's own `AmbientBackground`, so it follows the same
- * per-browser preference (`ui-prefs`; Smoke by default), draws one still frame
+ * per-browser preference (`ui-prefs`; Pixel by default), draws one still frame
  * under reduced motion, falls back to the flat ground without WebGL, and
  * moves a little with whatever the page is playing.
  *

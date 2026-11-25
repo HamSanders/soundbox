@@ -724,8 +724,8 @@ function InterfaceGroup() {
       <SettingRow
         id="background"
         htmlFor="background"
-        modified={background !== "smoke"}
-        onReset={() => changeBackground("smoke")}
+        modified={background !== "pixel"}
+        onReset={() => changeBackground("pixel")}
         control={
           <Select value={background} onValueChange={(v) => changeBackground(v as typeof background)}>
             <SelectTrigger id="background" className="w-32">

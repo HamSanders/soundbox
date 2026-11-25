@@ -6,6 +6,8 @@ to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-11-25
+
 ### Changed
 - **Theme opens a dialog.** The sidebar's **Theme** item now opens a dialog where you pick light or dark, the background behind the panels (Pixel, Smoke, Liquid, Gradient or None, each with a swatch), and whether it moves with your pointer and sound. Changes apply as you pick them. Settings → Interface still has the same choices.
 - **Pixel is the default background** for new installs. If you already picked a background, or changed another interface setting, you keep what you had.
@@ -393,7 +395,8 @@ Initial public release, MIT-licensed. Everything below is new.
   `SOUNDBOX_ALLOWED_HOSTS`), and requires JSON or an `X-Soundbox` header on
   mutating API requests.
 
-[Unreleased]: https://github.com/HamSanders/soundbox/compare/v0.6.3...HEAD
+[Unreleased]: https://github.com/HamSanders/soundbox/compare/v0.6.4...HEAD
+[0.6.4]: https://github.com/HamSanders/soundbox/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/HamSanders/soundbox/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/HamSanders/soundbox/compare/v0.6.0...v0.6.2
 [0.6.0]: https://github.com/HamSanders/soundbox/compare/v0.5.0...v0.6.0

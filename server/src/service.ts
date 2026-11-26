@@ -2478,6 +2478,9 @@ export class MirliService {
    * reference the model no longer reads.
    */
   private rebuildVoiceReference(voiceId: string): void {
+    // The id as the database holds it names the joined file, not the caller's spelling.
+    const id = this.db.getVoice(voiceId)?.id;
+    if (!id) return;
     const files = this.db.voiceSampleFilenames(voiceId);
     if (files.length === 0) return;
     const dir = this.config.paths.sounds;
@@ -2486,7 +2489,7 @@ export class MirliService {
       target = files[0]!;
     } else {
       const joined = reference.combineReferences(files.map((f) => dsp.readWav(join(dir, f))));
-      target = `voice-${voiceId}-joined-${randomUUID().slice(0, 8)}.wav`;
+      target = `voice-${id}-joined-${randomUUID().slice(0, 8)}.wav`;
       dsp.writeWav(join(dir, target), joined.audio, joined.sampleRate);
     }
     const previous = this.db.setVoiceFilename(voiceId, target);

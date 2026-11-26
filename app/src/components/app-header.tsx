@@ -37,6 +37,7 @@ const TITLES: Record<string, string> = {
   "/listen/explore": "Explore", // [audiobooks:listen]
   "/models": "Models",
   "/activity": "Activity",
+  "/trash": "Trash",
   "/settings": "Settings",
 };
 

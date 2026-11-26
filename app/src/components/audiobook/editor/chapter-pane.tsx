@@ -467,7 +467,7 @@ export function ChapterPane({
         />
       )}
 
-      <div className="border-border/60 flex flex-wrap items-center gap-2 border-b px-4 py-2">
+      <div className="flex flex-wrap items-center gap-2 px-5 pt-3 pb-1">
         {checked.size > 0 ? (
           <>
             <span className="text-sm font-medium">{checked.size} selected</span>
@@ -622,7 +622,7 @@ export function ChapterPane({
 
       <div
         id="audiobook-paragraph-keys"
-        className="border-border/60 text-muted-foreground hidden flex-wrap gap-x-3 gap-y-1 border-t px-4 py-1.5 text-[0.7rem] lg:flex"
+        className="text-muted-foreground/70 hidden flex-wrap gap-x-3 gap-y-1 px-5 pt-1 pb-2.5 text-[0.7rem] lg:flex"
       >
         <span><Kbd>j</Kbd>/<Kbd>k</Kbd> move</span>
         <span><Kbd>Enter</Kbd> edit</span>

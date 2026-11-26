@@ -6,7 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { voiceStores } from "../src/audiobook/render-access.js";
-import { estimate, layoutChapter, qcClip, wordErrorRate } from "../src/audiobook/render-qc.js";
+import { estimate, layoutChapter, qcClip, wordErrorRate, placeholderSeconds } from "../src/audiobook/render-qc.js";
 import { RenderService } from "../src/audiobook/render.js";
 import { recordTakes } from "../src/audiobook/takes.js";
 import { fakeSpeech, harness, SR, type Harness } from "./audiobook-voice-helpers.js";
@@ -73,13 +73,32 @@ describe("layoutChapter", () => {
       [
         { id: "h", kind: "line", start_s: 0, duration_s: 2, is_heading: true },
         { id: "a", kind: "line", start_s: 0, duration_s: 3, is_heading: false },
-        { id: "u", kind: "line", start_s: 0, duration_s: null, is_heading: false },
+        { id: "u", kind: "line", start_s: 0, duration_s: null, is_heading: false, placeholder_s: 1 },
         { id: "p", kind: "pause", start_s: 0, duration_s: 1, is_heading: false },
         { id: "b", kind: "line", start_s: 0, duration_s: 1, is_heading: false },
       ],
       { paragraph_gap_s: 0.5, heading_gap_s: 1.5 },
     );
-    expect(Object.fromEntries(moves)).toEqual({ a: 4, p: 7.5, b: 8.5 });
+    // h 0–2, a 4–7, u 7.5–8.5 (unvoiced, its placeholder), p 9–10, b 10.
+    expect(Object.fromEntries(moves)).toEqual({ a: 4, u: 7.5, p: 9, b: 10 });
+  });
+
+  it("gives an unvoiced paragraph its placeholder length, so nothing stacks", () => {
+    const moves = layoutChapter(
+      [
+        { id: "a", kind: "line", start_s: 0, duration_s: 3, is_heading: false },
+        { id: "u", kind: "line", start_s: 0, duration_s: null, is_heading: false, placeholder_s: 2 },
+        { id: "v", kind: "line", start_s: 0, duration_s: null, is_heading: false, placeholder_s: 1 },
+        { id: "b", kind: "line", start_s: 0, duration_s: 1, is_heading: false },
+      ],
+      { paragraph_gap_s: 0.5, heading_gap_s: 1.5 },
+    );
+    expect(Object.fromEntries(moves)).toEqual({ u: 3.5, v: 6, b: 7.5 });
+  });
+
+  it("estimates a placeholder at 0.4 s a word, at least 0.8 s", () => {
+    expect(placeholderSeconds("one two three four five")).toBe(2);
+    expect(placeholderSeconds("Hi.")).toBe(0.8);
   });
 });
 
@@ -119,8 +138,11 @@ describe("RenderService", { timeout: 30_000 }, () => {
     expect(head!.start_s).toBe(0);
     expect(a!.start_s).toBeCloseTo(head!.duration_s! + 0.5 + 1.5, 2);
     expect(pause!.start_s).toBeCloseTo(a!.start_s + a!.duration_s! + 0.5, 2);
-    expect(b!.start_s).toBeCloseTo(pause!.start_s + 1.5, 2);
+    // The locked paragraph between them is unvoiced, so it holds its
+    // placeholder (four words, 1.6 s) and its gap rather than taking no time.
     expect(p[3]!.sound_id).toBeFalsy();
+    expect(p[3]!.start_s).toBeCloseTo(pause!.start_s + 1.5, 2);
+    expect(b!.start_s).toBeCloseTo(p[3]!.start_s + 1.6 + 0.5, 2);
     // Core was told what each take was voiced from (unpronounced text).
     expect(h.book.voiced.map((v) => v.text)).toContain("Tamsin climbed aboard.");
     expect(h.book.events.some((e) => e.event.type === "render")).toBe(true);

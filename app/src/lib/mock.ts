@@ -908,6 +908,18 @@ const stories: Story[] = [];
 const segments: StorySegment[] = [];
 const tracks: StoryTrack[] = [];
 
+/** Set a clip's start without re-reading the script order from it, as the
+ *  server's chapter layout does (`db.updateSegment` without
+ *  `followPlacement`). Laying a chapter out moves every clip; re-reading the
+ *  order after each one, while the rest still sit where they were, would
+ *  shuffle the paragraphs. */
+export function placeMockSegment(segmentId: string, start_s: number): void {
+  const s = segments.find((x) => x.id === segmentId);
+  if (!s) return;
+  s.start_s = start_s;
+  s.updated_at = new Date().toISOString();
+}
+
 /** The mock's trash: what was deleted, and how to put it back or let it go.
  *  The real one keeps rows in place with a `deleted_at` (server/src/trash.ts);
  *  here the objects move out of their arrays and back. */

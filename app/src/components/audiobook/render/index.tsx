@@ -89,7 +89,7 @@ export function RenderBar({ bookId }: { bookId: string }) {
   const measured = est?.basis.every((b) => b.measured) ?? false;
 
   return (
-    <div className="border-border/70 flex flex-wrap items-center gap-x-3 gap-y-2 border-t px-3 py-2 text-xs">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 pb-3 text-xs">
       {active ? (
         <RunProgress run={active} onAction={(action) => act.mutate({ id: active.id, action })} busy={act.isPending} />
       ) : (

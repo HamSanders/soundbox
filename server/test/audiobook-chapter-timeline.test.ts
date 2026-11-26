@@ -6,9 +6,20 @@
 
 import { describe, expect, it } from "vitest";
 
-import { orderAfterDrop, packedStarts } from "@/components/audiobook/editor/chapter-timeline";
+import { orderAfterDrop, packedStarts, placeholderSeconds } from "@/components/audiobook/editor/chapter-timeline";
 
-type P = { id: string; position: number; start_s: number; kind: "line" | "pause"; sound_id: string | null; duration_s: number | null; is_heading: boolean };
+type P = {
+  id: string;
+  position: number;
+  start_s: number;
+  kind: "line" | "pause";
+  sound_id: string | null;
+  duration_s: number | null;
+  is_heading: boolean;
+  text: string;
+};
+/** Five words: a 2 s placeholder while unvoiced. */
+const FIVE = "one two three four five";
 const line = (id: string, position: number, start_s: number, duration_s: number | null, is_heading = false): P => ({
   id,
   position,
@@ -17,6 +28,7 @@ const line = (id: string, position: number, start_s: number, duration_s: number 
   sound_id: duration_s === null ? null : `snd-${id}`,
   duration_s,
   is_heading,
+  text: FIVE,
 });
 const pause = (id: string, position: number, start_s: number, duration_s: number): P => ({
   id,
@@ -26,26 +38,48 @@ const pause = (id: string, position: number, start_s: number, duration_s: number
   sound_id: null,
   duration_s,
   is_heading: false,
+  text: "",
+});
+
+describe("placeholderSeconds", () => {
+  it("is 0.4 s a word, at least 0.8 s", () => {
+    expect(placeholderSeconds(FIVE)).toBe(2);
+    expect(placeholderSeconds("Hi.")).toBe(0.8);
+  });
 });
 
 describe("packedStarts", () => {
-  it("packs voiced lines and pauses with the book's gaps, skipping unvoiced lines", () => {
+  it("packs every paragraph in reading order, unvoiced ones at their placeholder length", () => {
     const starts = packedStarts(
       [line("h", 0, 0, 2, true), line("a", 1, 0, 10), line("u", 2, 0, null), pause("p", 3, 0, 1), line("b", 4, 0, 5)],
       { paragraph_gap_s: 0.5, heading_gap_s: 1.5 },
     );
-    expect(Object.fromEntries(starts)).toEqual({ h: 0, a: 4, p: 14.5, b: 15.5 });
-    expect(starts.has("u")).toBe(false);
+    // h 0–2 (+0.5 +1.5), a 4–14 (+0.5), u 14.5–16.5 (+0.5), p 17–18, b 18.
+    expect(Object.fromEntries(starts)).toEqual({ h: 0, a: 4, u: 14.5, p: 17, b: 18 });
+  });
+
+  it("never puts two paragraphs at the same start", () => {
+    const starts = packedStarts([line("u1", 0, 0, null), line("u2", 1, 0, null), line("u3", 2, 0, null)], {
+      paragraph_gap_s: 0.5,
+      heading_gap_s: 1.5,
+    });
+    expect(new Set(starts.values()).size).toBe(3);
   });
 });
 
 describe("orderAfterDrop", () => {
-  // Voiced a (0–10), b (10.5–15.5), c (16–20), with unvoiced u1 and u2 at 0.
-  const ps = [line("u1", 0, 0, null), line("a", 1, 0, 10), line("b", 2, 10.5, 5), line("u2", 3, 0, null), line("c", 4, 16, 4)];
+  // Packed with a 0.5 s gap: u1 0–2, a 2.5–12.5, b 13–18, u2 18.5–20.5, c 21–25.
+  const ps = [
+    line("u1", 0, 0, null),
+    line("a", 1, 2.5, 10),
+    line("b", 2, 13, 5),
+    line("u2", 3, 18.5, null),
+    line("c", 4, 21, 4),
+  ];
 
   it("moves a clip before the first clip whose middle is past the drop", () => {
-    expect(orderAfterDrop(ps, [{ id: "c", start_s: 1 }])).toEqual(["u1", "c", "a", "b", "u2"]);
-    expect(orderAfterDrop(ps, [{ id: "a", start_s: 14 }])).toEqual(["u1", "b", "u2", "a", "c"]);
+    expect(orderAfterDrop(ps, [{ id: "c", start_s: 0.5 }])).toEqual(["c", "u1", "a", "b", "u2"]);
+    expect(orderAfterDrop(ps, [{ id: "a", start_s: 17 }])).toEqual(["u1", "b", "a", "u2", "c"]);
   });
 
   it("moves a clip after the last one when dropped past the end", () => {
@@ -53,12 +87,10 @@ describe("orderAfterDrop", () => {
   });
 
   it("leaves the order alone for a drop back in its own slot", () => {
-    expect(orderAfterDrop(ps, [{ id: "b", start_s: 11 }])).toEqual(["u1", "a", "b", "u2", "c"]);
+    expect(orderAfterDrop(ps, [{ id: "b", start_s: 13.5 }])).toEqual(["u1", "a", "b", "u2", "c"]);
   });
 
-  it("never moves an unvoiced paragraph, even though it sits at 0", () => {
-    // The bug this guards against: every unvoiced clip starts at 0, so a
-    // naive sort by start time sent a dragged one to the top of the chapter.
-    expect(orderAfterDrop(ps, [{ id: "u2", start_s: 0 }])).toEqual(["u1", "a", "b", "u2", "c"]);
+  it("moves an unvoiced paragraph like any other, now that it has a place", () => {
+    expect(orderAfterDrop(ps, [{ id: "u2", start_s: 3 }])).toEqual(["u1", "u2", "a", "b", "c"]);
   });
 });

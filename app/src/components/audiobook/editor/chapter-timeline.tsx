@@ -47,57 +47,66 @@ import type { BookOps } from "./use-book-ops";
 /** The narration lane. Beds and other sounds go on the lanes below it. */
 const NARRATION = 0;
 
+/** How long the timeline draws a paragraph with no audio yet. The same rule
+ *  as `estimateDuration` in story-timeline.tsx and the server's
+ *  `placeholderSeconds`: about 0.4 s a word, at least 0.8 s. */
+export function placeholderSeconds(text: string): number {
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(0.8, words * 0.4);
+}
+
+/** How long a paragraph is on the timeline: its audio, its pause, or the
+ *  placeholder it holds until it is voiced. */
+function lengthOf(p: Pick<Paragraph, "kind" | "sound_id" | "duration_s" | "text">): number {
+  if (p.kind === "pause") return p.duration_s ?? 0;
+  // A take whose length isn't known yet keeps the placeholder rather than
+  // collapsing to nothing.
+  return (p.sound_id ? p.duration_s : null) ?? placeholderSeconds(p.text);
+}
+
 /** Where each paragraph should start when the narration is packed: the same
- *  rule as the server's `layoutChapter`. Unvoiced lines take no time. */
+ *  rule as the server's `layoutChapter`. An unvoiced paragraph holds its place
+ *  at its placeholder length, so nothing piles up at the start. */
 export function packedStarts(
-  paragraphs: Pick<Paragraph, "id" | "kind" | "position" | "sound_id" | "duration_s" | "is_heading">[],
+  paragraphs: Pick<Paragraph, "id" | "kind" | "position" | "sound_id" | "duration_s" | "is_heading" | "text">[],
   pacing: { paragraph_gap_s: number; heading_gap_s: number },
 ): Map<string, number> {
   const starts = new Map<string, number>();
   let at = 0;
   for (const p of [...paragraphs].sort((a, b) => a.position - b.position)) {
-    if (p.kind === "pause") {
-      starts.set(p.id, round3(at));
-      at += p.duration_s ?? 0;
-      continue;
-    }
-    if (!p.sound_id) continue;
     starts.set(p.id, round3(at));
-    at += (p.duration_s ?? 0) + pacing.paragraph_gap_s + (p.is_heading ? pacing.heading_gap_s : 0);
+    at += lengthOf(p);
+    if (p.kind !== "pause") at += pacing.paragraph_gap_s + (p.is_heading ? pacing.heading_gap_s : 0);
   }
   return starts;
 }
 
 /**
  * The order paragraphs would read in if each dragged clip landed where it was
- * dropped. Only clips with audio (voiced paragraphs and pauses) have a place
- * on the timeline, so a drop is read against those: the paragraph goes just
- * before the first of them whose middle is past the drop point, or after the
- * last. Unvoiced paragraphs keep their places in the text, and an unvoiced
- * clip that gets dragged stays where it is.
+ * dropped. Every paragraph has a place on the timeline (an unvoiced one at its
+ * placeholder length), so a drop is read against all of them: the paragraph
+ * goes just before the first one whose middle is past the drop point, or
+ * after the last.
  */
 export function orderAfterDrop(
-  paragraphs: Pick<Paragraph, "id" | "position" | "start_s" | "kind" | "sound_id" | "duration_s">[],
+  paragraphs: Pick<Paragraph, "id" | "position" | "start_s" | "kind" | "sound_id" | "duration_s" | "text">[],
   moves: { id: string; start_s: number }[],
 ): string[] {
   const reading = [...paragraphs].sort((a, b) => a.position - b.position);
-  const placed = reading.filter((p) => p.kind === "pause" || p.sound_id);
+  const placed = reading;
   const byId = new Map(placed.map((p) => [p.id, p]));
   const movedIds = new Set(moves.filter((m) => byId.has(m.id)).map((m) => m.id));
   const order = reading.map((p) => p.id);
   for (const move of [...moves].filter((m) => movedIds.has(m.id)).sort((a, b) => a.start_s - b.start_s)) {
     const stay = placed.filter((p) => !movedIds.has(p.id));
-    const target = stay.find((p) => p.start_s + (p.duration_s ?? 0) / 2 > move.start_s);
+    const target = stay.find((p) => p.start_s + lengthOf(p) / 2 > move.start_s);
     const anchor = target ?? stay[stay.length - 1];
     if (!anchor) continue;
     order.splice(order.indexOf(move.id), 1);
     const at = order.indexOf(anchor.id);
     order.splice(target ? at : at + 1, 0, move.id);
   }
-  // Same order of clips with audio: nothing was really moved, so the text
-  // keeps its order rather than shuffling an unvoiced paragraph past one.
-  const audible = (ids: string[]) => ids.filter((id) => byId.has(id)).join();
-  return audible(order) === audible(reading.map((p) => p.id)) ? reading.map((p) => p.id) : order;
+  return order;
 }
 
 function round3(x: number): number {
@@ -173,7 +182,10 @@ export function ChapterTimeline({
   const pacing = book.settings.pacing;
   const signature = useMemo(
     () =>
-      paragraphs.map((p) => `${p.id}:${p.position}:${p.kind}:${p.sound_id ?? ""}:${p.duration_s ?? ""}:${p.is_heading}`).join("|") +
+      // The placeholder length too: rewording an unvoiced paragraph resizes it.
+      paragraphs
+        .map((p) => `${p.id}:${p.position}:${p.kind}:${p.sound_id ?? ""}:${p.duration_s ?? ""}:${p.is_heading}:${lengthOf(p)}`)
+        .join("|") +
       `#${pacing.paragraph_gap_s}/${pacing.heading_gap_s}`,
     [paragraphs, pacing.heading_gap_s, pacing.paragraph_gap_s],
   );

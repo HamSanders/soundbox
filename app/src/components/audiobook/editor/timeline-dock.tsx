@@ -10,9 +10,11 @@ import { ChevronDownIcon, ChevronUpIcon, GanttChartIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const KEY = "mirli.audiobook.timeline";
-const MIN = 140;
-const DEFAULT = 260;
+// v2: the default went from 260 to 180, so the script gets the room. A new
+// key lets that reach people whose browser remembered the old height.
+const KEY = "mirli.audiobook.timeline.v2";
+const MIN = 120;
+const DEFAULT = 180;
 
 function load(): { open: boolean; height: number } {
   try {
@@ -37,7 +39,7 @@ function save(state: { open: boolean; height: number }) {
 export function TimelineDock({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
   const [state, setState] = useState(load);
   const drag = useRef<{ y: number; height: number } | null>(null);
-  const max = () => Math.max(MIN, Math.round(window.innerHeight * 0.7));
+  const max = () => Math.max(MIN, Math.round(window.innerHeight * 0.55));
 
   useEffect(() => save(state), [state]);
 
@@ -58,7 +60,7 @@ export function TimelineDock({ title, children, className }: { title: string; ch
   return (
     <section
       aria-label="Chapter timeline"
-      className={cn("bg-card border-border/70 flex shrink-0 flex-col overflow-hidden rounded-xl border", className)}
+      className={cn("bg-card ring-border/60 flex shrink-0 flex-col overflow-hidden rounded-xl ring-1", className)}
       style={state.open ? { height: Math.min(state.height, max()) } : undefined}
     >
       {state.open && (
@@ -70,7 +72,7 @@ export function TimelineDock({ title, children, className }: { title: string; ch
           aria-valuemax={max()}
           aria-valuenow={state.height}
           tabIndex={0}
-          className="hover:bg-muted focus-visible:bg-muted flex h-2 shrink-0 cursor-row-resize items-center justify-center outline-none"
+          className="group/grip flex h-2.5 shrink-0 cursor-row-resize items-center justify-center outline-none"
           onPointerDown={(e) => {
             drag.current = { y: e.clientY, height: state.height };
             window.addEventListener("pointermove", onPointerMove);
@@ -83,7 +85,7 @@ export function TimelineDock({ title, children, className }: { title: string; ch
             setState((s) => ({ ...s, height: Math.min(max(), Math.max(MIN, s.height + step)) }));
           }}
         >
-          <span className="bg-border h-1 w-10 rounded-full" />
+          <span className="bg-border group-hover/grip:bg-muted-foreground/60 group-focus-visible/grip:bg-primary h-1 w-10 rounded-full transition-colors" />
         </div>
       )}
       <div className="flex shrink-0 items-center gap-2 px-3 py-1">

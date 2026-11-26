@@ -51,17 +51,17 @@ const STATUS_LABEL: Record<ParagraphStatus, string> = {
 };
 
 const STATUS_CLASS: Record<ParagraphStatus, string> = {
-  unvoiced: "text-muted-foreground border-border",
-  voiced: "text-ok border-ok/40 bg-ok/10",
-  stale: "text-warn border-warn/50 bg-warn/10",
-  locked: "text-foreground border-border-strong/60 bg-muted",
+  unvoiced: "text-muted-foreground bg-muted/60",
+  voiced: "text-ok bg-ok/12",
+  stale: "text-warn bg-warn/12",
+  locked: "text-foreground bg-muted",
 };
 
 export function StatusBadge({ status }: { status: ParagraphStatus }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-1.5 py-px text-[0.65rem] font-medium tracking-wide uppercase",
+        "inline-flex items-center gap-1 rounded-full px-2 py-px text-[0.65rem] font-medium tracking-wide uppercase",
         STATUS_CLASS[status],
       )}
     >
@@ -363,10 +363,10 @@ export const ParagraphRow = memo(function ParagraphRow({
       onClick={() => actions.select(p.id)}
       {...dnd}
       className={cn(
-        "group focus-visible:ring-ring/50 relative mx-2 flex gap-2 outline-none focus-visible:ring-2 rounded-lg border border-transparent py-2.5 pr-2 pl-2 transition-colors",
-        selected ? "bg-accent/60 border-border" : "hover:bg-accent/30",
-        checked && "bg-primary/5 border-primary/30",
-        playing && "border-primary/50",
+        "group focus-visible:ring-ring/50 relative mx-3 flex gap-2 rounded-xl py-3 pr-2 pl-2 outline-none transition-colors focus-visible:ring-2",
+        selected ? "bg-accent/60" : "hover:bg-accent/25",
+        checked && "bg-primary/8",
+        playing && "bg-primary/10",
         dragging && "opacity-40",
       )}
     >

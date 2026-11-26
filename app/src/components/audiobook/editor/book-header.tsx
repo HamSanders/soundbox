@@ -172,7 +172,7 @@ function BookHeaderView({
   const setSettings = (patch: BookPatch["settings"]) => update.mutate({ settings: patch });
 
   return (
-    <div className="border-border/70 flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-4 py-3">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 pt-3 pb-2">
       <button
         type="button"
         className="group relative w-11 shrink-0"

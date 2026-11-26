@@ -33,7 +33,15 @@ import { dialogueParts, type SpokenPart } from "./dialogue-parts.js";
 import { applyPronunciations, type PronounceResult } from "./pronounce.js";
 import type { BookAccess, BookParagraph } from "./render-access.js";
 import { voiceStores } from "./render-access.js";
-import { estimate, layoutChapter, qcClip, type Estimate, type EstimateParagraph, type QcResult } from "./render-qc.js";
+import {
+  estimate,
+  layoutChapter,
+  placeholderSeconds,
+  qcClip,
+  type Estimate,
+  type EstimateParagraph,
+  type QcResult,
+} from "./render-qc.js";
 import type { RenderOptions, RenderRunDetail } from "./render-store.js";
 import type { TakeOrigin } from "./takes-store.js";
 import type { RenderScope } from "./types.js";
@@ -281,8 +289,10 @@ export class RenderService {
         id: p.id,
         kind: p.kind,
         start_s: p.start_s,
-        duration_s: p.kind === "pause" ? (p.duration_s ?? 0) : p.sound_id ? (p.duration_s ?? 0) : null,
+        // A take whose length isn't recorded keeps its placeholder (null).
+        duration_s: p.kind === "pause" ? (p.duration_s ?? 0) : p.sound_id ? (p.duration_s ?? null) : null,
         is_heading: p.is_heading,
+        placeholder_s: placeholderSeconds(p.text),
       })),
       book.settings.pacing,
     );

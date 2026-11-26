@@ -23,7 +23,7 @@ import type {
   ReplaceResult,
 } from "./audiobook-api";
 import type { Book, BookSettings, Chapter, ChapterKind, ChapterStats, Character } from "./audiobook-types";
-import { addToMockTrash, mockApi } from "./mock";
+import { addToMockTrash, mockApi, placeMockSegment } from "./mock";
 
 interface Meta {
   character_id: string | null;
@@ -797,6 +797,9 @@ export const mockAudiobookApi: AudiobookApi = {
   },
 
   async layoutChapter(bookId, chapterId) {
+    // The timeline's placeholder for a line with no audio (see
+    // `placeholderSeconds` in chapter-timeline.tsx).
+    const placeholderSeconds = (text: string) => Math.max(0.8, text.trim().split(/\s+/).filter(Boolean).length * 0.4);
     await ready();
     const book = requireBook(bookId);
     const chapter = requireChapter(bookId, chapterId);
@@ -806,10 +809,11 @@ export const mockAudiobookApi: AudiobookApi = {
     let at = 0;
     let moved = 0;
     for (const s of segments) {
-      const length = s.kind === "pause" || s.sound_id ? (s.duration_s ?? 0) : null;
-      if (length === null) continue;
+      // An unvoiced paragraph holds its place, as on the server.
+      const length =
+        s.kind === "pause" ? (s.duration_s ?? 0) : ((s.sound_id ? s.duration_s : null) ?? placeholderSeconds(s.text));
       if (Math.abs(s.start_s - at) > 0.0005) {
-        await mockApi.updateSegment(chapter.story_id, s.id, { start_s: Math.round(at * 1000) / 1000 });
+        placeMockSegment(s.id, Math.round(at * 1000) / 1000);
         moved++;
       }
       at += length + (s.kind === "pause" ? 0 : book.settings.pacing.paragraph_gap_s);

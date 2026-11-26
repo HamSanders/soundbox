@@ -314,7 +314,7 @@ function ChapterListView({
           );
         })}
       </ol>
-      <div className="border-border/60 space-y-0.5 border-t p-2">
+      <div className="space-y-0.5 p-2">
         <Button variant="ghost" size="sm" className="w-full justify-start" onClick={addChapter}>
           <PlusIcon />
           Add chapter

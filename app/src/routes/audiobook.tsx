@@ -206,7 +206,11 @@ export function AudiobookPage() {
   }
 
   const data = visible;
-  const panel = "bg-card border-border/70 flex min-h-0 flex-col overflow-hidden rounded-xl border";
+  // The shell's panels, as the studio has them: on a full-bleed page the
+  // page draws no frame of its own, so each part is a solid card with one
+  // faint outline, over whatever background is chosen. Nothing inside draws
+  // a rule; a panel's parts are told apart by space.
+  const panel = "bg-card ring-border/60 flex min-h-0 flex-col overflow-hidden rounded-xl ring-1";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2 md:pr-2 md:pb-2">
@@ -222,7 +226,7 @@ export function AudiobookPage() {
       >
         Skip to paragraphs
       </a>
-      <div className={panel}>
+      <div className={`${panel} shrink-0`}>
         <BookHeader
           book={data}
           findOpen={findOpen}
@@ -241,7 +245,10 @@ export function AudiobookPage() {
             noteCounts={noteCounts}
           />
         </nav>
-        <section className={`${panel} min-h-[50vh] flex-1 md:min-h-0`} aria-label="Paragraphs">
+        <section
+          className={`${panel} min-h-[50vh] flex-1 md:min-h-0`}
+          aria-label="Paragraphs"
+        >
           {chapter ? (
             <ChapterPane
               // Remounted per chapter: a switch stops playback and editing.
@@ -301,7 +308,7 @@ export function AudiobookPage() {
         </section>
         <aside className={`${panel} md:w-80 md:shrink-0`} aria-label={side === "assistant" && assistantOn ? "Assistant" : "Inspector"}>
           {assistantOn && (
-            <div role="tablist" aria-label="Side panel" className="border-border/60 flex shrink-0 gap-1 border-b px-2 pt-2">
+            <div role="tablist" aria-label="Side panel" className="flex shrink-0 gap-1 px-3 pt-3">
               {(["inspector", "assistant"] as const).map((tab) => (
                 <button
                   key={tab}
@@ -309,10 +316,10 @@ export function AudiobookPage() {
                   role="tab"
                   aria-selected={side === tab}
                   className={cn(
-                    "-mb-px border-b-2 px-2.5 pb-1.5 text-xs font-medium capitalize transition-colors",
+                    "rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors",
                     side === tab
-                      ? "border-primary text-foreground"
-                      : "text-muted-foreground hover:text-foreground border-transparent",
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                   )}
                   onClick={() => setSide(tab)}
                 >

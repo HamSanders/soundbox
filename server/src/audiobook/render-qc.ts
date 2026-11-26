@@ -267,13 +267,31 @@ export interface PlacedSegment {
   /** Clip length for lines with audio, pause length for pauses; null = unvoiced. */
   duration_s: number | null;
   is_heading: boolean;
+  /** How long an unvoiced line is drawn, from `placeholderSeconds`. */
+  placeholder_s?: number;
+}
+
+/**
+ * How long the timeline draws a line that has no audio yet: about 0.4 s a
+ * word, at least 0.8 s. The same rule as `estimateDuration` in the app's
+ * `story-timeline.tsx`, so the slot an unvoiced paragraph holds is exactly
+ * the clip the timeline draws for it.
+ */
+export function placeholderSeconds(text: string): number {
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(0.8, words * 0.4);
 }
 
 /**
  * Lay a chapter's paragraphs end to end in reading order with the book's
- * pacing: `paragraph_gap_s` after each voiced paragraph, plus `heading_gap_s`
- * after a heading. Pause lines keep their own length and take no extra gap.
- * Unvoiced paragraphs take no time. Returns only the start times that change.
+ * pacing: `paragraph_gap_s` after each paragraph, plus `heading_gap_s` after
+ * a heading. Pause lines keep their own length and take no extra gap.
+ *
+ * An unvoiced paragraph holds its place at its placeholder length, so the
+ * timeline shows the chapter in reading order with room where the missing
+ * audio goes, rather than every unvoiced clip piled up wherever it was made.
+ * Voicing it swaps the estimate for the real length and the rest moves along.
+ * Returns only the start times that change.
  */
 export function layoutChapter(
   segments: PlacedSegment[],
@@ -287,9 +305,9 @@ export function layoutChapter(
       cursor += s.duration_s ?? 0;
       continue;
     }
-    if (s.duration_s === null) continue;
+    const length = s.duration_s ?? s.placeholder_s ?? 0;
     if (Math.abs(s.start_s - cursor) > 0.0005) moves.set(s.id, round3(cursor));
-    cursor += s.duration_s + pacing.paragraph_gap_s + (s.is_heading ? pacing.heading_gap_s : 0);
+    cursor += length + pacing.paragraph_gap_s + (s.is_heading ? pacing.heading_gap_s : 0);
   }
   return moves;
 }

@@ -8,8 +8,9 @@
  *
  * It starts the app on its in-browser mock backend (no server, no GPU, no data
  * directory) with the demo fixture in `app/src/lib/mock-demo.ts`, drives it
- * with Playwright at one fixed viewport, and writes each shot as WebP beside
- * `manifest.json`, which records the commit and the day they were taken.
+ * with Playwright at a fixed viewport (a larger one for the audiobook shots),
+ * and writes each shot as WebP beside `manifest.json`, which records the
+ * commit and the day they were taken.
  *
  * The screenshots went stale once because taking them was manual. To change
  * what a shot shows, edit the fixture or the `SHOTS` table below and run this
@@ -80,12 +81,53 @@ async function frameStudio(page) {
   await page.mouse.move(4, 4);
 }
 
+/* ------------------------------------------------------------ audiobooks */
+
+/** The audiobook shots are taken in a larger window: the editor has three
+ *  panes and a timeline, and at 1200x750 the paragraphs are a sliver. */
+const BOOK_VIEWPORT = { width: 1440, height: 900 };
+
+/** The mock's sample book, from `app/src/lib/audiobook-mock.ts`. */
+const BOOK = "The Lantern at Gull Point";
+
+async function openBook(page) {
+  await page.getByText(BOOK).first().click();
+  await page.getByRole("tab", { name: "Cast" }).waitFor();
+}
+
+/** The sample book's narrator and Mara point at voices the demo fixture does
+ *  not have, so the pickers read "Voice not installed". Cast them with the
+ *  fixture's own voices, through the Cast tab, the way a person would. */
+async function castBook(page) {
+  await page.getByRole("tab", { name: "Cast" }).click();
+  for (const name of [/^Narrator/, /^Mara/]) {
+    await page.getByRole("combobox").filter({ hasText: "Voice not installed" }).first().click();
+    await page.getByRole("option", { name }).click();
+    await page.waitForTimeout(300);
+  }
+}
+
+async function hideTimeline(page) {
+  await page.getByRole("button", { name: "Hide the timeline" }).click();
+}
+
+/** Turn the prompt assistant on in the mock. Reloading would reset the mock,
+ *  so this calls it in place and waits out the status query's 10 s
+ *  staleTime (App.tsx) before the book page mounts and asks again. */
+async function assistantOn(page) {
+  await page.evaluate(async () => {
+    const { mockApi } = await import("/src/lib/mock.ts");
+    await mockApi.updateSettings({ llm_mode: "managed" });
+  });
+  await page.waitForTimeout(10_500);
+}
+
 /**
  * One row per image. `route` is the app's hash route; `theme` defaults to the
  * app's default (dark); `prepare` runs once the page has settled and gets the
  * page to the state worth photographing.
  *
- * @type {{ name: string, route: string, theme?: "light" | "dark", jpeg?: boolean, prepare?: (page: import("playwright").Page) => Promise<void> }[]}
+ * @type {{ name: string, route: string, theme?: "light" | "dark", jpeg?: boolean, viewport?: { width: number, height: number }, prepare?: (page: import("playwright").Page) => Promise<void> }[]}
  */
 const SHOTS = [
   { name: "app-dashboard", route: "#/dashboard" },
@@ -114,6 +156,112 @@ const SHOTS = [
   { name: "app-agents", route: "#/agents" },
   { name: "app-voice-new", route: "#/voice/new" },
   { name: "app-voice-clone", route: "#/voice/new/clone" },
+  {
+    name: "app-audiobook-cast",
+    route: "#/audiobooks",
+    viewport: BOOK_VIEWPORT,
+    // Also a JPEG: the /audiobooks page's share card.
+    jpeg: true,
+    prepare: async (page) => {
+      await openBook(page);
+      await castBook(page);
+      await page.mouse.move(4, 4);
+    },
+  },
+  {
+    name: "app-audiobook-pronounce",
+    route: "#/audiobooks",
+    viewport: BOOK_VIEWPORT,
+    prepare: async (page) => {
+      await openBook(page);
+      await castBook(page);
+      await hideTimeline(page);
+      await page.getByRole("tab", { name: "Pronounce" }).click();
+      await page.getByLabel("Term", { exact: true }).last().fill("Marlow");
+      const replacement = page.getByLabel("Replacement", { exact: true }).last();
+      await replacement.fill("MAR-low");
+      await replacement.press("Enter");
+      // The "marked stale" toast would sit over the corner of the shot.
+      await page.waitForTimeout(5000);
+      await page.mouse.move(4, 4);
+    },
+  },
+  {
+    name: "app-audiobook-assistant",
+    route: "#/audiobooks",
+    viewport: BOOK_VIEWPORT,
+    prepare: async (page) => {
+      await assistantOn(page);
+      await openBook(page);
+      await castBook(page);
+      await hideTimeline(page);
+      await page.getByRole("tab", { name: "assistant" }).click();
+      await page.locator("textarea").last().fill("Make Juno the narrator and pronounce Marlow as MAR-low");
+      await page.getByRole("button", { name: "Send", exact: true }).click();
+      await page.getByRole("button", { name: /^Accept all/ }).waitFor();
+      await page.mouse.move(4, 4);
+    },
+  },
+  {
+    name: "app-audiobook-beds",
+    route: "#/audiobooks",
+    viewport: BOOK_VIEWPORT,
+    prepare: async (page) => {
+      await openBook(page);
+      await castBook(page);
+      await hideTimeline(page);
+      await page.getByRole("tab", { name: "Inspect" }).click();
+      await page.getByRole("button", { name: "Suggest soundscape" }).click();
+      const first = page.getByText(/^Ambience:/).first();
+      await first.waitFor();
+      await first.scrollIntoViewIfNeeded();
+      await page.mouse.move(4, 4);
+    },
+  },
+  {
+    name: "app-audiobook-acx",
+    route: "#/audiobooks",
+    viewport: BOOK_VIEWPORT,
+    prepare: async (page) => {
+      await openBook(page);
+      await castBook(page);
+      await page.getByRole("button", { name: "Export", exact: true }).click();
+      await page.getByRole("tab", { name: "ACX check" }).click();
+      await page.getByRole("button", { name: "Run check" }).click();
+      await page.getByText(/chapters pass$/).waitFor();
+      await page.mouse.move(4, 4);
+    },
+  },
+  {
+    name: "app-listen-player",
+    route: "#/listen/pride-and-prejudice",
+    viewport: BOOK_VIEWPORT,
+    prepare: async (page) => {
+      // Listening opens the full player, with the read-along beside it.
+      await page.getByRole("button", { name: /^(Resume|Listen)/ }).first().click();
+      await page.getByRole("button", { name: "Bookmark" }).last().waitFor();
+      // Let the read-along reach a line, then hold it still.
+      await page.waitForTimeout(2500);
+      await page.getByRole("button", { name: "Pause", exact: true }).last().click();
+      await page.mouse.move(4, 4);
+    },
+  },
+  { name: "app-listen-explore", route: "#/listen/explore", viewport: BOOK_VIEWPORT },
+  {
+    name: "app-trash",
+    route: "#/audiobooks",
+    viewport: BOOK_VIEWPORT,
+    prepare: async (page) => {
+      // Delete the second sample book and wait for the delete to be sent, then
+      // look in the trash. The toast with its Undo is still up, on purpose:
+      // the shot shows both ways back.
+      await page.getByRole("button", { name: "More for Field Notes" }).click();
+      await page.getByRole("menuitem", { name: "Delete book" }).click();
+      await page.waitForTimeout(7000);
+      await page.goto(page.url().replace(/#.*$/, "#/trash"));
+      await page.getByText("Field Notes").waitFor();
+    },
+  },
 ];
 
 /* ------------------------------------------------------------------ args */
@@ -234,7 +382,7 @@ try {
     // A context per shot: the mock keeps its state in the page, so every shot
     // starts from the same fixture whatever the one before it clicked.
     const context = await browser.newContext({
-      viewport: VIEWPORT,
+      viewport: shot.viewport ?? VIEWPORT,
       deviceScaleFactor: SCALE,
       colorScheme: shot.theme ?? "dark",
       reducedMotion: "reduce",
@@ -257,7 +405,7 @@ try {
     }
     const file = `${shot.name}.webp`;
     writeFileSync(path.join(outDir, file), await toWebp(encoder, await page.screenshot({ type: "png" })));
-    written.push({ file, route: shot.route, theme: shot.theme ?? "dark" });
+    written.push({ file, route: shot.route, theme: shot.theme ?? "dark", ...(shot.viewport ? { viewport: shot.viewport } : {}) });
     console.log(`  ${file}`);
     if (shot.jpeg) {
       // At CSS size (1200x750): a preview card never shows more than that.

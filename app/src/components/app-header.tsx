@@ -100,9 +100,18 @@ export function AppHeader() {
   return (
     // The first row of the page panel, not a bar across the window: the
     // sidebar keeps the logo, and each panel carries its own controls.
-    <header className="bg-background/90 supports-[backdrop-filter]:bg-background/70 sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 px-3 backdrop-blur">
+    <header
+      // No fill: it sits on the page's ground like the panels do. Without a
+      // fill it can't stay pinned over content that scrolls beneath it, so it
+      // scrolls away with the page instead (in the Studio nothing scrolls, so
+      // it stays put). On a phone the tab bar is the always-there navigation.
+      className="relative z-30 flex h-12 shrink-0 items-center gap-2 px-3"
+    >
       <div className="-ml-1 flex items-center">
-        <SidebarButton />
+        {/* On a tablet the rail carries this button; phones and desktops keep it here. */}
+        <span className="contents medium:max-expanded:hidden">
+          <SidebarButton />
+        </span>
         <HistoryButtons />
       </div>
       <Breadcrumb />

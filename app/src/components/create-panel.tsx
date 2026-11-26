@@ -168,7 +168,7 @@ function CreatePanelBody({ kind }: { kind: Kind }) {
     <aside
       aria-label="Create"
       style={panel.style}
-      className="bg-background ring-border relative my-2 mr-2 hidden h-(--panel-h) w-(--panel-w) shrink-0 flex-col rounded-xl ring-1 md:flex"
+      className="bg-background ring-border relative my-2 mr-2 hidden h-(--panel-h) w-(--panel-w) shrink-0 flex-col rounded-xl ring-1 expanded:flex"
     >
       {panel.handle}
       <nav aria-label="Kind" className="flex shrink-0 gap-4 px-4">

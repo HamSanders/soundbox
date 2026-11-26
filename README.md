@@ -2,46 +2,70 @@
 
 # Mirli
 
-**The free, open-source, local alternative to ElevenLabs and Suno.**
+**Free, open-source, local alternative to ElevenLabs and Suno.**
 
-Sound effects, music, songs with lyrics, speech and voice cloning from
-open-weight models on your own GPU. Arrange it on a timeline, or let Claude
-Code, Cursor or any MCP agent do it. No account, no credits, works offline. MIT.
+An AI sound effects generator, AI music and song generator, text-to-speech and
+voice cloning app that runs open-weight models on your own GPU. Arrange it all
+on a multi-track timeline, stream speech into a game or a chat agent, or let
+Claude Code, Cursor or any MCP agent drive it. No account, no credits, works
+offline. MIT licensed.
 
-Mirli was formerly Soundbox. The repository, the `soundbox` command, the
-`soundbox.*` MCP tools and the installer file names keep the old name for now.
-Environment variables are `MIRLI_*`, and the old `SOUNDBOX_*` names still work
-(0.5.0 and earlier read only `SOUNDBOX_*`).
-
-[Download](#download) · [Hear it](#hear-it) · [For agents](#for-agents) · [Models](#models) · [Docs](#docs) · [Website](https://mirli.app/) · [Patreon](https://patreon.com/soundboxai)
+[Download](#download) · [Features](#features) · [For agents](#for-agents) · [Models](#models) · [Docs](#docs) · [Website](https://mirli.app/) · [Patreon](https://patreon.com/soundboxai)
 
 [![Latest release](https://img.shields.io/github/v/release/HamSanders/soundbox?label=release)](https://github.com/HamSanders/soundbox/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/HamSanders/soundbox/total?label=downloads)](https://github.com/HamSanders/soundbox/releases)
 [![MIT licence](https://img.shields.io/badge/licence-MIT-2ea44f)](LICENSE)
-[![MCP server](https://img.shields.io/badge/MCP-24%20tools-6b4fbb)](docs/MCP.md)
+[![MCP server](https://img.shields.io/badge/MCP-27%20tools-6b4fbb)](docs/MCP.md)
 [![Patreon](https://img.shields.io/badge/Patreon-support-f96854?logo=patreon&logoColor=white)](https://patreon.com/soundboxai)
 
-<img src="site/public/product/same-prompt-three-models.gif" alt="The same prompt and seed rendered by Stable Audio 3.0 Small Music, MiniMax Music 3 and ACE-Step 1.5 Turbo, with measured render times on an RTX 5080" width="880">
+<img src="site/public/product/app-studio.webp" alt="The Mirli studio: a script cast across three voices above a timeline with narration, dialogue, a music bed, ambience and sound effects on five lanes, and the library beside it" width="880">
 
 **Watch:** [30-second tour](https://mirli.app/media/soundbox-vibe.mp4) · [Under the hood](https://mirli.app/media/soundbox-tech.mp4) · [Agents and MCP](https://mirli.app/media/soundbox-agents.mp4)
 
 </div>
 
-## Describe it, hear it, arrange it
+> Mirli was formerly Soundbox. The repository, the `soundbox` command, the
+> `soundbox.*` MCP tools and the installer file names keep the old name for now.
+> Environment variables are `MIRLI_*`; the old `SOUNDBOX_*` names still work.
 
-<img src="site/public/product/app-studio.webp" alt="The Mirli studio: a script cast across three voices above a timeline with narration, dialogue, a music bed, ambience and sound effects on five lanes, and the library beside it" width="880">
+## Features
 
-| Make | Arrange | Connect |
-|---|---|---|
-| Sound effects and ambience from a description | A multi-track timeline with effects, MIDI and mixdown | An MCP server with 24 tools for Claude Code and Cursor |
-| Instrumentals, or songs from a lyric sheet | Cast saved voices onto the lines of a script | A local HTTP API on port 17494, with OpenAI-compatible speech routes |
-| Speech, voice cloning and voice conversion | Extend, cover, repaint, split into stems | Three agent skills, including a full sound pass |
+**Sound effects and ambience.** Type the material, the action and the space,
+and get foley, game SFX, UI sounds and seamless ambience loops as WAV files.
+[Hear 600 samples](https://mirli.app/sfx/) · [Prompting guide](docs/GENERATING.md)
 
-Four models are verified end to end and on by default; 61 more can be switched
-on from the Models page. Each model's licence is shown before you download it.
-Everything stays in one SQLite file and a folder of WAVs under `~/.mirli`.
-Profiles give you several libraries in one install, one per game or client,
-switched from the header without a restart; the models are shared.
+**Music and songs.** Instrumentals and loops from a style prompt, or full songs
+with vocals from a lyric sheet. Extend a track, cover it in another style, or
+repaint a section. [Hear tracks](https://mirli.app/music/)
+
+**Text-to-speech and voice cloning.** 45 speech models, from Kokoro to
+Chatterbox, IndexTTS 2 and Fish Audio S2 Pro. Clone a voice from up to five
+clips, recorded or uploaded, and keep it in Voice Lab to reuse anywhere.
+Voice conversion turns one recording into another voice.
+
+**Streaming speech.** `POST /api/speak/stream` sends audio while the line is
+still being generated, as server-sent events or raw 16-bit PCM, for game
+dialogue and live chat agents. VoxCPM2 gets first audio out in about 0.2
+seconds on an RTX 5080. [Streaming docs](docs/STREAMING.md)
+
+**Stem separation.** Split any track into vocals, drums, bass and the rest with
+HTDemucs or RoFormer models.
+
+**Multi-track studio.** A timeline with effects racks, MIDI and a piano roll,
+mixdown and export. Paste a script, cast saved voices onto its lines, and lay
+music, ambience and effects underneath.
+[Studio docs](docs/STUDIO.md)
+
+**Agents, MCP and API.** An MCP server with 27 tools for Claude Code, Cursor
+and other clients, three agent skills including a full game sound pass, a local
+HTTP API, and OpenAI-compatible `/v1/audio/speech` and
+`/v1/audio/transcriptions` routes.
+
+**Yours, on your machine.** 65 models in the catalog, four verified and on by
+default, each with its licence shown before download. Everything lives in one
+SQLite file and a folder of WAVs under `~/.mirli`. Profiles keep a separate
+library per game or client. Bring your own ElevenLabs or fal key through custom
+endpoints if you want a hosted model too.
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="site/public/product/app-dashboard-light.webp">
@@ -104,19 +128,6 @@ model's size and licence before downloading it, never to accept a
 non-commercial licence for you, and to finish by generating one sound and
 telling you where the WAV is.
 
-## Hear it
-
-Each clip was generated by Mirli from the prompt shown. The
-[samples site](https://mirli.app/sfx/) has around 600 more.
-
-| | Prompt | Model | |
-|---|---|---|---|
-| Glass | *large window pane breaking, cracking then collapsing inward with long shards falling and shattering on a wooden floor* | Stable Audio 3.0 SFX | [▶ Listen](https://mirli.app/sfx/glass/glass-window-pane-break) |
-| Ambience | *heavy thunderstorm, driving rain with rolling thunder and wind gusting through trees, outdoor, seamless loop* | Stable Audio 3.0 SFX | [▶ Listen](https://mirli.app/sfx/rain/rain-thunderstorm-full) |
-| Game | *plasma bolt firing, thick electric discharge with a downward pitch sweep and a crackling tail* | Stable Audio 3.0 SFX | [▶ Listen](https://mirli.app/sfx/laser/laser-plasma-bolt) |
-| Instrumental | *1980s synthwave arcade title theme, wide analog saw lead, gated reverb drum machine, pulsing sidechained bass, 110 BPM* | Stable Audio 3.0 Small Music | [▶ Listen](https://mirli.app/music/neon-arcade-nights) |
-| Song | *triumphant power pop victory anthem, bright electric guitars, punchy live drums, gang vocal chorus*, with a four-line lyric sheet | ACE-Step 1.5 | [▶ Listen](https://mirli.app/music/victory-lap) |
-
 ## For agents
 
 Start Mirli, then add it to your client.
@@ -128,7 +139,7 @@ claude mcp add --transport http soundbox http://127.0.0.1:17494/mcp
 Cursor and other MCP clients take `{ "type": "http", "url": "http://127.0.0.1:17494/mcp" }`.
 Then ask: "add a door slam and a coin pickup to this game", "voice these three
 lines as two characters", "write a 20-second loading-screen loop". The agent
-gets 24 tools for sounds, speech and multi-track stories, and three skills:
+gets 27 tools for sounds, speech, multi-track stories and the studio you have open, and three skills:
 `soundbox-sfx`, `soundbox-sound-pass` and `soundbox-voice-story`. Every tool,
 the stdio bridge and the skills are in [docs/MCP.md](docs/MCP.md).
 

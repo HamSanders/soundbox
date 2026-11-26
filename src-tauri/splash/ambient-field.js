@@ -58,6 +58,7 @@ uniform float uPointerOn;
 uniform vec3 uAudio;
 uniform float uBands[${BANDS}];
 uniform float uCell;
+uniform float uDrift;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p) {
@@ -104,8 +105,11 @@ void main() {
   }
   p -= disp;
 
+  // Sound speeds the smoke up through uDrift, a phase the host advances by
+  // bass each frame. Scaling uTime by bass instead would jump the whole
+  // field on every beat once the app has been open a while.
   float level = uAudio.x, bass = uAudio.y, high = uAudio.z;
-  float t = uTime * (0.03 + bass * 0.02);
+  float t = uTime * 0.03 + uDrift;
 
   // Texture: noise warped by noise warped by noise, rising slowly, cut with
   // a soft threshold so it breaks into wisps with air between them.
@@ -114,16 +118,16 @@ void main() {
   vec2 r = vec2(fbm(s0 + 3.2 * q + vec2(1.7, 9.2) + 0.4 * t),
                 fbm(s0 + 3.2 * q + vec2(8.3, 2.8) - 0.3 * t));
   float d = fbm(s0 + 3.4 * r);
-  float wisp = smoothstep(0.42 - level * 0.05, 0.86, d);
+  float wisp = smoothstep(0.42 - level * 0.03, 0.86, d);
 
   // The bank: dense at the bottom-left source, clear air ahead, a billowing
-  // front that breathes and leans forward on bass hits. Its direction sways
+  // front that breathes and leans forward a little on bass. Its direction sways
   // slowly so the front never sits still.
   float sway = 0.25 * sin(uTime * 0.021);
   vec2 dir = normalize(vec2(0.45 + sway, 1.0));
   float along = dot(p, dir);
   float across = dot(p, vec2(-dir.y, dir.x));
-  float front = -0.08 + 0.1 * sin(uTime * 0.05) + bass * 0.06
+  float front = -0.08 + 0.1 * sin(uTime * 0.05) + bass * 0.04
               + (fbm(vec2(across * 2.2, t * 1.5)) - 0.5) * 0.45
               + (r.x - 0.5) * 0.18;
   float body = smoothstep(front + 0.04, front - 0.75, along);
@@ -135,15 +139,15 @@ void main() {
   // Mostly the smoke's own grey, warm where the warp is strongest, a hint
   // of the amber where it is densest.
   vec3 smoke = mix(uC3, uC2, smoothstep(0.35, 0.75, r.y) * 0.5);
-  smoke = mix(smoke, uC1, smoothstep(0.6, 0.95, d) * (0.35 + level * 0.4));
+  smoke = mix(smoke, uC1, smoothstep(0.6, 0.95, d) * (0.35 + level * 0.25));
 
   vec2 dp = screen - uPointer;
   float clear = exp(-dot(dp, dp) / 0.025) * uPointerOn * 0.7;
   clear = clamp(max(clear, blown * 0.9), 0.0, 1.0);
 
-  float amount = (wisp + haze) * uStrength * (1.0 - clear) * (1.0 + bass * 0.25);
+  float amount = (wisp + haze) * uStrength * (1.0 - clear) * (1.0 + bass * 0.15);
   vec3 col = mix(uBg, smoke, clamp(amount, 0.0, 1.0));
-  col += (noise(s0 * 18.0 + uTime * 2.0) - 0.5) * high * 0.025 * wisp;
+  col += (noise(s0 * 18.0 + uTime * 2.0) - 0.5) * high * 0.015 * wisp;
   gl_FragColor = vec4(dither(col), 1.0);
 }
 `;
@@ -280,7 +284,7 @@ const STYLES = { smoke: SMOKE, liquid: LIQUID, gradient: GRADIENT, pixel: PIXEL 
 /** Render scale and cell size per style. The pixel grid draws at half
  *  resolution so each 6-pixel cell is 12 CSS pixels and stays crisp. */
 const STYLE_SCALE = { smoke: 0.4, liquid: 0.4, gradient: 0.25, pixel: 0.5 };
-const UNIFORMS = ["uRes", "uTime", "uBg", "uC1", "uC2", "uC3", "uStrength", "uTrail", "uAge", "uPointer", "uPointerOn", "uAudio", "uBands", "uCell"];
+const UNIFORMS = ["uRes", "uTime", "uBg", "uC1", "uC2", "uC3", "uStrength", "uTrail", "uAge", "uPointer", "uPointerOn", "uAudio", "uBands", "uCell", "uDrift"];
 
 /** "#f2a40c" or "rgb(…)" to [r, g, b] in 0..1. Unknown input gives null. */
 export function parseColor(input) {
@@ -437,6 +441,10 @@ export function createAmbientField(canvas, options = {}) {
   const audio = [0, 0, 0];
   const avg = [0, 0, 0];
   const bands = new Float32Array(BANDS);
+  // Smoke gets the same reading eased once more, so it swells with the
+  // music instead of jumping on each beat, and a phase that bass advances.
+  const calm = [0, 0, 0];
+  let drift = 0;
   const smoothAudio = (dt) => {
     const raw = audioSource ? audioSource() : null;
     for (let i = 0; i < 3; i++) {
@@ -445,7 +453,9 @@ export function createAmbientField(canvas, options = {}) {
       if (i === 1) target = Math.min(1, 0.3 * target + 2.5 * Math.max(0, target - avg[i]));
       const k = target > audio[i] ? 1 - Math.exp(-dt / 0.06) : 1 - Math.exp(-dt / 0.6);
       audio[i] += (target - audio[i]) * k;
+      calm[i] += (audio[i] - calm[i]) * (1 - Math.exp(-dt / 0.35));
     }
+    drift += dt * calm[1] * 0.015;
     const rawBands = bandSource && style === "pixel" ? bandSource() : null;
     for (let i = 0; i < BANDS; i++) {
       const target = rawBands ? Math.min(1, Math.max(0, rawBands[i] || 0)) : 0;
@@ -481,7 +491,8 @@ export function createAmbientField(canvas, options = {}) {
     gl.uniform1fv(U.uAge, ages);
     gl.uniform2f(U.uPointer, pointer.x, pointer.y);
     gl.uniform1f(U.uPointerOn, still ? 0 : pointer.on);
-    gl.uniform3fv(U.uAudio, still ? zeros3 : audio);
+    gl.uniform3fv(U.uAudio, still ? zeros3 : style === "smoke" ? calm : audio);
+    if (U.uDrift) gl.uniform1f(U.uDrift, still ? 0 : drift);
     if (U.uBands) gl.uniform1fv(U.uBands, still ? zerosBands : bands);
     if (U.uCell) gl.uniform1f(U.uCell, 6.0);
     gl.drawArrays(gl.TRIANGLES, 0, 3);

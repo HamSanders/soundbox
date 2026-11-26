@@ -2430,7 +2430,8 @@ export class MirliService {
     }
 
     const sampleId = randomUUID();
-    const filename = `voice-${voiceId}-${sampleId.slice(0, 8)}.wav`;
+    // The id as the database holds it, not as the request spelled it.
+    const filename = `voice-${voice.id}-${sampleId.slice(0, 8)}.wav`;
     dsp.writeWav(join(this.config.paths.sounds, filename), clip.audio, clip.sampleRate);
     this.db.addVoiceSample({
       id: sampleId,

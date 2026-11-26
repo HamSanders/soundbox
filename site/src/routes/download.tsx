@@ -65,8 +65,8 @@ const PROMPTS = [
 ];
 
 const HEADLINE = [
-  ["Every", "sound", "you", "need,"],
-  ["on", "your", "own", "machine."],
+  ["A", "free,", "open-source", "alternative"],
+  ["to", "ElevenLabs", "and", "Suno"],
 ];
 
 const INSIDE = [
@@ -479,7 +479,7 @@ export function DownloadPage() {
 
           <h1
             id="download-heading"
-            className="mt-4 px-4 text-[clamp(3.1rem,11.4vw,9.25rem)] leading-[0.84] text-balance uppercase"
+            className="mt-4 px-4 text-[clamp(2.3rem,7.9vw,6.5rem)] leading-[0.84] text-balance uppercase"
           >
             {HEADLINE.map((line, l) => (
               <span key={l} className="block">
@@ -505,8 +505,7 @@ export function DownloadPage() {
             className="text-muted-foreground dl-rise mt-7 max-w-xl px-4 text-lg leading-relaxed text-pretty sm:text-xl"
             style={{ "--d": "0.8s" } as CSSProperties}
           >
-            Sound effects, music and voices from open models, generated on your
-            GPU. No account, no credits, no cloud.
+            Sound effects, music and voices.
           </p>
 
           <div

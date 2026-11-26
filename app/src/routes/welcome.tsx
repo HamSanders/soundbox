@@ -44,6 +44,7 @@ import { SamplePlay } from "@/components/sample-play";
 import { type ExampleId } from "@/content/examples";
 import { cloudWaitlistHref, MODELS_HUB_HREF, REPO_URL, repoFile } from "@/lib/marketing-links";
 import { cn } from "@/lib/utils";
+import { assetUrl } from "@/lib/asset-url";
 
 /* ------------------------------------------------------------------- data */
 
@@ -160,14 +161,47 @@ function useStars(): number | null {
 }
 
 /**
+ * The running app, large and centred under the buttons: the Music page with
+ * its Create panel, the takes it made and the player. A capture of the 0.6 app
+ * in mock mode (the same set as `ProductShots`), not a drawing.
+ *
+ * Hidden on phones, where a desktop window is too small to read; the Studio
+ * section further down shows the same screens with tabs. The source sits
+ * behind a min-width media query, so a phone fetches only the 1px placeholder.
+ */
+function HeroShot() {
+  return (
+    <figure className="relative mx-auto mt-12 hidden w-full max-w-5xl sm:block">
+      <div
+        aria-hidden="true"
+        className="bg-primary/10 pointer-events-none absolute inset-x-[8%] top-[10%] bottom-[-4%] blur-3xl"
+      />
+      <picture className="relative block">
+        <source media="(min-width: 640px)" srcSet={assetUrl("/product/app-music.webp")} />
+        <img
+          src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+          alt="The Mirli app on its Music page: a Create panel with an ACE-Step model picker, an instrumental switch and a styles prompt, beside a list of seven generated tracks with licence badges, and a player at the bottom."
+          width={1440}
+          height={900}
+          loading="eager"
+          fetchPriority="high"
+          decoding="async"
+          className="ring-border/70 aspect-[16/10] w-full rounded-xl object-cover object-top shadow-2xl ring-1"
+        />
+      </picture>
+    </figure>
+  );
+}
+
+/**
  * Say what it is, then let it be heard.
  *
  * The audio sites that do this well (Stable Audio, Suno, ElevenLabs) put real
  * output with a play button in the first screen, labelled with the prompt
  * that made it. This hero used to hold a decorative timeline and a prompt box
  * that could only open the download page; both are gone. What is left is one
- * headline, one sentence, two buttons and six renders, each playable without
- * installing anything.
+ * headline, one sentence, two buttons, a large screenshot of the running app
+ * and six renders, each playable without installing anything.
  */
 function Hero() {
   const stars = useStars();
@@ -183,21 +217,15 @@ function Hero() {
 
       <div className="relative mx-auto w-full max-w-5xl py-16 sm:py-24">
         <div className="mx-auto max-w-3xl text-center">
-          <span className="text-muted-foreground ring-border bg-card inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ring-1">
-            <span className="bg-primary size-1.5 rounded-full" aria-hidden="true" />
-            Free · Open source · Runs on your GPU
-          </span>
-
           <h1
             id="hero-heading"
-            className="font-heading mt-5 text-4xl font-semibold tracking-tight text-balance sm:text-5xl"
+            className="font-heading text-4xl font-semibold tracking-tight text-balance sm:text-5xl"
           >
-            Sound effects, music and voices, made on your own GPU
+            A free, open-source alternative to ElevenLabs and Suno
           </h1>
 
           <p className="text-muted-foreground mx-auto mt-5 max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
-            A free, open-source alternative to ElevenLabs and Suno. No account,
-            no credits, works offline.
+            Sound effects, music and voices.
           </p>
 
           <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row sm:items-start">
@@ -225,9 +253,11 @@ function Hero() {
           </p>
         </div>
 
+        <HeroShot />
+
         <ul
           aria-label="Sounds made with Mirli"
-          className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+          className="mt-16 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
         >
           {/* Four on a phone, where each tile is a full row; all six once the
               grid has columns. */}

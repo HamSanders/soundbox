@@ -20,7 +20,9 @@
  *    `app/src/lib/listen-player-store.ts`, publishing in
  *    `server/src/audiobook/publish/`, the assistant's card in
  *    `app/src/components/agent-proposal.tsx`, the toasts in
- *    `app/src/lib/undo.ts` and the trash in `server/src/trash.ts`.
+ *    `app/src/lib/undo.ts` and the trash in `server/src/trash.ts`. The
+ *    agent route: the tools in `server/src/mcp/server.ts`, and the export
+ *    folder (`<data dir>/exports/audiobooks`) in `server/src/audiobook/export.ts`.
  *    `docs/AUDIOBOOKS.md` says the same things at length.
  *
  * The screenshots are real captures of the app on its mock backend, taken by
@@ -195,9 +197,13 @@ function Hero() {
               </Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <Link to="/docs/audiobooks">Read the audiobook guide</Link>
+              <a href="#agents">Or ask your agent</a>
             </Button>
           </div>
+          <p className="text-muted-foreground mx-auto mt-4 max-w-xl text-sm leading-relaxed text-pretty">
+            You don&apos;t have to open the app. Ask Claude, or any agent connected to Mirli
+            over MCP, to make the book, and it hands back the finished file.
+          </p>
         </div>
 
         <Shot
@@ -578,11 +584,41 @@ function Agents() {
   return (
     <Section
       id="agents"
-      eyebrow="For agents"
-      title="An agent can build the whole book"
-      lede="Every step on this page has an MCP tool, so Claude Code, Cursor or any MCP client connected to Mirli can make an audiobook end to end."
+      eyebrow="Ask your agent"
+      title="Or skip the app and just ask"
+      lede="Every step of making a book has an MCP tool, so Claude Code, Cursor or any MCP client connected to Mirli can make an audiobook from start to finish while you do something else."
     >
-      <ol className="flex flex-wrap items-center gap-2 text-xs">
+      <figure className="bg-card ring-border max-w-3xl rounded-xl p-5 ring-1">
+        <blockquote className="text-sm leading-relaxed sm:text-base">
+          &ldquo;Import lantern.epub from my Documents folder, have a calm narrator read it and a
+          different voice for Mara, say Marlow as MAR&#8209;low, put quiet sea ambience under
+          chapter one, and export an M4B.&rdquo;
+        </blockquote>
+        <figcaption className="text-muted-foreground mt-3 text-xs">
+          An example request. The agent turns it into the tool calls below.
+        </figcaption>
+      </figure>
+      <ul className="text-muted-foreground mt-6 grid max-w-3xl gap-3 text-sm leading-relaxed sm:grid-cols-2">
+        <li>
+          <Strong>The file comes back to the agent.</Strong> The export tool writes MP3,
+          WAV, FLAC or M4B into Mirli&apos;s data folder (under{" "}
+          <code className="font-mono text-xs">exports/audiobooks</code>) and returns its
+          path and any ACX check that failed, so the agent can tell you, or copy the file
+          where you want it.
+        </li>
+        <li>
+          <Strong>The book is in the app too.</Strong> The tools go through the same HTTP API
+          as the app, so they validate exactly as the editor does, and a book an agent builds
+          opens in the app like any other, ready to listen to or fix by hand.
+        </li>
+        <li className="sm:col-span-2">
+          <Strong>What it needs:</Strong> Mirli running (the desktop app, or the server on its
+          own, for example in Docker), your agent connected to it once, and a text-to-speech
+          model installed in Mirli or reached through an endpoint you add.
+        </li>
+      </ul>
+      <p className="label-caps text-muted-foreground mt-8">The tools, in order</p>
+      <ol className="mt-3 flex flex-wrap items-center gap-2 text-xs">
         {AGENT_FLOW.map((tool, i) => (
           <li key={tool} className="flex items-center gap-2">
             <code className="bg-muted/60 ring-border rounded-md px-2 py-1 font-mono ring-1 ring-inset">
@@ -599,8 +635,7 @@ function Agents() {
       <p className="text-muted-foreground mt-6 max-w-3xl text-sm leading-relaxed">
         More tools edit the text and the chapters: edit, cast, lock, split and merge
         paragraphs, find and replace across the book, and add, rename, move or delete
-        chapters. They go through the same HTTP API as the app, so they validate exactly as
-        the editor does, and a book an agent builds opens in the app like any other.
+        chapters.
       </p>
       <div className="mt-6 flex flex-wrap gap-2">
         <Button variant="outline" asChild>
@@ -703,10 +738,12 @@ export function AudiobooksPage() {
         Skip to content
       </a>
       <main id="main">
-        {/* The order is the order a book is made in: in, cast, pronounce,
-            voice, beds, out, then listening to it; the assistant and the
-            agent tools after, as another way to do all of the above. */}
+        {/* Asking an agent comes first, right under the hero, because it
+            is the shortest way to a finished book. The rest is the order a
+            book is made in by hand: in, cast, pronounce, voice, beds, out,
+            then listening to it, and the editor's assistant. */}
         <Hero />
+        <Agents />
         <Import />
         <Cast />
         <Pronounce />
@@ -715,7 +752,6 @@ export function AudiobooksPage() {
         <Export />
         <Listen />
         <Assistant />
-        <Agents />
         <UndoAndTrash />
         <Close />
       </main>

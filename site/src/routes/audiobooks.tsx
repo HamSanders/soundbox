@@ -662,7 +662,7 @@ function Close() {
             Audiobooks are part of Mirli
           </h2>
           <p className="text-muted-foreground mt-3 leading-relaxed">
-            There is no account and nothing extra to buy. To voice a book you need a
+            Audiobooks come with the app. To voice a book you need a
             text-to-speech model, installed in the app or reached through an endpoint you
             add. Read its licence first: it decides what you may do with the recording.
           </p>

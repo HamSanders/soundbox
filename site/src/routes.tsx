@@ -7,6 +7,7 @@ import { DocPageRoute } from "./routes/doc";
 import { BlogIndexPage } from "./routes/blog-index";
 import { BlogPostPage } from "./routes/blog-post";
 import { McpPage } from "./routes/mcp";
+import { AudiobooksPage } from "./routes/audiobooks";
 import { PressPage } from "./routes/press";
 import { DownloadPage } from "./routes/download";
 import { DevelopersPage } from "./routes/developers";
@@ -107,6 +108,14 @@ export const routes: RouteRecord[] = [
         path: "voices",
         Component: VoicesPage,
         entry: "../app/src/routes/voices.tsx",
+      },
+      {
+        // The audiobook pitch: import, cast, pronounce, render, beds, export,
+        // Listen and the book editor's assistant. Site-only, one page. Not
+        // the app's own /audiobooks shelf, which never ships in this build.
+        path: "audiobooks",
+        Component: AudiobooksPage,
+        entry: "src/routes/audiobooks.tsx",
       },
       {
         // Marketing content about the five models Mirli runs locally.

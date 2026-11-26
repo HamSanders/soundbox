@@ -182,7 +182,7 @@ export function writeCrawlerFiles(
     const p = byRel.get(`docs/${slug}/`)!;
     return line(p, url(`docs/${slug}/index.md`));
   });
-  const PRODUCT = ["", "download/", "mcp/", "studio/", "voices/", "models/", "sfx/", "music/", "press/", "blog/"];
+  const PRODUCT = ["", "download/", "mcp/", "studio/", "voices/", "audiobooks/", "models/", "sfx/", "music/", "press/", "blog/"];
   const optional = all.filter(
     (p) =>
       /^(sfx|models|music|blog)\/[^/]+\/$/.test(p.rel) ||

@@ -58,7 +58,13 @@ interface BookView {
     voiced?: number;
   }[];
   characters: { character_id: string; name: string; voice_id: string | null; model_id?: string | null }[];
-  paragraphs?: { paragraph_id: string; text: string; character_id: string | null; status: string }[];
+  paragraphs?: {
+    paragraph_id: string;
+    text: string;
+    character_id: string | null;
+    status: string;
+    is_heading?: boolean;
+  }[];
 }
 
 async function contextFor(
@@ -104,6 +110,7 @@ async function contextFor(
             text: p.text,
             character_id: p.character_id,
             status: p.status,
+            is_heading: p.is_heading ?? false,
           })),
         }
       : null,

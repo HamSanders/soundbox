@@ -52,20 +52,23 @@ afterAll(async () => {
 });
 
 describe("POST /api/agent/plan", () => {
-  it("shows the model the book, the open chapter and the tools, and keeps only valid calls", async () => {
+  it("routes, then plans with the routed tools and short names, and keeps only valid calls", async () => {
     const llm = svc.llm as unknown as {
       resolveEndpoint: () => Promise<unknown>;
       complete: (e: unknown, messages: { content: string }[]) => Promise<string>;
     };
     let seen: { content: string }[] = [];
+    let turn = 0;
     const endpoint = vi.spyOn(llm, "resolveEndpoint").mockResolvedValue({ baseUrl: "x", apiKey: null, model: "m" });
     const complete = vi.spyOn(llm, "complete").mockImplementation(async (_e, messages) => {
+      // First the router, then the planner.
+      if (turn++ === 0) return "sound, text";
       seen = messages;
       return JSON.stringify({
         reply: "Muting the beds lane and fixing the first line.",
         calls: [
-          { tool: "soundbox.mix_track", arguments: { story_id: storyId, track_index: 1, muted: true } },
-          { tool: "soundbox.update_line", arguments: { line_id: paragraphId, text: "Once upon a midnight." } },
+          { tool: "soundbox.mix_track", arguments: { story_id: "C1", track_index: 1, muted: true } },
+          { tool: "soundbox.update_line", arguments: { line_id: "P1", text: "Once upon a midnight dreary, while I pondered." } },
           { tool: "soundbox.update_line", arguments: { line_id: "made-up", text: "x" } },
         ],
       });
@@ -75,21 +78,26 @@ describe("POST /api/agent/plan", () => {
         method: "POST",
         url: "/api/agent/plan",
         headers: H,
-        payload: { instruction: "mute the beds and shorten the first line", scope: { book_id: bookId, chapter_id: chapterId } },
+        payload: { instruction: "mute the beds lane and lengthen the first paragraph", scope: { book_id: bookId, chapter_id: chapterId } },
       });
       expect(res.statusCode).toBe(200);
       const plan = res.json();
+      expect(plan.groups).toEqual(["text", "sound"]);
+      expect(plan.calls[0].arguments.story_id).toBe(storyId);
+      expect(plan.calls[1].arguments.line_id).toBe(paragraphId);
       expect(plan.calls.map((c: { tool: string; risk: string }) => [c.tool, c.risk])).toEqual([
         ["soundbox.mix_track", "write"],
         ["soundbox.update_line", "write"],
       ]);
       expect(plan.dropped).toHaveLength(1);
       const system = seen[0]!.content;
-      expect(system).toContain("soundbox.render_audiobook(");
-      expect(system).toContain("soundbox.add_pronunciation(");
+      expect(system).toContain("soundbox.mix_track(");
+      expect(system).toContain("soundbox.update_line(");
+      expect(system).not.toContain("soundbox.render_audiobook(");
       const user = seen.at(-1)!.content;
-      expect(user).toContain(`book_id=${bookId}`);
-      expect(user).toContain(`paragraph_id=${paragraphId}`);
+      expect(user).toContain('Book B: "The Raven"');
+      expect(user).toContain("P1 (unvoiced): Once upon a midnight dreary.");
+      expect(user).not.toContain(bookId);
     } finally {
       endpoint.mockRestore();
       complete.mockRestore();

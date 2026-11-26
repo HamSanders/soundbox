@@ -20,7 +20,16 @@ import {
   type LlmProgressFn,
 } from "../models/llmCatalog.js";
 import * as llamaBinary from "../models/llamaServerBinary.js";
-import { buildAgentMessages, parseAgentPlan, type AgentContext, type AgentPlan, type AgentTool } from "./agent.js";
+import {
+  buildAgentMessages,
+  buildRouteMessages,
+  parseAgentPlan,
+  parseGroups,
+  toolsFor,
+  type AgentContext,
+  type AgentPlan,
+  type AgentTool,
+} from "./agent.js";
 import { chatCompletion } from "./client.js";
 import type { ChatMessage } from "./client.js";
 import {
@@ -300,12 +309,18 @@ export class LlmService {
     context: AgentContext,
   ): Promise<AgentPlan> {
     const endpoint = await this.resolveEndpoint();
-    const text = await this.complete(endpoint, buildAgentMessages(instruction, history, tools, context), {
+    // Route first, then plan with only the tools that route needs: all of
+    // MCP does not fit the managed model's context (see `TOOL_GROUPS`).
+    const groups = parseGroups(
+      await this.complete(endpoint, buildRouteMessages(instruction, history), { temperature: 0, maxTokens: 24 }),
+      instruction,
+    );
+    const text = await this.complete(endpoint, buildAgentMessages(instruction, history, tools, context, groups), {
       temperature: 0,
-      maxTokens: 900,
+      maxTokens: 700,
     });
     this.runtime.touch();
-    return parseAgentPlan(text, tools, context);
+    return { ...parseAgentPlan(text, toolsFor(tools, groups), context, instruction), groups };
   }
 
   private async complete(

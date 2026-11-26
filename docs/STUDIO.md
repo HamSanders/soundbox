@@ -864,8 +864,9 @@ Splitting a voiced line keeps all the words on the first half, because there is
 no reliable way to tell which words fall on each side of the cut.
 
 An agent can change the same track properties the export applies: name, mute,
-solo and gain. There is no MCP tool for the device rack, because the export
-ignores it.
+solo and gain. It can also put devices on a lane's rack, turn their knobs and
+take them off, but devices are heard in the studio's playback only:
+`soundbox.export_story` mixes dry.
 
 The studio runs on an ordinary HTTP API: `/api/stories`, its `/tracks` and
 `/segments`, and `/export`. See [the API reference](./API.md) to call it

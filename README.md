@@ -15,7 +15,7 @@ offline. MIT licensed.
 [![Latest release](https://img.shields.io/github/v/release/HamSanders/soundbox?label=release)](https://github.com/HamSanders/soundbox/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/HamSanders/soundbox/total?label=downloads)](https://github.com/HamSanders/soundbox/releases)
 [![MIT licence](https://img.shields.io/badge/licence-MIT-2ea44f)](LICENSE)
-[![MCP server](https://img.shields.io/badge/MCP-27%20tools-6b4fbb)](docs/MCP.md)
+[![MCP server](https://img.shields.io/badge/MCP-49%20tools-6b4fbb)](docs/MCP.md)
 [![Patreon](https://img.shields.io/badge/Patreon-support-f96854?logo=patreon&logoColor=white)](https://patreon.com/soundboxai)
 
 <img src="site/public/product/app-studio.webp" alt="The Mirli studio: a script cast across three voices above a timeline with narration, dialogue, a music bed, ambience and sound effects on five lanes, and the library beside it" width="880">
@@ -56,7 +56,15 @@ mixdown and export. Paste a script, cast saved voices onto its lines, and lay
 music, ambience and effects underneath.
 [Studio docs](docs/STUDIO.md)
 
-**Agents, MCP and API.** An MCP server with 27 tools for Claude Code, Cursor
+**Audiobooks.** Import an EPUB, PDF, DOCX, text file or web page, or start from
+one of 42 bundled public-domain classics. Cast a narrator and a voice per
+character, fix pronunciations, voice it paragraph by paragraph with takes and
+locks, lay music and ambience under each chapter with ducking, then master to
+the ACX numbers and export MP3, WAV, FLAC or M4B with chapters. Listen in the
+app's own player, with read-along. An assistant in the editor turns a request
+into steps you accept or reject. [Audiobook docs](docs/AUDIOBOOKS.md)
+
+**Agents, MCP and API.** An MCP server with 49 tools for Claude Code, Cursor
 and other clients, three agent skills including a full game sound pass, a local
 HTTP API, and OpenAI-compatible `/v1/audio/speech` and
 `/v1/audio/transcriptions` routes.
@@ -64,7 +72,8 @@ HTTP API, and OpenAI-compatible `/v1/audio/speech` and
 **Yours, on your machine.** 65 models in the catalog, four verified and on by
 default, each with its licence shown before download. Everything lives in one
 SQLite file and a folder of WAVs under `~/.mirli`. Profiles keep a separate
-library per game or client. Bring your own ElevenLabs or fal key through custom
+library per game or client. Deleted sounds, sessions and books wait in the
+Trash for 30 days. Bring your own ElevenLabs or fal key through custom
 endpoints if you want a hosted model too.
 
 <picture>
@@ -139,7 +148,7 @@ claude mcp add --transport http soundbox http://127.0.0.1:17494/mcp
 Cursor and other MCP clients take `{ "type": "http", "url": "http://127.0.0.1:17494/mcp" }`.
 Then ask: "add a door slam and a coin pickup to this game", "voice these three
 lines as two characters", "write a 20-second loading-screen loop". The agent
-gets 27 tools for sounds, speech, multi-track stories and the studio you have open, and three skills:
+gets 49 tools for sounds, speech, multi-track stories, audiobooks and the studio you have open, and three skills:
 `soundbox-sfx`, `soundbox-sound-pass` and `soundbox-voice-story`. Every tool,
 the stdio bridge and the skills are in [docs/MCP.md](docs/MCP.md).
 
@@ -255,6 +264,7 @@ Anything with an OpenAI base URL setting can use Mirli for speech: point it at
 | Get it running, or fix a first run | [Install](docs/INSTALL.md) · [Desktop](docs/DESKTOP.md) |
 | Write prompts these models answer | [Generating](docs/GENERATING.md) |
 | Arrange, mix and export | [Studio](docs/STUDIO.md) · [Library](docs/LIBRARY.md) |
+| Make an audiobook | [Audiobooks](docs/AUDIOBOOKS.md) |
 | Drive it from an agent or a script | [MCP](docs/MCP.md) · [HTTP API](docs/API.md) |
 | Add or verify a model | [audio.cpp](docs/AUDIOCPP.md) · [Contributing](CONTRIBUTING.md) |
 | Understand how the pieces fit | [Architecture](docs/ARCHITECTURE.md) |

@@ -19,6 +19,11 @@ A book's type comes from the classic it was started from, or from a form genre
 such as "Novels" or "Poetry" in its details; a book with neither shows only
 under "All types".
 
+**Delete** (in a book's menu on the shelf) moves the book to the Trash with
+its chapters and voiced audio, without asking first. The toast that follows
+has **Undo**; after that, restore it from **Trash** in the sidebar within 30
+days ([Deleting and the Trash](./LIBRARY.md#deleting-and-the-trash)).
+
 An agent can do all of it too, through the MCP tools under
 [Audiobooks in MCP.md](./MCP.md#audiobooks). The HTTP API is under
 [Audiobooks in API.md](./API.md#audiobooks).
@@ -117,6 +122,11 @@ resize it, or fold it away with the arrow; both are remembered in this browser.
 **Open in timeline** still opens the chapter in the full studio, with the
 library, prompt and device panels.
 
+**Delete chapter** (in a chapter's menu) takes the chapter out of the list at
+once, with an **Undo** toast. Undo, or Ctrl+Z in the editor, before the toast
+closes brings it back. Once the toast closes the chapter is deleted with its
+paragraphs and voiced audio. Chapters don't go to the Trash.
+
 ## The assistant
 
 With the prompt assistant on (Settings → Prompt assistant), the right-hand
@@ -140,9 +150,9 @@ What it wants to do comes back as a card, one row per step:
 - **Reject** runs nothing. **Tweak** puts your request back in the box.
 - Once run, **Undo** puts back what it can: a character's voice, who reads
   a paragraph, its text or lock, a split or merge, a find and replace, a
-  chapter's name, place or a chapter it added, a lane's mix, an effect. The
-  card names the steps it can't undo, such as a new pronunciation, voiced
-  audio or a deleted chapter.
+  chapter's name, place or a chapter it added, a lane's mix, an effect, and a
+  deleted sound or book (from the Trash). The card names the steps it can't
+  undo, such as a new pronunciation, voiced audio or a deleted chapter.
 
 It runs on the same small local model as the rest of the prompt assistant, so
 it asks the model twice: once to sort the request, then to plan it with only
@@ -324,8 +334,8 @@ A classic's **+** (on its cover, or **Add to library** under Top picks)
 imports the whole work with default settings and leaves you in Explore. The
 toast that follows has **Open**, to go to the book in Audiobooks to cast and
 voice it, and **Undo**, which removes it again. Clicking the cover opens its
-details, with where the text comes from and the rights note, and the same
-**Add to library**. To change sections first, use **Classics** on the
+details in the docked panel on the right, with where the text comes from and
+the rights note, and the same **Add to library**. To change sections first, use **Classics** on the
 Audiobooks page instead. Lengths for anything not voiced
 are estimates at about 155 words a minute.
 

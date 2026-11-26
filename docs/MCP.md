@@ -274,10 +274,20 @@ Search and manage the library. `list_sounds` takes `q`, `tag`, `voice_id` and
 `voice_id` answers "what has this voice already said" without re-reading it. `get_sound`
 takes a `sound_id` and returns the one sound with its absolute path.
 `delete_sound` takes a `sound_id` and moves the sound to the trash: it leaves
-the library and is deleted for good after 30 days. `list_trash` shows what is
-there, and `restore_from_trash` (`kind` `sound`, `session` or `book`, and `id`)
-brings something back as it was. `delete_audiobook` takes a `book_id` and moves
-the book to the trash the same way, chapters and voiced audio included.
+the library and is deleted for good after 30 days.
+
+#### `soundbox.list_trash` / `soundbox.restore_from_trash`
+
+`list_trash` takes nothing and returns `days` (how long the trash keeps
+things, 30) and `items`: each sound, session and audiobook in the trash with
+its `kind`, `id`, `name`, a `detail` line ("12 sounds", "Jane Austen · 4
+chapters"), `deleted_at`, `purge_at` (when it will be deleted for good) and
+`size_bytes`, newest first. `restore_from_trash` takes `kind` (`sound`,
+`session` or `book`) and `id`, and brings it back as it was. A session comes
+back with its sounds, a book with its chapters and voiced audio. Sessions are
+moved to the trash from the app or the HTTP API; there is no MCP tool to
+delete one. Nothing over MCP deletes from the trash for good; the app's Trash
+page and `DELETE /api/trash` do.
 
 ### Voices
 
@@ -446,13 +456,17 @@ override what the file says; the book settings are as for `create_audiobook`.
 Chapters, front and back matter, the cover and metadata are detected as the
 app's import does. The result includes the parser's `warnings`.
 
-#### `soundbox.list_audiobooks` / `soundbox.get_audiobook`
+#### `soundbox.list_audiobooks` / `soundbox.get_audiobook` / `soundbox.delete_audiobook`
 
 `list_audiobooks` takes nothing. `get_audiobook` takes `book_id` and returns
 chapters (with `chapter_id`, `story_id`, kind, whether it is included, and
 voiced counts), the cast, settings and stats. With `chapter_id` it adds that
 chapter's paragraphs (`offset`, `limit` up to 500): text, character, status
 (`unvoiced`, `voiced`, `stale`, `locked`) and timing.
+
+`delete_audiobook` takes `book_id` and moves the book to the trash, chapters
+and voiced audio included. It leaves `list_audiobooks` and is deleted for good
+after 30 days; `restore_from_trash` with `kind` `book` brings it back.
 
 #### `soundbox.set_character_voice`
 

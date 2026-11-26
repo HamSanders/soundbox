@@ -79,7 +79,7 @@ export const DOC_PAGES: DocPage[] = [
     label: "Library & projects",
     section: "Using Mirli",
     blurb:
-      "Where everything you make goes, how to find it again, and how editing works without destroying the original.",
+      "Where everything you make goes, how to find it again, the details panel, how editing works without destroying the original, and the Trash.",
     ...library,
   },
   {

@@ -650,7 +650,7 @@ MCP clients use it to show recent server activity. For a full trail, `grep` the 
 ```
 `GET /api/sounds/{id}` → `Sound`
 `PATCH /api/sounds/{id}` `{ "name"?, "favorite"?, "tags"? }` → `Sound`
-`DELETE /api/sounds/{id}` → `204` (deletes file too)
+`DELETE /api/sounds/{id}` → `204`. Moves the sound to the trash: it leaves every list and is deleted for good, file included, after 30 days. `?permanent=true` deletes the row and the file now. See [Trash](#trash).
 `GET /api/tags` → `[{ "tag": "impact", "count": 12 }]`
 `GET /files/{id}.wav`: static. `?format=mp3` transcodes on the fly (cached).
 
@@ -679,9 +679,27 @@ automatically.
 `POST /api/sessions` `{ "title": "..." }` → `201 Session`. Rarely needed; generating creates one.
 `GET /api/sessions/{id}` → `Session`
 `PATCH /api/sessions/{id}` `{ "title": "..." }` → `Session`
-`DELETE /api/sessions/{id}` → `204`. **Deletes the session and every sound in it, audio files included.**
+`DELETE /api/sessions/{id}` → `204`. Moves the session to the trash, and every sound in it leaves the library with it. Restoring the session brings them back. `?permanent=true` **deletes the session and every sound in it now, audio files included.**
 
 To read one session's thread, filter the library: `GET /api/sounds?session_id={id}`.
+
+## Trash
+
+Deleting a sound, a session or an audiobook moves it to the trash instead of
+deleting it. It disappears from every list, and nothing it owns is touched,
+files included. Anything in the trash longer than 30 days is deleted for good;
+the server checks at startup and every six hours. A `DELETE` with
+`?permanent=true` skips the trash.
+
+`GET /api/trash` → `{ "days": 30, "items": TrashItem[] }`, newest first
+```json
+{ "kind": "sound" | "session" | "book", "id": "uuid", "name": "Door slam 01",
+  "detail": "12 sounds" | null, "deleted_at": "iso", "purge_at": "iso",
+  "size_bytes": 529244 | null }
+```
+`POST /api/trash/{kind}/{id}/restore` → `{ "restored": true, kind, id }`, or `404` when it isn't in the trash.
+`DELETE /api/trash/{kind}/{id}` → `204`. Deletes one thing for good; `404` unless it is in the trash.
+`DELETE /api/trash` → `{ "deleted": n }`. Empties the trash.
 
 ## Settings
 
@@ -949,16 +967,18 @@ when a keyword lexicon did (the assistant is off, or its reply was unusable);
 
 ## MCP
 
-Streamable-HTTP MCP endpoint at `/mcp` (same port). Thirty-three tools; `server/src/mcp/server.ts` is the authority on their signatures, and [MCP.md](./MCP.md) documents them in full. Summary:
+Streamable-HTTP MCP endpoint at `/mcp` (same port). Forty-nine tools; `server/src/mcp/server.ts` is the authority on their signatures, and [MCP.md](./MCP.md) documents them in full. Summary:
 
 Sounds:
 - `soundbox.generate(prompt, duration_s?, model?, negative_prompt?, seed?, variations?, tags?, lyrics?, source_sound_id?, edit?)` → waits for the job, returns `Sound[]` with absolute file paths.
 - `soundbox.enhance_prompt(prompt, n?, category?, lyrics?, model?)` → `{ variations: string[] }`, or a plain-text explanation when the assistant is off.
 - `soundbox.separate(sound_id, model?, stems?, rest?)` → waits for the job, returns the stems as `Sound[]` with absolute file paths.
 - `soundbox.list_models()` → `Model[]`
-- `soundbox.list_sounds(q?, tag?, limit?)` → `Sound[]`
+- `soundbox.list_sounds(q?, tag?, voice_id?, limit?)` → `Sound[]`
 - `soundbox.get_sound(sound_id)` → `Sound` + absolute path
-- `soundbox.delete_sound(sound_id)`
+- `soundbox.delete_sound(sound_id)` → moves it to the trash.
+- `soundbox.list_trash()` → `{ days, items }`, as `GET /api/trash`.
+- `soundbox.restore_from_trash(kind, id)` → brings a sound, session or book back.
 
 Voices:
 - `soundbox.list_voices()` → the saved voices a script can be cast to.
@@ -977,10 +997,18 @@ Arrangement:
 
 Audiobooks (a book of chapters, each chapter a story):
 - `soundbox.create_audiobook(title, author?, narrator?, language?, model_id?, narrator_voice_id?, cast_mode?)`, `soundbox.import_manuscript(path? | text? | url?, format?, title?, author?, …)`
-- `soundbox.list_audiobooks()`, `soundbox.get_audiobook(book_id, chapter_id?, offset?, limit?)`
+- `soundbox.list_audiobooks()`, `soundbox.get_audiobook(book_id, chapter_id?, offset?, limit?)`, `soundbox.delete_audiobook(book_id)` → to the trash.
 - `soundbox.set_character_voice(book_id, character, voice_id, model_id?, create?)`, `soundbox.add_pronunciation(term, replacement, kind?, book_id?, case_sensitive?, whole_word?)`
 - `soundbox.render_audiobook(book_id, chapter_id?, paragraph_ids?, overwrite?, wait?, timeout_s?)` → waits for the render run.
 - `soundbox.add_bed(book_id, chapter_id, kind?, sound_id? | prompt?, gain_db?, mode?, loop?, fade_in_s?, fade_out_s?, paragraph_id?, offset_s?, duck_db?, …)`
+- `soundbox.edit_paragraph(book_id, paragraph_id, text?, character?, locked?, is_heading?)`, `soundbox.cast_paragraphs(book_id, paragraph_ids, character)`, `soundbox.lock_paragraphs(book_id, paragraph_ids, locked?)`
+- `soundbox.split_paragraph(book_id, paragraph_id, before? | at?)`, `soundbox.merge_paragraphs(book_id, paragraph_id)`, `soundbox.find_replace(book_id, find, replace, chapter_ids?, case_sensitive?, whole_word?, dry_run?)`
+- `soundbox.add_chapter(book_id, title, text?, position?)`, `soundbox.edit_chapter(book_id, chapter_id, title?, kind?, included?)`, `soundbox.move_chapter(book_id, chapter_id, position)`, `soundbox.delete_chapter(book_id, chapter_id)` → for good, not to the trash.
 - `soundbox.master_and_export_audiobook(book_id, format?, layout?, mastering?, bitrate_kbps?, chapter_ids?, include_cover?, include_transcripts?, include_beds?)` → waits, returns the path and failed ACX checks.
+
+The open studio (needs a studio showing in the app):
+- `soundbox.studio_context(story_id?)` → lanes, clips, playhead, selection and voices as they are on screen.
+- `soundbox.studio_apply(actions, story_id?, summary?, allow_delete?)` → edits through the studio's own handlers, so each is on the user's undo stack.
+- `soundbox.search_docs(query, limit?)` → the sections of the README and `docs/` that answer it, each with its file and heading.
 
 Stdio bridge for clients that can't do HTTP: `node <checkout>/server/dist/mcp/stdio.js`, which proxies to the running server. The file exists only after `npm run build`, and the bridge covers the sound tools (`generate`, `enhance_prompt`, `list_models`, `list_sounds`, `get_sound`, `delete_sound`). Use HTTP for `separate`, speech and stories. The Agents page prints the line with the path resolved.

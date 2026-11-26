@@ -13,6 +13,7 @@
  */
 
 import type { ExampleId } from "@/content/examples";
+import { MCP_TOOLS } from "@/content/mcp/tools";
 import { COMMERCIAL, FREE, GPU, MAC, OFFLINE, type Faq } from "@/content/faq";
 
 export interface Trick {
@@ -82,7 +83,7 @@ export const LANDERS: Lander[] = [
       },
       {
         title: "Your agent can drive it",
-        body: "An MCP server with 24 tools lets Claude Code, Cursor or any MCP client make and place the audio for you.",
+        body: `An MCP server with ${MCP_TOOLS.length} tools lets Claude Code, Cursor or any MCP client make and place the audio for you.`,
       },
     ],
     compare: "Mirli next to a hosted service",
@@ -265,7 +266,7 @@ export const LANDERS: Lander[] = [
       {
         question: "How does the agent connect?",
         answer:
-          "Start Mirli, then add it to your client with one command: claude mcp add --transport http soundbox http://127.0.0.1:17494/mcp. Cursor and other MCP clients take the same URL. The agent gets 24 tools for sounds, speech and multi-track stories.",
+          `Start Mirli, then add it to your client with one command: claude mcp add --transport http soundbox http://127.0.0.1:17494/mcp. Cursor and other MCP clients take the same URL. The agent gets ${MCP_TOOLS.length} tools for sounds, speech, multi-track stories and audiobooks.`,
       },
       {
         question: "Can I ship these sounds in a commercial game?",

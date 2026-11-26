@@ -42,7 +42,7 @@ export interface McpToolDoc {
   args: McpToolArg[];
   /** Blocks for a long time (actually renders audio). */
   slow?: boolean;
-  /** Permanently removes something. */
+  /** Deletes something: to the trash, or for good. */
   destructive?: boolean;
 }
 
@@ -81,7 +81,7 @@ export const MCP_TOOL_GROUPS: { id: McpToolGroup; title: string; intro: string }
     id: "audiobooks",
     title: "Audiobooks",
     intro:
-      "A book is chapters, and each chapter is a story. Import a manuscript, cast it, fix pronunciations, voice it, lay music under it, then master and export it, all from an agent.",
+      "A book is chapters, and each chapter is a story. Import a manuscript, tidy its text and chapters, cast it, fix pronunciations, voice it, lay music under it, then master and export it, all from an agent. A deleted book goes to the trash.",
   },
 ];
 
@@ -162,6 +162,7 @@ export const MCP_TOOLS: McpToolDoc[] = [
     args: [
       { name: "q", type: "string", note: "Text to match in prompt or name." },
       { name: "tag", type: "string" },
+      { name: "voice_id", type: "string", note: "Only what this saved voice has said." },
       { name: "limit", type: "integer", note: "1–100, default 20." },
     ],
   },
@@ -193,10 +194,29 @@ export const MCP_TOOLS: McpToolDoc[] = [
   {
     name: "soundbox.delete_sound",
     title: "Delete a sound",
-    blurb: "Permanently deletes a sound and its audio file.",
+    blurb: "Moves a sound to the trash. It leaves the library and is deleted for good after 30 days unless restored.",
     group: "sounds",
     destructive: true,
     args: [{ name: "sound_id", type: "string", required: true }],
+  },
+  {
+    name: "soundbox.list_trash",
+    title: "List the trash",
+    blurb:
+      "The sounds, sessions and audiobooks in the trash, newest first, each with when it was deleted and when it will be deleted for good.",
+    group: "sounds",
+    args: [],
+  },
+  {
+    name: "soundbox.restore_from_trash",
+    title: "Restore from the trash",
+    blurb:
+      "Brings a sound, session or audiobook back as it was. A session returns with its sounds, a book with its chapters and audio.",
+    group: "sounds",
+    args: [
+      { name: "kind", type: '"sound" | "session" | "book"', required: true },
+      { name: "id", type: "string", required: true, note: "From soundbox.list_trash, or the id that was deleted." },
+    ],
   },
 
   /* ------------------------------------------------------------- voices */
@@ -530,6 +550,15 @@ export const MCP_TOOLS: McpToolDoc[] = [
     ],
   },
   {
+    name: "soundbox.delete_audiobook",
+    title: "Delete an audiobook",
+    blurb:
+      "Moves a book to the trash with its chapters and voiced audio. soundbox.restore_from_trash brings it back within 30 days.",
+    group: "audiobooks",
+    destructive: true,
+    args: [{ name: "book_id", type: "string", required: true }],
+  },
+  {
     name: "soundbox.set_character_voice",
     title: "Cast a character",
     blurb: "Gives a character a voice, and every paragraph of theirs follows. The name narrator sets the default voice.",
@@ -593,6 +622,135 @@ export const MCP_TOOLS: McpToolDoc[] = [
       { name: "sound_id", type: "string", note: "Give this or prompt." },
       { name: "prompt", type: "string" },
       { name: "duck_db", type: "number", note: "How far it dips under narration; 0 turns ducking off." },
+    ],
+  },
+  {
+    name: "soundbox.edit_paragraph",
+    title: "Edit a paragraph",
+    blurb:
+      "Changes one paragraph's text, who reads it, its lock, or whether it is a heading. New text marks a voiced paragraph stale. Use it rather than update_line for a book.",
+    group: "audiobooks",
+    args: [
+      { name: "book_id", type: "string", required: true },
+      { name: "paragraph_id", type: "string", required: true, note: "From get_audiobook with a chapter_id." },
+      { name: "text", type: "string", note: "The whole new text." },
+      { name: "character", type: "string | null", note: "Name, alias or id, or narrator." },
+      { name: "locked", type: "boolean" },
+      { name: "is_heading", type: "boolean" },
+    ],
+  },
+  {
+    name: "soundbox.cast_paragraphs",
+    title: "Give paragraphs to a character",
+    blurb:
+      "Gives a set of paragraphs to one character, so they take that character's voice. An unknown name is refused with the names the book has.",
+    group: "audiobooks",
+    args: [
+      { name: "book_id", type: "string", required: true },
+      { name: "paragraph_ids", type: "string[]", required: true },
+      { name: "character", type: "string | null", required: true, note: "Name, alias or id, or narrator." },
+    ],
+  },
+  {
+    name: "soundbox.lock_paragraphs",
+    title: "Lock or unlock paragraphs",
+    blurb: "Locks paragraphs so rendering and find and replace leave them alone, or unlocks them.",
+    group: "audiobooks",
+    args: [
+      { name: "book_id", type: "string", required: true },
+      { name: "paragraph_ids", type: "string[]", required: true },
+      { name: "locked", type: "boolean", note: "Default true; false unlocks." },
+    ],
+  },
+  {
+    name: "soundbox.split_paragraph",
+    title: "Split a paragraph",
+    blurb:
+      "Splits a paragraph in two, at the words that start the second half or at a character offset. Works on the text, so the paragraph need not be voiced yet.",
+    group: "audiobooks",
+    args: [
+      { name: "book_id", type: "string", required: true },
+      { name: "paragraph_id", type: "string", required: true },
+      { name: "before", type: "string", note: "Text that starts the second paragraph. Give this or at." },
+      { name: "at", type: "integer", note: "Character offset to split at." },
+    ],
+  },
+  {
+    name: "soundbox.merge_paragraphs",
+    title: "Merge a paragraph with the next",
+    blurb: "Joins a paragraph with the one after it.",
+    group: "audiobooks",
+    args: [
+      { name: "book_id", type: "string", required: true },
+      { name: "paragraph_id", type: "string", required: true, note: "The first of the two." },
+    ],
+  },
+  {
+    name: "soundbox.find_replace",
+    title: "Find and replace in a book",
+    blurb:
+      "Replaces text across a book or chosen chapters, skipping locked paragraphs. A dry run counts the matches without changing anything.",
+    group: "audiobooks",
+    args: [
+      { name: "book_id", type: "string", required: true },
+      { name: "find", type: "string", required: true },
+      { name: "replace", type: "string", required: true, note: "Empty removes the match." },
+      { name: "chapter_ids", type: "string[]", note: "Default: the whole book." },
+      { name: "case_sensitive", type: "boolean" },
+      { name: "whole_word", type: "boolean" },
+      { name: "dry_run", type: "boolean" },
+    ],
+  },
+  {
+    name: "soundbox.add_chapter",
+    title: "Add a chapter",
+    blurb: "Adds a chapter, optionally with its text, which is split into paragraphs the way an import is.",
+    group: "audiobooks",
+    args: [
+      { name: "book_id", type: "string", required: true },
+      { name: "title", type: "string", required: true },
+      { name: "text", type: "string" },
+      { name: "position", type: "integer", note: "0 is first. Default: the end." },
+    ],
+  },
+  {
+    name: "soundbox.edit_chapter",
+    title: "Rename or change a chapter",
+    blurb:
+      "Renames a chapter, marks it as front or back matter, credits or the retail sample, or leaves it out of render and export.",
+    group: "audiobooks",
+    args: [
+      { name: "book_id", type: "string", required: true },
+      { name: "chapter_id", type: "string", required: true },
+      { name: "title", type: "string" },
+      {
+        name: "kind",
+        type: '"chapter" | "front_matter" | "back_matter" | "opening_credits" | "closing_credits" | "retail_sample"',
+      },
+      { name: "included", type: "boolean", note: "False leaves it out of render and export." },
+    ],
+  },
+  {
+    name: "soundbox.move_chapter",
+    title: "Move a chapter",
+    blurb: "Moves a chapter to another place in the book.",
+    group: "audiobooks",
+    args: [
+      { name: "book_id", type: "string", required: true },
+      { name: "chapter_id", type: "string", required: true },
+      { name: "position", type: "integer", required: true, note: "0 is first." },
+    ],
+  },
+  {
+    name: "soundbox.delete_chapter",
+    title: "Delete a chapter",
+    blurb:
+      "Deletes a chapter, its paragraphs and their voiced audio. It does not go to the trash, and a book keeps at least one chapter.",
+    group: "audiobooks",
+    destructive: true,
+    args: [
+      { name: "book_id", type: "string", required: true },
+      { name: "chapter_id", type: "string", required: true },
     ],
   },
 ];

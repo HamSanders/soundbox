@@ -326,7 +326,8 @@ export class AudiobookExportService {
 
   /** Drop exports (rows and files) whose book no longer exists. */
   sweepOrphans(): void {
-    const ids = new Set(this.books.listBooks().map((b) => b.id));
+    // The trash included: a trashed book's exports are its own until it is purged.
+    const ids = new Set(this.books.allBookIds());
     for (const bookId of this.store.bookIds()) {
       if (ids.has(bookId)) continue;
       for (const e of this.store.list(bookId)) this.removeFiles(e);

@@ -183,10 +183,15 @@ describe("audiobook voice routes", { timeout: 30_000 }, () => {
     expect(res.statusCode).toBe(409);
   });
 
-  it("drops takes when the book is deleted", async () => {
+  it("keeps takes while the book is in the trash, and drops them when it is deleted for good", async () => {
     const sid = (await paragraphs())[0].id;
+    const count = () =>
+      (app.soundbox.db.sqlite.prepare("SELECT COUNT(*) AS n FROM segment_takes WHERE segment_id = ?").get(sid) as { n: number }).n;
+    const before = count();
+    expect(before).toBeGreaterThan(0);
     await json("DELETE", `/api/audiobooks/${bookId}`);
-    const n = app.soundbox.db.sqlite.prepare("SELECT COUNT(*) AS n FROM segment_takes WHERE segment_id = ?").get(sid) as { n: number };
-    expect(n.n).toBe(0);
+    expect(count()).toBe(before);
+    await json("DELETE", `/api/trash/book/${bookId}`);
+    expect(count()).toBe(0);
   });
 });

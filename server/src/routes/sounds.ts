@@ -15,7 +15,8 @@ import { UNSET, type UpdateSoundPatch } from "../db.js";
 import type { Source } from "../schemas.js";
 import { soundEditRequestSchema, soundPatchSchema } from "../schemas.js";
 import type { MirliService } from "../service.js";
-import { HttpError, boolQuery, enumQuery, intQuery, listQuery, strQuery } from "./helpers.js";
+import { trashItem } from "../trash.js";
+import { HttpError, boolQuery, enumQuery, intQuery, listQuery, permanent, strQuery } from "./helpers.js";
 
 /** Open the OS file manager with `path` selected, one spawn per platform.
  *  Mirli is local-only by design — the server and the browser hitting it
@@ -92,10 +93,12 @@ export function registerSounds(app: FastifyInstance, svc: MirliService): void {
     return sound;
   });
 
+  /** To the trash (see ../trash.ts); `?permanent=true` deletes for good. */
   app.delete<IdParams>("/api/sounds/:sound_id", async (request, reply) => {
-    if (!(await svc.deleteSound(request.params.sound_id))) {
-      throw new HttpError(404, "Sound not found");
-    }
+    const ok = permanent(request.query)
+      ? await svc.deleteSound(request.params.sound_id)
+      : await trashItem(svc, "sound", request.params.sound_id);
+    if (!ok) throw new HttpError(404, "Sound not found");
     return reply.code(204).send();
   });
 

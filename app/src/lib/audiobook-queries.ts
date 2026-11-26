@@ -22,7 +22,8 @@ import {
   type SnapshotDiff,
   type SnapshotInfo,
 } from "./audiobook-api";
-import { qk } from "./queries";
+import { qk, useTrashDelete } from "./queries";
+import { useHiddenFilter } from "./undo";
 
 export const abk = {
   books: ["audiobooks"] as const,
@@ -42,10 +43,12 @@ const fail = (what: string) => (err: unknown) => {
 
 /** Every book, or one project's (`project`), the way library pages scope. */
 export function useBooks(enabled = true, project?: string | null): UseQueryResult<BookSummary[]> {
+  const hidden = useHiddenFilter("book");
   return useQuery({
     queryKey: abk.booksIn(project),
     queryFn: () => audiobookApi.listBooks(project),
     enabled,
+    select: hidden && ((b: BookSummary[]) => hidden(b)),
   });
 }
 
@@ -162,17 +165,11 @@ export function useUpdateBook(bookId: string) {
   });
 }
 
+/** A book goes to the trash, chapters and audio with it, with Undo (see
+ *  `useTrashDelete`). Its takes leave the library and its chapters the
+ *  studio's list until it is restored. */
 export function useDeleteBook() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => audiobookApi.deleteBook(id),
-    onSuccess: (_v, id) => {
-      qc.removeQueries({ queryKey: abk.book(id) });
-      void qc.invalidateQueries({ queryKey: abk.books });
-      void qc.invalidateQueries({ queryKey: qk.stories });
-    },
-    onError: fail("Could not delete the book"),
-  });
+  return useTrashDelete("book", (id) => audiobookApi.deleteBook(id), [abk.books, qk.stories, ["sounds"]], "Could not delete the book");
 }
 
 export function useUploadCover(bookId: string) {

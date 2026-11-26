@@ -23,7 +23,7 @@ import type {
   ReplaceResult,
 } from "./audiobook-api";
 import type { Book, BookSettings, Chapter, ChapterKind, ChapterStats, Character } from "./audiobook-types";
-import { mockApi } from "./mock";
+import { addToMockTrash, mockApi } from "./mock";
 
 interface Meta {
   character_id: string | null;
@@ -517,16 +517,28 @@ export const mockAudiobookApi: AudiobookApi = {
     return detail(bookId);
   },
 
+  /** To the trash, as the server does: the book and its chapters leave
+   *  their lists and come back on restore. */
   async deleteBook(bookId) {
     await ready();
-    requireBook(bookId);
-    for (const chapter of bookChapters(bookId)) {
-      await mockApi.deleteStory(chapter.story_id, true);
-      chapters.splice(chapters.indexOf(chapter), 1);
-    }
-    books.splice(
-      books.findIndex((b) => b.id === bookId),
-      1,
+    const book = requireBook(bookId);
+    const own = bookChapters(bookId);
+    for (const chapter of own) chapters.splice(chapters.indexOf(chapter), 1);
+    const at = books.findIndex((b) => b.id === bookId);
+    books.splice(at, 1);
+    addToMockTrash(
+      "book",
+      bookId,
+      book.title,
+      `${own.length} chapter${own.length === 1 ? "" : "s"}`,
+      () => {
+        books.splice(Math.min(at, books.length), 0, book);
+        chapters.push(...own);
+        emit(bookId, { type: "book" });
+      },
+      () => {
+        for (const chapter of own) void mockApi.deleteStory(chapter.story_id, true);
+      },
     );
     emit(bookId, { type: "deleted" });
   },

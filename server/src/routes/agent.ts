@@ -208,6 +208,10 @@ async function inverseFor(
         arguments: { story_id: storyId, track_index: index, device: device.id, params: device.params, bypassed: device.bypassed },
       }];
     }
+    case "soundbox.delete_sound":
+      return () => [{ tool: "soundbox.restore_from_trash", arguments: { kind: "sound", id: args.sound_id } }];
+    case "soundbox.delete_audiobook":
+      return () => [{ tool: "soundbox.restore_from_trash", arguments: { kind: "book", id: args.book_id } }];
     case "soundbox.edit_paragraph": {
       const p = audiobooks(svc).getParagraph(String(args.paragraph_id ?? ""));
       if (!p) return none;

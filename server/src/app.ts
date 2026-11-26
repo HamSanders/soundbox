@@ -35,6 +35,8 @@ import { registerSpeakStream } from "./routes/speakStream.js";
 import { registerRender } from "./routes/render.js";
 import { crossSiteRefusal, isOpenAiPath, openAiError, registerOpenAi } from "./routes/openai.js";
 import { registerAgent } from "./routes/agent.js";
+import { registerTrash } from "./routes/trash.js";
+import { startTrashPurge } from "./trash.js";
 import { registerLlm } from "./routes/llm.js";
 import { registerImage } from "./routes/image.js";
 import { registerEndpoints } from "./routes/endpoints.js";
@@ -267,6 +269,7 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
   registerProfiles(app, svc);
   registerLlm(app, svc);
   registerAgent(app, svc);
+  registerTrash(app, svc);
   registerImage(app, svc);
   registerEndpoints(app, svc);
   registerAudiobooks(app, svc); // [audiobooks:core]
@@ -356,6 +359,7 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
     void svc.image.maybeAutoStop(config.settings.auto_unload_minutes);
   }, 30_000);
   idle.unref();
+  let stopTrashPurge: (() => void) | null = null;
 
   app.addHook("onReady", async () => {
     // Before anything asks whether a model is downloaded: weights installed
@@ -366,12 +370,16 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
     // the weights are shared across profiles even though the enable list is
     // not, so a model on this disk belongs in this profile's list.
     await svc.adoptDownloadedModels();
+    // Delete what has been in the trash past its time, now and every few
+    // hours (see trash.ts).
+    stopTrashPurge = startTrashPurge(svc);
     console.info(
       `Mirli ${VERSION} ready — profile ${config.profile}, data dir ${config.paths.root}`,
     );
   });
   app.addHook("onClose", async () => {
     clearInterval(idle);
+    stopTrashPurge?.();
     // MCP sessions first: their transports hold open streams, and a tool call
     // still in flight should end before the service it calls is torn down.
     await mcpEndpoint.close();

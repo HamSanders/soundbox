@@ -193,11 +193,20 @@ describe("books", () => {
     expect((await json("GET", `/api/stories/${outside.chapters[0].story_id}`)).project_id ?? null).toBeNull();
   });
 
-  it("deletes a book and its chapter stories", async () => {
+  it("moves a deleted book to the trash, and a permanent delete takes its chapter stories", async () => {
     const book = await json("POST", "/api/audiobooks", { title: "Doomed" });
     const storyId = book.chapters[0].story_id;
     const del = await call({ method: "DELETE", url: `/api/audiobooks/${book.id}` });
     expect(del.statusCode).toBe(204);
+    expect((await call({ method: "GET", url: `/api/audiobooks/${book.id}` })).statusCode).toBe(404);
+    // In the trash it keeps everything, its chapter stories included.
+    expect((await call({ method: "GET", url: `/api/stories/${storyId}` })).statusCode).toBe(200);
+    const restored = await call({ method: "POST", url: `/api/trash/book/${book.id}/restore` });
+    expect(restored.statusCode).toBe(200);
+    expect((await call({ method: "GET", url: `/api/audiobooks/${book.id}` })).statusCode).toBe(200);
+
+    const gone = await call({ method: "DELETE", url: `/api/audiobooks/${book.id}?permanent=true` });
+    expect(gone.statusCode).toBe(204);
     expect((await call({ method: "GET", url: `/api/audiobooks/${book.id}` })).statusCode).toBe(404);
     expect((await call({ method: "GET", url: `/api/stories/${storyId}` })).statusCode).toBe(404);
   });

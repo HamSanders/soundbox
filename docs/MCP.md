@@ -158,8 +158,11 @@ Search and manage the library. `list_sounds` takes `q`, `tag`, `voice_id` and
 `limit`; searching before generating is usually faster than regenerating, and
 `voice_id` answers "what has this voice already said" without re-reading it. `get_sound`
 takes a `sound_id` and returns the one sound with its absolute path.
-`delete_sound` takes a `sound_id` and **permanently** removes the row and the
-file on disk.
+`delete_sound` takes a `sound_id` and moves the sound to the trash: it leaves
+the library and is deleted for good after 30 days. `list_trash` shows what is
+there, and `restore_from_trash` (`kind` `sound`, `session` or `book`, and `id`)
+brings something back as it was. `delete_audiobook` takes a `book_id` and moves
+the book to the trash the same way, chapters and voiced audio included.
 
 ### Voices
 

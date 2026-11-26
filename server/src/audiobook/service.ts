@@ -394,7 +394,51 @@ export class AudiobookService {
     return this.getBook(id);
   }
 
+  /**
+   * Move a book to the trash. Every row and file stays; it leaves the shelf,
+   * Listen, the studio's list and the library, and comes back as it was on
+   * `restoreBook`. A render running on it is stopped. After the trash's 30
+   * days `MirliService.purgeTrash` calls `deleteBook`.
+   */
+  async trashBook(id: string): Promise<boolean> {
+    if (!this.store.getBook(id)) return false;
+    for (const hook of this.trashHooks) await hook(id);
+    if (!this.store.setTrashed(id, new Date().toISOString())) return false;
+    this.hub.publish(id, { type: "deleted" });
+    return true;
+  }
+
+  restoreBook(id: string): BookDetail | null {
+    if (!this.store.setTrashed(id, null)) return null;
+    this.hub.publish(id, { type: "book" });
+    return this.getBook(id);
+  }
+
+  listTrashedBooks() {
+    return this.store.listTrashed();
+  }
+
+  trashedBooksBefore(cutoff: string): string[] {
+    return this.store.trashedBefore(cutoff);
+  }
+
+  /** Every book id, the trash included. */
+  allBookIds(): string[] {
+    return this.store.allBookIds();
+  }
+
+  private readonly trashHooks: ((bookId: string) => void | Promise<void>)[] = [];
+
+  /** Called as a book goes to the trash, to stop work on it. Nothing it
+   *  owns may be deleted here: the trash can be undone. */
+  onTrash(cb: (bookId: string) => void | Promise<void>): void {
+    this.trashHooks.push(cb);
+  }
+
+  /** Delete a book and everything it owns, for good. From the trash too:
+   *  it is taken out first so the delete hooks see it as they always have. */
   async deleteBook(id: string, deleteSounds = true): Promise<boolean> {
+    this.store.setTrashed(id, null);
     const book = this.store.getBook(id);
     if (!book) return false;
     const chapters = this.store.listChapters(id);

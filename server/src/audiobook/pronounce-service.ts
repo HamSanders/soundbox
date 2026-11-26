@@ -29,7 +29,7 @@ import type { PronunciationRule } from "./types.js";
 export class PronounceService {
   constructor(
     private readonly svc: MirliService,
-    private readonly book: BookAccess & { listBooks(): { id: string }[] },
+    private readonly book: BookAccess & { allBookIds(): string[] },
     private readonly render: RenderService,
   ) {}
 
@@ -54,7 +54,8 @@ export class PronounceService {
 
   /** Mark paragraphs matching any of `rules` stale. Returns how many. */
   markStale(bookId: string | null, rules: PronunciationRule[]): number {
-    const books = bookId ? [bookId] : this.book.listBooks().map((b) => b.id);
+    // Trashed books too: restored, they should read with the rule.
+    const books = bookId ? [bookId] : this.book.allBookIds();
     const ids = affectedParagraphs(this.paragraphs(books), rules);
     return ids.length ? this.book.markStale(ids) : 0;
   }

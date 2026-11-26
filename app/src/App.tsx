@@ -51,6 +51,7 @@ const ModelsPage = lazy(() => import("@/routes/models").then((m) => ({ default: 
 const AgentsPage = lazy(() => import("@/routes/agents").then((m) => ({ default: m.AgentsPage })));
 const SettingsPage = lazy(() => import("@/routes/settings").then((m) => ({ default: m.SettingsPage })));
 const ActivityPage = lazy(() => import("@/routes/activity").then((m) => ({ default: m.ActivityPage })));
+const TrashPage = lazy(() => import("@/routes/trash").then((m) => ({ default: m.TrashPage })));
 const AudiobooksPage = lazy(() => import("@/routes/audiobooks").then((m) => ({ default: m.AudiobooksPage }))); // [audiobooks:core]
 const AudiobookPage = lazy(() => import("@/routes/audiobook").then((m) => ({ default: m.AudiobookPage }))); // [audiobooks:core]
 const ListenPage = lazy(() => import("@/routes/listen").then((m) => ({ default: m.ListenPage }))); // [audiobooks:listen]
@@ -234,6 +235,7 @@ function AppShellReady() {
             <Route path="/models" element={<ModelsPage />} />
             <Route path="/agents" element={<AgentsPage />} />
             <Route path="/activity" element={<ActivityPage />} />
+            <Route path="/trash" element={<TrashPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>

@@ -16,7 +16,8 @@ import { audiobooks } from "../audiobook/service.js";
 import { CHAPTER_KINDS } from "../audiobook/store.js";
 import type { ChapterKind } from "../audiobook/types.js";
 import type { MirliService } from "../service.js";
-import { HttpError, streamSse } from "./helpers.js";
+import { trashItem } from "../trash.js";
+import { HttpError, permanent, streamSse } from "./helpers.js";
 
 type BookParams = { Params: { id: string } };
 type ChapterParams = { Params: { id: string; cid: string } };
@@ -192,8 +193,12 @@ function routes(app: FastifyInstance, svc: MirliService): void {
     return book;
   });
 
+  /** To the trash (see ../trash.ts). `?permanent=true` deletes for good,
+   *  with its audio unless `delete_sounds=false`. */
   app.delete<BookParams>("/api/audiobooks/:id", async (request, reply) => {
-    const ok = await books().deleteBook(request.params.id, deleteSoundsQuery(request.query));
+    const ok = permanent(request.query)
+      ? await books().deleteBook(request.params.id, deleteSoundsQuery(request.query))
+      : await trashItem(svc, "book", request.params.id);
     if (!ok) throw new HttpError(404, "Book not found");
     return reply.code(204).send();
   });

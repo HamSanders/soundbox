@@ -43,6 +43,7 @@ import {
 } from "../devices.js";
 import { ProgressReporter } from "./progress.js";
 import * as audiobook from "./audiobook.js"; // [audiobooks:soundscape]
+import { listTrash, restoreItem, TRASH_DAYS, trashItem } from "../trash.js";
 import { CHAPTER_KINDS } from "../audiobook/store.js";
 import type { ChapterKind } from "../audiobook/types.js";
 
@@ -369,7 +370,9 @@ export const MCP_TOOLS: McpToolInfo[] = [
   {
     name: "soundbox.delete_sound",
     title: "Delete a sound",
-    description: "Permanently delete a sound and its audio file.",
+    description:
+      "Move a sound to the trash. It leaves the library and is deleted for " +
+      "good after 30 days; soundbox.restore_from_trash brings it back.",
     calls: 0,
   },
   {
@@ -674,6 +677,29 @@ export const MCP_TOOLS: McpToolInfo[] = [
     name: "soundbox.move_chapter",
     title: "Move a chapter",
     description: "Move a chapter to a position in the book (0 is first).",
+    calls: 0,
+  },
+  {
+    name: "soundbox.delete_audiobook",
+    title: "Delete an audiobook",
+    description:
+      "Move a book to the trash, with its chapters and voiced audio. It leaves " +
+      "the shelf and is deleted for good after 30 days; " +
+      "soundbox.restore_from_trash brings it back.",
+    calls: 0,
+  },
+  {
+    name: "soundbox.list_trash",
+    title: "List the trash",
+    description:
+      "What is in the trash: deleted sounds, sessions and audiobooks, when " +
+      "each was deleted and when it will be deleted for good.",
+    calls: 0,
+  },
+  {
+    name: "soundbox.restore_from_trash",
+    title: "Restore from the trash",
+    description: "Bring a deleted sound, session or audiobook back from the trash, as it was.",
     calls: 0,
   },
   {
@@ -1371,11 +1397,14 @@ export function buildMcp(
     },
     async ({ sound_id }, extra) =>
       await track(extra, "soundbox.delete_sound", { sound_id }, async (rec) => {
-        if (!(await getService().deleteSound(sound_id))) {
+        if (!(await trashItem(getService(), "sound", sound_id))) {
           throw new Error(`No sound with id ${sound_id}`);
         }
         rec.setSounds([sound_id]);
-        return text(`Deleted ${sound_id}`);
+        return json({
+          trashed: sound_id,
+          note: "In the trash for 30 days. soundbox.restore_from_trash with kind sound brings it back.",
+        });
       }),
   );
 
@@ -2471,6 +2500,54 @@ export function buildMcp(
       await track(extra, "soundbox.move_chapter", { ...args }, async () =>
         json(await audiobook.moveChapter(getService(), args)),
       ),
+  );
+
+  mcp.registerTool(
+    "soundbox.delete_audiobook",
+    {
+      title: meta["soundbox.delete_audiobook"].title ?? undefined,
+      description: meta["soundbox.delete_audiobook"].description,
+      inputSchema: { book_id: z.string() },
+    },
+    async ({ book_id }, extra) =>
+      await track(extra, "soundbox.delete_audiobook", { book_id }, async () => {
+        const svc = getService();
+        const title = (await audiobook.getAudiobook(svc, { book_id })).title;
+        if (!(await trashItem(svc, "book", book_id))) throw new Error(`No audiobook with id ${book_id}`);
+        return json({
+          trashed: book_id,
+          title,
+          note: "In the trash for 30 days. soundbox.restore_from_trash with kind book brings it back.",
+        });
+      }),
+  );
+
+  mcp.registerTool(
+    "soundbox.list_trash",
+    {
+      title: meta["soundbox.list_trash"].title ?? undefined,
+      description: meta["soundbox.list_trash"].description,
+      inputSchema: {},
+    },
+    async (_args, extra) =>
+      await track(extra, "soundbox.list_trash", {}, async () => json({ days: TRASH_DAYS, items: listTrash(getService()) })),
+  );
+
+  mcp.registerTool(
+    "soundbox.restore_from_trash",
+    {
+      title: meta["soundbox.restore_from_trash"].title ?? undefined,
+      description: meta["soundbox.restore_from_trash"].description,
+      inputSchema: {
+        kind: z.enum(["sound", "session", "book"]),
+        id: z.string().describe("From soundbox.list_trash, or the id that was deleted."),
+      },
+    },
+    async ({ kind, id }, extra) =>
+      await track(extra, "soundbox.restore_from_trash", { kind, id }, async () => {
+        if (!restoreItem(getService(), kind, id)) throw new Error(`No ${kind} ${id} in the trash.`);
+        return json({ restored: id, kind });
+      }),
   );
 
   mcp.registerTool(

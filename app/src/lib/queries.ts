@@ -13,12 +13,14 @@ import { toast } from "sonner";
 import { forgetStoryDevices } from "@/hooks/use-track-devices";
 import { followPlacement } from "@/lib/reading-order";
 import { useDock } from "@/lib/dock";
-import { undoable, useHiddenFilter, useHiddenStore, type HiddenKind } from "@/lib/undo";
+import { reversible, undoable, useHiddenFilter, useHiddenStore, type HiddenKind } from "@/lib/undo";
 import {
   api,
   NO_CAPABILITIES,
   errorMessage,
   type Capabilities,
+  type TrashKind,
+  type TrashList,
   type AssistantChatRequest,
   type AssistantChatResponse,
   type AssistantOpenersRequest,
@@ -88,6 +90,7 @@ export const qk = {
   sound: (id: string) => ["sound", id] as const,
   tags: ["tags"] as const,
   sessions: ["sessions"] as const,
+  trash: ["trash"] as const,
   session: (id: string) => ["session", id] as const,
   projects: ["projects"] as const,
   stories: ["stories"] as const,
@@ -931,7 +934,12 @@ export function useRevealSound() {
 }
 
 export function useSessions(limit = 50): UseQueryResult<Session[]> {
-  return useQuery({ queryKey: qk.sessions, queryFn: () => api.listSessions(limit) });
+  const hidden = useHiddenFilter("session");
+  return useQuery({
+    queryKey: qk.sessions,
+    queryFn: () => api.listSessions(limit),
+    select: hidden && ((s: Session[]) => hidden(s)),
+  });
 }
 
 export function useSetSessionProject() {
@@ -949,18 +957,106 @@ export function useSetSessionProject() {
   });
 }
 
+/** A session and its sounds go to the trash, with Undo. */
 export function useDeleteSession() {
+  // Its sounds went with it, so every sound-shaped view is stale too.
+  return useTrashDelete("session", (id) => api.deleteSession(id), [qk.sessions, ["sounds"], qk.tags, qk.projects], "Could not delete the session");
+}
+
+/* ------------------------------------------------------------------- trash */
+
+/**
+ * Delete to the server's trash, with Undo on the toast (lib/undo.ts
+ * `reversible`). The item leaves every list at once; the request goes now,
+ * so Undo works after a reload too, and restores it from the trash. What
+ * Undo can't reach, the Trash page can for 30 days.
+ */
+export function useTrashDelete(
+  kind: TrashKind,
+  del: (id: string) => Promise<unknown>,
+  keys: QueryKey[],
+  failure: string,
+  /** Close any panel showing the item. */
+  closePanel?: (id: string) => void,
+) {
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => api.deleteSession(id),
-    onError: fail("Could not delete the session"),
-    onSuccess: () => {
-      toast.success("Session deleted");
-      // Its sounds went with it, so every sound-shaped view is stale too.
-      void qc.invalidateQueries({ queryKey: qk.sessions });
-      void qc.invalidateQueries({ queryKey: ["sounds"] });
-      void qc.invalidateQueries({ queryKey: qk.tags });
+  return (
+    item: { id: string; name: string },
+    opts?: { description?: string; onUndo?: () => void; onDone?: () => void },
+  ) => {
+    const hidden = kind as HiddenKind;
+    const { hide, show } = useHiddenStore.getState();
+    const refresh = () => Promise.all([...keys, qk.trash].map((queryKey) => qc.invalidateQueries({ queryKey })));
+    hide(hidden, item.id);
+    closePanel?.(item.id);
+    void reversible({
+      run: async () => {
+        try {
+          await del(item.id);
+        } finally {
+          // Shown again once the lists have refetched without it, so it
+          // never flickers back in between.
+          await refresh().finally(() => show(hidden, item.id));
+        }
+        opts?.onDone?.();
+      },
+      message: `Deleted “${item.name}”`,
+      description: opts?.description ?? "It's in the trash for 30 days.",
+      undo: async () => {
+        await api.restoreFromTrash(kind, item.id);
+        await refresh();
+        opts?.onUndo?.();
+      },
+      undone: `Restored “${item.name}”`,
+      failure: "Couldn't restore it",
+    }).catch((err: unknown) => toast.error(failure, { description: errorMessage(err) }));
+  };
+}
+
+export function useTrash(): UseQueryResult<TrashList> {
+  return useQuery({ queryKey: qk.trash, queryFn: () => api.listTrash() });
+}
+
+/** Everything a trash change can touch. */
+function useRefreshAfterTrash() {
+  const qc = useQueryClient();
+  return () => {
+    for (const queryKey of [qk.trash, qk.sessions, ["sounds"], qk.tags, qk.projects, qk.stories, ["audiobooks"], ["audiobook"]]) {
+      void qc.invalidateQueries({ queryKey });
+    }
+  };
+}
+
+export function useRestoreFromTrash() {
+  const refresh = useRefreshAfterTrash();
+  return useMutation<void, Error, { kind: TrashKind; id: string; name: string }>({
+    mutationFn: ({ kind, id }) => api.restoreFromTrash(kind, id),
+    onSuccess: (_v, { name }) => {
+      toast.success(`Restored “${name}”`);
+      refresh();
     },
+    onError: fail("Could not restore it"),
+  });
+}
+
+export function usePurgeTrashItem() {
+  const refresh = useRefreshAfterTrash();
+  return useMutation<void, Error, { kind: TrashKind; id: string }>({
+    mutationFn: ({ kind, id }) => api.purgeTrashItem(kind, id),
+    onSuccess: refresh,
+    onError: fail("Could not delete it"),
+  });
+}
+
+export function useEmptyTrash() {
+  const refresh = useRefreshAfterTrash();
+  return useMutation<{ deleted: number }, Error, void>({
+    mutationFn: () => api.emptyTrash(),
+    onSuccess: ({ deleted }) => {
+      toast.success(deleted === 1 ? "Deleted 1 item for good" : `Deleted ${deleted} items for good`);
+      refresh();
+    },
+    onError: fail("Could not empty the trash"),
   });
 }
 
@@ -1261,8 +1357,9 @@ export function useExportStory(storyId: string) {
   });
 }
 
+/** To the trash, with Undo (see `useTrashDelete`). */
 export function useDeleteSound() {
-  return useDeleteWithUndo("sound", (id) => api.deleteSound(id), [["sounds"], qk.tags], "Could not delete the sound", (id) => {
+  return useTrashDelete("sound", (id) => api.deleteSound(id), [["sounds"], qk.tags, qk.sessions], "Could not delete the sound", (id) => {
     if (useDock.getState().isOpen("sound", id)) useDock.getState().close();
   });
 }

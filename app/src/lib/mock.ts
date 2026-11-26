@@ -67,7 +67,7 @@ import type {
   Unsubscribe,
 } from "./api";
 import { ApiError, DESKTOP_CAPABILITIES } from "./api";
-import type { AgentCall, AgentPlan, AgentPlanRequest, AgentRunResult } from "./api";
+import type { AgentCall, AgentPlan, AgentPlanRequest, AgentRunResult, TrashItem, TrashKind } from "./api";
 
 /** `npm run dev:mock:sandboxed`: play a sandboxed server (MIRLI_SANDBOXED=1). */
 const MOCK_SANDBOXED = import.meta.env.VITE_MOCK_SANDBOXED === "1";
@@ -907,6 +907,24 @@ function estimateDuration(text: string): number {
 const stories: Story[] = [];
 const segments: StorySegment[] = [];
 const tracks: StoryTrack[] = [];
+
+/** The mock's trash: what was deleted, and how to put it back or let it go.
+ *  The real one keeps rows in place with a `deleted_at` (server/src/trash.ts);
+ *  here the objects move out of their arrays and back. */
+const trashBin: { item: TrashItem; restore: () => void; purge: () => void }[] = [];
+
+export function addToMockTrash(
+  kind: TrashKind,
+  id: string,
+  name: string,
+  detail: string | null,
+  restore: () => void,
+  purge: () => void = () => {},
+): void {
+  const deleted_at = new Date().toISOString();
+  const purge_at = new Date(Date.now() + 30 * 864e5).toISOString();
+  trashBin.unshift({ item: { kind, id, name, detail, deleted_at, purge_at, size_bytes: null }, restore, purge });
+}
 
 /**
  * Saved voices. Seeded with two so the Voice studio has something to pick on
@@ -2734,7 +2752,42 @@ export const mockApi: MirliApi = {
     const i = sounds.findIndex((s) => s.id === id);
     if (i < 0) throw new Error(`Unknown sound ${id}`);
     const [removed] = sounds.splice(i, 1);
-    if (removed.file.startsWith("blob:")) URL.revokeObjectURL(removed.file);
+    addToMockTrash(
+      "sound",
+      id,
+      removed.name,
+      null,
+      () => sounds.splice(Math.min(i, sounds.length), 0, removed),
+      () => removed.file.startsWith("blob:") && URL.revokeObjectURL(removed.file),
+    );
+  },
+
+  async listTrash() {
+    await wait(80);
+    return { days: 30, items: trashBin.map((t) => ({ ...t.item })) };
+  },
+
+  async restoreFromTrash(kind, id) {
+    await wait(100);
+    const i = trashBin.findIndex((t) => t.item.kind === kind && t.item.id === id);
+    if (i < 0) throw new ApiError("Not in the trash", 404);
+    const [entry] = trashBin.splice(i, 1);
+    entry.restore();
+  },
+
+  async purgeTrashItem(kind, id) {
+    await wait(100);
+    const i = trashBin.findIndex((t) => t.item.kind === kind && t.item.id === id);
+    if (i < 0) throw new ApiError("Not in the trash", 404);
+    const [entry] = trashBin.splice(i, 1);
+    entry.purge();
+  },
+
+  async emptyTrash() {
+    await wait(120);
+    const all = trashBin.splice(0);
+    for (const entry of all) entry.purge();
+    return { deleted: all.length };
   },
 
   // Nothing to reveal — the mock backend has no real files on disk, only
@@ -2937,14 +2990,23 @@ export const mockApi: MirliApi = {
     await wait(120);
     const i = sessions.findIndex((x) => x.id === id);
     if (i < 0) throw new Error(`Unknown session ${id}`);
-    sessions.splice(i, 1);
-    // Same as the server: the session's sounds go with it, audio included.
+    const [session] = sessions.splice(i, 1);
+    // Same as the server: to the trash, with the session's sounds.
+    const taken: MockSound[] = [];
     for (let k = sounds.length - 1; k >= 0; k--) {
-      if (sounds[k].session_id === id) {
-        const [removed] = sounds.splice(k, 1);
-        if (removed.file.startsWith("blob:")) URL.revokeObjectURL(removed.file);
-      }
+      if (sounds[k].session_id === id) taken.unshift(...sounds.splice(k, 1));
     }
+    addToMockTrash(
+      "session",
+      id,
+      session.title,
+      `${taken.length} sound${taken.length === 1 ? "" : "s"}`,
+      () => {
+        sessions.splice(Math.min(i, sessions.length), 0, session);
+        sounds.unshift(...taken);
+      },
+      () => taken.forEach((s) => s.file.startsWith("blob:") && URL.revokeObjectURL(s.file)),
+    );
   },
 
   /* ------------------------------------------------------------- stories */

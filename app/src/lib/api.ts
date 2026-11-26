@@ -732,6 +732,27 @@ export interface EnhanceLyricsResponse {
   lyrics: string;
 }
 
+/** What can be in the trash. See server/src/trash.ts. */
+export type TrashKind = "sound" | "session" | "book";
+
+export interface TrashItem {
+  kind: TrashKind;
+  id: string;
+  name: string;
+  /** "12 sounds", "Jane Austen · 64 chapters". */
+  detail: string | null;
+  deleted_at: string;
+  /** When it will be deleted for good. */
+  purge_at: string;
+  size_bytes: number | null;
+}
+
+export interface TrashList {
+  /** How long things stay. */
+  days: number;
+  items: TrashItem[];
+}
+
 export interface Sound {
   id: string;
   created_at: string;
@@ -787,6 +808,8 @@ export interface Sound {
    *  dialogues and non-speech sounds. The library tile uses it to show the
    *  voice's avatar where a music track shows its cover. */
   voice_id?: string | null;
+  /** When it went to the trash, or null. Lists leave trashed sounds out. */
+  deleted_at?: string | null;
 }
 
 export type SoundEditOp =
@@ -1774,7 +1797,14 @@ export interface MirliApi {
   getSession(id: string): Promise<Session>;
   renameSession(id: string, title: string): Promise<Session>;
   setSessionProject(id: string, projectId: string | null): Promise<Session>;
+  /** To the trash, with its sounds. */
   deleteSession(id: string): Promise<void>;
+  listTrash(): Promise<TrashList>;
+  restoreFromTrash(kind: TrashKind, id: string): Promise<void>;
+  /** Delete one thing in the trash for good. */
+  purgeTrashItem(kind: TrashKind, id: string): Promise<void>;
+  /** Delete everything in the trash for good. */
+  emptyTrash(): Promise<{ deleted: number }>;
   listStories(limit?: number): Promise<Story[]>;
   getStory(id: string): Promise<Story>;
   createStory(
@@ -2236,6 +2266,16 @@ export const httpApi: MirliApi = {
 
   deleteSession: (id) =>
     request<void>(`/api/sessions/${encodeURIComponent(id)}`, { method: "DELETE" }),
+
+  listTrash: () => request<TrashList>("/api/trash"),
+
+  restoreFromTrash: (kind, id) =>
+    request<void>(`/api/trash/${kind}/${encodeURIComponent(id)}/restore`, { method: "POST" }),
+
+  purgeTrashItem: (kind, id) =>
+    request<void>(`/api/trash/${kind}/${encodeURIComponent(id)}`, { method: "DELETE" }),
+
+  emptyTrash: () => request<{ deleted: number }>("/api/trash", { method: "DELETE" }),
 
   listStories: (limit = 50) => request<Story[]>(`/api/stories?limit=${limit}`),
 

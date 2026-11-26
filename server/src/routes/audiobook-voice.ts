@@ -86,6 +86,12 @@ export function voiceServices(svc: MirliService): VoiceServices {
     };
     services.set(svc, s);
     recordTakes(svc);
+    // A book going to the trash stops being voiced; its runs' history stays.
+    book.onTrash((bookId) => {
+      for (const run of render.list(bookId)) {
+        if (["queued", "running", "paused"].includes(run.status)) render.cancel(run.id);
+      }
+    });
     // Rows that point at a deleted book's or chapter's segments go with it.
     book.onDelete((scope) => {
       const stores = voiceStores(svc.db);

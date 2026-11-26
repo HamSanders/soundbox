@@ -30,7 +30,7 @@ import { errorMessage } from "./api";
 /* --------------------------------------------------------- hidden items */
 
 /** Things deleted but not sent yet, so every list can leave them out. */
-export type HiddenKind = "sound" | "project" | "voice" | "endpoint" | "chapter";
+export type HiddenKind = "sound" | "project" | "voice" | "endpoint" | "chapter" | "session" | "book";
 
 interface HiddenState {
   ids: Record<string, true>;

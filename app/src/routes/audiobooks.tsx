@@ -17,17 +17,8 @@ import { BookCard } from "@/components/audiobook/shelf/book-card";
 import { EmptyState } from "@/components/empty-state";
 import { FilterChip } from "@/components/filter-chip";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { type BookSummary } from "@/lib/audiobook-api";
 import { audiobookApi } from "@/lib/audiobook-api";
 import {
   useBooks,
@@ -82,7 +73,6 @@ export function AudiobooksPage() {
   };
   const setImporting = (open: boolean) => setParam("import", open ? "1" : null);
   const openClassics = () => setParam("import", "classics");
-  const [doomed, setDoomed] = useState<BookSummary | null>(null);
 
   const all = useMemo(() => books.data ?? [], [books.data]);
   const list = useMemo(() => entries(all, classics.data?.works ?? []), [all, classics.data]);
@@ -279,7 +269,13 @@ export function AudiobooksPage() {
               key={book.id}
               book={book}
               index={i}
-              onDelete={setDoomed}
+              // To the trash, with Undo: no "are you sure".
+              onDelete={(b) =>
+                remove(
+                  { id: b.id, name: b.title },
+                  { description: "With its chapters and voiced audio. In the trash for 30 days." },
+                )
+              }
               onDuplicate={(b) => duplicate.mutate({ id: b.id })}
               onMove={(b, p) => move.mutate({ id: b.id, project: p })}
               projects={projects.data}
@@ -288,30 +284,6 @@ export function AudiobooksPage() {
         </div>
       )}
 
-      <Dialog open={doomed !== null} onOpenChange={(open) => !open && setDoomed(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete “{doomed?.title}”?</DialogTitle>
-            <DialogDescription>
-              Its chapters, paragraphs and voiced audio are deleted too. This can't be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDoomed(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={remove.isPending}
-              onClick={() =>
-                doomed && remove.mutate(doomed.id, { onSuccess: () => setDoomed(null) })
-              }
-            >
-              Delete book
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

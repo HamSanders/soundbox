@@ -441,6 +441,9 @@ export interface Sound {
    *  (no one avatar is honest) and for everything that isn't speech. Lets a
    *  list show the voice's avatar where a music track would show its cover. */
   voice_id?: string | null;
+  /** When it went to the trash, or null. Lists leave trashed sounds out; a
+   *  sound fetched by id still says so, since a timeline can still use it. */
+  deleted_at?: string | null;
 }
 
 export interface McpCall {

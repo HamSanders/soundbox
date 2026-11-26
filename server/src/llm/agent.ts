@@ -106,6 +106,7 @@ const COSTLY = new Set([
 ]);
 
 const DESTRUCTIVE = new Set([
+  "soundbox.delete_audiobook",
   "soundbox.delete_chapter",
   "soundbox.delete_sound",
   "soundbox.delete_line",
@@ -196,9 +197,12 @@ export const TOOL_GROUPS = [
   },
   {
     id: "library",
-    about: "other books and stories: create, import, list, speak or export a story; models",
+    about: "other books and stories: create, import, list, delete; the trash; speak or export a story; models",
     verbs: [
       "create_audiobook",
+      "delete_audiobook",
+      "list_trash",
+      "restore_from_trash",
       "import_manuscript",
       "list_audiobooks",
       "create_story",
@@ -255,6 +259,7 @@ const GROUP_IDS: ToolGroup[] = [...TOOL_GROUPS.map((g) => g.id), "other", "answe
  * reach the planner without the tools for it.
  */
 const KIND_WORDS: [ToolGroup, RegExp][] = [
+  ["library", /\b(trash|restore|undelete|bring (?:it |them |\w+ )?back|delete (?:this|the) (?:book|audiobook))\b/i],
   ["chapters", /\b((?:leave|take|keep)\b.{0,40}\bout of|add (?:a |another )?chapter|new chapter|rename (?:the |this )?chapter|chapter title|move (?:the |this )?chapter|delete (?:the |this )?chapter|remove (?:the |this )?chapter|(?:leave|take) (?:it |this |the chapter )?out of the (?:render|export)|exclude|front matter|back matter)\b/i],
   ["text", /\b(typo|fix|rewrite|reword|change the (?:text|words|wording)|edit|split|merge|replace|lock|unlock|delete the \w+ paragraph|remove the \w+ paragraph|paragraph)\b/i],
   ["voicing", /\b(voice (?:this|the|it|chapter|book|paragraph)|render|re-?voice|read .{0,30}\b(?:aloud|out loud))\b/i],

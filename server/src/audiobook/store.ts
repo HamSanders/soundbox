@@ -431,6 +431,13 @@ export class AudiobookStore {
     if (!columns.some((c) => c.name === "model_id")) {
       this.conn.exec("ALTER TABLE book_paragraphs ADD COLUMN model_id TEXT");
     }
+    // The trash: when the book was deleted, or null. A trashed book keeps
+    // every row and file; lists and lookups leave it out until it is restored
+    // or purged (`AudiobookService.trashBook`).
+    const bookColumns = this.prep("PRAGMA table_info(books)").all() as { name: string }[];
+    if (!bookColumns.some((c) => c.name === "deleted_at")) {
+      this.conn.exec("ALTER TABLE books ADD COLUMN deleted_at TEXT");
+    }
   }
 
   /** Run `fn` in one transaction. The service uses this to keep a story and
@@ -444,19 +451,50 @@ export class AudiobookStore {
   /** `project`: undefined = every book, null = books in no project, else
    *  that project's books. */
   listBooks(project?: string | null): Book[] {
+    const live = "deleted_at IS NULL";
     const rows = (
       project === undefined
-        ? this.prep("SELECT * FROM books ORDER BY updated_at DESC").all()
+        ? this.prep(`SELECT * FROM books WHERE ${live} ORDER BY updated_at DESC`).all()
         : project === null
-          ? this.prep("SELECT * FROM books WHERE project_id IS NULL ORDER BY updated_at DESC").all()
-          : this.prep("SELECT * FROM books WHERE project_id = ? ORDER BY updated_at DESC").all(project)
+          ? this.prep(`SELECT * FROM books WHERE project_id IS NULL AND ${live} ORDER BY updated_at DESC`).all()
+          : this.prep(`SELECT * FROM books WHERE project_id = ? AND ${live} ORDER BY updated_at DESC`).all(project)
     ) as BookRow[];
     return rows.map(toBook);
   }
 
+  /** A book that isn't in the trash. */
   getBook(id: string): Book | null {
-    const row = this.prep("SELECT * FROM books WHERE id=?").get(id) as BookRow | undefined;
+    const row = this.prep("SELECT * FROM books WHERE id=? AND deleted_at IS NULL").get(id) as BookRow | undefined;
     return row ? toBook(row) : null;
+  }
+
+  /** Every book id, the trash included: for sweeps that must not mistake a
+   *  trashed book for a deleted one. */
+  allBookIds(): string[] {
+    return (this.prep("SELECT id FROM books").all() as { id: string }[]).map((r) => r.id);
+  }
+
+  /** Move a book to the trash, or out. False when there is no such book or
+   *  it is already there. */
+  setTrashed(id: string, deletedAt: string | null): boolean {
+    return (
+      this.prep(`UPDATE books SET deleted_at=? WHERE id=? AND deleted_at IS ${deletedAt === null ? "NOT NULL" : "NULL"}`)
+        .run(deletedAt, id).changes > 0
+    );
+  }
+
+  listTrashed(): { id: string; title: string; author: string | null; deleted_at: string; chapters: number }[] {
+    return this.prep(
+      `SELECT b.id, b.title, b.author, b.deleted_at,
+              (SELECT COUNT(*) FROM book_chapters c WHERE c.book_id = b.id) chapters
+         FROM books b WHERE b.deleted_at IS NOT NULL ORDER BY b.deleted_at DESC`,
+    ).all() as { id: string; title: string; author: string | null; deleted_at: string; chapters: number }[];
+  }
+
+  trashedBefore(cutoff: string): string[] {
+    return (
+      this.prep("SELECT id FROM books WHERE deleted_at IS NOT NULL AND deleted_at < ?").all(cutoff) as { id: string }[]
+    ).map((r) => r.id);
   }
 
   createBook(fields: BookFields & { title: string }): Book {

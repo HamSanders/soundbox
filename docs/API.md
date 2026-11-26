@@ -90,7 +90,7 @@ route answers `202 { "job_id": "..." }` and the work is followed through
 | GET | `/api/sounds` | Search the library (`?q, tag, favorite, model, models, session_id, project_id, parent_id, voice_id, source, limit, offset`). `voice_id` lists what one saved voice has read: single-voice reads and conversions, not multi-voice dialogues |
 | GET | `/api/sounds/{id}` | One sound |
 | PATCH | `/api/sounds/{id}` | Body `{ name?, favorite?, tags? }` |
-| DELETE | `/api/sounds/{id}` | Delete the row and the file |
+| DELETE | `/api/sounds/{id}` | Move to the trash; `?permanent=true` deletes the row and the file |
 | POST | `/api/sounds/upload` | Add audio from disk or the microphone. Body is the raw audio; `?name, source, project_id` |
 | POST | `/api/sounds/{id}/edit` | Non-destructive edit: writes a new derived sound. Body `{ op: "trim" \| "normalize" \| "reverse" \| "gain" \| "highpass" \| "lowpass" \| "pitch" \| "stretch", start_s?, end_s?, target_lufs?, gain_db?, cutoff_hz?, semitones?, rate? }` → `201 Sound` |
 | POST | `/api/sounds/{id}/reveal` | Show the file in the OS file manager |
@@ -199,7 +199,7 @@ rather than failing the import.
 | Method | Path | What it does |
 |---|---|---|
 | GET / POST | `/api/sessions` | List (`?limit`) or create (`{ title }`) |
-| GET / PATCH / DELETE | `/api/sessions/{id}` | Read, update (`{ title?, project_id? }`), delete with its sounds |
+| GET / PATCH / DELETE | `/api/sessions/{id}` | Read, update (`{ title?, project_id? }`), delete with its sounds (to the trash; `?permanent=true` for good) |
 | GET / POST | `/api/projects` | List or create (`{ name }`) |
 | DELETE | `/api/projects/{id}` | Delete a project |
 
@@ -818,7 +818,11 @@ describes the features.
 | POST | `/api/audiobooks` | Create a blank book with one chapter |
 | GET | `/api/audiobooks/{id}` | Book, chapters with stats, characters |
 | PATCH | `/api/audiobooks/{id}` | Metadata and settings |
-| DELETE | `/api/audiobooks/{id}` | Delete the book (`?delete_sounds=false` keeps its audio) |
+| DELETE | `/api/audiobooks/{id}` | Move the book to the trash; `?permanent=true` deletes it for good (`&delete_sounds=false` keeps its audio) |
+| GET | `/api/trash` | What is in the trash: `{ days, items: [{ kind, id, name, detail, deleted_at, purge_at, size_bytes }] }` |
+| POST | `/api/trash/{kind}/{id}/restore` | Take a `sound`, `session` or `book` out of the trash |
+| DELETE | `/api/trash/{kind}/{id}` | Delete one thing in the trash for good |
+| DELETE | `/api/trash` | Empty the trash. Things in it longer than 30 days are deleted on their own |
 | PUT, GET | `/api/audiobooks/{id}/cover` | Raw image body (PNG, JPEG, WebP, GIF) |
 | GET | `/api/audiobooks/{id}/events` | SSE: book, chapter, paragraph, render, export and bed events |
 | POST | `/api/audiobooks/{id}/chapters` | Add a chapter `{ title, kind, position, paragraphs? }` |

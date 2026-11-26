@@ -802,7 +802,9 @@ export class MirliService {
 
   /** Delete a session and everything generated in it. */
   async deleteSession(sessionId: string): Promise<boolean> {
-    if (this.db.getSession(sessionId) === null) return false;
+    // `sessionExists`, not `getSession`: purging the trash deletes sessions
+    // that `getSession` no longer shows.
+    if (!this.db.sessionExists(sessionId)) return false;
     for (const filename of this.db.deleteSession(sessionId)) {
       // Removing the row does not reclaim the disk, and the audio is the part
       // that actually takes space.

@@ -148,7 +148,7 @@ function jsonLd(): object[] {
 
 export function DevelopersPage() {
   return (
-    <div className="bg-background text-foreground min-h-svh">
+    <div className="text-foreground">
       <SeoHead
         title={PAGE.title}
         description={PAGE.description}

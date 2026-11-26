@@ -32,6 +32,7 @@ import { WaveformPlayer } from "@/components/waveform-player";
 import { useJobStream } from "@/hooks/use-job-stream";
 import { useModels, useSounds, useSpeak, useUpdateVoice, useVoices, qk } from "@/lib/queries";
 import { useDock } from "@/lib/dock";
+import { useVoiceLabPrefs } from "@/lib/voice-lab-prefs";
 import type { Model, Voice } from "@/lib/api";
 import { voiceReferenceError } from "@/lib/voice-reference";
 
@@ -352,7 +353,9 @@ export function VoiceDetailPanel({ id }: { id: string }) {
   const close = useDock((s) => s.close);
   const voices = useVoices();
   const models = useModels();
-  const [line, setLine] = useState("The quick brown fox jumps over the lazy dog.");
+  // The line to try a voice on is remembered across voices and visits.
+  const line = useVoiceLabPrefs((s) => s.line);
+  const setLine = useVoiceLabPrefs((s) => s.setLine);
   const voice = voices.data?.find((v) => v.id === id) ?? null;
 
   // A deleted voice takes its panel with it.

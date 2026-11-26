@@ -59,6 +59,8 @@ import { registerAudiobookListen } from "./routes/audiobook-listen.js"; // [audi
 import { registerAudiobookBeds } from "./routes/audiobook-beds.js"; // [audiobooks:soundscape]
 import { registerAudiobookExport } from "./routes/audiobook-export.js"; // [audiobooks:export]
 import { registerAudiobookVoice } from "./routes/audiobook-voice.js"; // [audiobooks:voice]
+import { registerCalls } from "./routes/calls.js";
+import { envVar } from "./env.js";
 import { MirliService } from "./service.js";
 
 declare module "fastify" {
@@ -262,6 +264,9 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
   registerOpenAi(app, svc);
   registerSounds(app, svc);
   registerVoices(app, svc);
+  // Live voice calls are pulled from releases until they are ready: the Call
+  // API (and the call secret it writes) only exists with MIRLI_CALLS=1.
+  if (envVar("MIRLI_CALLS") === "1") registerCalls(app, svc);
   registerSessions(app, svc);
   registerHistory(app, svc);
   registerStories(app, svc);

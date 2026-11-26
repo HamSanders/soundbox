@@ -380,7 +380,10 @@ export function StudioEditor({
   const tracks = useTracks(storyId);
   // Live view of this story: an agent writing lines over MCP shows up here as
   // it happens, rather than on the next refresh.
-  const agent = useStoryEvents(storyId);
+  // `answer`: this studio can be asked for its live state and to apply edits
+  // by an agent over MCP (soundbox.studio_context / studio_apply). The
+  // requests are answered from the bridge this page lends below.
+  const agent = useStoryEvents(storyId, { answer: true });
   const history = useEditHistory();
   const clearHistory = history.clear;
 
@@ -1328,6 +1331,9 @@ export function StudioEditor({
         name: track?.name ?? null,
         muted: track?.muted ?? false,
         soloed: track?.soloed ?? false,
+        // So "take the reverb off the vocal" has a rack to read — the planner
+        // and soundbox.studio_context both accept it.
+        devices: getLane(lane).map((d) => d.kind),
       };
     }),
     clips: lines.map((line) => ({

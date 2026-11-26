@@ -14,9 +14,17 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { AudioLinesIcon, PauseIcon, PlayIcon, SkipBackIcon, SkipForwardIcon } from "lucide-react";
+import {
+  AudioLinesIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  PauseIcon,
+  PlayIcon,
+  SkipBackIcon,
+  SkipForwardIcon,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { LicenseChip } from "@/components/license-badge";
@@ -263,7 +271,9 @@ export function SiteInlinePlayer({ audio, id, label }: { audio: SiteAudio; id: s
   );
 }
 
-/** The bottom dock, as the app's: the sound, transport and timeline, extras. */
+/** The bottom dock, as the app's: the sound, transport and timeline, extras,
+ *  on the ground under the panels rather than in a box of its own. Frosted,
+ *  because here the page scrolls behind it. */
 export function SiteDock({ audio, trailing }: { audio: SiteAudio; trailing?: ReactNode }) {
   const { current, playing } = audio;
   if (!current) return null;
@@ -271,7 +281,7 @@ export function SiteDock({ audio, trailing }: { audio: SiteAudio; trailing?: Rea
     <div
       role="region"
       aria-label="Now playing"
-      className="bg-sidebar border-border fixed inset-x-0 bottom-0 z-40 grid h-[72px] grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-t px-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)]"
+      className="bg-sidebar/80 supports-[backdrop-filter]:bg-sidebar/60 fixed inset-x-0 bottom-0 z-40 grid h-[72px] grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 backdrop-blur-xl md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)]"
     >
       {/* Narrow windows: the timeline runs along the dock's top edge. */}
       <SiteScrubber audio={audio} className="absolute inset-x-0 -top-2 md:hidden" />
@@ -437,8 +447,87 @@ export function SiteTrackRow({
   );
 }
 
+/* ------------------------------------------------------------------ rail */
+
+export interface SiteRailLink {
+  href: string;
+  label: string;
+  icon: ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" }>;
+}
+
+export interface SiteRailGroup {
+  heading: string;
+  links: SiteRailLink[];
+}
+
+/**
+ * The left rail of the public /music and /sfx pages: grouped jump links, then
+ * a "make your own" card pinned to the bottom. A panel of its own beside the
+ * page, as the app's Create panel sits beside its page: sticky, above the
+ * dock, and only from `lg` up; below that the page is one column and the
+ * rail's links would only repeat the headings.
+ *
+ * Put it as the first child of `SiteRailLayout`, beside the page's `<main>`.
+ */
+export function SiteRail({ groups, cta }: { groups: SiteRailGroup[]; cta?: ReactNode }) {
+  return (
+    <nav
+      aria-label="On this page"
+      className="bg-background ring-border sticky top-2 hidden h-[calc(100svh-1rem-var(--site-dock,0px))] flex-col gap-7 overflow-y-auto rounded-xl px-3 py-5 ring-1 lg:flex"
+    >
+      {groups.map((group) => (
+        <div key={group.heading}>
+          <p className="label-caps text-muted-foreground px-3">{group.heading}</p>
+          <ul className="mt-2">
+            {group.links.map(({ href, label, icon: Icon }) => (
+              <li key={href}>
+                <a
+                  href={href}
+                  className="text-muted-foreground hover:text-foreground hover:bg-card focus-visible:ring-ring/50 flex items-center gap-3 rounded-sm px-3 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-3"
+                >
+                  <Icon className="size-4 shrink-0" aria-hidden="true" />
+                  <span className="truncate">{label}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+      {cta && <div className="mt-auto">{cta}</div>}
+    </nav>
+  );
+}
+
+/** The "make your own" card at the foot of the rail. */
+export function SiteRailCard({ title, body, action }: { title: string; body: string; action: ReactNode }) {
+  return (
+    <div className="bg-card rounded-md p-4">
+      <p className="text-sm font-semibold">{title}</p>
+      <p className="text-muted-foreground mt-1 text-xs leading-relaxed">{body}</p>
+      <div className="mt-3">{action}</div>
+    </div>
+  );
+}
+
+/**
+ * Rail on the left, page on the right, from `lg` up; one column below. Two
+ * panels on the ground with the app's 8px gap between them: put `SiteRail`
+ * first and the page, in a `SitePanel`, second.
+ */
+export function SiteRailLayout({ children }: { children: ReactNode }) {
+  return (
+    <div className="w-full items-start lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-2">{children}</div>
+  );
+}
+
 /* ---------------------------------------------------------------- shelves */
 
+/**
+ * A row of tiles as a carousel: no scrollbar, tiles snap to the left edge, and
+ * two arrow buttons page by the visible width. The arrows grey out at either
+ * end and hide when everything already fits. Touch, trackpad and Shift+wheel
+ * still scroll it directly; the arrows are for a mouse.
+ */
 export function SiteShelf({
   title,
   id,
@@ -451,17 +540,100 @@ export function SiteShelf({
   more?: ReactNode;
   children: ReactNode;
 }) {
+  const track = useRef<HTMLUListElement>(null);
+  const [edges, setEdges] = useState({ start: true, end: true });
+
+  const measure = useCallback(() => {
+    const el = track.current;
+    if (!el) return;
+    // 2px of slack: snapping and subpixel widths stop a pixel short of the end.
+    setEdges({
+      start: el.scrollLeft <= 2,
+      end: el.scrollLeft + el.clientWidth >= el.scrollWidth - 2,
+    });
+  }, []);
+
+  useEffect(() => {
+    const el = track.current;
+    if (!el) return;
+    measure();
+    el.addEventListener("scroll", measure, { passive: true });
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", measure);
+      ro.disconnect();
+    };
+  }, [measure, children]);
+
+  const page = (dir: -1 | 1) => {
+    const el = track.current;
+    if (!el) return;
+    // Land on a tile's left edge rather than trusting CSS snap, which smooth
+    // scrolling skips in some browsers and leaves a half tile in view.
+    // Forward: the first tile cut off on the right becomes the first in view.
+    // Back: the first tile within one width to the left of here.
+    const box = el.getBoundingClientRect();
+    const pad = parseFloat(getComputedStyle(el).paddingLeft) || 0;
+    const tiles = [...el.children] as HTMLElement[];
+    const starts = tiles.map((c) => c.getBoundingClientRect().left - box.left + el.scrollLeft - pad);
+    const view = el.clientWidth - 2 * pad;
+    const target =
+      dir > 0
+        ? starts.find((s, i) => s + tiles[i].offsetWidth > el.scrollLeft + view + 1)
+        : starts.find((s) => s >= el.scrollLeft - view - 1);
+    el.scrollTo({ left: Math.max(0, target ?? el.scrollLeft + dir * view), behavior: "smooth" });
+  };
+
+  const fits = edges.start && edges.end;
+  const arrows = !fits && (
+    <div className="flex shrink-0 items-center gap-1">
+      <Button
+        variant="outline"
+        size="icon-sm"
+        className="rounded-full"
+        onClick={() => page(-1)}
+        disabled={edges.start}
+        aria-label={title ? `Scroll ${title} back` : "Scroll back"}
+      >
+        <ChevronLeftIcon />
+      </Button>
+      <Button
+        variant="outline"
+        size="icon-sm"
+        className="rounded-full"
+        onClick={() => page(1)}
+        disabled={edges.end}
+        aria-label={title ? `Scroll ${title} forward` : "Scroll forward"}
+      >
+        <ChevronRightIcon />
+      </Button>
+    </div>
+  );
+
   return (
     <section aria-labelledby={title ? id : undefined} className="grid min-w-0 gap-2">
-      {title && (
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 id={id} className="label-caps text-muted-foreground">
-            {title}
-          </h2>
-          {more}
+      {(title || more || arrows) && (
+        <div className="flex min-h-8 items-center justify-between gap-3">
+          {title ? (
+            <h2 id={id} className="label-caps text-muted-foreground">
+              {title}
+            </h2>
+          ) : (
+            <span />
+          )}
+          <div className="flex items-center gap-3">
+            {more}
+            {arrows}
+          </div>
         </div>
       )}
-      <ul className="-mx-1 grid auto-cols-[8.5rem] grid-flow-col gap-3 overflow-x-auto px-1 pb-2">{children}</ul>
+      <ul
+        ref={track}
+        className="-mx-1 grid snap-x snap-mandatory scroll-px-1 auto-cols-[8.5rem] grid-flow-col gap-3 overflow-x-auto overscroll-x-contain px-1 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>li]:snap-start"
+      >
+        {children}
+      </ul>
     </section>
   );
 }

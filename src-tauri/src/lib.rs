@@ -34,7 +34,7 @@ struct AppState {
 /// load, `kill` from a terminal) without us finding out any other way.
 #[tauri::command]
 fn backend_health() -> bool {
-    backend::is_healthy(backend::DEFAULT_PORT)
+    backend::is_healthy(backend::port())
 }
 
 /// (Re)start the backend, replacing anything we already own.
@@ -59,7 +59,7 @@ fn restart_backend(app: tauri::AppHandle) -> Result<(), String> {
          SOUNDBOX_PROJECT_ROOT to a checkout."
             .to_string()
     })?;
-    let port = backend::DEFAULT_PORT;
+    let port = backend::port();
     let started = backend::start(&home, port)?;
     *state.backend.lock().unwrap() = Some(started);
 
@@ -207,8 +207,24 @@ pub fn run() {
             .inner_size(1200.0, 820.0)
             .min_inner_size(720.0, 560.0)
             .resizable(true)
-            .on_new_window(popout_handler(app.handle().clone()))
-            .build()?;
+            .on_new_window(popout_handler(app.handle().clone()));
+
+            // The app draws its own title bar (app/src/components/window-title-bar.tsx),
+            // so the window has no native one. On Windows and Linux that means
+            // no frame at all: `shadow` (on by default) keeps the drop shadow,
+            // and on Windows 11 the rounded corners and a 1px border, and the
+            // edges still resize. The bar brings its own minimize, maximize and
+            // close. On macOS the frame stays and its title bar becomes a
+            // transparent overlay, so the real traffic lights sit over the
+            // app's bar and the app leaves room for them.
+            #[cfg(not(target_os = "macos"))]
+            let window = window.decorations(false);
+            #[cfg(target_os = "macos")]
+            let window = window
+                .title_bar_style(tauri::TitleBarStyle::Overlay)
+                .hidden_title(true);
+
+            let window = window.build()?;
 
             let handle = app.handle().clone();
             // Startup blocks on network and process spawning, so it cannot run
@@ -234,7 +250,7 @@ pub fn run() {
                 };
 
                 notify("starting", "Starting up…");
-                let port = backend::DEFAULT_PORT;
+                let port = backend::port();
                 match backend::start(&home, port) {
                     Ok(handle_backend) => {
                         let state = handle.state::<AppState>();

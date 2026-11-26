@@ -22,7 +22,7 @@
  * think about, not every optional field.
  */
 
-export type McpToolGroup = "sounds" | "voices" | "stories" | "arrangement" | "audiobooks";
+export type McpToolGroup = "sounds" | "voices" | "stories" | "arrangement" | "studio" | "audiobooks";
 
 export interface McpToolArg {
   name: string;
@@ -70,6 +70,12 @@ export const MCP_TOOL_GROUPS: { id: McpToolGroup; title: string; intro: string }
     title: "Arrangement",
     intro:
       "The timeline underneath a story: which lane a clip is on, how loud it is, and what the studio shows when you open it.",
+  },
+  {
+    id: "studio",
+    title: "The open studio",
+    intro:
+      "The studio as the person sees it right now: the playhead, the selection, the panels. Edits go through the studio's own controls, so each one is on their undo stack. Needs a studio open in the app.",
   },
   {
     id: "audiobooks",
@@ -441,6 +447,41 @@ export const MCP_TOOLS: McpToolDoc[] = [
     args: [
       { name: "story_id", type: "string", required: true },
       { name: "track_index", type: "integer", required: true, note: "−16 to 16." },
+    ],
+  },
+
+  /* ------------------------------------------------------------- studio */
+  {
+    name: "soundbox.studio_context",
+    title: "Read the open studio",
+    blurb:
+      "Returns what the open studio shows: lanes with their effects, every clip with its id and label, the playhead, the selection and the voices a line can be cast to. Read it before studio_apply.",
+    group: "studio",
+    args: [{ name: "story_id", type: "string", note: "Omit when only one studio is open." }],
+  },
+  {
+    name: "soundbox.studio_apply",
+    title: "Edit the open studio",
+    blurb:
+      "Applies edits through the studio's own controls: mute, rename, move, fade, recast, write and read lines, effects, a generated take on a lane, panels. One action can cover many clips with select. Invented ids are dropped.",
+    group: "studio",
+    destructive: true,
+    args: [
+      { name: "actions", type: "object[]", required: true, note: "The studio's action list; the tool description has every shape." },
+      { name: "story_id", type: "string", note: "Omit when only one studio is open." },
+      { name: "summary", type: "string", note: "One line for the studio's toast and history." },
+      { name: "allow_delete", type: "boolean", note: "delete_clip actions are held unless this is true." },
+    ],
+  },
+  {
+    name: "soundbox.search_docs",
+    title: "Search Mirli's documentation",
+    blurb:
+      "Finds the sections of Mirli's README and docs that answer a question, with their source file, so an agent quotes the manual instead of guessing.",
+    group: "studio",
+    args: [
+      { name: "query", type: "string", required: true },
+      { name: "limit", type: "integer", note: "1–8, default 4." },
     ],
   },
 

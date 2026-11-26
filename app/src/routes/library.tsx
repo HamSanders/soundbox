@@ -10,17 +10,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { keepDetail } from "@/lib/dock";
-import { BotIcon, ChevronDownIcon, SearchIcon, StarIcon, XIcon } from "lucide-react";
+import { BotIcon, SearchIcon, StarIcon } from "lucide-react";
 
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { FilterChip, FilterMenu, TogglePill } from "@/components/filter-pills";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,11 +32,10 @@ import {
 import { useGenerateSession } from "@/hooks/use-generate-session";
 import { prefillFromSound, usePrefillStore } from "@/lib/generate-store";
 import { usePlayerStore } from "@/lib/player-store";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useSizeClass } from "@/hooks/use-size-class";
 import { useModels, useProjects, useSounds, useTags } from "@/lib/queries";
 import { clampDuration, preferredModel } from "@/lib/session-store";
 import type { Model, SoundQuery } from "@/lib/api";
-import { cn } from "@/lib/utils";
 
 const ALL = "__all__";
 
@@ -69,7 +62,7 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
   // The "now playing" dock pins to the same viewport-bottom spot the
   // category composer does — see the matching hook in routes/generate.tsx.
   const nowPlaying = usePlayerStore((s) => s.sound !== null);
-  const isDesktop = !useIsMobile();
+  const isDesktop = useSizeClass() === "expanded";
   const [searchParams, setSearchParams] = useSearchParams();
   const projectId = searchParams.get("project");
   // The combined Library filters by kind in place; a kind page is one kind.
@@ -459,10 +452,15 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
           // beside it: `main` has 24px of bottom padding, and without pulling
           // through it the composer would rest 24px above the window edge on a
           // short page while sitting flush against it on a long one.
-          className="from-background via-background sticky z-20 mt-auto md:hidden -mx-3 -mb-6 overflow-x-clip [overflow-clip-margin:12px] bg-gradient-to-t via-75% to-transparent px-3 pt-6 pb-6 transition-[bottom]"
+          className="from-background via-background sticky z-20 mt-auto expanded:hidden -mx-3 -mb-6 overflow-x-clip [overflow-clip-margin:12px] bg-gradient-to-t via-75% to-transparent px-3 pt-6 pb-6 transition-[bottom]"
           // Desktop scrolls inside the panel, which already ends above the
           // player; only the narrow, window-scrolled layout needs the offset.
-          style={{ bottom: nowPlaying && !isDesktop ? PLAYER_DOCK_HEIGHT_PX : 0 }}
+          // On a phone it also clears the tab bar, which sits under the player.
+          style={{
+            bottom: isDesktop
+              ? 0
+              : `calc(${nowPlaying ? PLAYER_DOCK_HEIGHT_PX : 0}px + var(--tabbar-h, 0px))`,
+          }}
         >
           {/* Capped and centred: a prompt box the full width of the list is
               a long line to read and a long way to the Generate button. */}
@@ -507,91 +505,5 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
         </div>
       )}
     </div>
-  );
-}
-
-const PILL =
-  "focus-visible:ring-ring/50 inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium outline-none transition-colors focus-visible:ring-3 [&_svg]:size-3.5";
-const PILL_OFF = "border-border text-muted-foreground hover:text-foreground hover:bg-muted";
-const PILL_ON = "bg-primary text-primary-foreground border-primary";
-
-/** A filter with a list of values, as a pill that opens a menu. */
-function FilterMenu({
-  label,
-  value,
-  valueLabel,
-  anyLabel,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string | null;
-  valueLabel?: string;
-  anyLabel: string;
-  options: { value: string; label: string; hint?: string }[];
-  onChange: (v: string | null) => void;
-}) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className={cn(PILL, value ? PILL_ON : PILL_OFF)}
-          aria-label={value ? `${label}: ${valueLabel ?? value}. Change.` : `Filter by ${label.toLowerCase()}`}
-        >
-          {label}
-          {value && <span className="max-w-32 truncate font-normal opacity-80">· {valueLabel ?? value}</span>}
-          <ChevronDownIcon aria-hidden="true" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="max-h-80 w-56 overflow-y-auto">
-        <DropdownMenuRadioGroup value={value ?? ""} onValueChange={(v) => onChange(v || null)}>
-          <DropdownMenuRadioItem value="">{anyLabel}</DropdownMenuRadioItem>
-          {options.map((o) => (
-            <DropdownMenuRadioItem key={o.value} value={o.value}>
-              <span className="truncate">{o.label}</span>
-              {o.hint && <span className="readout text-muted-foreground ml-auto pl-2">{o.hint}</span>}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-/** An on/off filter, as a pill that is filled when on. */
-function TogglePill({
-  pressed,
-  onToggle,
-  icon,
-  label,
-}: {
-  pressed: boolean;
-  onToggle: () => void;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <button type="button" aria-pressed={pressed} onClick={onToggle} className={cn(PILL, pressed ? PILL_ON : PILL_OFF)}>
-      {icon}
-      {label}
-    </button>
-  );
-}
-
-/** One chosen filter value, as a chip whose × clears only it. */
-function FilterChip({ label, onClear }: { label: string; onClear: () => void }) {
-  return (
-    <span className="bg-muted text-foreground inline-flex h-8 items-center gap-1 rounded-full pr-1 pl-2.5 text-xs">
-      {label}
-      <button
-        type="button"
-        onClick={onClear}
-        aria-label={`Clear ${label}`}
-        className="text-muted-foreground hover:text-foreground hover:bg-background/60 rounded-full p-0.5"
-      >
-        <XIcon className="size-3" />
-      </button>
-    </span>
   );
 }

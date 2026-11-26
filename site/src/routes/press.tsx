@@ -447,7 +447,7 @@ export function PressPage() {
   const landscape = VIDEOS.filter((v) => !v.vertical);
   const vertical = VIDEOS.filter((v) => v.vertical);
   return (
-    <div className="bg-background text-foreground min-h-svh overflow-x-clip">
+    <div className="text-foreground overflow-x-clip">
       <SeoHead
         title="Press kit | Mirli"
         description="Descriptions to quote, a fact sheet and downloadable films, screenshots and logos for anyone covering Mirli, the free app that generates sound effects, music and speech on your own computer."

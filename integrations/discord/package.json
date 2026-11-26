@@ -1,0 +1,24 @@
+{
+  "name": "mirli-discord",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mirli live voice characters in Discord voice channels",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "start": "node bot.mjs",
+    "register": "node register-commands.mjs",
+    "test": "node --test test/bridge.test.mjs test/mirli.test.mjs"
+  },
+  "dependencies": {
+    "@discordjs/voice": "^0.19.2",
+    "@snazzah/davey": "^0.2.0",
+    "discord.js": "^14.28.1",
+    "libsodium-wrappers": "^0.8.4",
+    "opusscript": "^0.1.1",
+    "ws": "^8.23.0"
+  }
+}

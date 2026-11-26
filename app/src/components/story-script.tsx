@@ -578,7 +578,7 @@ function LineRow({
               variant="ghost"
               size="icon-sm"
               className={cn(
-                "size-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+                "size-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 no-hover:opacity-100",
                 auditioning && "opacity-100",
               )}
               aria-label={auditioning ? "Stop" : "Play this line"}
@@ -611,7 +611,7 @@ function LineRow({
             variant="ghost"
             size="icon-sm"
             className={cn(
-              "size-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+              "size-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 no-hover:opacity-100",
               busy && "opacity-100",
             )}
             aria-label={segment.sound_id ? "Read this line again" : "Read this line"}
@@ -626,7 +626,7 @@ function LineRow({
           <Button
             variant="ghost"
             size="icon-sm"
-            className="size-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+            className="size-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 no-hover:opacity-100"
             aria-label="Delete this line"
             onClick={(e) => {
               e.stopPropagation();
@@ -797,7 +797,7 @@ function PauseRow({
       <Button
         variant="ghost"
         size="icon-sm"
-        className="size-6 opacity-0 group-hover:opacity-100"
+        className="size-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 no-hover:opacity-100"
         aria-label="Delete this pause"
         onClick={(e) => {
           e.stopPropagation();
@@ -859,7 +859,7 @@ function DeliveryButton({
             size="icon-sm"
             aria-label={title}
             className={cn(
-              "size-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+              "size-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 no-hover:opacity-100",
               count > 0 && "text-primary opacity-100",
             )}
           >

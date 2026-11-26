@@ -89,10 +89,31 @@
       .tip.show { opacity: 1; }
       .tip b { color: var(--fg); font-weight: 600; }
       body.settled .tip, body[data-stage="error"] .tip { opacity: 0; }
+      /* The window has no system frame (src-tauri/src/lib.rs), so the splash
+         brings the top of one: a strip you drag the window by and
+         double-click to maximize, and minimize, maximize and close drawn
+         like the app's own bar (app/src/components/window-title-bar.tsx).
+         macOS keeps its traffic lights, so there it is drag space only. */
+      .titlebar { position: fixed; top: 0; left: 0; right: 0; height: 40px; display: flex; justify-content: flex-end; z-index: 10; }
+      .caption {
+        width: 46px; height: 100%; border: 0; padding: 0; background: transparent; color: var(--fg);
+        opacity: 0.8; display: flex; align-items: center; justify-content: center;
+        font: 10px "Segoe Fluent Icons", "Segoe MDL2 Assets", ui-sans-serif, system-ui, sans-serif;
+        transition: background-color 0.1s;
+      }
+      .caption:hover { background: color-mix(in srgb, var(--fg) 10%, transparent); opacity: 1; }
+      .caption.close:hover { background: #c42b1c; color: #fff; }
+      .caption svg { width: 12px; height: 12px; stroke: currentColor; stroke-width: 1.2; fill: none; }
+      html.mac .caption { display: none; }
     </style>
   </head>
   <body data-stage="starting">
     <canvas id="ambient" aria-hidden="true"></canvas>
+    <header class="titlebar" id="titlebar">
+      <button class="caption" type="button" data-window="minimize" aria-label="Minimize" title="Minimize"></button>
+      <button class="caption" type="button" data-window="toggleMaximize" aria-label="Maximize" title="Maximize"></button>
+      <button class="caption close" type="button" data-window="close" aria-label="Close" title="Close"></button>
+    </header>
     <div class="wrap">
       <div class="mark" aria-hidden="true">
         <svg viewBox="-4 -4 230 135">
@@ -126,6 +147,34 @@
           field.setStrength(ambientStrength());
         });
       }
+    </script>
+    <script type="module">
+      // The title strip. Windows has the Segoe caption glyphs; Linux gets
+      // drawn ones; macOS uses its own traffic lights.
+      const ua = navigator.userAgent;
+      const platform = /Mac/.test(ua) ? "mac" : /Windows/.test(ua) ? "windows" : "linux";
+      document.documentElement.classList.add(platform);
+      const glyphs = {
+        windows: { minimize: "", toggleMaximize: "", close: "" },
+        linux: {
+          minimize: '<svg viewBox="0 0 12 12"><path d="M2 6h8"/></svg>',
+          toggleMaximize: '<svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7"/></svg>',
+          close: '<svg viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></svg>',
+        },
+      }[platform];
+      const win = window.__TAURI__.window.getCurrentWindow();
+      for (const button of document.querySelectorAll("[data-window]")) {
+        const action = button.dataset.window;
+        if (glyphs) button.innerHTML = glyphs[action];
+        button.addEventListener("click", () => void win[action]());
+      }
+      // Any press on the strip that is not a button moves the window, and a
+      // double press maximizes, as on the app's bar.
+      document.getElementById("titlebar").addEventListener("mousedown", (event) => {
+        if (event.button !== 0 || event.target.closest("button")) return;
+        event.preventDefault();
+        void (event.detail === 2 ? win.toggleMaximize() : win.startDragging());
+      });
     </script>
     <script type="module">
       const { listen } = window.__TAURI__.event;

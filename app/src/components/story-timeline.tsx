@@ -35,6 +35,7 @@ import {
   RepeatIcon,
   CircleIcon,
   LayersIcon,
+  EllipsisIcon,
   Loader2Icon,
   ScissorsIcon,
   UploadIcon,
@@ -2162,6 +2163,22 @@ export function StoryTimeline({
                 readOnly={readOnly}
                 onTrack={onTrack}
                 onRemove={onRemoveTrack}
+                onMenu={
+                  readOnly
+                    ? undefined
+                    : (track, anchor) => {
+                        const rect = anchor.getBoundingClientRect();
+                        const host = rootRef.current!.getBoundingClientRect();
+                        setClipMenu(null);
+                        setInsertAt(null);
+                        setLaneMenu({
+                          startS: playheadRef.current,
+                          track,
+                          x: rect.left - host.left,
+                          y: rect.bottom - host.top + 4,
+                        });
+                      }
+                }
               />
               <div
                 className={cn(
@@ -2593,8 +2610,11 @@ function ClipMenu({
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} onContextMenu={(e) => e.preventDefault()} />
+      {/* On a touch screen the menu is a sheet along the bottom instead of a
+          popup at the finger: the timeline panel is short on a phone, and a
+          popup there gets cut off by it. Same for the lane menu below. */}
       <div
-        className="bg-popover border-border absolute z-50 w-52 rounded-lg border p-1 shadow-lg"
+        className="bg-popover border-border absolute z-50 w-52 rounded-lg border p-1 shadow-lg pointer-coarse:fixed pointer-coarse:inset-x-2 pointer-coarse:top-auto! pointer-coarse:left-2! pointer-coarse:bottom-[calc(0.5rem+env(safe-area-inset-bottom))] pointer-coarse:w-auto pointer-coarse:max-h-[70svh] pointer-coarse:overflow-y-auto"
         style={{ left: Math.max(8, at.x), top: Math.max(8, at.y) }}
       >
         <MenuRow
@@ -2698,7 +2718,7 @@ function MenuRow({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm disabled:pointer-events-none disabled:opacity-40",
+        "hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm disabled:pointer-events-none disabled:opacity-40 pointer-coarse:min-h-11",
         destructive && "text-destructive",
       )}
     >
@@ -2805,7 +2825,7 @@ function LaneMenu({
         onContextMenu={(e) => e.preventDefault()}
       />
       <div
-        className="bg-popover border-border absolute z-50 w-56 rounded-lg border p-1 shadow-lg"
+        className="bg-popover border-border absolute z-50 w-56 rounded-lg border p-1 shadow-lg pointer-coarse:fixed pointer-coarse:inset-x-2 pointer-coarse:top-auto! pointer-coarse:left-2! pointer-coarse:bottom-[calc(0.5rem+env(safe-area-inset-bottom))] pointer-coarse:w-auto pointer-coarse:max-h-[70svh] pointer-coarse:overflow-y-auto"
         style={{ left: Math.max(8, at.x), top: Math.max(8, at.y) }}
       >
         <p className="text-muted-foreground px-2 py-1 font-(family-name:--font-log) text-[11px] tabular-nums">
@@ -2947,6 +2967,7 @@ function TrackHead({
   readOnly,
   onTrack,
   onRemove,
+  onMenu,
 }: {
   lane: number;
   track: StoryTrack | null;
@@ -2956,6 +2977,9 @@ function TrackHead({
   readOnly: boolean;
   onTrack: (trackIndex: number, patch: TrackPatch) => void;
   onRemove: (trackIndex: number, clips: number) => void;
+  /** Opens the empty-lane menu at the playhead; the touch stand-in for a
+   *  right-click on the lane. Absent when the story is read-only. */
+  onMenu?: (lane: number, anchor: HTMLElement) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const muted = track?.muted ?? false;
@@ -3056,11 +3080,22 @@ function TrackHead({
         {/* The trailing lane exists only as somewhere to drag a clip down to;
             it has no row and nothing on it, so offering to remove it would be
             a button that does nothing. */}
+        {onMenu && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="hidden size-5 pointer-coarse:inline-flex"
+            aria-label={`Track ${lane} actions`}
+            onClick={(e) => onMenu(lane, e.currentTarget)}
+          >
+            <EllipsisIcon className="size-3" />
+          </Button>
+        )}
         {(track !== null || clips > 0) && (
           <Button
             variant="ghost"
             size="icon-sm"
-            className="size-5 opacity-0 group-hover/track:opacity-100 focus-visible:opacity-100"
+            className="size-5 opacity-0 group-hover/track:opacity-100 focus-visible:opacity-100 no-hover:opacity-100"
             aria-label={`Remove track ${lane}`}
             disabled={readOnly}
             onClick={() => onRemove(lane, clips)}
@@ -3181,6 +3216,9 @@ function Clip({
       aria-label={`${segment.speaker ?? "Line"}: ${segment.text.slice(0, 40) || "empty"}`}
       className={cn(
         "absolute top-1.5 bottom-1.5 overflow-hidden rounded-md border select-none",
+        // A finger dragging a clip moves the clip, as a mouse does; without
+        // this the browser takes the drag as a scroll and the clip never moves.
+        "touch-none",
         // A clip with audio wears its lane's colour; one with nothing in it
         // yet stays dashed and grey, so a placeholder never reads as audio
         // that is simply very quiet.
@@ -3210,6 +3248,25 @@ function Clip({
         onSplitAt((e.clientX - rect.left) / pxPerSecond);
       }}
     >
+      {/* The clip menu without a right-click. Touch screens have none, and
+          long-press is hidden, so the selected clip shows its menu as a
+          button. Right of centre, clear of the trim strip and fade handles. */}
+      {selected && (
+        <button
+          type="button"
+          aria-label="Clip actions"
+          className="bg-background/85 border-border text-foreground absolute top-1/2 right-3 z-30 hidden size-8 -translate-y-1/2 items-center justify-center rounded-full border shadow-sm after:absolute after:-inset-1.5 pointer-coarse:flex"
+          onPointerDown={(e) => e.stopPropagation()}
+          onDoubleClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onContextMenu(e);
+          }}
+        >
+          <EllipsisIcon className="size-4" />
+        </button>
+      )}
+
       {/* The fades, drawn over the waveform: the audio darkens into silence
           across exactly the span that is being faded. A shape rather than a
           number, because the question you are asking is "does this reach far

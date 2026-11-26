@@ -4,7 +4,7 @@ import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"
 
-import { useIsMobile } from "@/hooks/use-mobile"
+import { useSizeClass } from "@/hooks/use-size-class"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -65,7 +65,9 @@ function SidebarProvider({
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }) {
-  const isMobile = useIsMobile()
+  // Below the expanded size class the sidebar is a sheet; the tab bar (phone)
+  // or the rail (tablet) is what stays on screen.
+  const isMobile = useSizeClass() !== "expanded"
   const [openMobile, setOpenMobile] = React.useState(false)
 
   // This is the internal state of the sidebar.
@@ -206,7 +208,7 @@ function Sidebar({
 
   return (
     <div
-      className="group peer hidden text-sidebar-foreground md:block"
+      className="group peer hidden text-sidebar-foreground expanded:block"
       data-state={state}
       data-collapsible={state === "collapsed" ? collapsible : ""}
       data-variant={variant}
@@ -229,7 +231,7 @@ function Sidebar({
         data-slot="sidebar-container"
         data-side={side}
         className={cn(
-          "fixed top-0 bottom-(--dock-h,0px) z-50 hidden w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex",
+          "fixed top-(--top-h,0px) bottom-(--dock-h,0px) z-50 hidden w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] expanded:flex",
           // Adjust the padding for floating and inset variants.
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
@@ -306,7 +308,7 @@ function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
     <main
       data-slot="sidebar-inset"
       className={cn(
-        "relative flex w-full flex-1 flex-col bg-background md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:ring-1 md:peer-data-[variant=inset]:ring-border md:peer-data-[variant=inset]:peer-data-[collapsible=offcanvas]:ml-2",
+        "relative flex w-full flex-1 flex-col bg-background expanded:peer-data-[variant=inset]:m-2 expanded:peer-data-[variant=inset]:ml-0 expanded:peer-data-[variant=inset]:rounded-xl expanded:peer-data-[variant=inset]:ring-1 expanded:peer-data-[variant=inset]:ring-border expanded:peer-data-[variant=inset]:peer-data-[collapsible=offcanvas]:ml-2",
         className
       )}
       {...props}
@@ -421,7 +423,7 @@ function SidebarGroupAction({
       data-slot="sidebar-group-action"
       data-sidebar="group-action"
       className={cn(
-        "absolute top-3.5 right-3 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground ring-sidebar-ring outline-hidden transition-transform group-data-[collapsible=icon]:hidden after:absolute after:-inset-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 md:after:hidden [&>svg]:size-4 [&>svg]:shrink-0",
+        "absolute top-3.5 right-3 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground ring-sidebar-ring outline-hidden transition-transform group-data-[collapsible=icon]:hidden after:absolute after:-inset-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 expanded:after:hidden [&>svg]:size-4 [&>svg]:shrink-0",
         className
       )}
       {...props}
@@ -553,9 +555,9 @@ function SidebarMenuAction({
       data-slot="sidebar-menu-action"
       data-sidebar="menu-action"
       className={cn(
-        "absolute top-1.5 right-1 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground ring-sidebar-ring outline-hidden transition-transform group-data-[collapsible=icon]:hidden peer-hover/menu-button:text-sidebar-accent-foreground peer-data-[size=default]/menu-button:top-1.5 peer-data-[size=lg]/menu-button:top-2.5 peer-data-[size=sm]/menu-button:top-1 after:absolute after:-inset-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 md:after:hidden [&>svg]:size-4 [&>svg]:shrink-0",
+        "absolute top-1.5 right-1 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground ring-sidebar-ring outline-hidden transition-transform group-data-[collapsible=icon]:hidden peer-hover/menu-button:text-sidebar-accent-foreground peer-data-[size=default]/menu-button:top-1.5 peer-data-[size=lg]/menu-button:top-2.5 peer-data-[size=sm]/menu-button:top-1 after:absolute after:-inset-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 expanded:after:hidden [&>svg]:size-4 [&>svg]:shrink-0",
         showOnHover &&
-          "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 peer-data-active/menu-button:text-sidebar-accent-foreground aria-expanded:opacity-100 md:opacity-0",
+          "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 peer-data-active/menu-button:text-sidebar-accent-foreground aria-expanded:opacity-100 expanded:opacity-0 no-hover:opacity-100!",
         className
       )}
       {...props}

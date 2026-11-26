@@ -121,8 +121,10 @@ library, prompt and device panels.
 
 With the prompt assistant on (Settings → Prompt assistant), the right-hand
 panel has an **Assistant** tab beside the Inspector. Ask it about the book, or
-say what to change: "make Ada the narrator", "pronounce Marlow as MAR-low",
-"put rain under this chapter", "voice this chapter".
+say what to change: "make Ada the narrator", "Mrs. Bennet reads the third
+paragraph", "pronounce Marlow as MAR-low", "replace Netherfield with
+Netherfield Park everywhere", "rename chapter II", "put rain under this
+chapter", "voice this chapter".
 
 It works through the same tools an agent gets over MCP (`soundbox.*`, listed
 in [MCP.md](MCP.md)), so it can do what they do and nothing else. It is shown
@@ -136,9 +138,16 @@ What it wants to do comes back as a card, one row per step:
   first that fails; each row also has its own accept and reject. Steps that
   make audio are marked, and a step that deletes is red.
 - **Reject** runs nothing. **Tweak** puts your request back in the box.
-- Once run, **Undo** puts back what it can: a character's voice, a lane's
-  mix, a paragraph's text, an effect. The card names the steps it can't undo,
-  such as a new pronunciation or voiced audio.
+- Once run, **Undo** puts back what it can: a character's voice, who reads
+  a paragraph, its text or lock, a split or merge, a find and replace, a
+  chapter's name, place or a chapter it added, a lane's mix, an effect. The
+  card names the steps it can't undo, such as a new pronunciation, voiced
+  audio or a deleted chapter.
+
+It runs on the same small local model as the rest of the prompt assistant, so
+it asks the model twice: once to sort the request, then to plan it with only
+the tools that kind of request needs. Say which paragraph or chapter you mean
+("the third paragraph", "chapter II"), or select paragraphs first.
 
 Runs are logged in the MCP activity as the "Mirli assistant" client.
 

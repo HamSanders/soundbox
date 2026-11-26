@@ -69,7 +69,8 @@ describe("POST /api/agent/plan", () => {
         calls: [
           { tool: "soundbox.mix_track", arguments: { story_id: "C1", track_index: 1, muted: true } },
           { tool: "soundbox.update_line", arguments: { line_id: "P1", text: "Once upon a midnight dreary, while I pondered." } },
-          { tool: "soundbox.update_line", arguments: { line_id: "made-up", text: "x" } },
+          // Not offered for a text-and-sound request.
+          { tool: "soundbox.render_audiobook", arguments: { book_id: "B" } },
         ],
       });
     });

@@ -320,7 +320,7 @@ export class LlmService {
       maxTokens: 700,
     });
     this.runtime.touch();
-    return { ...parseAgentPlan(text, toolsFor(tools, groups), context, instruction), groups };
+    return { ...parseAgentPlan(text, toolsFor(tools, groups, instruction), context, instruction), groups };
   }
 
   private async complete(

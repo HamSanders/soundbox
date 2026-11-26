@@ -43,6 +43,8 @@ import {
 } from "../devices.js";
 import { ProgressReporter } from "./progress.js";
 import * as audiobook from "./audiobook.js"; // [audiobooks:soundscape]
+import { CHAPTER_KINDS } from "../audiobook/store.js";
+import type { ChapterKind } from "../audiobook/types.js";
 
 export const MCP_INSTRUCTIONS = `Mirli makes audio locally from open-weight models: sound effects, music, and speech.
 
@@ -602,6 +604,84 @@ export const MCP_TOOLS: McpToolInfo[] = [
       "Add a music or ambience bed, or a sound effect at a paragraph, to a " +
       "chapter, from a library sound or a prompt. Beds loop to the chapter's " +
       "length, fade, and duck under the narration when exported.",
+    calls: 0,
+  },
+  {
+    name: "soundbox.edit_paragraph",
+    title: "Edit a paragraph",
+    description:
+      "Change one paragraph of a book: its text, who reads it (a character's " +
+      "name, or narrator), whether it is locked, or whether it is a heading. " +
+      "Changed text marks its audio stale. Locked paragraphs keep their take.",
+    calls: 0,
+  },
+  {
+    name: "soundbox.cast_paragraphs",
+    title: "Give paragraphs to a character",
+    description:
+      "Have a character read these paragraphs (by name, alias or id), or the " +
+      "narrator with narrator. The paragraphs take that character's voice.",
+    calls: 0,
+  },
+  {
+    name: "soundbox.lock_paragraphs",
+    title: "Lock or unlock paragraphs",
+    description:
+      "Lock paragraphs so rendering, find and replace and re-voicing leave " +
+      "them alone, or unlock them.",
+    calls: 0,
+  },
+  {
+    name: "soundbox.split_paragraph",
+    title: "Split a paragraph",
+    description:
+      "Split a paragraph's text in two, before a piece of its text (`before`) " +
+      "or at a character offset (`at`). The new paragraph keeps the reader.",
+    calls: 0,
+  },
+  {
+    name: "soundbox.merge_paragraphs",
+    title: "Merge a paragraph with the next",
+    description: "Join a paragraph and the one after it into one paragraph.",
+    calls: 0,
+  },
+  {
+    name: "soundbox.find_replace",
+    title: "Find and replace in a book",
+    description:
+      "Replace text across a book's paragraphs, or some chapters'. Locked " +
+      "paragraphs are skipped and counted. `dry_run` counts without changing.",
+    calls: 0,
+  },
+  {
+    name: "soundbox.add_chapter",
+    title: "Add a chapter",
+    description:
+      "Add a chapter to a book, empty or from text (split into paragraphs the " +
+      "way an import is), at the end or at a position.",
+    calls: 0,
+  },
+  {
+    name: "soundbox.edit_chapter",
+    title: "Rename or change a chapter",
+    description:
+      "Change a chapter's title, its kind (a chapter, front or back matter, " +
+      "credits, or the retail sample), or " +
+      "whether it is included in render and export.",
+    calls: 0,
+  },
+  {
+    name: "soundbox.move_chapter",
+    title: "Move a chapter",
+    description: "Move a chapter to a position in the book (0 is first).",
+    calls: 0,
+  },
+  {
+    name: "soundbox.delete_chapter",
+    title: "Delete a chapter",
+    description:
+      "Delete a chapter, its paragraphs and their voiced audio. Cannot be " +
+      "undone; a book keeps at least one chapter.",
     calls: 0,
   },
 ];
@@ -2219,6 +2299,194 @@ export function buildMcp(
         const progress = new ProgressReporter(extra);
         return json(await audiobook.addBed(getService(), args, (f, m) => progress.update(f, m)));
       }),
+  );
+
+  /* ---------------------------------------------- paragraphs and chapters */
+
+  mcp.registerTool(
+    "soundbox.edit_paragraph",
+    {
+      title: meta["soundbox.edit_paragraph"].title ?? undefined,
+      description: meta["soundbox.edit_paragraph"].description,
+      inputSchema: {
+        book_id: z.string(),
+        paragraph_id: z.string().describe("From soundbox.get_audiobook with a chapter_id."),
+        text: z.string().max(20000).optional().describe("The whole new text of the paragraph."),
+        character: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("Who reads it: a character's name, alias or id, or narrator."),
+        locked: z.boolean().optional(),
+        is_heading: z.boolean().optional(),
+      },
+    },
+    async (args, extra) =>
+      await track(extra, "soundbox.edit_paragraph", { ...args }, async () =>
+        json(await audiobook.editParagraph(getService(), args)),
+      ),
+  );
+
+  mcp.registerTool(
+    "soundbox.cast_paragraphs",
+    {
+      title: meta["soundbox.cast_paragraphs"].title ?? undefined,
+      description: meta["soundbox.cast_paragraphs"].description,
+      inputSchema: {
+        book_id: z.string(),
+        paragraph_ids: z.array(z.string()).min(1).max(5000),
+        character: z.string().nullable().describe("A character's name, alias or id, or narrator."),
+      },
+    },
+    async (args, extra) =>
+      await track(extra, "soundbox.cast_paragraphs", { ...args }, async () =>
+        json(await audiobook.castParagraphs(getService(), args)),
+      ),
+  );
+
+  mcp.registerTool(
+    "soundbox.lock_paragraphs",
+    {
+      title: meta["soundbox.lock_paragraphs"].title ?? undefined,
+      description: meta["soundbox.lock_paragraphs"].description,
+      inputSchema: {
+        book_id: z.string(),
+        paragraph_ids: z.array(z.string()).min(1).max(5000),
+        locked: z.boolean().default(true).describe("False unlocks."),
+      },
+    },
+    async (args, extra) =>
+      await track(extra, "soundbox.lock_paragraphs", { ...args }, async () =>
+        json(await audiobook.lockParagraphs(getService(), args)),
+      ),
+  );
+
+  mcp.registerTool(
+    "soundbox.split_paragraph",
+    {
+      title: meta["soundbox.split_paragraph"].title ?? undefined,
+      description: meta["soundbox.split_paragraph"].description,
+      inputSchema: {
+        book_id: z.string(),
+        paragraph_id: z.string(),
+        before: z.string().min(1).max(2000).optional().describe("Text that starts the new, second paragraph."),
+        at: z.number().int().min(1).optional().describe("Or: the character offset to split at."),
+      },
+    },
+    async (args, extra) =>
+      await track(extra, "soundbox.split_paragraph", { ...args }, async () =>
+        json(await audiobook.splitParagraph(getService(), args)),
+      ),
+  );
+
+  mcp.registerTool(
+    "soundbox.merge_paragraphs",
+    {
+      title: meta["soundbox.merge_paragraphs"].title ?? undefined,
+      description: meta["soundbox.merge_paragraphs"].description,
+      inputSchema: {
+        book_id: z.string(),
+        paragraph_id: z.string().describe("The first of the two; the next one joins it."),
+      },
+    },
+    async (args, extra) =>
+      await track(extra, "soundbox.merge_paragraphs", { ...args }, async () =>
+        json(await audiobook.mergeParagraphs(getService(), args)),
+      ),
+  );
+
+  mcp.registerTool(
+    "soundbox.find_replace",
+    {
+      title: meta["soundbox.find_replace"].title ?? undefined,
+      description: meta["soundbox.find_replace"].description,
+      inputSchema: {
+        book_id: z.string(),
+        find: z.string().min(1).max(1000),
+        replace: z.string().max(1000).describe("What to put in its place; empty removes it."),
+        chapter_ids: z.array(z.string()).optional().describe("Only these chapters. Default: the whole book."),
+        case_sensitive: z.boolean().optional(),
+        whole_word: z.boolean().optional(),
+        dry_run: z.boolean().optional().describe("Count the matches without changing anything."),
+      },
+    },
+    async (args, extra) =>
+      await track(extra, "soundbox.find_replace", { ...args }, async () =>
+        json(await audiobook.findReplace(getService(), args)),
+      ),
+  );
+
+  mcp.registerTool(
+    "soundbox.add_chapter",
+    {
+      title: meta["soundbox.add_chapter"].title ?? undefined,
+      description: meta["soundbox.add_chapter"].description,
+      inputSchema: {
+        book_id: z.string(),
+        title: z.string().min(1).max(300),
+        text: z.string().max(2_000_000).optional().describe("Its text; split into paragraphs."),
+        position: z.number().int().min(0).optional().describe("Where it goes, 0 first. Default: the end."),
+      },
+    },
+    async (args, extra) =>
+      await track(extra, "soundbox.add_chapter", { title: args.title, position: args.position }, async () =>
+        json(await audiobook.addChapter(getService(), args)),
+      ),
+  );
+
+  mcp.registerTool(
+    "soundbox.edit_chapter",
+    {
+      title: meta["soundbox.edit_chapter"].title ?? undefined,
+      description: meta["soundbox.edit_chapter"].description,
+      inputSchema: {
+        book_id: z.string(),
+        chapter_id: z.string(),
+        title: z.string().trim().min(1).max(300).optional(),
+        kind: z
+          .enum(CHAPTER_KINDS as [ChapterKind, ...ChapterKind[]])
+          .optional()
+          .describe("What it is: a chapter, front or back matter, credits, or the retail sample."),
+        included: z.boolean().optional().describe("False leaves it out of render and export."),
+      },
+    },
+    async (args, extra) =>
+      await track(extra, "soundbox.edit_chapter", { ...args }, async () =>
+        json(await audiobook.editChapter(getService(), args)),
+      ),
+  );
+
+  mcp.registerTool(
+    "soundbox.move_chapter",
+    {
+      title: meta["soundbox.move_chapter"].title ?? undefined,
+      description: meta["soundbox.move_chapter"].description,
+      inputSchema: {
+        book_id: z.string(),
+        chapter_id: z.string(),
+        position: z.number().int().min(0).describe("0 is first."),
+      },
+    },
+    async (args, extra) =>
+      await track(extra, "soundbox.move_chapter", { ...args }, async () =>
+        json(await audiobook.moveChapter(getService(), args)),
+      ),
+  );
+
+  mcp.registerTool(
+    "soundbox.delete_chapter",
+    {
+      title: meta["soundbox.delete_chapter"].title ?? undefined,
+      description: meta["soundbox.delete_chapter"].description,
+      inputSchema: {
+        book_id: z.string(),
+        chapter_id: z.string(),
+      },
+    },
+    async (args, extra) =>
+      await track(extra, "soundbox.delete_chapter", { ...args }, async () =>
+        json(await audiobook.deleteChapter(getService(), args)),
+      ),
   );
 
   return mcp;

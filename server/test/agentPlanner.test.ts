@@ -62,6 +62,25 @@ const tools: AgentTool[] = [
     name: "soundbox.get_audiobook",
     description: "Read a book.",
     inputSchema: { properties: { book_id: {}, chapter_id: {} }, required: ["book_id"] },
+  },  {
+    name: "soundbox.cast_paragraphs",
+    description: "Have a character read paragraphs.",
+    inputSchema: { properties: { book_id: {}, paragraph_ids: {}, character: {} }, required: ["book_id", "paragraph_ids", "character"] },
+  },
+  {
+    name: "soundbox.split_paragraph",
+    description: "Split a paragraph.",
+    inputSchema: { properties: { book_id: {}, paragraph_id: {}, before: {}, at: {} }, required: ["book_id", "paragraph_id"] },
+  },
+  {
+    name: "soundbox.edit_chapter",
+    description: "Change a chapter.",
+    inputSchema: { properties: { book_id: {}, chapter_id: {}, title: {}, included: { type: "boolean" } }, required: ["book_id", "chapter_id"] },
+  },
+  {
+    name: "soundbox.add_chapter",
+    description: "Add a chapter.",
+    inputSchema: { properties: { book_id: {}, title: {}, position: {} }, required: ["book_id", "title"] },
   },
 ];
 
@@ -134,6 +153,13 @@ describe("routing", () => {
     expect(parseGroups("hmm", "Hello there")).toEqual(["answer"]);
   });
 
+  it("offers only casting when the request is about who reads paragraphs", () => {
+    expect(toolsFor(tools, ["text", "voices"], "Mrs. Bennet reads the third paragraph").map((t) => t.name)).toEqual([
+      "soundbox.cast_paragraphs",
+    ]);
+    expect(parseGroups("export", "Leave the Imprint chapter out of the export")).toEqual(["chapters"]);
+  });
+
   it("offers only the routed tools", () => {
     expect(toolsFor(tools, ["voicing"]).map((t) => t.name)).toEqual(["soundbox.render_audiobook"]);
     expect(toolsFor(tools, ["answer"])).toEqual([]);
@@ -167,7 +193,7 @@ describe("buildAgentMessages", () => {
     expect(user).toContain("Number of chapters: 2.");
     expect(user).toContain("Chapters fully voiced: 1.");
     expect(user).toContain('Longest chapters: "II" (9 paragraphs), "I" (3 paragraphs)');
-    expect(user).toContain("Saved voices: Mara, Tobias.");
+    expect(user).toContain("Voices you have saved (2): Mara, Tobias.");
     expect(user).not.toMatch(/\bV1\b|\bC1\b/);
   });
 
@@ -269,6 +295,40 @@ describe("parseAgentPlan", () => {
       "missing voice_id",
       "paragraph_ids names one it was not shown",
     ]);
+  });
+
+  it("finds the chapter a request names by title, over the model's C number", () => {
+    // In a book titled "I", "II", the model took "chapter II" for C2.
+    const p = plan([{ tool: "soundbox.edit_chapter", arguments: { book_id: "B", chapter_id: "C1", title: "The Second" } }], "Rename chapter II to The Second");
+    expect(p.calls[0]!.arguments.chapter_id).toBe("ch-2");
+    const v = plan([{ tool: "soundbox.edit_chapter", arguments: { book_id: "B", chapter_id: "II", title: "x" } }], "rename it");
+    expect(v.calls[0]!.arguments.chapter_id).toBe("ch-2");
+  });
+
+  it("takes a paragraph from the request's ordinal when the model's isn't one, and resolves numbers", () => {
+    const p = plan([{ tool: "soundbox.cast_paragraphs", arguments: { book_id: "B", paragraph_ids: ["C2"], character: "Mr. Bennet" } }], "Mr. Bennet reads the third paragraph");
+    expect(p.calls[0]!.arguments.paragraph_ids).toEqual(["p-3"]);
+    const n = plan([{ tool: "soundbox.delete_line", arguments: { line_id: 2 } }]);
+    expect(n.calls[0]!.arguments.line_id).toBe("p-2");
+  });
+
+  it("moves a split to the paragraph holding its words", () => {
+    const p = plan([{ tool: "soundbox.split_paragraph", arguments: { book_id: "B", paragraph_id: "P1", before: "that a single man" } }]);
+    expect(p.calls[0]!.arguments.paragraph_id).toBe("p-2");
+  });
+
+  it("drops an unasked included and a position past the end", () => {
+    const e = plan([{ tool: "soundbox.edit_chapter", arguments: { book_id: "B", chapter_id: "C1", title: "One", included: false } }], "rename the first chapter to One");
+    expect(e.calls[0]!.arguments).not.toHaveProperty("included");
+    const left = plan([{ tool: "soundbox.edit_chapter", arguments: { book_id: "B", chapter_id: "C1", included: false } }], "leave chapter I out of the export");
+    expect(left.calls[0]!.arguments.included).toBe(false);
+    const add = plan([{ tool: "soundbox.add_chapter", arguments: { book_id: "B", title: "Epilogue", position: 2252 } }]);
+    expect(add.calls[0]!.arguments).not.toHaveProperty("position");
+  });
+
+  it("gives a voice's name, in a request about narrating, to the narrator when casting too", () => {
+    const p = plan([{ tool: "soundbox.cast_paragraphs", arguments: { book_id: "B", paragraph_ids: ["P3"], character: "Mara" } }], "The narrator reads the third paragraph");
+    expect(p.calls[0]!.arguments.character).toBe("narrator");
   });
 
   it("never shows a reply that says the work is done over a card that waits", () => {

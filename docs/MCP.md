@@ -311,6 +311,10 @@ A typical run: `import_manuscript` → `set_character_voice` for the narrator
 and each character → `add_pronunciation` for names → `render_audiobook` →
 `add_bed` → `master_and_export_audiobook`.
 
+To tidy the text first: `edit_paragraph`, `find_replace`, `split_paragraph`
+and `merge_paragraphs`; `cast_paragraphs` for who reads what; `add_chapter`,
+`edit_chapter`, `move_chapter` and `delete_chapter` for the chapters.
+
 #### `soundbox.create_audiobook` / `soundbox.import_manuscript`
 
 `create_audiobook` takes `title` and optionally `author`, `narrator` (the
@@ -367,6 +371,51 @@ Takes `book_id`, `chapter_id`, `kind` (`music`, the default, `ambience` or
 the bed dips under the narration; `0` turns ducking off. A prompt **blocks**
 while the bed is generated. The bed lands on its own track in the chapter's
 story; the result has the bed, its clip count and an `open_in_studio` link.
+
+#### `soundbox.edit_paragraph`
+
+Takes `book_id`, `paragraph_id` (from `get_audiobook` with a `chapter_id`) and
+any of `text` (the whole new text), `character` (a character's name, alias or
+id, or `narrator`), `locked` and `is_heading`. New text marks the paragraph
+`stale` if it was voiced. Prefer this to `update_line` for a book: it goes
+through the book, so its status and cast stay right.
+
+#### `soundbox.cast_paragraphs` / `soundbox.lock_paragraphs`
+
+`cast_paragraphs` takes `book_id`, `paragraph_ids` and `character` (a name,
+alias or id, or `narrator`), and those paragraphs take that character's voice.
+An unknown name is refused with the names the book has; add a character with
+`set_character_voice` and `create: true`. `lock_paragraphs` takes `book_id`,
+`paragraph_ids` and `locked` (default true; false unlocks). Locked paragraphs
+are left alone by rendering and by find and replace.
+
+#### `soundbox.split_paragraph` / `soundbox.merge_paragraphs`
+
+`split_paragraph` takes `book_id`, `paragraph_id` and either `before` (the
+words that start the second paragraph) or `at` (a character offset). Text
+that isn't in the paragraph is refused with what the paragraph says.
+`merge_paragraphs` takes `book_id` and `paragraph_id` and joins it with the
+paragraph after it. Both work on text, so unlike `split_line` (which cuts a
+clip at a time) they work on paragraphs that aren't voiced yet.
+
+#### `soundbox.find_replace`
+
+Takes `book_id`, `find`, `replace` (empty removes the match), and optionally
+`chapter_ids`, `case_sensitive`, `whole_word` and `dry_run` (count without
+changing). Locked paragraphs are skipped and counted. Returns the matches, the
+paragraphs changed and their ids.
+
+#### `soundbox.add_chapter` / `soundbox.edit_chapter` / `soundbox.move_chapter` / `soundbox.delete_chapter`
+
+`add_chapter` takes `book_id`, `title`, and optionally `text` (split into
+paragraphs the way an import is, with the title as its heading) and
+`position` (0 is first; default the end). `edit_chapter` takes `book_id`,
+`chapter_id` and any of `title`, `kind` (`chapter`, `front_matter`,
+`back_matter`, `opening_credits`, `closing_credits`, `retail_sample`) and
+`included` (false leaves it out of render and export). `move_chapter` takes
+`book_id`, `chapter_id` and `position`. `delete_chapter` takes `book_id` and
+`chapter_id`, and deletes the chapter, its paragraphs and their voiced audio;
+it cannot be undone, and a book keeps at least one chapter.
 
 #### `soundbox.master_and_export_audiobook`
 

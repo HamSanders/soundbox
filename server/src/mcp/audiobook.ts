@@ -14,6 +14,7 @@ import { basename, extname, isAbsolute } from "node:path";
 
 import type { FastifyInstance } from "fastify";
 
+import { audiobooks } from "../audiobook/service.js";
 import { tokenFromEnv } from "../auth.js";
 import { DEFAULT_HOST, DEFAULT_PORT } from "../config.js";
 import { isUncPath } from "../pathGuards.js";
@@ -584,4 +585,205 @@ export async function addBed(
     note: "Ducking is applied when the book is exported. Export with include_beds false for retail samples.",
     ...(chapter ? { open_in_studio: appUrl(`/studio/script/${chapter.story_id}`) } : {}),
   };
+}
+
+/* ------------------------------------------------- paragraphs and chapters */
+
+interface ParagraphLike {
+  id: string;
+  text: string;
+  character_id: string | null;
+  locked: boolean;
+  is_heading: boolean;
+  position: number;
+  track_index?: number;
+}
+
+function paragraphView(p: ParagraphLike) {
+  return {
+    paragraph_id: p.id,
+    text: p.text,
+    character_id: p.character_id,
+    locked: p.locked,
+    is_heading: p.is_heading,
+  };
+}
+
+/**
+ * A character's id from a name, alias or id. "narrator" (or null) is the
+ * narrator, which on a paragraph means no character.
+ */
+async function characterId(svc: MirliService, bookId: string, who: string | null): Promise<string | null> {
+  if (who === null || who.trim() === "" || who.trim().toLowerCase() === "narrator") return null;
+  const name = who.trim();
+  const characters = await call<{ id: string; name: string; aliases?: string[] }[]>(
+    svc,
+    "GET",
+    `${book(bookId)}/characters`,
+  );
+  const lower = name.toLowerCase();
+  const match =
+    characters.find((c) => c.id === name) ??
+    characters.find((c) => c.name.toLowerCase() === lower) ??
+    characters.find((c) => (c.aliases ?? []).some((a) => a.toLowerCase() === lower));
+  if (!match) {
+    throw new Error(
+      `No character '${name}' in this book. Known: ${characters.map((c) => c.name).join(", ") || "none"}. ` +
+        "Add one with soundbox.set_character_voice and create: true.",
+    );
+  }
+  return match.id;
+}
+
+export async function editParagraph(
+  svc: MirliService,
+  args: {
+    book_id: string;
+    paragraph_id: string;
+    text?: string;
+    character?: string | null;
+    locked?: boolean;
+    is_heading?: boolean;
+  },
+) {
+  const patch: Record<string, unknown> = {};
+  if (args.text !== undefined) patch.text = args.text;
+  if (args.character !== undefined) patch.character_id = await characterId(svc, args.book_id, args.character);
+  if (args.locked !== undefined) patch.locked = args.locked;
+  if (args.is_heading !== undefined) patch.is_heading = args.is_heading;
+  if (Object.keys(patch).length === 0) throw new Error("Give text, character, locked or is_heading to change.");
+  const updated = await call<ParagraphLike>(svc, "PATCH", `${book(args.book_id)}/paragraphs/${enc(args.paragraph_id)}`, patch);
+  return { paragraph: paragraphView(updated) };
+}
+
+export async function castParagraphs(
+  svc: MirliService,
+  args: { book_id: string; paragraph_ids: string[]; character: string | null },
+) {
+  const character_id = await characterId(svc, args.book_id, args.character);
+  const res = await call<{ changed: number }>(svc, "POST", `${book(args.book_id)}/paragraphs/cast`, {
+    segment_ids: args.paragraph_ids,
+    character_id,
+  });
+  return { changed: res.changed, character_id, note: character_id ? undefined : "Read by the narrator." };
+}
+
+export async function lockParagraphs(
+  svc: MirliService,
+  args: { book_id: string; paragraph_ids: string[]; locked: boolean },
+) {
+  for (const id of args.paragraph_ids) {
+    await call(svc, "PATCH", `${book(args.book_id)}/paragraphs/${enc(id)}`, { locked: args.locked });
+  }
+  return { changed: args.paragraph_ids.length, locked: args.locked };
+}
+
+/**
+ * Split a paragraph in two, at a character offset or before a piece of its
+ * text. "Before" is the friendlier one for an agent: "split before 'However'"
+ * needs no counting.
+ */
+export async function splitParagraph(
+  svc: MirliService,
+  args: { book_id: string; paragraph_id: string; before?: string; at?: number },
+) {
+  let at = args.at;
+  if (args.before !== undefined) {
+    const p = audiobooks(svc).getParagraph(args.paragraph_id);
+    if (!p) throw new Error(`No paragraph ${args.paragraph_id}.`);
+    const i = p.text.indexOf(args.before);
+    if (i <= 0) {
+      throw new Error(
+        i === 0
+          ? "That text is where the paragraph already starts."
+          : `'${args.before}' isn't in the paragraph. It reads: ${p.text.slice(0, 200)}`,
+      );
+    }
+    at = i;
+  }
+  if (at === undefined) throw new Error("Give `before` (text that starts the new paragraph) or `at` (a character offset).");
+  const res = await call<{ first: ParagraphLike; second: ParagraphLike }>(
+    svc,
+    "POST",
+    `${book(args.book_id)}/paragraphs/${enc(args.paragraph_id)}/split`,
+    { at },
+  );
+  return { first: paragraphView(res.first), second: paragraphView(res.second) };
+}
+
+export async function mergeParagraphs(svc: MirliService, args: { book_id: string; paragraph_id: string }) {
+  const res = await call<{ paragraph: ParagraphLike; removed_id: string; split_at: number }>(
+    svc,
+    "POST",
+    `${book(args.book_id)}/paragraphs/${enc(args.paragraph_id)}/merge-next`,
+    {},
+  );
+  return { paragraph: res.paragraph ? paragraphView(res.paragraph) : undefined, removed_id: res.removed_id, split_at: res.split_at };
+}
+
+export async function findReplace(
+  svc: MirliService,
+  args: {
+    book_id: string;
+    find: string;
+    replace: string;
+    chapter_ids?: string[];
+    case_sensitive?: boolean;
+    whole_word?: boolean;
+    dry_run?: boolean;
+  },
+) {
+  return await call(svc, "POST", `${book(args.book_id)}/replace`, args);
+}
+
+export async function addChapter(
+  svc: MirliService,
+  args: { book_id: string; title: string; text?: string; position?: number },
+) {
+  // With text, it is split into paragraphs with the importer's cleanup.
+  const chapter = args.text
+    ? await call<ChapterLike>(svc, "POST", `${book(args.book_id)}/chapters/from-text`, {
+        title: args.title,
+        text: args.text,
+        position: args.position ?? null,
+      })
+    : await call<ChapterLike>(svc, "POST", `${book(args.book_id)}/chapters`, {
+        title: args.title,
+        position: args.position ?? null,
+      });
+  return { chapter_id: chapter.id, story_id: chapter.story_id, title: chapter.title };
+}
+
+export async function editChapter(
+  svc: MirliService,
+  args: { book_id: string; chapter_id: string; title?: string; kind?: string; included?: boolean },
+) {
+  const patch: Record<string, unknown> = {};
+  if (args.title !== undefined) patch.title = args.title;
+  if (args.kind !== undefined) patch.kind = args.kind;
+  if (args.included !== undefined) patch.included = args.included;
+  if (Object.keys(patch).length === 0) throw new Error("Give title, kind or included to change.");
+  const chapter = await call<ChapterLike>(svc, "PATCH", `${book(args.book_id)}/chapters/${enc(args.chapter_id)}`, patch);
+  return { chapter_id: chapter.id, title: chapter.title, kind: chapter.kind, included: chapter.included };
+}
+
+export async function moveChapter(
+  svc: MirliService,
+  args: { book_id: string; chapter_id: string; position: number },
+) {
+  const chapters = (await call<BookLike>(svc, "GET", book(args.book_id))).chapters ?? [];
+  const ids = chapters.map((c) => c.id).filter((id) => id !== args.chapter_id);
+  if (ids.length === chapters.length) throw new Error(`No chapter ${args.chapter_id} in this book.`);
+  ids.splice(Math.max(0, Math.min(args.position, ids.length)), 0, args.chapter_id);
+  await call(svc, "POST", `${book(args.book_id)}/chapters/reorder`, { ids });
+  return { chapter_id: args.chapter_id, position: ids.indexOf(args.chapter_id), order: ids };
+}
+
+export async function deleteChapter(svc: MirliService, args: { book_id: string; chapter_id: string }) {
+  const chapters = (await call<BookLike>(svc, "GET", book(args.book_id))).chapters ?? [];
+  const chapter = chapters.find((c) => c.id === args.chapter_id);
+  if (!chapter) throw new Error(`No chapter ${args.chapter_id} in this book.`);
+  if (chapters.length <= 1) throw new Error("A book keeps at least one chapter.");
+  await call(svc, "DELETE", `${book(args.book_id)}/chapters/${enc(args.chapter_id)}`);
+  return { deleted: chapter.id, title: chapter.title, note: "Its voiced audio was deleted with it." };
 }

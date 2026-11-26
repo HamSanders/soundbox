@@ -19,7 +19,8 @@ import { z } from "zod";
 
 import { HttpError } from "./helpers.js";
 import type { AgentCall, AgentContext } from "../llm/agent.js";
-import { getAudiobook } from "../mcp/audiobook.js";
+import { audiobooks } from "../audiobook/service.js";
+import { call, getAudiobook } from "../mcp/audiobook.js";
 import { callLocalTool, localTools } from "../mcp/local-client.js";
 import type { MirliService } from "../service.js";
 
@@ -206,6 +207,91 @@ async function inverseFor(
         tool,
         arguments: { story_id: storyId, track_index: index, device: device.id, params: device.params, bypassed: device.bypassed },
       }];
+    }
+    case "soundbox.edit_paragraph": {
+      const p = audiobooks(svc).getParagraph(String(args.paragraph_id ?? ""));
+      if (!p) return none;
+      const back: Record<string, unknown> = { book_id: args.book_id, paragraph_id: p.id };
+      if (args.text !== undefined) back.text = p.text;
+      if (args.character !== undefined) back.character = p.character_id ?? "narrator";
+      if (args.locked !== undefined) back.locked = p.locked;
+      if (args.is_heading !== undefined) back.is_heading = p.is_heading;
+      return () => [{ tool, arguments: back }];
+    }
+    case "soundbox.cast_paragraphs":
+    case "soundbox.lock_paragraphs": {
+      // Grouped by what each paragraph was, one call per group.
+      const ids = Array.isArray(args.paragraph_ids) ? args.paragraph_ids.map(String) : [];
+      const field = tool === "soundbox.cast_paragraphs" ? "character" : "locked";
+      const groups = new Map<string, string[]>();
+      for (const id of ids) {
+        const p = audiobooks(svc).getParagraph(id);
+        if (!p) return none;
+        const was = field === "character" ? (p.character_id ?? "narrator") : String(p.locked);
+        groups.set(was, [...(groups.get(was) ?? []), id]);
+      }
+      return () =>
+        [...groups].map(([was, paragraph_ids]) => ({
+          tool,
+          arguments: { book_id: args.book_id, paragraph_ids, [field]: field === "locked" ? was === "true" : was },
+        }));
+    }
+    case "soundbox.split_paragraph":
+      return (result) => {
+        const first = (result as { first?: { paragraph_id?: string } } | null)?.first?.paragraph_id;
+        return first ? [{ tool: "soundbox.merge_paragraphs", arguments: { book_id: args.book_id, paragraph_id: first } }] : null;
+      };
+    case "soundbox.merge_paragraphs":
+      return (result) => {
+        const at = (result as { split_at?: number } | null)?.split_at;
+        return typeof at === "number" && at > 0
+          ? [{ tool: "soundbox.split_paragraph", arguments: { book_id: args.book_id, paragraph_id: args.paragraph_id, at } }]
+          : null;
+      };
+    case "soundbox.find_replace": {
+      if (args.dry_run) return none;
+      // What it would change, and what those paragraphs say now.
+      let changed: { segment_id: string }[];
+      try {
+        const dry = await call<{ changed: { segment_id: string }[] }>(
+          svc,
+          "POST",
+          `/api/audiobooks/${encodeURIComponent(String(args.book_id))}/replace`,
+          { ...args, dry_run: true },
+        );
+        changed = dry.changed;
+      } catch {
+        return none;
+      }
+      const before = changed.flatMap((c) => {
+        const p = audiobooks(svc).getParagraph(c.segment_id);
+        return p ? [{ id: p.id, text: p.text }] : [];
+      });
+      if (before.length === 0 || before.length > 200) return none;
+      return () =>
+        before.map((b) => ({
+          tool: "soundbox.edit_paragraph",
+          arguments: { book_id: args.book_id, paragraph_id: b.id, text: b.text },
+        }));
+    }
+    case "soundbox.add_chapter":
+      return (result) => {
+        const id = (result as { chapter_id?: string } | null)?.chapter_id;
+        return id ? [{ tool: "soundbox.delete_chapter", arguments: { book_id: args.book_id, chapter_id: id } }] : null;
+      };
+    case "soundbox.edit_chapter": {
+      const c = audiobooks(svc).getChapter(String(args.chapter_id ?? ""));
+      if (!c) return none;
+      const back: Record<string, unknown> = { book_id: args.book_id, chapter_id: c.id };
+      if (args.title !== undefined) back.title = c.title;
+      if (args.kind !== undefined) back.kind = c.kind;
+      if (args.included !== undefined) back.included = c.included;
+      return () => [{ tool, arguments: back }];
+    }
+    case "soundbox.move_chapter": {
+      const c = audiobooks(svc).getChapter(String(args.chapter_id ?? ""));
+      if (!c) return none;
+      return () => [{ tool, arguments: { book_id: args.book_id, chapter_id: c.id, position: c.position } }];
     }
     default:
       return none;

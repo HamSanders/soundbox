@@ -11,7 +11,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 import * as dsp from "../audio/dsp.js";
-import { UNSET, type UpdateSoundPatch } from "../db.js";
+import { SOUND_SORTS, UNSET, type UpdateSoundPatch } from "../db.js";
 import type { Source } from "../schemas.js";
 import { soundEditRequestSchema, soundPatchSchema } from "../schemas.js";
 import type { MirliService } from "../service.js";
@@ -66,6 +66,7 @@ export function registerSounds(app: FastifyInstance, svc: MirliService): void {
       parent_id: strQuery(q.parent_id),
       voice_id: strQuery(q.voice_id),
       source: enumQuery(q.source, "source", SOURCES),
+      sort: enumQuery(q.sort, "sort", SOUND_SORTS),
     });
   });
 

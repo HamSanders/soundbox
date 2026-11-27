@@ -1482,7 +1482,13 @@ export interface SoundQuery {
   /** Sounds read in one saved voice — the Voice Lab's per-voice history. */
   voice_id?: string;
   source?: SoundSource;
+  /** Row order; newest first when absent. An older server ignores it. */
+  sort?: SoundSort;
 }
+
+/** The orders the Library can list sounds in — mirrors the server's
+ *  `SOUND_SORTS`. */
+export type SoundSort = "newest" | "oldest" | "longest" | "shortest" | "name";
 
 export interface SoundPatch {
   name?: string;

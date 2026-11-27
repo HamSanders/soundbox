@@ -13,7 +13,7 @@ import { BotIcon, SearchIcon, StarIcon } from "lucide-react";
 
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
-import { FilterChip, FilterMenu, TogglePill } from "@/components/filter-pills";
+import { FilterChip, FilterMenu, SortMenu, TogglePill } from "@/components/filter-pills";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,9 +34,17 @@ import { usePlayerStore } from "@/lib/player-store";
 import { useSizeClass } from "@/hooks/use-size-class";
 import { useModels, useProjects, useSounds, useTags } from "@/lib/queries";
 import { clampDuration, preferredModel } from "@/lib/session-store";
-import type { Model, SoundQuery } from "@/lib/api";
+import type { Model, SoundQuery, SoundSort } from "@/lib/api";
 
 const ALL = "__all__";
+
+const SORTS: { value: SoundSort; label: string }[] = [
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+  { value: "longest", label: "Longest first" },
+  { value: "shortest", label: "Shortest first" },
+  { value: "name", label: "Name A–Z" },
+];
 
 /** Matches `Model.category` — "voice" covers both the "tts" and "vc" models
  *  behind the Voice studio, which is why the nav label for it reads "Text to
@@ -77,6 +85,15 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
   const [modelId, setModelId] = useState<string>(ALL);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [agentsOnly, setAgentsOnly] = useState(false);
+  // In the URL so it survives opening a sound and coming back.
+  const sortParam = searchParams.get("sort");
+  const sort: SoundSort = SORTS.some((o) => o.value === sortParam) ? (sortParam as SoundSort) : "newest";
+  const setSort = (next: SoundSort) => {
+    const params = new URLSearchParams(searchParams);
+    if (next === "newest") params.delete("sort");
+    else params.set("sort", next);
+    setSearchParams(params, { replace: true });
+  };
 
   const { data: models } = useModels();
   const { data: tags } = useTags();
@@ -116,8 +133,9 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
       favorite: favoritesOnly || undefined,
       project_id: projectId ?? undefined,
       source: agentsOnly ? "mcp" : undefined,
+      sort: sort === "newest" ? undefined : sort,
     }),
-    [q, tag, modelId, favoritesOnly, agentsOnly, projectId, listCategory, categoryModelIds],
+    [q, tag, modelId, favoritesOnly, agentsOnly, projectId, listCategory, categoryModelIds, sort],
   );
 
   // While `models` (the catalogue) hasn't loaded yet, `categoryModelIds` is
@@ -128,6 +146,7 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
   const { data, isLoading, isError, error } = useSounds(query, modelsReady);
 
   const items = data?.items ?? [];
+  const total = data?.total ?? items.length;
   // Previous / next in the bottom player walk the list on screen.
   const setQueue = usePlayerStore((s) => s.setQueue);
   useEffect(() => {
@@ -249,7 +268,11 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
     setModelId(ALL);
     setFavoritesOnly(false);
     setAgentsOnly(false);
-    if (projectId) setSearchParams({}, { replace: true });
+    if (projectId) {
+      const params = new URLSearchParams(searchParams);
+      params.delete("project");
+      setSearchParams(params, { replace: true });
+    }
   };
 
   const title = project ? project.name : category ? CATEGORY_LABEL[category] : "Library";
@@ -276,10 +299,17 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
         <CollectionHeader project={project} sounds={items} />
       ) : (
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="font-heading text-2xl font-semibold tracking-tight">{title}</h1>
-            <p className="text-muted-foreground text-sm">
-              {data ? `${items.length} sound${items.length === 1 ? "" : "s"}` : " "}
+          <div className="max-w-2xl">
+            <h1 className="font-heading text-3xl font-semibold tracking-tight">{title}</h1>
+            <p className="text-muted-foreground mt-1 text-base leading-relaxed">
+              {data && (
+                <span className="text-foreground font-medium">
+                  {total} sound{total === 1 ? "" : "s"}.{" "}
+                </span>
+              )}
+              Click a row to play it. From any row you can split it into stems
+              (vocals, drums, bass and the rest), open it in the Studio, or — for
+              music — extend it. The ··· menu, or a right-click, has the rest.
             </p>
           </div>
         </div>
@@ -301,10 +331,10 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
       {/* One row: search, then each filter as a small pill. A dropdown pill
           names its choice once one is made ("Tag · door"); a toggle pill is
           filled when on. No panel to open first. */}
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-56 flex-1">
           <SearchIcon
-            className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
+            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
             aria-hidden="true"
           />
           <Label htmlFor="library-search" className="sr-only">
@@ -315,7 +345,7 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search names, prompts and tags"
-            className="h-9 pl-8"
+            className="h-10 pl-9 text-base md:text-base"
           />
         </div>
         <FilterMenu
@@ -346,20 +376,30 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
           label="By agents"
         />
         {project && (
-          <FilterChip label={`Project: ${project.name}`} onClear={() => setSearchParams({}, { replace: true })} />
+          <FilterChip
+            label={`Project: ${project.name}`}
+            onClear={() => {
+              const params = new URLSearchParams(searchParams);
+              params.delete("project");
+              setSearchParams(params, { replace: true });
+            }}
+          />
         )}
         {filtered && (
-          <Button variant="ghost" size="sm" onClick={clear} aria-label="Clear all filters" className="h-8">
+          <Button variant="ghost" size="sm" onClick={clear} aria-label="Clear all filters" className="h-9">
             Clear
           </Button>
         )}
+        <div className="ml-auto">
+          <SortMenu value={sort} options={SORTS} onChange={setSort} />
+        </div>
       </div>
 
       {/* -------------------------------------------------------------- list */}
       {isLoading || !modelsReady ? (
         <div className="grid gap-3">
           {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-28 w-full" />
+            <Skeleton key={i} className="h-16 w-full" />
           ))}
         </div>
       ) : isError ? (
@@ -418,9 +458,19 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
             <SoundCard
               key={sound.id}
               track
-              // Music keeps Extend / Cover in the row's menu, as the old
-              // Music studio list had them.
-              onEdit={listCategory === "music" ? startEdit : undefined}
+              // Extend / Cover are music-only. The Music page has the composer
+              // the edit lands in; elsewhere (the combined Library) the edit is
+              // set up in the shared session and the Music page opens with it.
+              onEdit={
+                modelCategories.get(sound.model) !== "music"
+                  ? undefined
+                  : category === "music"
+                    ? startEdit
+                    : (kind, s) => {
+                        startEdit(kind, s);
+                        navigate("/library/music");
+                      }
+              }
               sound={sound}
               modelName={modelNames.get(sound.model)}
               className="animate-in fade-in-0 slide-in-from-bottom-1 duration-300 fill-mode-both"

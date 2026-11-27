@@ -12,11 +12,13 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import {
   ActivityIcon,
+  BookOpenIcon, // [audiobooks:core]
   BotIcon,
   ChevronDownIcon,
   CpuIcon,
   DownloadIcon,
   FolderIcon,
+  HeadphonesIcon, // [audiobooks:listen]
   InfoIcon,
   LibraryIcon,
   MessagesSquareIcon,
@@ -49,14 +51,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Progress } from "@/components/ui/progress";
@@ -75,7 +69,7 @@ import { formatMb, formatRelative } from "@/lib/format";
 import { SITE_URL } from "@/lib/marketing-links";
 import { useSessionStore } from "@/lib/session-store";
 import { api, type Model, type Session, type Sound } from "@/lib/api";
-import { useDetailStore } from "@/lib/detail-store";
+import { DETAIL_PARAM, dockKey } from "@/lib/dock";
 import { cn } from "@/lib/utils";
 import { isDesktop } from "@/lib/desktop";
 import { CALLS_ENABLED } from "@/lib/features";
@@ -116,6 +110,8 @@ const NAV_STUDIO: NavItem[] = [
     hue: "studio",
   },
   { to: "/voice/lab", label: "Voice Lab", icon: MicIcon, end: false, hue: "voice" },
+  { to: "/audiobooks", label: "Audiobooks", icon: BookOpenIcon, end: false, hue: "voice" }, // [audiobooks:core]
+  { to: "/listen", label: "Listen", icon: HeadphonesIcon, end: false, hue: "voice" }, // [audiobooks:listen]
   // Calls: talking with a character in real time, by voice. Pulled from
   // releases until they are ready (lib/features.ts).
   ...(CALLS_ENABLED ? [{ to: "/calls", label: "Calls", icon: PhoneIcon, end: false, hue: "voice" } as NavItem] : []),
@@ -155,6 +151,8 @@ const NAV_SAMPLES: NavItem[] = [
 const NAV_FOOTER: NavItem[] = [
   { to: "/settings", label: "Settings", icon: SettingsIcon, end: false },
   { to: "/activity", label: "Activity", icon: ActivityIcon, end: false },
+  // Where a delete comes back from once its Undo toast has gone.
+  { to: "/trash", label: "Trash", icon: Trash2Icon, end: false },
   // No "API & MCP" entry: the reference is published once, on the public site
   // at /docs/reference, instead of being maintained as a second in-app copy
   // that drifted. Agents (above) is the in-app MCP surface.
@@ -239,8 +237,6 @@ function RecentSessions() {
   const { setOpenMobile } = useSidebar();
   const deleteSession = useDeleteSession();
   const { data: models } = useModels();
-  const openDetails = useDetailStore((s) => s.open);
-  const [pendingDelete, setPendingDelete] = useState<Session | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [sectionOpen, setSectionOpen] = useState(true);
@@ -278,9 +274,9 @@ function RecentSessions() {
       navigate("/library");
       return;
     }
+    // With its details open: the panel follows `?detail=` (lib/dock.ts).
     const to = libraryPathFor(models?.find((m) => m.id === newest.model)?.category);
-    navigate(to);
-    openDetails(newest, to);
+    navigate(`${to}?${DETAIL_PARAM}=${encodeURIComponent(dockKey({ kind: "sound", id: newest.id }))}`);
   };
 
   return (
@@ -346,7 +342,18 @@ ${s.sound_count} sound${s.sound_count === 1 ? "" : "s"} · ${formatRelative(s.up
                         aria-label={`Delete session ${s.title}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setPendingDelete(s);
+                          // To the trash, with Undo: no "are you sure".
+                          deleteSession(
+                            { id: s.id, name: s.title },
+                            {
+                              description: `With its ${s.sound_count} sound${s.sound_count === 1 ? "" : "s"}. In the trash for 30 days.`,
+                              // If the thread on screen was this one, clear it
+                              // rather than leaving turns whose sounds are gone.
+                              onDone: () => {
+                                if (useSessionStore.getState().sessionId === s.id) useSessionStore.getState().reset();
+                              },
+                            },
+                          );
                         }}
                       >
                         <Trash2Icon />
@@ -358,48 +365,6 @@ ${s.sound_count} sound${s.sound_count === 1 ? "" : "s"} · ${formatRelative(s.up
         </CollapsibleContent>
       </Collapsible>
 
-      <Dialog open={pendingDelete !== null} onOpenChange={(o) => !o && setPendingDelete(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete this session?</DialogTitle>
-            <DialogDescription>
-              {pendingDelete && (
-                <>
-                  &ldquo;{pendingDelete.title}&rdquo; and the{" "}
-                  {pendingDelete.sound_count} sound
-                  {pendingDelete.sound_count === 1 ? "" : "s"} generated in it will be
-                  deleted, audio files included. This cannot be undone.
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPendingDelete(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={deleteSession.isPending}
-              onClick={() => {
-                if (!pendingDelete) return;
-                const id = pendingDelete.id;
-                deleteSession.mutate(id, {
-                  onSuccess: () => {
-                    // If the thread on screen was this one, clear it rather
-                    // than leaving turns whose sounds no longer exist.
-                    if (useSessionStore.getState().sessionId === id) {
-                      useSessionStore.getState().reset();
-                    }
-                    setPendingDelete(null);
-                  },
-                });
-              }}
-            >
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </SidebarGroup>
   );
 }

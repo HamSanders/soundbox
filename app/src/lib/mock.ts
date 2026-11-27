@@ -67,6 +67,7 @@ import type {
   Unsubscribe,
 } from "./api";
 import { ApiError, DESKTOP_CAPABILITIES } from "./api";
+import type { AgentCall, AgentPlan, AgentPlanRequest, AgentRunResult, TrashItem, TrashKind } from "./api";
 
 /** `npm run dev:mock:sandboxed`: play a sandboxed server (MIRLI_SANDBOXED=1). */
 const MOCK_SANDBOXED = import.meta.env.VITE_MOCK_SANDBOXED === "1";
@@ -906,6 +907,36 @@ function estimateDuration(text: string): number {
 const stories: Story[] = [];
 const segments: StorySegment[] = [];
 const tracks: StoryTrack[] = [];
+
+/** Set a clip's start without re-reading the script order from it, as the
+ *  server's chapter layout does (`db.updateSegment` without
+ *  `followPlacement`). Laying a chapter out moves every clip; re-reading the
+ *  order after each one, while the rest still sit where they were, would
+ *  shuffle the paragraphs. */
+export function placeMockSegment(segmentId: string, start_s: number): void {
+  const s = segments.find((x) => x.id === segmentId);
+  if (!s) return;
+  s.start_s = start_s;
+  s.updated_at = new Date().toISOString();
+}
+
+/** The mock's trash: what was deleted, and how to put it back or let it go.
+ *  The real one keeps rows in place with a `deleted_at` (server/src/trash.ts);
+ *  here the objects move out of their arrays and back. */
+const trashBin: { item: TrashItem; restore: () => void; purge: () => void }[] = [];
+
+export function addToMockTrash(
+  kind: TrashKind,
+  id: string,
+  name: string,
+  detail: string | null,
+  restore: () => void,
+  purge: () => void = () => {},
+): void {
+  const deleted_at = new Date().toISOString();
+  const purge_at = new Date(Date.now() + 30 * 864e5).toISOString();
+  trashBin.unshift({ item: { kind, id, name, detail, deleted_at, purge_at, size_bytes: null }, restore, purge });
+}
 
 /**
  * Saved voices. Seeded with two so the Voice studio has something to pick on
@@ -2733,7 +2764,42 @@ export const mockApi: MirliApi = {
     const i = sounds.findIndex((s) => s.id === id);
     if (i < 0) throw new Error(`Unknown sound ${id}`);
     const [removed] = sounds.splice(i, 1);
-    if (removed.file.startsWith("blob:")) URL.revokeObjectURL(removed.file);
+    addToMockTrash(
+      "sound",
+      id,
+      removed.name,
+      null,
+      () => sounds.splice(Math.min(i, sounds.length), 0, removed),
+      () => removed.file.startsWith("blob:") && URL.revokeObjectURL(removed.file),
+    );
+  },
+
+  async listTrash() {
+    await wait(80);
+    return { days: 30, items: trashBin.map((t) => ({ ...t.item })) };
+  },
+
+  async restoreFromTrash(kind, id) {
+    await wait(100);
+    const i = trashBin.findIndex((t) => t.item.kind === kind && t.item.id === id);
+    if (i < 0) throw new ApiError("Not in the trash", 404);
+    const [entry] = trashBin.splice(i, 1);
+    entry.restore();
+  },
+
+  async purgeTrashItem(kind, id) {
+    await wait(100);
+    const i = trashBin.findIndex((t) => t.item.kind === kind && t.item.id === id);
+    if (i < 0) throw new ApiError("Not in the trash", 404);
+    const [entry] = trashBin.splice(i, 1);
+    entry.purge();
+  },
+
+  async emptyTrash() {
+    await wait(120);
+    const all = trashBin.splice(0);
+    for (const entry of all) entry.purge();
+    return { deleted: all.length };
   },
 
   // Nothing to reveal — the mock backend has no real files on disk, only
@@ -2936,14 +3002,23 @@ export const mockApi: MirliApi = {
     await wait(120);
     const i = sessions.findIndex((x) => x.id === id);
     if (i < 0) throw new Error(`Unknown session ${id}`);
-    sessions.splice(i, 1);
-    // Same as the server: the session's sounds go with it, audio included.
+    const [session] = sessions.splice(i, 1);
+    // Same as the server: to the trash, with the session's sounds.
+    const taken: MockSound[] = [];
     for (let k = sounds.length - 1; k >= 0; k--) {
-      if (sounds[k].session_id === id) {
-        const [removed] = sounds.splice(k, 1);
-        if (removed.file.startsWith("blob:")) URL.revokeObjectURL(removed.file);
-      }
+      if (sounds[k].session_id === id) taken.unshift(...sounds.splice(k, 1));
     }
+    addToMockTrash(
+      "session",
+      id,
+      session.title,
+      `${taken.length} sound${taken.length === 1 ? "" : "s"}`,
+      () => {
+        sessions.splice(Math.min(i, sessions.length), 0, session);
+        sounds.unshift(...taken);
+      },
+      () => taken.forEach((s) => s.file.startsWith("blob:") && URL.revokeObjectURL(s.file)),
+    );
   },
 
   /* ------------------------------------------------------------- stories */
@@ -3258,6 +3333,17 @@ export const mockApi: MirliApi = {
     return { ...track };
   },
 
+  async insertTrack(storyId, trackIndex, patch): Promise<StoryTrack> {
+    await wait(80);
+    for (const s of segments) {
+      if (s.story_id === storyId && s.track_index >= trackIndex) s.track_index += 1;
+    }
+    for (const t of tracks) {
+      if (t.story_id === storyId && t.track_index >= trackIndex) t.track_index += 1;
+    }
+    return this.updateTrack(storyId, trackIndex, patch);
+  },
+
   async deleteTrack(storyId, trackIndex): Promise<{ removed_clips: number }> {
     await wait(80);
     const doomed = segments.filter(
@@ -3502,6 +3588,7 @@ export const mockApi: MirliApi = {
     if (!voice) throw new Error(`Unknown voice ${id}`);
     if (patch.name !== undefined) voice.name = patch.name;
     if (patch.notes !== undefined) voice.notes = patch.notes ?? null;
+    if (patch.model_id !== undefined && voice.kind === "clone") voice.model_id = patch.model_id ?? null;
     for (const sample of patch.samples ?? []) {
       const stored = voice.samples?.find((s) => s.id === sample.id);
       if (stored && sample.reference_text !== undefined) stored.reference_text = sample.reference_text;
@@ -3716,6 +3803,67 @@ export const mockApi: MirliApi = {
    * into the draft after that. Enough to exercise the thread, the proposal
    * card and both handoffs without a model running.
    */
+  /**
+   * A stand-in for the agent planner: a few phrasings become the MCP calls
+   * the real planner would write, against the mock book, so proposals can be
+   * seen and run without a model.
+   */
+  async agentPlan(req: AgentPlanRequest): Promise<AgentPlan> {
+    await wait(400);
+    if (settings.llm_mode === "off") {
+      throw new Error("Prompt enhancement is off. Turn it on in Settings → Prompt assistant.");
+    }
+    const { mockAudiobookApi } = await import("./audiobook-mock");
+    const q = req.instruction.toLowerCase();
+    const book_id = req.scope.book_id;
+    const chapter_id = req.scope.chapter_id ?? null;
+    const calls: AgentPlan["calls"] = [];
+    // "the narrator" names the role, not the voice called Narrator.
+    const voice = voices.find((v) => v.name.toLowerCase() !== "narrator" && q.includes(v.name.toLowerCase()));
+    if (voice && /narrat/.test(q)) {
+      calls.push({ tool: "soundbox.set_character_voice", arguments: { book_id, character: "narrator", voice_id: voice.id }, risk: "write" });
+    }
+    const say = /pronounce (\w+) (?:as|like) ([\w-]+)/.exec(req.instruction);
+    if (say) {
+      calls.push({ tool: "soundbox.add_pronunciation", arguments: { book_id, term: say[1], replacement: say[2] }, risk: "write" });
+    }
+    if (/voice (this|the) chapter|render/.test(q) && chapter_id) {
+      calls.push({ tool: "soundbox.render_audiobook", arguments: { book_id, chapter_id }, risk: "costly" });
+    }
+    if (/delete the first paragraph/.test(q) && chapter_id) {
+      const first = (await mockAudiobookApi.listParagraphs(book_id, chapter_id))[0];
+      if (first) calls.push({ tool: "soundbox.delete_line", arguments: { line_id: first.id }, risk: "destructive" });
+    }
+    if (calls.length === 0) {
+      const book = await mockAudiobookApi.getBook(book_id);
+      return { reply: `“${book.title}” has ${book.chapters.length} chapters. Ask me to change something and I'll propose it.`, calls, dropped: [] };
+    }
+    return { reply: "Here's what I'd do. Nothing runs until you accept.", calls, dropped: [] };
+  },
+
+  async agentRun(call: AgentCall): Promise<AgentRunResult> {
+    await wait(300);
+    const { mockAudiobookApi } = await import("./audiobook-mock");
+    const a = call.arguments as Record<string, string>;
+    switch (call.tool) {
+      case "soundbox.set_character_voice": {
+        const before = await mockAudiobookApi.getBook(a.book_id!);
+        await mockAudiobookApi.updateBook(a.book_id!, { settings: { ...before.settings, narrator_voice_id: a.voice_id ?? null } });
+        return {
+          result: { character: "narrator", voice_id: a.voice_id },
+          undo: [{ tool: call.tool, arguments: { ...a, voice_id: before.settings.narrator_voice_id } }],
+        };
+      }
+      case "soundbox.delete_line":
+        // The real tool deletes; the mock only says it did.
+        return { result: { deleted: a.line_id }, undo: null };
+      case "soundbox.render_audiobook":
+        return { result: { note: "Voicing in the mock does nothing." }, undo: null };
+      default:
+        return { result: { ok: true }, undo: null };
+    }
+  },
+
   /**
    * A stand-in for the guide: matches a couple of well-known questions so the
    * links and the sources render without a model running.

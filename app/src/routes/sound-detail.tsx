@@ -26,15 +26,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { InlineEdit } from "@/components/ui/inline-edit";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -90,7 +82,6 @@ export function SoundDetailPage() {
   const artwork = useSoundArtwork();
   const imageReady = useImageStatus().data?.ready ?? false;
   const remove = useDeleteSound();
-  const [confirmOpen, setConfirmOpen] = useState(false);
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [opening, setOpening] = useState(false);
@@ -148,9 +139,13 @@ export function SoundDetailPage() {
             />
           )}
           <div className="min-w-0">
-            <h1 className="font-heading truncate text-2xl font-semibold tracking-tight">
-              {sound.name}
-            </h1>
+            <InlineEdit
+              as="h1"
+              value={sound.name}
+              label="Sound name"
+              onCommit={(name) => update.mutateAsync({ id: sound.id, patch: { name } })}
+              className="font-heading truncate text-2xl font-semibold tracking-tight"
+            />
             <p className="text-muted-foreground mt-1 text-sm leading-relaxed">{sound.prompt}</p>
           </div>
         </div>
@@ -353,7 +348,11 @@ export function SoundDetailPage() {
                 variant="ghost"
                 size="icon"
                 aria-label={`Delete ${sound.name}`}
-                onClick={() => setConfirmOpen(true)}
+                onClick={() => {
+                  const id = sound.id;
+                  remove(sound, { onUndo: () => navigate(`/sounds/${encodeURIComponent(id)}`) });
+                  navigate("/library");
+                }}
               >
                 <Trash2Icon />
               </Button>
@@ -442,31 +441,6 @@ export function SoundDetailPage() {
         </dl>
       </section>
 
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete this sound?</DialogTitle>
-            <DialogDescription>
-              &ldquo;{sound.name}&rdquo; and its audio file will be removed from disk. This cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                remove.mutate(sound.id);
-                setConfirmOpen(false);
-                navigate("/library");
-              }}
-            >
-              Delete sound
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

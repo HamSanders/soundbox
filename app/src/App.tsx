@@ -22,10 +22,9 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { AmbientBackground } from "@/components/ambient-background";
 import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog";
 import { NowPlayingBar } from "@/components/now-playing-bar";
+import { ListenPlayerHost } from "@/components/listen/mini-player"; // [audiobooks:listen]
 import { CreatePanel, CreateRedirect } from "@/components/create-panel";
-import { SoundDetailPanel } from "@/components/sound-detail-panel";
-import { VoiceDetailPanel } from "@/components/voice-detail-panel";
-import { ModelDetailPanel } from "@/components/model-detail-panel";
+import { DetailDock } from "@/components/detail-dock";
 import { Button } from "@/components/ui/button";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { PLAYER_DOCK_HEIGHT_PX } from "@/components/player-dock";
@@ -58,6 +57,12 @@ const ModelsPage = lazy(() => import("@/routes/models").then((m) => ({ default: 
 const AgentsPage = lazy(() => import("@/routes/agents").then((m) => ({ default: m.AgentsPage })));
 const SettingsPage = lazy(() => import("@/routes/settings").then((m) => ({ default: m.SettingsPage })));
 const ActivityPage = lazy(() => import("@/routes/activity").then((m) => ({ default: m.ActivityPage })));
+const TrashPage = lazy(() => import("@/routes/trash").then((m) => ({ default: m.TrashPage })));
+const AudiobooksPage = lazy(() => import("@/routes/audiobooks").then((m) => ({ default: m.AudiobooksPage }))); // [audiobooks:core]
+const AudiobookPage = lazy(() => import("@/routes/audiobook").then((m) => ({ default: m.AudiobookPage }))); // [audiobooks:core]
+const ListenPage = lazy(() => import("@/routes/listen").then((m) => ({ default: m.ListenPage }))); // [audiobooks:listen]
+const ListenExplorePage = lazy(() => import("@/routes/listen-explore").then((m) => ({ default: m.ListenExplorePage }))); // [audiobooks:listen]
+const ListenBookPage = lazy(() => import("@/routes/listen-book").then((m) => ({ default: m.ListenBookPage }))); // [audiobooks:listen]
 const CallsHomePage = lazy(() => import("@/routes/calls/calls-home").then((m) => ({ default: m.CallsHomePage })));
 const VoiceCallPage = lazy(() => import("@/routes/calls/voice-call").then((m) => ({ default: m.VoiceCallPage })));
 const CharacterEditorPage = lazy(() => import("@/routes/calls/character-editor").then((m) => ({ default: m.CharacterEditorPage })));
@@ -91,7 +96,11 @@ function ScrollToTop() {
  *  every pixel — capping it at 1152px wastes half a wide monitor. */
 function isFullBleed(pathname: string): boolean {
   // A call fills the window: the reply's big type wants every pixel.
-  return pathname.startsWith("/studio/") || pathname.startsWith("/calls/voice");
+  return (
+    pathname.startsWith("/studio/") ||
+    pathname.startsWith("/audiobooks/") || // [audiobooks:core]
+    pathname.startsWith("/calls/voice")
+  );
 }
 
 /** The app shell: sidebar, header, and the routes that live inside them. */
@@ -251,10 +260,16 @@ function AppShellReady() {
             <Route path="/library/music" element={<LibraryPage category="music" />} />
             <Route path="/library/speech" element={<SpeechLibraryPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/audiobooks" element={<AudiobooksPage />} /> {/* [audiobooks:core] */}
+            <Route path="/audiobooks/:id" element={<AudiobookPage />} /> {/* [audiobooks:core] */}
+            <Route path="/listen" element={<ListenPage />} /> {/* [audiobooks:listen] */}
+            <Route path="/listen/explore" element={<ListenExplorePage />} /> {/* [audiobooks:listen] */}
+            <Route path="/listen/:id" element={<ListenBookPage />} /> {/* [audiobooks:listen] */}
             <Route path="/sounds/:id" element={<SoundDetailPage />} />
             <Route path="/models" element={<ModelsPage />} />
             <Route path="/agents" element={<AgentsPage />} />
             <Route path="/activity" element={<ActivityPage />} />
+            <Route path="/trash" element={<TrashPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
@@ -264,16 +279,15 @@ function AppShellReady() {
             excludes the sidebar's width, so `position="sticky"` here never
             draws over the sidebar the way a viewport-`fixed` dock would. */}
         <NowPlayingBar />
+        <ListenPlayerHost /> {/* [audiobooks:listen] */}
       </SidebarInset>
       {/* Phones only: the five places you go most, always one tap away.
           Everything else stays in the menu behind the header's button. See
           docs/device-nav/DESIGN.md, model A. */}
       <MobileTabBar />
       <NavRail />
-      {/* Docked beside the page, in the shell's row: see sound-detail-panel.tsx. */}
-      <SoundDetailPanel />
-      <VoiceDetailPanel />
-      <ModelDetailPanel />
+      {/* Docked beside the page, in the shell's row: see detail-dock.tsx. */}
+      <DetailDock />
       {/* Inside the shell, not the app root: it offers the shell's pages and
           reads the route to know when to stand down. */}
       <AppCommandPalette />

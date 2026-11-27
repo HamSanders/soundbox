@@ -19,6 +19,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   AudioLinesIcon,
+  BookHeadphonesIcon,
   BookOpenIcon,
   BotIcon,
   BoxesIcon,
@@ -69,6 +70,12 @@ export const GROUPS: NavGroup[] = [
         label: "Voices",
         blurb: "Narration and dialogue from cloned or designed voices.",
         icon: MicVocalIcon,
+      },
+      {
+        to: "/audiobooks",
+        label: "Audiobooks",
+        blurb: "A manuscript to a cast, checked, exported audiobook.",
+        icon: BookHeadphonesIcon,
       },
     ],
   },

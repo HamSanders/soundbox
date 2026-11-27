@@ -12,11 +12,15 @@ import { toast } from "sonner";
 
 import { forgetStoryDevices } from "@/hooks/use-track-devices";
 import { followPlacement } from "@/lib/reading-order";
+import { useDock } from "@/lib/dock";
+import { reversible, undoable, useHiddenFilter, useHiddenStore, type HiddenKind } from "@/lib/undo";
 import {
   api,
   NO_CAPABILITIES,
   errorMessage,
   type Capabilities,
+  type TrashKind,
+  type TrashList,
   type AssistantChatRequest,
   type AssistantChatResponse,
   type AssistantOpenersRequest,
@@ -86,6 +90,7 @@ export const qk = {
   sound: (id: string) => ["sound", id] as const,
   tags: ["tags"] as const,
   sessions: ["sessions"] as const,
+  trash: ["trash"] as const,
   session: (id: string) => ["session", id] as const,
   projects: ["projects"] as const,
   stories: ["stories"] as const,
@@ -328,8 +333,9 @@ function openerStudioKey(studio: AssistantOpenersRequest["studio"]): string {
 }
 
 /** Empty-thread chips. No toast: the chat falls back to static openers. */
-export function useAssistantOpeners(studio: AssistantOpenersRequest["studio"]) {
+export function useAssistantOpeners(studio: AssistantOpenersRequest["studio"], enabled = true) {
   return useQuery<AssistantOpenersResponse, Error>({
+    enabled,
     queryKey: qk.assistantOpeners(openerStudioKey(studio)),
     queryFn: () => api.assistantOpeners({ studio: studio ?? null }),
     retry: 1,
@@ -403,7 +409,12 @@ export function useImageStatus(): UseQueryResult<ImageStatus> {
 /* ---------------------------------------------------- custom endpoints */
 
 export function useEndpoints(): UseQueryResult<EndpointList> {
-  return useQuery({ queryKey: qk.endpoints, queryFn: () => api.listEndpoints() });
+  const hidden = useHiddenFilter("endpoint");
+  return useQuery({
+    queryKey: qk.endpoints,
+    queryFn: () => api.listEndpoints(),
+    select: hidden && ((d: EndpointList) => ({ ...d, endpoints: hidden(d.endpoints) })),
+  });
 }
 
 /** Saving or deleting an endpoint changes the model list too — each endpoint
@@ -422,15 +433,7 @@ export function useSaveEndpoint() {
 }
 
 export function useDeleteEndpoint() {
-  const qc = useQueryClient();
-  return useMutation<void, Error, string>({
-    mutationFn: (id) => api.deleteEndpoint(id),
-    onError: fail("Could not delete the endpoint"),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: qk.endpoints });
-      void qc.invalidateQueries({ queryKey: qk.models });
-    },
-  });
+  return useDeleteWithUndo("endpoint", (id) => api.deleteEndpoint(id), [qk.endpoints, qk.models], "Could not delete the endpoint");
 }
 
 /** No toast on error: the form shows the failure inline, next to the button
@@ -501,10 +504,17 @@ export function useVoiceArtwork() {
 }
 
 export function useSounds(query: SoundQuery, enabled = true): UseQueryResult<SoundsPage> {
+  const hidden = useHiddenFilter("sound");
   return useQuery({
     queryKey: qk.sounds(query),
     queryFn: () => api.listSounds(query),
     enabled,
+    select:
+      hidden &&
+      ((page: SoundsPage) => {
+        const items = hidden(page.items);
+        return { ...page, items, total: page.total - (page.items.length - items.length) };
+      }),
   });
 }
 
@@ -704,6 +714,8 @@ export function useUpdateSound() {
     mutationFn: ({ id, patch }) => api.updateSound(id, patch),
     onError: fail("Could not save the sound"),
     onSuccess: (sound, { patch }) => {
+      // The docked panel reads this sound's own query: show the change now.
+      qc.setQueryData(qk.sound(sound.id), sound);
       void qc.invalidateQueries({ queryKey: ["sounds"] });
       void qc.invalidateQueries({ queryKey: qk.sound(sound.id) });
       void qc.invalidateQueries({ queryKey: qk.tags });
@@ -735,7 +747,8 @@ export function useEditSound() {
 /* ------------------------------------------------------------------ voices */
 
 export function useVoices(): UseQueryResult<Voice[]> {
-  return useQuery({ queryKey: qk.voices, queryFn: () => api.listVoices() });
+  const hidden = useHiddenFilter("voice");
+  return useQuery({ queryKey: qk.voices, queryFn: () => api.listVoices(), select: hidden && ((v: Voice[]) => hidden(v)) });
 }
 
 export function useCreateVoice() {
@@ -786,14 +799,8 @@ export function useUpdateVoice() {
 }
 
 export function useDeleteVoice() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => api.deleteVoice(id),
-    onError: fail("Could not delete the voice"),
-    onSuccess: () => {
-      toast.success("Voice deleted");
-      void qc.invalidateQueries({ queryKey: qk.voices });
-    },
+  return useDeleteWithUndo("voice", (id) => api.deleteVoice(id), [qk.voices], "Could not delete the voice", (id) => {
+    if (useDock.getState().isOpen("voice", id)) useDock.getState().close();
   });
 }
 
@@ -927,7 +934,12 @@ export function useRevealSound() {
 }
 
 export function useSessions(limit = 50): UseQueryResult<Session[]> {
-  return useQuery({ queryKey: qk.sessions, queryFn: () => api.listSessions(limit) });
+  const hidden = useHiddenFilter("session");
+  return useQuery({
+    queryKey: qk.sessions,
+    queryFn: () => api.listSessions(limit),
+    select: hidden && ((s: Session[]) => hidden(s)),
+  });
 }
 
 export function useSetSessionProject() {
@@ -945,18 +957,106 @@ export function useSetSessionProject() {
   });
 }
 
+/** A session and its sounds go to the trash, with Undo. */
 export function useDeleteSession() {
+  // Its sounds went with it, so every sound-shaped view is stale too.
+  return useTrashDelete("session", (id) => api.deleteSession(id), [qk.sessions, ["sounds"], qk.tags, qk.projects], "Could not delete the session");
+}
+
+/* ------------------------------------------------------------------- trash */
+
+/**
+ * Delete to the server's trash, with Undo on the toast (lib/undo.ts
+ * `reversible`). The item leaves every list at once; the request goes now,
+ * so Undo works after a reload too, and restores it from the trash. What
+ * Undo can't reach, the Trash page can for 30 days.
+ */
+export function useTrashDelete(
+  kind: TrashKind,
+  del: (id: string) => Promise<unknown>,
+  keys: QueryKey[],
+  failure: string,
+  /** Close any panel showing the item. */
+  closePanel?: (id: string) => void,
+) {
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => api.deleteSession(id),
-    onError: fail("Could not delete the session"),
-    onSuccess: () => {
-      toast.success("Session deleted");
-      // Its sounds went with it, so every sound-shaped view is stale too.
-      void qc.invalidateQueries({ queryKey: qk.sessions });
-      void qc.invalidateQueries({ queryKey: ["sounds"] });
-      void qc.invalidateQueries({ queryKey: qk.tags });
+  return (
+    item: { id: string; name: string },
+    opts?: { description?: string; onUndo?: () => void; onDone?: () => void },
+  ) => {
+    const hidden = kind as HiddenKind;
+    const { hide, show } = useHiddenStore.getState();
+    const refresh = () => Promise.all([...keys, qk.trash].map((queryKey) => qc.invalidateQueries({ queryKey })));
+    hide(hidden, item.id);
+    closePanel?.(item.id);
+    void reversible({
+      run: async () => {
+        try {
+          await del(item.id);
+        } finally {
+          // Shown again once the lists have refetched without it, so it
+          // never flickers back in between.
+          await refresh().finally(() => show(hidden, item.id));
+        }
+        opts?.onDone?.();
+      },
+      message: `Deleted “${item.name}”`,
+      description: opts?.description ?? "It's in the trash for 30 days.",
+      undo: async () => {
+        await api.restoreFromTrash(kind, item.id);
+        await refresh();
+        opts?.onUndo?.();
+      },
+      undone: `Restored “${item.name}”`,
+      failure: "Couldn't restore it",
+    }).catch((err: unknown) => toast.error(failure, { description: errorMessage(err) }));
+  };
+}
+
+export function useTrash(): UseQueryResult<TrashList> {
+  return useQuery({ queryKey: qk.trash, queryFn: () => api.listTrash() });
+}
+
+/** Everything a trash change can touch. */
+function useRefreshAfterTrash() {
+  const qc = useQueryClient();
+  return () => {
+    for (const queryKey of [qk.trash, qk.sessions, ["sounds"], qk.tags, qk.projects, qk.stories, ["audiobooks"], ["audiobook"]]) {
+      void qc.invalidateQueries({ queryKey });
+    }
+  };
+}
+
+export function useRestoreFromTrash() {
+  const refresh = useRefreshAfterTrash();
+  return useMutation<void, Error, { kind: TrashKind; id: string; name: string }>({
+    mutationFn: ({ kind, id }) => api.restoreFromTrash(kind, id),
+    onSuccess: (_v, { name }) => {
+      toast.success(`Restored “${name}”`);
+      refresh();
     },
+    onError: fail("Could not restore it"),
+  });
+}
+
+export function usePurgeTrashItem() {
+  const refresh = useRefreshAfterTrash();
+  return useMutation<void, Error, { kind: TrashKind; id: string }>({
+    mutationFn: ({ kind, id }) => api.purgeTrashItem(kind, id),
+    onSuccess: refresh,
+    onError: fail("Could not delete it"),
+  });
+}
+
+export function useEmptyTrash() {
+  const refresh = useRefreshAfterTrash();
+  return useMutation<{ deleted: number }, Error, void>({
+    mutationFn: () => api.emptyTrash(),
+    onSuccess: ({ deleted }) => {
+      toast.success(deleted === 1 ? "Deleted 1 item for good" : `Deleted ${deleted} items for good`);
+      refresh();
+    },
+    onError: fail("Could not empty the trash"),
   });
 }
 
@@ -1234,13 +1334,18 @@ export function useDeleteTrack(storyId: string) {
     mutationKey: qk.storyEdits(storyId),
     mutationFn: (trackIndex) => api.deleteTrack(storyId, trackIndex),
     onError: fail("Could not remove the track"),
-    onSuccess: ({ removed_clips }) => {
-      if (removed_clips > 0) {
-        toast.success(
-          `Track removed with ${removed_clips} clip${removed_clips === 1 ? "" : "s"}`,
-        );
-      }
-    },
+    // The caller says what went, with Undo (`timelineEdits.removeTrack`).
+    onSettled: () => settleStory(qc, storyId, [qk.stories]),
+  });
+}
+
+/** Put a removed lane back at its index; see `api.insertTrack`. */
+export function useInsertTrack(storyId: string) {
+  const qc = useQueryClient();
+  return useMutation<StoryTrack, Error, { trackIndex: number; patch: TrackPatch }>({
+    mutationKey: qk.storyEdits(storyId),
+    mutationFn: ({ trackIndex, patch }) => api.insertTrack(storyId, trackIndex, patch),
+    onError: fail("Could not put the track back"),
     onSettled: () => settleStory(qc, storyId, [qk.stories]),
   });
 }
@@ -1252,21 +1357,55 @@ export function useExportStory(storyId: string) {
   });
 }
 
+/** To the trash, with Undo (see `useTrashDelete`). */
 export function useDeleteSound() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => api.deleteSound(id),
-    onError: fail("Could not delete the sound"),
-    onSuccess: () => {
-      toast.success("Sound deleted");
-      void qc.invalidateQueries({ queryKey: ["sounds"] });
-      void qc.invalidateQueries({ queryKey: qk.tags });
-    },
+  return useTrashDelete("sound", (id) => api.deleteSound(id), [["sounds"], qk.tags, qk.sessions], "Could not delete the sound", (id) => {
+    if (useDock.getState().isOpen("sound", id)) useDock.getState().close();
   });
 }
 
+/**
+ * Delete with Undo instead of "Are you sure?": the item leaves every list at
+ * once, and the request goes when the toast closes (see lib/undo.ts).
+ */
+function useDeleteWithUndo(
+  kind: HiddenKind,
+  del: (id: string) => Promise<unknown>,
+  keys: QueryKey[],
+  failure: string,
+  /** Close any panel showing the item. */
+  closePanel?: (id: string) => void,
+) {
+  const qc = useQueryClient();
+  return (
+    item: { id: string; name: string },
+    opts?: { description?: string; onUndo?: () => void },
+  ) => {
+    const { hide, show } = useHiddenStore.getState();
+    undoable({
+      message: `Deleted “${item.name}”`,
+      description: opts?.description,
+      apply: () => {
+        hide(kind, item.id);
+        closePanel?.(item.id);
+      },
+      revert: () => {
+        show(kind, item.id);
+        opts?.onUndo?.();
+      },
+      commit: () => del(item.id),
+      done: () =>
+        void Promise.all(keys.map((queryKey) => qc.invalidateQueries({ queryKey }))).finally(() =>
+          show(kind, item.id),
+        ),
+      failure,
+    });
+  };
+}
+
 export function useProjects(): UseQueryResult<Project[]> {
-  return useQuery({ queryKey: qk.projects, queryFn: () => api.listProjects() });
+  const hidden = useHiddenFilter("project");
+  return useQuery({ queryKey: qk.projects, queryFn: () => api.listProjects(), select: hidden && ((p: Project[]) => hidden(p)) });
 }
 
 export function useCreateProject() {
@@ -1281,18 +1420,9 @@ export function useCreateProject() {
 }
 
 export function useDeleteProject() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => api.deleteProject(id),
-    onError: fail("Could not delete the project"),
-    onSuccess: () => {
-      toast.success("Project deleted");
-      // Its sounds are only unfiled, not gone — but any view scoped to this
-      // project (or showing project membership) is stale either way.
-      void qc.invalidateQueries({ queryKey: qk.projects });
-      void qc.invalidateQueries({ queryKey: ["sounds"] });
-    },
-  });
+  // Its sounds are only unfiled, not gone, but any view scoped to this
+  // project (or showing project membership) is stale either way.
+  return useDeleteWithUndo("project", (id) => api.deleteProject(id), [qk.projects, ["sounds"]], "Could not delete the project");
 }
 
 /* --------------------------------------------------------------- profiles */

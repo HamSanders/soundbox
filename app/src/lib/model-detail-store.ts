@@ -1,10 +1,6 @@
 /**
- * The model whose details are open in the docked right-hand panel, plus the
- * download jobs the Models page is watching.
- *
- * The model twin of `detail-store.ts` and `voice-detail-store.ts`. It holds an
- * id rather than a `Model`, so the panel follows the model as the list
- * refetches (a download finishes, a load changes its status).
+ * What the model details panel is asking, plus the download jobs the Models
+ * page is watching. Which model is open is the dock's (lib/dock.ts).
  *
  * Jobs live here rather than on a row so that a download started from the row
  * keeps reporting in the panel, and the panel's Download shows in the row.
@@ -12,40 +8,40 @@
 
 import { create } from "zustand";
 
-import { useDetailStore } from "@/lib/detail-store";
-import { useVoiceDetailStore } from "@/lib/voice-detail-store";
+import { useDock } from "@/lib/dock";
 import type { Job } from "@/lib/api";
 
 /** What the panel's dialog is asking, if anything. */
 export type ModelConfirm = "download" | "delete" | null;
 
 interface ModelDetailState {
-  modelId: string | null;
   confirm: ModelConfirm;
+  /** The model `confirm` is about: a question never carries over to another. */
+  confirmFor: string | null;
   /** Running download job per model id. */
   jobs: Record<string, string>;
   /** The last failed download per model id, kept until the next attempt. */
   failures: Record<string, Job>;
+  /** Opens the model's panel, optionally straight onto a confirmation. */
   open: (modelId: string, confirm?: ModelConfirm) => void;
-  close: () => void;
   setConfirm: (confirm: ModelConfirm) => void;
+  /** Drops the question about this model, if that's the one asked. */
+  clearConfirm: (modelId: string) => void;
   setJob: (modelId: string, jobId: string | null) => void;
   setFailure: (modelId: string, job: Job | null) => void;
 }
 
 export const useModelDetailStore = create<ModelDetailState>((set) => ({
-  modelId: null,
   confirm: null,
+  confirmFor: null,
   jobs: {},
   failures: {},
   open: (modelId, confirm = null) => {
-    // One docked panel at a time.
-    useDetailStore.getState().close();
-    useVoiceDetailStore.getState().close();
-    set({ modelId, confirm });
+    useDock.getState().open({ kind: "model", id: modelId });
+    set({ confirm, confirmFor: modelId });
   },
-  close: () => set({ modelId: null, confirm: null }),
   setConfirm: (confirm) => set({ confirm }),
+  clearConfirm: (modelId) => set((s) => (s.confirmFor === modelId ? { confirm: null, confirmFor: null } : s)),
   setJob: (modelId, jobId) =>
     set((s) => {
       const jobs = { ...s.jobs };

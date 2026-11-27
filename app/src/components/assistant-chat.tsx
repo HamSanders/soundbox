@@ -33,7 +33,6 @@ import {
   ArrowRightIcon,
   ArrowUpIcon,
   BotIcon,
-  CheckIcon,
   ChevronRightIcon,
   Loader2Icon,
   RotateCcwIcon,
@@ -44,10 +43,13 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { LoadingVerb } from "@/components/loading-verb";
+import { AgentProposalCard } from "@/components/agent-proposal";
+import { ProposalCard } from "@/components/proposal-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { errorMessage, type AssistantLink, type AssistantOpener } from "@/lib/api";
+import { api, errorMessage, type AssistantLink, type AssistantOpener } from "@/lib/api";
+import { useAgentScope } from "@/lib/agent-scope";
 import type { StudioAction, StudioContext } from "@/lib/studio-command";
 import {
   DEFAULT_THREAD,
@@ -84,12 +86,21 @@ const OPENERS: AssistantOpener[] = [
 
 const OPENER_SKELETONS = ["w-24", "w-28", "w-20", "w-32"] as const;
 
+/** Openers beside a book: things the agent can actually do there. */
+const BOOK_OPENERS: AssistantOpener[] = [
+  { label: "What's left to voice?", text: "Which chapters still need voicing?" },
+  { label: "Narrator voice", text: "Which of my voices would suit the narrator? Set it." },
+  { label: "Pronunciation", text: "Add a pronunciation for the hardest name in this chapter" },
+  { label: "Voice this chapter", text: "Voice this chapter" },
+];
+
 function OpenerChips({ onPick }: { onPick: (text: string) => void }) {
   const bridge = useStudioBridge((s) => s.bridge);
+  const book = useAgentScope((s) => s.scope) !== null;
   const studio = bridge?.context() ?? null;
-  const { data, isPending, isError } = useAssistantOpeners(studio);
-  const chips =
-    !isError && data?.openers.length ? data.openers : OPENERS;
+  const { data, isPending: loading, isError } = useAssistantOpeners(studio, !book);
+  const isPending = !book && loading;
+  const chips = book ? BOOK_OPENERS : !isError && data?.openers.length ? data.openers : OPENERS;
 
   return (
     <div className="flex flex-wrap justify-center gap-2" role="group" aria-label="Openers">
@@ -155,6 +166,8 @@ export function AssistantChat({
   const reset = useAssistantStore((s) => s.reset);
   const markEdits = useAssistantStore((s) => s.markEdits);
   const bridge = useStudioBridge((s) => s.bridge);
+  /** A book editor's scope: turns there go to the agent planner. */
+  const agent = useAgentScope((s) => s.scope);
 
   const chat = useAssistantChat();
   /** With the prompt assistant off there is no answer to be had — see
@@ -212,6 +225,47 @@ export function AssistantChat({
         },
       );
     };
+    if (agent) {
+      // A book is open: the agent planner answers with MCP tool calls to
+      // propose, or with words alone when the turn is a question.
+      const history = threadForServer(threadMessages(threadKey)).slice(0, -1);
+      void api
+        .agentPlan({
+          instruction: trimmed,
+          messages: history,
+          scope: { book_id: agent.bookId, chapter_id: agent.chapterId(), selected_ids: agent.selectedIds() },
+        })
+        .then(
+          (plan) => {
+            if (plan.calls.length === 0 && !plan.reply) {
+              askAssistant();
+              return;
+            }
+            settle(threadKey, id, {
+              content: plan.reply || "Here's what I'd do.",
+              proposal:
+                plan.calls.length || plan.dropped.length
+                  ? {
+                      instruction: trimmed,
+                      steps: plan.calls.map((call, i) => ({
+                        id: String(i),
+                        call: { tool: call.tool, arguments: call.arguments },
+                        risk: call.risk,
+                        status: "proposed",
+                      })),
+                      dropped: plan.dropped,
+                    }
+                  : null,
+            });
+            finish();
+          },
+          (err) => {
+            settle(threadKey, id, { error: errorMessage(err) });
+            finish();
+          },
+        );
+      return;
+    }
     if (!bridge) {
       askAssistant();
       return;
@@ -302,13 +356,12 @@ export function AssistantChat({
           </div>
           <div className="space-y-1.5">
             <h1 className="font-heading text-2xl font-semibold tracking-tight">
-              Talk it through first
+              {agent ? "Work on this book" : "Talk it through first"}
             </h1>
             <p className="text-muted-foreground mx-auto max-w-md text-sm leading-relaxed">
-              The assistant knows which models you have, what each is for, what
-              its licence allows and how it likes to be prompted. Say what you
-              need; it asks what it has to, writes the prompt, and hands it to
-              the composer or straight onto a timeline.
+              {agent
+                ? "Ask about the book, or say what to change. The assistant can do what Mirli's agent tools do: set voices, add pronunciations and beds, edit, voice and export. Nothing changes until you accept it."
+                : "The assistant knows which models you have, what each is for, what its licence allows and how it likes to be prompted. Say what you need; it asks what it has to, writes the prompt, and hands it to the composer or straight onto a timeline."}
             </p>
           </div>
           <OpenerChips onPick={send} />
@@ -341,6 +394,11 @@ export function AssistantChat({
                 }
                 onDiscardEdits={() => markEdits(threadKey, m.id, null)}
                 onOpenArtifact={bridge ? (panel) => bridge.showPanel(panel) : null}
+                threadKey={threadKey}
+                onTweak={(instruction) => {
+                  setText(instruction);
+                  inputRef.current?.focus();
+                }}
               />
             ),
           )}
@@ -373,7 +431,9 @@ export function AssistantChat({
             value={text}
             disabled={pending}
             placeholder={
-              bridge
+              agent
+                ? "Ask, or say what to change…"
+                : bridge
                 ? "Say what to change — name the tracks, mute 1 and 3, add reverb to the vocal…"
                 : empty
                   ? "What do you need? A sound, a track, or a question about your models."
@@ -491,7 +551,11 @@ function AssistantBubble({
   onApplyEdits,
   onDiscardEdits,
   onOpenArtifact,
+  threadKey,
+  onTweak,
 }: {
+  threadKey: string;
+  onTweak: (instruction: string) => void;
   message: AssistantMessage;
   thinking: boolean;
   onRetry: () => void;
@@ -534,6 +598,14 @@ function AssistantBubble({
             onApply={onApplyEdits}
             onDiscard={onDiscardEdits}
             onOpenArtifact={onOpenArtifact}
+          />
+        )}
+        {message.proposal && !thinking && (
+          <AgentProposalCard
+            threadKey={threadKey}
+            messageId={message.id}
+            proposal={message.proposal}
+            onTweak={onTweak}
           />
         )}
         {!!message.sources?.length && !thinking && <SourceNote sources={message.sources} />}
@@ -662,80 +734,24 @@ function EditsCard({
 }) {
   // Where this turn's work lives, so the card can take you back to it.
   const panel = edits.actions.map(panelForAction).find((p): p is string => p !== null) ?? null;
-  const openable = panel !== null && onOpenArtifact !== null && edits.applied;
+  const destructive = edits.actions.some(isDestructive);
   return (
-    <div
-      className={cn(
-        "border-border bg-card rounded-xl border p-3 shadow-sm",
-        openable && "hover:border-foreground/25 cursor-pointer transition-colors",
-      )}
-      {...(openable
-        ? {
-            role: "button",
-            tabIndex: 0,
-            "aria-label": `Open the ${panel} panel`,
-            onClick: () => onOpenArtifact(panel),
-            onKeyDown: (e: React.KeyboardEvent) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                onOpenArtifact(panel);
-              }
-            },
-          }
-        : {})}
-    >
-      <p className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-xs font-medium">
-        {edits.applied ? (
-          <>
-            <CheckIcon className="size-3.5 text-ok" aria-hidden="true" />
-            Applied to the studio — Ctrl+Z there undoes it
-          </>
-        ) : (
-          <>
-            <TriangleAlertIcon className="text-destructive size-3.5" aria-hidden="true" />
-            Waiting for you — this deletes something
-          </>
-        )}
-      </p>
-      <ul className="text-muted-foreground space-y-0.5 text-xs">
-        {edits.actions.map((action, i) => (
-          <li key={i} className={cn("font-mono", isDestructive(action) && "text-destructive")}>
-            {describeAction(action, edits.context)}
-          </li>
-        ))}
-      </ul>
-      {openable && (
-        <p className="text-muted-foreground mt-2 text-[11px]">Click to open the {panel}.</p>
-      )}
-      {!edits.applied && (
-        <div className="mt-2 flex gap-2">
-          {onApply ? (
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={(e) => {
-                e.stopPropagation();
-                onApply(edits.actions, summary);
-              }}
-            >
-              Apply {edits.actions.length} {edits.actions.length === 1 ? "edit" : "edits"}
-            </Button>
-          ) : (
-            <p className="text-muted-foreground text-xs">The studio is closed; open it again to apply.</p>
-          )}
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDiscard();
-            }}
-          >
-            Discard
-          </Button>
-        </div>
-      )}
-    </div>
+    <ProposalCard
+      status={edits.applied ? "applied" : "proposed"}
+      risk={destructive ? "destructive" : "safe"}
+      receipt="Applied to the studio. Ctrl+Z there undoes it"
+      items={edits.actions.map((action, i) => ({
+        id: String(i),
+        label: <span className="font-mono">{describeAction(action, edits.context)}</span>,
+        tone: isDestructive(action) ? "destructive" : "muted",
+      }))}
+      acceptLabel={`Apply ${edits.actions.length} ${edits.actions.length === 1 ? "edit" : "edits"}`}
+      onAccept={onApply ? () => onApply(edits.actions, summary) : null}
+      waitingNote="The studio is closed; open it again to apply."
+      onReject={onDiscard}
+      onOpen={panel !== null && onOpenArtifact ? () => onOpenArtifact(panel) : null}
+      openLabel={panel ? `Open the ${panel} panel` : undefined}
+    />
   );
 }
 

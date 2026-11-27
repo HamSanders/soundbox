@@ -1,9 +1,10 @@
 # Fish Audio reference transcripts
 
-In Voice Lab, enter **Reference Transcript** when creating a clone. Use
-**Edit voice** to enter or correct the exact words for every existing clip;
-each field includes a player. When adding another clip, enter that clip's
-transcript before uploading or adding the recorded take.
+In Voice Lab, enter **Reference Transcript** when creating a clone. To enter
+or correct the exact words for an existing clip, open the clone's panel (or
+pick **Clips** in its ··· menu) and click the line under that clip's player.
+When adding another clip there, enter that clip's transcript before uploading
+or adding the recorded take.
 
 The transcript describes the reference recording. The Speak prompt or script
 line describes the new speech to generate. Mirli never invents a transcript.

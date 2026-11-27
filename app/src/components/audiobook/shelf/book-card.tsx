@@ -1,0 +1,133 @@
+/** One book on the shelf: cover, title, author and how much of it is voiced. */
+
+import { Link } from "react-router-dom";
+import { CheckIcon, CopyIcon, FolderIcon, MoreHorizontalIcon, Trash2Icon } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import type { Project } from "@/lib/api";
+import { bookProgress, type BookSummary } from "@/lib/audiobook-api";
+import { formatDuration, formatRelative } from "@/lib/format";
+
+import { BookCover } from "./book-cover";
+
+export function BookCard({
+  book,
+  onDelete,
+  onDuplicate,
+  onMove,
+  projects = [],
+  index = 0,
+}: {
+  book: BookSummary;
+  onDelete: (book: BookSummary) => void;
+  onDuplicate: (book: BookSummary) => void;
+  onMove: (book: BookSummary, project: string | null) => void;
+  projects?: Project[];
+  index?: number;
+}) {
+  const pct = bookProgress(book);
+  return (
+    <div
+      className="group animate-in fade-in-0 slide-in-from-bottom-1 relative flex flex-col gap-2 duration-300 fill-mode-both"
+      style={{ animationDelay: `${Math.min(index, 10) * 30}ms` }}
+    >
+      {/* The cover repeats the title link below, so it is out of the tab
+          order and hidden from screen readers: one stop per book. */}
+      <Link
+        to={`/audiobooks/${book.id}`}
+        tabIndex={-1}
+        aria-hidden="true"
+        className="rounded-md transition-transform duration-(--duration-fast) outline-none group-hover:-translate-y-0.5"
+      >
+        <BookCover book={book} />
+      </Link>
+      <div className="flex items-start gap-1">
+        <div className="min-w-0 flex-1">
+          <Link to={`/audiobooks/${book.id}`} className="hover:underline">
+            <p className="truncate text-sm font-medium">{book.title}</p>
+          </Link>
+          <p className="text-muted-foreground truncate text-xs">
+            {book.author || "No author"} · {book.stats.chapters} chapter
+            {book.stats.chapters === 1 ? "" : "s"}
+          </p>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label={`More for ${book.title}`}
+              className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100"
+            >
+              <MoreHorizontalIcon />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => onDuplicate(book)}>
+              <CopyIcon />
+              Duplicate
+            </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <FolderIcon />
+                Move to project
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-48">
+                <DropdownMenuItem onSelect={() => onMove(book, null)}>
+                  <span className="flex-1">No project</span>
+                  {book.project_id === null && <CheckIcon />}
+                </DropdownMenuItem>
+                {projects.length > 0 && <DropdownMenuSeparator />}
+                {projects.map((p) => (
+                  <DropdownMenuItem key={p.id} onSelect={() => onMove(book, p.id)}>
+                    <span className="flex-1 truncate">{p.name}</span>
+                    {book.project_id === p.id && <CheckIcon />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onSelect={() => onDelete(book)}>
+              <Trash2Icon />
+              Delete book
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <div className="space-y-1">
+        <div
+          className="bg-muted h-1 overflow-hidden rounded-full"
+          role="progressbar"
+          aria-valuenow={pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`${book.title}: voiced`}
+          aria-valuetext={`${pct}% voiced`}
+        >
+          <div className="bg-primary h-full rounded-full" style={{ width: `${pct}%` }} />
+        </div>
+        <p className="text-muted-foreground flex justify-between text-[0.7rem] tabular-nums">
+          <span>
+            {pct}% voiced
+            {book.stats.stale > 0 ? ` · ${book.stats.stale} stale` : ""}
+          </span>
+          <span>
+            {book.stats.duration_s > 0
+              ? formatDuration(book.stats.duration_s)
+              : formatRelative(book.updated_at)}
+          </span>
+        </p>
+      </div>
+    </div>
+  );
+}

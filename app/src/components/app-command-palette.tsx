@@ -36,6 +36,7 @@ import { isDownloadable } from "@/components/model-shared";
 import { MOD } from "@/lib/platform";
 import { useSessionStore } from "@/lib/session-store";
 import type { CapabilityKey, Model, Profile } from "@/lib/api";
+import { useAudiobookCommands } from "@/components/audiobook/shelf/use-audiobook-commands"; // [audiobooks:core]
 
 const NO_PROFILES: Profile[] = [];
 
@@ -152,6 +153,7 @@ export function AppCommandPalette() {
   const [everOpened, setEverOpened] = useState(false);
   const { data: sounds } = useSounds({ limit: 25 }, everOpened);
   const { data: stories } = useStories(50);
+  const audiobookRows = useAudiobookCommands(everOpened); // [audiobooks:core]
   const { data: voices } = useVoices();
   const { data: models } = useModels();
   const modelAction = useModelAction();
@@ -320,6 +322,7 @@ export function AppCommandPalette() {
       })),
       ...soundRows,
       ...storyRows,
+      ...audiobookRows, // [audiobooks:core]
       ...voiceRows,
       ...modelRows,
       ...settingRows,
@@ -334,6 +337,7 @@ export function AppCommandPalette() {
     activate,
     sounds,
     stories,
+    audiobookRows, // [audiobooks:core]
     voices,
     models,
     modelAction,

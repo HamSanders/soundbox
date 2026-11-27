@@ -14,6 +14,7 @@ import { HeaderSlot } from "@/components/header-slot";
 import { QueueIndicator } from "@/components/queue-indicator";
 import { SidebarButton } from "@/components/sidebar-peek";
 import { useSound } from "@/lib/queries";
+import { BookCrumb } from "@/components/audiobook/shelf/book-crumb"; // [audiobooks:core]
 import { cn } from "@/lib/utils";
 
 const TITLES: Record<string, string> = {
@@ -31,8 +32,12 @@ const TITLES: Record<string, string> = {
   "/voice/new/clone": "Clone a Voice",
   "/voice/new/builtin": "Built-in Voice",
   "/projects": "Projects",
+  "/audiobooks": "Audiobooks", // [audiobooks:core]
+  "/listen": "Listen", // [audiobooks:listen]
+  "/listen/explore": "Explore", // [audiobooks:listen]
   "/models": "Models",
   "/activity": "Activity",
+  "/trash": "Trash",
   "/settings": "Settings",
 };
 
@@ -67,6 +72,7 @@ export function Breadcrumb({ className }: { className?: string }) {
   // builder you are in is worth saying — it is the difference between the two
   // tools — and the crumb links to that half of the shelf.
   const builder = /^\/studio\/(script|music)\//.exec(pathname)?.[1] ?? null;
+  const bookId = /^\/audiobooks\/([^/]+)$/.exec(pathname)?.[1] ?? null; // [audiobooks:core]
 
   return (
     <nav
@@ -76,6 +82,8 @@ export function Breadcrumb({ className }: { className?: string }) {
       <span>Mirli</span>
       {soundId ? (
         <SoundCrumb id={soundId} />
+      ) : bookId ? ( // [audiobooks:core]
+        <BookCrumb id={bookId} />
       ) : builder !== null ? (
         <>
           <span aria-hidden="true">/</span>

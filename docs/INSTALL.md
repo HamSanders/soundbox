@@ -310,6 +310,15 @@ from the published port. It logs a warning about binding beyond loopback on
 every start unless `MIRLI_API_TOKEN` is set; that is expected here, and is
 the reason for the paragraph above.
 
+**`MIRLI_IMPORT_PRIVATE_HOSTS` and audiobook URL import.** Importing a
+manuscript from a web address only connects to public addresses: loopback,
+private, link-local and cloud metadata ranges are refused, after DNS and on
+every redirect. To import from a host on your own network, list it (or `*`):
+
+```bash
+-e MIRLI_IMPORT_PRIVATE_HOSTS=wiki.example.lan
+```
+
 **`MIRLI_ALLOWED_HOSTS` and the MCP endpoint.** `/mcp` checks the `Host`
 header (and `Origin`, when a browser sends one) against loopback and answers
 **403** to anything else, so a web page cannot reach your server through DNS

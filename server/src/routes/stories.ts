@@ -191,6 +191,19 @@ export function registerStories(app: FastifyInstance, svc: MirliService): void {
     return track;
   });
 
+  /** Opens a lane at this index with the settings given; the lanes at and
+   *  above it slide up. The inverse of DELETE, for undo. */
+  app.post<TrackParams>("/api/stories/:story_id/tracks/:track_index", async (request, reply) => {
+    const patch = trackPatchSchema.parse(request.body ?? {});
+    const index = Number(request.params.track_index);
+    if (!Number.isInteger(index) || index < 0) {
+      throw new HttpError(422, "track_index must be a whole number, 0 or more");
+    }
+    const track = svc.insertTrack(request.params.story_id, index, patch);
+    if (track === null) throw new HttpError(404, "Story not found");
+    return reply.code(201).send(track);
+  });
+
   /** Removes the lane and the clips on it — see `Database.deleteTrack` for why
    *  the audio goes too. Lanes above slide down. */
   app.delete<TrackParams>("/api/stories/:story_id/tracks/:track_index", async (request) => {

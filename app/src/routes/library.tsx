@@ -9,6 +9,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { keepDetail } from "@/lib/dock";
 import { BotIcon, SearchIcon, StarIcon } from "lucide-react";
 
 import { EmptyState } from "@/components/empty-state";
@@ -249,7 +250,7 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
     setModelId(ALL);
     setFavoritesOnly(false);
     setAgentsOnly(false);
-    if (projectId) setSearchParams({}, { replace: true });
+    if (projectId) setSearchParams(keepDetail({}), { replace: true });
   };
 
   const title = project ? project.name : category ? CATEGORY_LABEL[category] : "Library";
@@ -346,7 +347,7 @@ export function LibraryPage({ category }: { category?: LibraryCategory }) {
           label="By agents"
         />
         {project && (
-          <FilterChip label={`Project: ${project.name}`} onClear={() => setSearchParams({}, { replace: true })} />
+          <FilterChip label={`Project: ${project.name}`} onClear={() => setSearchParams(keepDetail({}), { replace: true })} />
         )}
         {filtered && (
           <Button variant="ghost" size="sm" onClick={clear} aria-label="Clear all filters" className="h-8">

@@ -4,6 +4,8 @@
  * hardware table) or from copy already on the site.
  */
 
+import { MCP_TOOLS } from "@/content/mcp/tools";
+
 export interface Faq {
   question: string;
   answer: string;
@@ -54,5 +56,5 @@ export const RENAMED: Faq = {
 export const AGENT_FAQ: Faq = {
   question: "How do I connect Claude Code or Cursor?",
   answer:
-    "Start the app, then run: claude mcp add --transport http soundbox http://127.0.0.1:17494/mcp. Cursor and other MCP clients take the same URL. The agent gets 24 tools for sounds, speech and multi-track stories.",
+    `Start the app, then run: claude mcp add --transport http soundbox http://127.0.0.1:17494/mcp. Cursor and other MCP clients take the same URL. The agent gets ${MCP_TOOLS.length} tools for sounds, speech, multi-track stories and audiobooks.`,
 };

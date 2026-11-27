@@ -15,7 +15,8 @@ import type { FastifyInstance } from "fastify";
 
 import { projectPatchSchema, sessionPatchSchema, type Session } from "../schemas.js";
 import type { MirliService } from "../service.js";
-import { HttpError, intQuery } from "./helpers.js";
+import { trashItem } from "../trash.js";
+import { HttpError, intQuery, permanent } from "./helpers.js";
 
 type SessionParams = { Params: { session_id: string } };
 type ProjectParams = { Params: { project_id: string } };
@@ -65,11 +66,13 @@ export function registerSessions(app: FastifyInstance, svc: MirliService): void 
     return session!;
   });
 
-  /** Deletes the session *and* the sounds generated in it, audio included. */
+  /** The session *and* the sounds generated in it go to the trash (see
+   *  ../trash.ts); `?permanent=true` deletes them for good, audio included. */
   app.delete<SessionParams>("/api/sessions/:session_id", async (request, reply) => {
-    if (!(await svc.deleteSession(request.params.session_id))) {
-      throw new HttpError(404, "Session not found");
-    }
+    const ok = permanent(request.query)
+      ? await svc.deleteSession(request.params.session_id)
+      : await trashItem(svc, "session", request.params.session_id);
+    if (!ok) throw new HttpError(404, "Session not found");
     return reply.code(204).send();
   });
 

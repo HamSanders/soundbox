@@ -1,6 +1,6 @@
 /** One saved sound: rename, play, tag, favourite, download, reuse, delete. */
 
-import { useState, type CSSProperties } from "react";
+import { useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   AudioLinesIcon,
@@ -30,16 +30,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { InlineEdit, isRenameKey } from "@/components/ui/inline-edit";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,7 +64,7 @@ import {
 } from "@/lib/queries";
 import { api } from "@/lib/api";
 import { usePlayerStore } from "@/lib/player-store";
-import { useDetailStore } from "@/lib/detail-store";
+import { useDock } from "@/lib/dock";
 import { instrumentIcon } from "@/lib/instrument-icons";
 import { recipeLine } from "@/lib/recipe";
 import { cn } from "@/lib/utils";
@@ -121,13 +112,15 @@ export function SoundCard({
   className,
   style,
 }: SoundCardProps) {
-  const [editing, setEditing] = useState(false);
+  /** The name is being edited in place (Rename in the ··· menu, or F2). */
+  const [renaming, setRenaming] = useState(false);
+  /** Set by the Rename item: once the menu has closed (and let go of
+   *  focus), the name turns into a field. */
+  const renameAfterMenu = useRef(false);
   // Made in the last few seconds: this row is a generation landing, and gets
   // the arrival treatment once (see `.sb-arrive` in index.css). Read at mount
   // only, so a re-render later never replays it.
   const [fresh] = useState(() => Date.now() - Date.parse(sound.created_at) < FRESH_MS);
-  const [draftName, setDraftName] = useState(sound.name);
-  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const update = useUpdateSound();
   const remove = useDeleteSound();
@@ -162,7 +155,8 @@ export function SoundCard({
   const playSound = usePlayerStore((s) => s.play);
   const setNowPlaying = usePlayerStore((s) => s.setSound);
   const playing = usePlayerStore((s) => s.sound?.id === sound.id);
-  const openDetails = useDetailStore((s) => s.open);
+  const openDock = useDock((s) => s.open);
+  const openDetails = (s: Sound) => openDock({ kind: "sound", id: s.id }, { seed: s });
   const [opening, setOpening] = useState(false);
   const navigate = useNavigate();
   const [separating, setSeparating] = useState(false);
@@ -189,15 +183,28 @@ export function SoundCard({
   // session's project, so the two states get worded differently below.
   const isOverride = sound.project_id != null;
 
-  const commitName = () => {
-    const name = draftName.trim();
-    setEditing(false);
-    if (!name || name === sound.name) {
-      setDraftName(sound.name);
-      return;
-    }
-    update.mutate({ id: sound.id, patch: { name } });
+  const startRename = () => setRenaming(true);
+  /** F2 on the name renames it, as in a file list. */
+  const onNameKey = (e: KeyboardEvent) => {
+    if (!isRenameKey(e)) return;
+    e.preventDefault();
+    startRename();
   };
+  /** The name, editable in place, around however this layout shows it. */
+  const editableName = (show: (name: string) => ReactNode, className: string) => (
+    <InlineEdit
+      value={sound.name}
+      onCommit={(name) => update.mutateAsync({ id: sound.id, patch: { name } })}
+      label="Sound name"
+      as="div"
+      className={className}
+      activate="manual"
+      editing={renaming}
+      onEditingChange={setRenaming}
+    >
+      {show}
+    </InlineEdit>
+  );
 
   /** Play this sound in the fixed bottom player — a click on the title or
    *  the cover tile means "play it and keep it on screen", not "play it
@@ -214,78 +221,25 @@ export function SoundCard({
   // (`dense`), the sound is already on screen as part of the conversation,
   // so title/cover stay inert there; the row's own inline waveform still has
   // its own play button for that case.
-  const nameControl = dense ? (
-    <span className="max-w-full truncate text-sm font-medium">{sound.name}</span>
-  ) : (
-    <button
-      type="button"
-      onClick={playInBar}
-      className="focus-visible:ring-ring/50 max-w-full rounded text-left outline-none focus-visible:ring-3"
-      aria-label={`Play ${sound.name}`}
-    >
-      <span className="hover:text-primary truncate text-sm font-medium underline-offset-4 hover:underline">
-        {sound.name}
-      </span>
-    </button>
-  );
-
-  const renameDialog = (
-    <Dialog
-      open={editing}
-      onOpenChange={(open) => {
-        if (open) setDraftName(sound.name);
-        setEditing(open);
-      }}
-    >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Rename this sound</DialogTitle>
-        </DialogHeader>
-        <Input
-          autoFocus
-          value={draftName}
-          aria-label="Sound name"
-          onChange={(e) => setDraftName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") commitName();
-          }}
-        />
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
-          </DialogClose>
-          <Button onClick={commitName}>Save</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-
-  const confirmDialog = (
-    <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Delete this sound?</DialogTitle>
-          <DialogDescription>
-            &ldquo;{sound.name}&rdquo; and its audio file will be removed from disk. This
-            cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
-          </DialogClose>
-          <Button
-            variant="destructive"
-            onClick={() => {
-              remove.mutate(sound.id);
-              setConfirmOpen(false);
-            }}
-          >
-            Delete sound
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+  const nameControl = editableName(
+    (name) =>
+      dense ? (
+        <span className="max-w-full truncate text-sm font-medium">{name}</span>
+      ) : (
+        <button
+          type="button"
+          onClick={playInBar}
+          onKeyDown={onNameKey}
+          className="focus-visible:ring-ring/50 max-w-full rounded text-left outline-none focus-visible:ring-3"
+          aria-label={`Play ${name}`}
+          aria-keyshortcuts="F2"
+        >
+          <span className="hover:text-primary truncate text-sm font-medium underline-offset-4 hover:underline">
+            {name}
+          </span>
+        </button>
+      ),
+    "max-w-full text-sm font-medium",
   );
 
   /**
@@ -470,7 +424,16 @@ export function SoundCard({
                 <MoreHorizontalIcon />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent
+              align="end"
+              className="w-48"
+              onCloseAutoFocus={(e) => {
+                if (!renameAfterMenu.current) return;
+                renameAfterMenu.current = false;
+                e.preventDefault();
+                startRename();
+              }}
+            >
               <DropdownMenuItem onClick={() => openDetails(sound)}>
                 <Maximize2Icon />
                 Details
@@ -481,14 +444,10 @@ export function SoundCard({
                   Open full page
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  setDraftName(sound.name);
-                  setEditing(true);
-                }}
-              >
+              <DropdownMenuItem onClick={() => (renameAfterMenu.current = true)}>
                 <PencilIcon />
                 Rename
+                <span className="text-muted-foreground ml-auto text-xs">F2</span>
               </DropdownMenuItem>
               {canExtend && (
                 <DropdownMenuItem onClick={() => onEdit!("extend", sound)}>
@@ -612,7 +571,7 @@ export function SoundCard({
                   Split into stems…
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem variant="destructive" onClick={() => setConfirmOpen(true)}>
+              <DropdownMenuItem variant="destructive" onClick={() => remove(sound)}>
                 <Trash2Icon />
                 Delete
               </DropdownMenuItem>
@@ -727,7 +686,7 @@ export function SoundCard({
         }}
         onClick={(e) => {
           // Buttons and menus inside the row do their own thing.
-          if ((e.target as Element).closest("button, a, [role=menu], [role=dialog]")) return;
+          if ((e.target as Element).closest("button, a, input, [role=menu], [role=dialog]")) return;
           // A click on the row plays it in the bottom player; the title and
           // the ··· menus open details.
           playInBar();
@@ -759,15 +718,22 @@ export function SoundCard({
           </span>
         </button>
         <div className="min-w-0">
-          <button
-            type="button"
-            onClick={() => openDetails(sound)}
-            aria-label={`Details for ${sound.name}`}
-            title="Details"
-            className="focus-visible:ring-ring/50 block max-w-full truncate rounded text-left text-sm font-medium outline-none hover:underline focus-visible:ring-3"
-          >
-            {sound.name}
-          </button>
+          {editableName(
+            (name) => (
+              <button
+                type="button"
+                onClick={() => openDetails(sound)}
+                onKeyDown={onNameKey}
+                aria-label={`Details for ${name}`}
+                aria-keyshortcuts="F2"
+                title="Details"
+                className="focus-visible:ring-ring/50 block max-w-full truncate rounded text-left text-sm font-medium outline-none hover:underline focus-visible:ring-3"
+              >
+                {name}
+              </button>
+            ),
+            "text-sm font-medium",
+          )}
           <p className="readout text-muted-foreground truncate" title={log}>
             {log}
           </p>
@@ -780,8 +746,6 @@ export function SoundCard({
           {formatDuration(sound.duration_s)}
         </span>
         <div className="flex items-center">{actions}</div>
-        {renameDialog}
-        {confirmDialog}
         {stemDialog}
       </li>
     );
@@ -798,8 +762,6 @@ export function SoundCard({
         style={style}
       >
         {row}
-        {renameDialog}
-        {confirmDialog}
         {stemDialog}
       </div>
     );
@@ -816,8 +778,6 @@ export function SoundCard({
       style={style}
     >
       {row}
-      {renameDialog}
-      {confirmDialog}
       {stemDialog}
     </Card>
   );

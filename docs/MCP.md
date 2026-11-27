@@ -185,7 +185,8 @@ See [Access token](INSTALL.md#access-token).
 
 ## Tools
 
-Twenty-seven tools in five groups: sounds, voices, stories, arrangement, and the open studio. The
+Forty-nine tools in six groups: sounds, voices, stories, arrangement, the open studio, and
+audiobooks. The
 authority is `server/src/mcp/server.ts`: the `MCP_TOOLS` table for names and
 descriptions, and the zod `inputSchema` on each `registerTool` call for
 arguments. Where this file and that one disagree, that one is right.
@@ -272,8 +273,21 @@ Search and manage the library. `list_sounds` takes `q`, `tag`, `voice_id` and
 `limit`; searching before generating is usually faster than regenerating, and
 `voice_id` answers "what has this voice already said" without re-reading it. `get_sound`
 takes a `sound_id` and returns the one sound with its absolute path.
-`delete_sound` takes a `sound_id` and **permanently** removes the row and the
-file on disk.
+`delete_sound` takes a `sound_id` and moves the sound to the trash: it leaves
+the library and is deleted for good after 30 days.
+
+#### `soundbox.list_trash` / `soundbox.restore_from_trash`
+
+`list_trash` takes nothing and returns `days` (how long the trash keeps
+things, 30) and `items`: each sound, session and audiobook in the trash with
+its `kind`, `id`, `name`, a `detail` line ("12 sounds", "Jane Austen · 4
+chapters"), `deleted_at`, `purge_at` (when it will be deleted for good) and
+`size_bytes`, newest first. `restore_from_trash` takes `kind` (`sound`,
+`session` or `book`) and `id`, and brings it back as it was. A session comes
+back with its sounds, a book with its chapters and voiced audio. Sessions are
+moved to the trash from the app or the HTTP API; there is no MCP tool to
+delete one. Nothing over MCP deletes from the trash for good; the app's Trash
+page and `DELETE /api/trash` do.
 
 ### Voices
 
@@ -412,6 +426,140 @@ shows each change as it lands.
 
 > Devices are heard in the studio's timeline playback. `export_story` mixes
 > dry, without them.
+
+### Audiobooks
+
+A book is a list of chapters, and each chapter is a story, so the story and
+arrangement tools above also work on a chapter (its `story_id` is in every
+book summary). [AUDIOBOOKS.md](./AUDIOBOOKS.md) is the user guide. These tools
+call the audiobook HTTP API in-process, so they validate exactly as the app
+does. Every one returns ids for the next step and an `open_in_app` link.
+
+A typical run: `import_manuscript` → `set_character_voice` for the narrator
+and each character → `add_pronunciation` for names → `render_audiobook` →
+`add_bed` → `master_and_export_audiobook`.
+
+To tidy the text first: `edit_paragraph`, `find_replace`, `split_paragraph`
+and `merge_paragraphs`; `cast_paragraphs` for who reads what; `add_chapter`,
+`edit_chapter`, `move_chapter` and `delete_chapter` for the chapters.
+
+#### `soundbox.create_audiobook` / `soundbox.import_manuscript`
+
+`create_audiobook` takes `title` and optionally `author`, `narrator` (the
+credited name), `language`, `model_id`, `narrator_voice_id` and `cast_mode`
+(`single` or `multi`). It makes an empty book with one chapter.
+
+`import_manuscript` takes exactly one of `path` (an absolute path to an
+`.epub`, `.pdf`, `.docx`, `.txt`, `.md` or `.html` file, at most 200 MB),
+`text` (with `format` `txt`, `md` or `html`), or `url`. `title` and `author`
+override what the file says; the book settings are as for `create_audiobook`.
+Chapters, front and back matter, the cover and metadata are detected as the
+app's import does. The result includes the parser's `warnings`.
+
+#### `soundbox.list_audiobooks` / `soundbox.get_audiobook` / `soundbox.delete_audiobook`
+
+`list_audiobooks` takes nothing. `get_audiobook` takes `book_id` and returns
+chapters (with `chapter_id`, `story_id`, kind, whether it is included, and
+voiced counts), the cast, settings and stats. With `chapter_id` it adds that
+chapter's paragraphs (`offset`, `limit` up to 500): text, character, status
+(`unvoiced`, `voiced`, `stale`, `locked`) and timing.
+
+`delete_audiobook` takes `book_id` and moves the book to the trash, chapters
+and voiced audio included. It leaves `list_audiobooks` and is deleted for good
+after 30 days; `restore_from_trash` with `kind` `book` brings it back.
+
+#### `soundbox.set_character_voice`
+
+Takes `book_id`, `character` (a name, alias or id) and `voice_id` (from
+`list_voices`, or `null` to clear it). Every paragraph of that character
+follows. `character: "narrator"` sets the book's narrator voice instead.
+`create: true` adds the character if the book has none by that name.
+`model_id` reads the character on another model; usually leave it off, since
+a voice has its own.
+
+#### `soundbox.add_pronunciation`
+
+Takes `term`, `replacement`, `kind` (`alias`, the default, `ipa` or `cmu`),
+`case_sensitive` (default false) and `whole_word` (default true). With
+`book_id` the rule belongs to that book; without, it is global. Rules apply
+top to bottom and the first match wins. Paragraphs the rule changes become
+`stale`.
+
+#### `soundbox.render_audiobook`
+
+Takes `book_id` and, to narrow it, `chapter_id` or `paragraph_ids`.
+`overwrite` re-voices paragraphs that already have audio; locked paragraphs
+are never redone. **Blocks** until the run finishes, reporting progress per
+paragraph, unless `wait` is false. After `timeout_s` (default 3600) it stops
+waiting and returns the run, which carries on in the app.
+
+#### `soundbox.add_bed`
+
+Takes `book_id`, `chapter_id`, `kind` (`music`, the default, `ambience` or
+`sfx`) and either `sound_id` (a library sound) or `prompt` (generated on
+`model`, or an installed music or SFX model). Optional: `gain_db`, `mode`
+(`full`, `intro`, `outro`, `intro_outro`), `intro_s`, `loop`, `fade_in_s`,
+`fade_out_s`, and for SFX `paragraph_id` and `offset_s`. `duck_db` sets how far
+the bed dips under the narration; `0` turns ducking off. A prompt **blocks**
+while the bed is generated. The bed lands on its own track in the chapter's
+story; the result has the bed, its clip count and an `open_in_studio` link.
+
+#### `soundbox.edit_paragraph`
+
+Takes `book_id`, `paragraph_id` (from `get_audiobook` with a `chapter_id`) and
+any of `text` (the whole new text), `character` (a character's name, alias or
+id, or `narrator`), `locked` and `is_heading`. New text marks the paragraph
+`stale` if it was voiced. Prefer this to `update_line` for a book: it goes
+through the book, so its status and cast stay right.
+
+#### `soundbox.cast_paragraphs` / `soundbox.lock_paragraphs`
+
+`cast_paragraphs` takes `book_id`, `paragraph_ids` and `character` (a name,
+alias or id, or `narrator`), and those paragraphs take that character's voice.
+An unknown name is refused with the names the book has; add a character with
+`set_character_voice` and `create: true`. `lock_paragraphs` takes `book_id`,
+`paragraph_ids` and `locked` (default true; false unlocks). Locked paragraphs
+are left alone by rendering and by find and replace.
+
+#### `soundbox.split_paragraph` / `soundbox.merge_paragraphs`
+
+`split_paragraph` takes `book_id`, `paragraph_id` and either `before` (the
+words that start the second paragraph) or `at` (a character offset). Text
+that isn't in the paragraph is refused with what the paragraph says.
+`merge_paragraphs` takes `book_id` and `paragraph_id` and joins it with the
+paragraph after it. Both work on text, so unlike `split_line` (which cuts a
+clip at a time) they work on paragraphs that aren't voiced yet.
+
+#### `soundbox.find_replace`
+
+Takes `book_id`, `find`, `replace` (empty removes the match), and optionally
+`chapter_ids`, `case_sensitive`, `whole_word` and `dry_run` (count without
+changing). Locked paragraphs are skipped and counted. Returns the matches, the
+paragraphs changed and their ids.
+
+#### `soundbox.add_chapter` / `soundbox.edit_chapter` / `soundbox.move_chapter` / `soundbox.delete_chapter`
+
+`add_chapter` takes `book_id`, `title`, and optionally `text` (split into
+paragraphs the way an import is, with the title as its heading) and
+`position` (0 is first; default the end). `edit_chapter` takes `book_id`,
+`chapter_id` and any of `title`, `kind` (`chapter`, `front_matter`,
+`back_matter`, `opening_credits`, `closing_credits`, `retail_sample`) and
+`included` (false leaves it out of render and export). `move_chapter` takes
+`book_id`, `chapter_id` and `position`. `delete_chapter` takes `book_id` and
+`chapter_id`, and deletes the chapter, its paragraphs and their voiced audio;
+it cannot be undone, and a book keeps at least one chapter.
+
+#### `soundbox.master_and_export_audiobook`
+
+Takes `book_id`, `format` (`mp3`, the default, `wav`, `flac`, `m4b`),
+`layout` (`files`: one per chapter, zipped, ACX names; `single`: one file;
+M4B is always single), `mastering` (`acx`, the default, `podcast`, `none`),
+`bitrate_kbps` (MP3; default 192), `chapter_ids`, `include_cover`,
+`include_transcripts` (SRT, VTT and read-along JSON) and `include_beds`.
+`include_beds` defaults on, and off when a retail sample is exported, since
+ACX samples must not contain music. **Blocks** until the export is written,
+and returns its absolute `path`, `qc_failures` (each failed ACX check by
+chapter), and any bed warnings.
 
 ### The open studio
 

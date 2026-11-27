@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 
 import * as dsp from "./audio/dsp.js";
+import { partGapS, type SpokenPart } from "./audiobook/dialogue-parts.js"; // [audiobooks:voice]
 import * as reference from "./audio/reference.js";
 import {
   VERSION,
@@ -41,6 +42,8 @@ import {
 } from "./models/audiocpp.js";
 import { listGpus, pickGpu } from "./gpu.js";
 import { HistoryStore } from "./history.js";
+import { beds } from "./audiobook/beds.js"; // [audiobooks:soundscape]
+import { EmptyMixError, type MixPlan, type PlannedClip, renderMixLanes, sumLanes } from "./audiobook/export-mix.js"; // [audiobooks:export]
 import { DOWNLOAD_FAILURES_FILE, DownloadFailureStore } from "./models/downloadFailures.js";
 import { ModelManager } from "./models/manager.js";
 import * as audiocppBinary from "./models/audiocppBinary.js";
@@ -246,6 +249,8 @@ export class MirliService {
   readonly telemetry: McpTelemetry;
   /** Live story activity — see story-hub.ts. */
   readonly stories = new StoryHub();
+  /** Called after a segment is voiced; audiobook takes record each generation. */
+  readonly segmentVoiced: ((e: { segment_id: string; sound_id: string; spoken_text: string; voice_id: string | null; model_id: string; request_options: Record<string, string>; seed: number | null }) => void)[] = []; // [audiobooks:voice]
   /** Sampled instruments for the MIDI dry render — see instruments/index.ts.
    *  Reads the models directory at call time, like everything under `paths`. */
   readonly instruments = new InstrumentLibrary(() => this.config.paths.models);
@@ -797,7 +802,9 @@ export class MirliService {
 
   /** Delete a session and everything generated in it. */
   async deleteSession(sessionId: string): Promise<boolean> {
-    if (this.db.getSession(sessionId) === null) return false;
+    // `sessionExists`, not `getSession`: purging the trash deletes sessions
+    // that `getSession` no longer shows.
+    if (!this.db.sessionExists(sessionId)) return false;
     for (const filename of this.db.deleteSession(sessionId)) {
       // Removing the row does not reclaim the disk, and the audio is the part
       // that actually takes space.
@@ -976,6 +983,18 @@ export class MirliService {
     return track;
   }
 
+  /** Open a lane at `trackIndex`, sliding the lanes at and above it up, with
+   *  the mix and devices given. How an undone lane removal comes back; its
+   *  clips are recreated one by one after. Null when the story does not exist. */
+  insertTrack(storyId: string, trackIndex: number, patch: TrackPatch): StoryTrack | null {
+    if (this.db.getStory(storyId) === null) return null;
+    if (patch.devices !== undefined) patch = { ...patch, devices: normalizeChain(patch.devices) };
+    this.db.insertTrack(storyId, trackIndex);
+    const track = this.db.updateTrack(storyId, trackIndex, patch);
+    this.stories.changed(storyId);
+    return track;
+  }
+
   /** Remove a lane and the clips on it. Returns how many clips went, or null
    *  when the story does not exist. */
   deleteTrack(storyId: string, trackIndex: number): number | null {
@@ -1021,10 +1040,12 @@ export class MirliService {
     segmentId: string,
     req: SegmentGenerate,
     handle?: JobHandle,
+    parts?: SpokenPart[], // [audiobooks:voice]
   ): Promise<StorySegment | null> {
     const segment = this.db.getSegment(segmentId);
     if (segment === null) return null;
-    if (!segment.text.trim()) throw new ModelError("This line has no text to speak.");
+    const spoken = req.text ?? segment.text; // [audiobooks:voice]
+    if (!spoken.trim()) throw new ModelError("This line has no text to speak.");
 
     const model = this.models.get(req.model);
     const info = model.describe();
@@ -1042,7 +1063,9 @@ export class MirliService {
     this.models.touch();
 
     handle?.phase("generating", "Speaking");
-    const clip = await model.speak(segment.text, {
+    const clip = parts?.length // [audiobooks:voice] dialogue in the character's voice, the rest narrated
+      ? await this.speakParts(segment, parts, req, handle)
+      : await model.speak(spoken, { // [audiobooks:voice]
       voiceRefPath: refPath,
       voiceId: builtinId,
       seed: req.seed ?? null,
@@ -1072,6 +1095,7 @@ export class MirliService {
 
     this.models.touch();
     const voiced = this.db.setSegmentSound(segmentId, sound.id, sound.duration_s);
+    for (const cb of this.segmentVoiced) cb({ segment_id: segmentId, sound_id: sound.id, spoken_text: spoken, voice_id: segment.voice_id ?? null, model_id: req.model, request_options: requestOptions, seed: req.seed ?? null }); // [audiobooks:voice] record a take
     this.stories.changed(segment.story_id);
 
     // A line that has never been placed sits at 0:00, because until it has
@@ -1365,6 +1389,36 @@ export class MirliService {
    * timeline was playing.
    */
   exportStory(storyId: string, handle?: JobHandle): Sound | null {
+    // [audiobooks:export] mixdown factored into mixStory so audiobook export
+    // can master the buffer before anything is written.
+    const mix = this.mixStory(storyId, handle);
+    if (mix === null) return null;
+    const { story, segments, audio: mixed, sampleRate } = mix;
+    return this.writeSound(mixed, sampleRate, {
+      model: "story",
+      prompt: segments.map((s) => (s.speaker ? `${s.speaker}: ${s.text}` : s.text)).join("\n").slice(0, 2000),
+      name: story.title,
+      seed: null,
+      steps: null,
+      cfg: null,
+      projectId: story.project_id ?? null,
+      trim: false,
+      // One gain over the whole mixdown, so the clips keep their levels
+      // relative to each other; only the file's overall loudness moves.
+      normalize: true,
+    });
+  }
+
+  /**
+   * What `mixStory` will mix, as data: the audible clips of a story with
+   * their files, placement, trims, fades and gains, and the chapter's bed
+   * lanes. Reads the database only. Null when the story does not exist;
+   * throws when no line has audio. [audiobooks:export]
+   */
+  planMix(
+    storyId: string,
+    options: { tracks?: (lane: number) => boolean; includeBeds?: boolean } = {},
+  ) {
     const story = this.db.getStory(storyId);
     if (story === null) return null;
     // A track's mute/solo and its gain sit on top of each clip's own — the
@@ -1376,7 +1430,10 @@ export class MirliService {
       gains.has(lane) ? gains.get(lane)! : gains.get(Number.NaN)!;
     const segments = this.db
       .listSegments(storyId)
-      .filter((s) => !s.muted && s.sound_id && trackGain(s.track_index) !== null);
+      .filter(
+        (s) =>
+          !s.muted && s.sound_id && trackGain(s.track_index) !== null && (options.tracks?.(s.track_index) ?? true),
+      );
     if (segments.length === 0) {
       throw new ModelError("Nothing to export: no line in this story has audio yet.");
     }
@@ -1424,66 +1481,65 @@ export class MirliService {
       }
     }
 
-    handle?.phase("encoding", "Reading clips");
-    const placed: { audio: dsp.Audio; startS: number }[] = [];
-    let sampleRate = 0;
+    // [audiobooks:export] The clips as data: the file each reads from, its
+    // trim, fades (with the crossfades above) and gain. `renderMixLanes`
+    // does the reading and DSP, here or on the audiobook export worker.
+    const clips: PlannedClip[] = [];
     for (const segment of segments) {
       const filename = this.db.getFilename(segment.sound_id!);
       if (filename === null) continue; // sound deleted out from under the story
-      const clip = dsp.readWav(join(this.config.paths.sounds, filename));
-      // Everything mixes at one rate, and the first clip's is as good a choice
-      // as any — the same call `runSpeak` makes when joining lines.
-      if (sampleRate === 0) sampleRate = clip.sampleRate;
-      let audio =
-        clip.sampleRate === sampleRate
-          ? clip.audio
-          : dsp.resampleAudio(clip.audio, clip.sampleRate, sampleRate);
-
-      // Honour the clip's trim: what plays is `duration_s` of the source
-      // starting at `trim_start_s`, not the whole file. Dropped entirely if
-      // the trim leaves nothing, rather than exporting a zero-length clip.
-      const from = segment.trim_start_s ?? 0;
-      const length = segment.duration_s ?? null;
-      if (from > 0 || length !== null) {
-        const full = dsp.frameCount(audio) / sampleRate;
-        const to = length === null ? full : Math.min(full, from + length);
-        if (to <= from) continue;
-        if (from > 0 || to < full) audio = dsp.trimRange(audio, sampleRate, from, to);
-      }
-
-      const gainDb = segment.gain_db + (trackGain(segment.track_index) ?? 0);
-      // Fades last, after the trim that decides where the clip's edges are.
-      // The lengths are the clip's own plus whatever an overlap on this lane
-      // asks for — see `crossfades`.
-      const fades = crossfades.get(segment.id);
-      const faded =
-        fades && (fades.in > 0 || fades.out > 0)
-          ? dsp.applyFades(audio, sampleRate, fades.in, fades.out)
-          : audio;
-      placed.push({
-        audio: gainDb ? dsp.applyGainDb(faded, gainDb) : faded,
-        startS: segment.start_s,
+      const fades = crossfades.get(segment.id)!;
+      clips.push({
+        path: join(this.config.paths.sounds, filename),
+        start_s: segment.start_s,
+        lane: segment.track_index,
+        trim_start_s: segment.trim_start_s ?? 0,
+        length_s: segment.duration_s ?? null,
+        fade_in_s: fades.in,
+        fade_out_s: fades.out,
+        gain_db: segment.gain_db + (trackGain(segment.track_index) ?? 0),
       });
     }
-    if (placed.length === 0) {
-      throw new ModelError("Nothing to export: every line's audio is missing from disk.");
-    }
+    const plan: MixPlan = {
+      clips,
+      beds: [...beds(this).bedTracks(storyId)], // [audiobooks:export]
+      includeBeds: options.includeBeds ?? true,
+    };
+    return { story, segments, plan };
+  }
 
+  /**
+   * The mixdown behind `exportStory`, returned as a buffer rather than
+   * written: every audible clip at its `start_s` with trims, fades,
+   * crossfades and clip + track gain applied. Timeline second t is frame
+   * t * sampleRate of the result. Null when the story does not exist; throws
+   * when nothing in it has audio. [audiobooks:export]
+   */
+  mixStory(
+    storyId: string,
+    handle?: JobHandle,
+    options: { tracks?: (lane: number) => boolean; includeBeds?: boolean } = {},
+  ) {
+    const planned = this.planMix(storyId, options);
+    if (planned === null) return null;
+    const { story, segments, plan } = planned;
+    handle?.phase("encoding", "Reading clips");
+    let rendered;
+    try {
+      rendered = renderMixLanes(plan, dsp.readWav);
+    } catch (exc) {
+      if (exc instanceof EmptyMixError) throw new ModelError(exc.message);
+      throw exc;
+    }
+    const { sampleRate } = rendered;
     handle?.progress(0.7, "Mixing timeline", "encoding");
-    const mixed = dsp.mixTimeline(placed, sampleRate);
-    return this.writeSound(mixed, sampleRate, {
-      model: "story",
-      prompt: segments.map((s) => (s.speaker ? `${s.speaker}: ${s.text}` : s.text)).join("\n").slice(0, 2000),
-      name: story.title,
-      seed: null,
-      steps: null,
-      cfg: null,
-      projectId: story.project_id ?? null,
-      trim: false,
-      // One gain over the whole mixdown, so the clips keep their levels
-      // relative to each other; only the file's overall loudness moves.
-      normalize: true,
-    });
+    // Each track is laid into its own lane buffer (same rate, length and
+    // channels, all starting at 0) before the lanes are summed and clipped,
+    // which is exactly what `mixTimeline` does in one go. Lanes exist so
+    // audiobook beds can be ducked under narration here.
+    let lanes = rendered.lanes;
+    lanes = beds(this).duckChapterLanes(story.id, lanes, sampleRate, options.includeBeds ?? true); // [audiobooks:soundscape]
+    return { story, segments, audio: sumLanes(lanes), sampleRate };
   }
 
   /**
@@ -1494,6 +1550,57 @@ export class MirliService {
    * synthesising anything) and by single-segment generation, so a stale voice
    * id fails the same way in both.
    */
+  /**
+   * Speak a line as several parts, each in its own voice and model, and join
+   * them into one clip. Audiobooks use it so a character reads only the words
+   * inside quotes and the narrator reads the attribution around them. Each
+   * part is trimmed, then the pause between parts follows the punctuation the
+   * earlier part ends on. [audiobooks:voice]
+   */
+  private async speakParts(
+    segment: StorySegment,
+    parts: SpokenPart[],
+    req: SegmentGenerate,
+    handle?: JobHandle,
+  ): Promise<{ audio: dsp.Audio; sampleRate: number }> {
+    const pieces: { audio: dsp.Audio; text: string }[] = [];
+    let rate = 0;
+    for (const [i, part] of parts.entries()) {
+      const m = this.models.get(part.model);
+      const info = m.describe();
+      if (info.task !== "tts") throw new ModelError(`${info.name} is not a text-to-speech model.`);
+      if (!m.loaded) {
+        handle?.phase("loading", `Loading ${info.name}`);
+        await this.models.load(part.model);
+        handle?.phase("generating", "Speaking");
+      }
+      this.models.touch();
+      const v = this.resolveVoice(part.voice_id, info.family, this.deliveryFor(segment, info.family, req.request_options));
+      const clip = await m.speak(part.text, {
+        voiceRefPath: v.refPath,
+        voiceId: v.builtinId,
+        seed: req.seed ?? null,
+        steps: req.steps ?? null,
+        cfg: req.cfg ?? null,
+        loadOptions: req.load_options,
+        requestOptions: v.requestOptions,
+      });
+      handle?.progress(0.2 + (0.7 * (i + 1)) / parts.length, "Speaking", "generating");
+      if (!rate) rate = clip.sampleRate;
+      const audio = clip.sampleRate === rate ? clip.audio : dsp.resampleAudio(clip.audio, clip.sampleRate, rate);
+      pieces.push({ audio: dsp.trimSilence(audio, rate), text: part.text });
+    }
+    const joined: dsp.Audio[] = [];
+    pieces.forEach((p, i) => {
+      if (i > 0) {
+        const gap = Math.round(partGapS(pieces[i - 1]!.text) * rate);
+        joined.push(Array.from({ length: p.audio.length }, () => new Float32Array(gap)));
+      }
+      joined.push(p.audio);
+    });
+    return { audio: dsp.concatAudio(joined, rate), sampleRate: rate };
+  }
+
   private resolveVoice(
     voiceId: string | null,
     family: string,
@@ -2583,6 +2690,16 @@ export class MirliService {
       const ids = new Set(voice.samples?.map((s) => s.id));
       if (patch.samples.some((s) => !ids.has(s.id))) {
         throw new ModelError("A transcript can only be changed for this voice's own clips.");
+      }
+    }
+    if (patch.model_id !== undefined && (patch.model_id ?? null) !== (voice.model_id ?? null)) {
+      if (voice.kind !== "clone") throw new ModelError(`${voice.name} is one of its model's own voices and can't move to another.`);
+      // Same check as saving a clone: a text-to-speech model that reads from
+      // a reference clip.
+      if (patch.model_id) {
+        const info = this.models.get(patch.model_id).describe();
+        if (info.task !== "tts") throw new ModelError(`${info.name} is not a text-to-speech model.`);
+        if (!info.supports.voice_reference) throw new ModelError(`${info.name} cannot read from a reference clip.`);
       }
     }
     return this.db.updateVoice(voiceId, patch);

@@ -1,20 +1,16 @@
 /**
- * A model's details as a docked artifact panel, the model twin of
- * `SoundDetailPanel`: a third panel of the shell, so the Models list stays
- * live beside it and another row swaps what it shows. On a narrow window it
- * covers the page instead.
+ * A model's details in the docked panel (see detail-dock.tsx), so the Models
+ * list stays live beside it and another row swaps what it shows.
  *
  * It holds everything the row has no room for: the description, the licence
  * and its source, gated-repo steps, failures, specs, the controls the model
  * accepts, the repo, the self-test, and the destructive actions. The two
  * confirmations (non-commercial download, delete weights) are one dialog
  * opened from here, so a row's Download can open the panel straight onto it.
- *
- * Closes on ×, on Escape, and when the route changes.
  */
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useEffect, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ActivityIcon,
@@ -26,7 +22,7 @@ import {
   XIcon,
 } from "lucide-react";
 
-import { usePanelWidth } from "@/hooks/use-panel-width";
+import { DockFrame } from "@/components/dock-frame";
 import { FailureCard } from "@/components/failure-card";
 import { LicenseChip, LicensePanel } from "@/components/license-badge";
 import {
@@ -55,6 +51,7 @@ import { api } from "@/lib/api";
 import type { AudioCppCatalogEntry, Model, ModelSelfTest } from "@/lib/api";
 import { formatHz, formatMb } from "@/lib/format";
 import { repoFile } from "@/lib/marketing-links";
+import { useDock } from "@/lib/dock";
 import { useModelDetailStore } from "@/lib/model-detail-store";
 import {
   useAudioCppCatalog,
@@ -66,31 +63,15 @@ import {
 } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
-export function ModelDetailPanel() {
-  const panel = usePanelWidth({ id: "model-detail", initial: 416, min: 320, max: 720, edge: "left" });
-  const modelId = useModelDetailStore((s) => s.modelId);
-  const close = useModelDetailStore((s) => s.close);
+export function ModelDetailPanel({ id: modelId }: { id: string }) {
+  const close = useDock((s) => s.close);
+  const clearConfirm = useModelDetailStore((s) => s.clearConfirm);
   const { data: models } = useModels();
   const { data: catalog } = useAudioCppCatalog();
 
-  const { pathname } = useLocation();
-  const openedOn = useRef(pathname);
-  useEffect(() => {
-    if (modelId && pathname !== openedOn.current) close();
-    openedOn.current = pathname;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only a route change should close it
-  }, [pathname]);
+  // Closing the panel, or moving to another model, drops what it was asking.
+  useEffect(() => () => clearConfirm(modelId), [modelId, clearConfirm]);
 
-  useEffect(() => {
-    if (!modelId) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !document.querySelector("[role=dialog], [role=menu]")) close();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [modelId, close]);
-
-  if (!modelId) return null;
   const model = models?.find((m) => m.id === modelId);
   const entry = catalog?.find((e) => e.id === modelId);
   if (!model && !entry) return null;
@@ -100,12 +81,7 @@ export function ModelDetailPanel() {
   const kind = KIND_LABEL[modelKind(model ?? entry!)];
 
   return (
-    <aside
-      aria-label={`Details for ${name}`}
-      className="bg-background ring-border animate-in fade-in-0 slide-in-from-right-8 fixed right-0 left-(--rail-w,0px) top-0 bottom-[calc(var(--dock-h,0px)+var(--tabbar-h,0px))] z-30 flex flex-col duration-(--duration-base) expanded:static expanded:z-auto expanded:my-2 expanded:mr-2 expanded:relative expanded:h-[calc(100svh-1rem-var(--dock-h,0px))] expanded:w-(--panel-w) expanded:shrink-0 expanded:rounded-xl expanded:ring-1"
-      style={panel.style}
-    >
-      {panel.handle}
+    <DockFrame label={`Details for ${name}`} widthId="model-detail" itemKey={`model:${modelId}`}>
       <div className="border-border flex items-start gap-3 border-b px-4 pt-4 pb-3">
         <ModelMark vendor={vendor} />
         <div className="grid min-w-0 flex-1 gap-1">
@@ -128,7 +104,7 @@ export function ModelDetailPanel() {
           <CatalogBody entry={entry!} catalog={catalog ?? []} />
         )}
       </div>
-    </aside>
+    </DockFrame>
   );
 }
 
@@ -195,9 +171,8 @@ function ModelBody({ model, entry }: { model: Model; entry?: AudioCppCatalogEntr
   const setEnabled = useSetAudioCppEnabled();
   const hfTokenSet = settings?.hf_token_set ?? false;
   const { remove, dismissFailure } = useModelAction();
-  const confirm = useModelDetailStore((s) => s.confirm);
+  const confirm = useModelDetailStore((s) => (s.confirmFor === model.id ? s.confirm : null));
   const setConfirm = useModelDetailStore((s) => s.setConfirm);
-  const close = useModelDetailStore((s) => s.close);
   const lastFailure = useModelDetailStore((s) => s.failures[model.id] ?? null);
   const setFailure = useModelDetailStore((s) => s.setFailure);
   const { job, downloading, progressPct, busyLabel } = useModelJob(model);
@@ -334,7 +309,7 @@ function ModelBody({ model, entry }: { model: Model; entry?: AudioCppCatalogEntr
               </li>
               <li>
                 {hfTokenSet ? "Access token added in " : "Add a read access token in "}
-                <Link to="/settings" className="font-medium underline underline-offset-4" onClick={close}>
+                <Link to="/settings" className="font-medium underline underline-offset-4">
                   Settings
                 </Link>
                 {hfTokenSet ? ": done." : "."}
@@ -432,7 +407,7 @@ function ModelBody({ model, entry }: { model: Model; entry?: AudioCppCatalogEntr
       {(can.remove || removable) && (
         <div className="border-border flex flex-wrap gap-2 border-t pt-4">
           {can.remove && (
-            <Button variant="destructive" size="sm" onClick={() => setConfirm("delete")} disabled={remove.isPending}>
+            <Button variant="destructive" size="sm" onClick={() => useModelDetailStore.setState({ confirm: "delete", confirmFor: model.id })} disabled={remove.isPending}>
               <Trash2Icon />
               Delete weights
             </Button>

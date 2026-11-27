@@ -69,14 +69,6 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -140,6 +132,7 @@ import {
   useStory,
   useTracks,
   useDeleteTrack,
+  useInsertTrack,
   useUpdateTrack,
   useUpdateSegment,
   useVoices,
@@ -163,26 +156,21 @@ import { usePlayerStore } from "@/lib/player-store";
 import type {
   ClipMidi,
   Job,
-  SegmentCreate,
   SegmentPatch,
   Sound,
   StemSelection,
   StoryBuilder,
   StorySegment,
-  TrackPatch,
   Unsubscribe,
 } from "@/lib/api";
 import { StemPickerDialog } from "@/components/stem-picker";
+import { restorable, timelineEdits } from "@/lib/timeline-edits";
 import {
   DEFAULT_REPAINT,
   RepaintDialog,
   type RepaintOptions,
 } from "@/components/repaint-controls";
 
-/** The mixer half of a track patch — what the strip on a lane edits and its
- *  undo history records. The device chain has its own path through
- *  `useTrackDevices`, which paces a dial sweep into a few writes. */
-type MixPatch = Omit<TrackPatch, "devices">;
 
 /* --------------------------------------------------------------------- page */
 
@@ -196,7 +184,6 @@ export function StudioPage({ builder }: { builder: StoryBuilder }) {
 }
 
 
-type ClipMove = { id: string; patch: { start_s: number; track_index: number } };
 
 /** Everything needed to put a deleted clip back as it was — not just its
  *  words and place, but its trim, fades, gain and delivery. */
@@ -215,27 +202,6 @@ function newTakeId(): string {
   return `take-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function restorable(seg: StorySegment): SegmentCreate {
-  return {
-    text: seg.text,
-    speaker: seg.speaker,
-    voice_id: seg.voice_id,
-    language: seg.language,
-    kind: seg.kind,
-    sound_id: seg.sound_id,
-    duration_s: seg.duration_s,
-    track_index: seg.track_index,
-    position: seg.position,
-    start_s: seg.start_s,
-    trim_start_s: seg.trim_start_s,
-    fade_in_s: seg.fade_in_s,
-    fade_out_s: seg.fade_out_s,
-    gain_db: seg.gain_db,
-    muted: seg.muted,
-    request_options: seg.request_options,
-    midi: seg.midi ?? null,
-  };
-}
 
 /* ------------------------------------------------------------------- editor */
 
@@ -498,10 +464,7 @@ export function StudioEditor({
   const deleteSegment = useDeleteSegment(storyId);
   const updateTrack = useUpdateTrack(storyId);
   const deleteTrack = useDeleteTrack(storyId);
-  const [pendingTrackRemoval, setPendingTrackRemoval] = useState<{
-    trackIndex: number;
-    clips: number;
-  } | null>(null);
+  const insertTrack = useInsertTrack(storyId);
   const splitSegment = useSplitSegment(storyId);
   const separateSound = useSeparateSound();
   const repaintSound = useRepaintSound();
@@ -527,10 +490,6 @@ export function StudioEditor({
    *  chains move with their lanes when one is removed; the server renumbers
    *  the track rows itself. */
   const { devices, setLane, getLane } = useTrackDevices(storyId);
-  const removeTrack = (trackIndex: number): void => {
-    // The mutation's own toast says what went wrong.
-    deleteTrack.mutateAsync(trackIndex).catch(() => undefined);
-  };
   const lanes = useMemo(
     () => lanesFor(segments.data ?? [], tracks.data ?? []),
     [segments.data, tracks.data],
@@ -1748,269 +1707,21 @@ export function StudioEditor({
   // when it runs, because an undone delete or add brings a clip back under a
   // new id.
 
-  /**
-   * Put clips on the timeline, as one edit.
-   *
-   * One at a time and in order rather than all at once: the server appends
-   * each to the script as it arrives, and a batch fired together would be
-   * read in whatever order the requests happened to land. Undo deletes them;
-   * redo puts the same clips back — same sound, trim and place — under new
-   * ids, which every older step is told about.
-   */
-  const addClips = async (label: string, reqs: SegmentCreate[]): Promise<StorySegment[]> => {
-    const created: StorySegment[] = [];
-    for (const req of reqs) {
-      try {
-        created.push(await createSegment.mutateAsync(req));
-      } catch {
-        // the mutation's own toast says what went wrong
-      }
-    }
-    if (created.length > 0) {
-      history.push({
-        label: created.length > 1 ? `${label} ${created.length} clips` : label,
-        undo: () => created.forEach((clip) => deleteSegment.mutate(history.resolve(clip.id))),
-        redo: () => {
-          void (async () => {
-            for (const clip of created) {
-              try {
-                const again = await createSegment.mutateAsync(restorable(clip));
-                history.remap(history.resolve(clip.id), again.id);
-              } catch {
-                // the mutation's own toast says what went wrong
-              }
-            }
-          })();
-        },
-      });
-    }
-    return created;
-  };
-  const addClip = (label: string, req: SegmentCreate): void => void addClips(label, [req]);
-
-  /**
-   * Change some of a clip's fields — a fade, its gain, a trim, mute — as one
-   * edit. What they were is read off the clip as it stands, so the inverse is
-   * exactly the fields this touched and nothing an edit since has changed.
-   */
-  const editClip = (label: string, id: string, patch: SegmentPatch): void => {
-    const before = lines.find((l) => l.id === id);
-    updateSegment.mutateAsync({ id, patch }).then(
-      () => {
-        if (!before) return;
-        const fields = Object.keys(patch) as (keyof SegmentPatch)[];
-        // A cleared length reads back as null, which a patch cannot send;
-        // leaving it out keeps whatever the clip has instead.
-        const previous = Object.fromEntries(
-          fields.map((field) => [field, before[field] ?? undefined]),
-        ) as SegmentPatch;
-        if (fields.every((field) => previous[field] === patch[field])) return;
-        const write = (to: SegmentPatch) => () =>
-          updateSegment.mutate({ id: history.resolve(id), patch: to });
-        history.push({ label, undo: write(previous), redo: write(patch) });
-      },
-      () => undefined, // the mutation's own toast says what went wrong
-    );
-  };
-
-  /**
-   * A track's name, mute, solo or volume, as one edit. Lanes are numbers
-   * rather than rows the server hands out, so nothing here needs resolving.
-   * A volume drag is one step however many writes it took — see `merge`.
-   */
-  const editTrack = (trackIndex: number, patch: MixPatch): void => {
-    const row = tracks.data?.find((t) => t.track_index === trackIndex);
-    // A lane with no row is at its defaults.
-    const was: Required<MixPatch> = {
-      name: row?.name ?? null,
-      muted: row?.muted ?? false,
-      soloed: row?.soloed ?? false,
-      gain_db: row?.gain_db ?? 0,
-    };
-    const fields = Object.keys(patch) as (keyof MixPatch)[];
-    const previous = Object.fromEntries(fields.map((field) => [field, was[field]])) as MixPatch;
-    const label =
-      patch.name !== undefined
-        ? "rename track"
-        : patch.muted !== undefined
-          ? patch.muted
-            ? "mute track"
-            : "unmute track"
-          : patch.soloed !== undefined
-            ? patch.soloed
-              ? "solo track"
-              : "unsolo track"
-            : "track volume";
-    updateTrack.mutateAsync({ trackIndex, patch }).then(
-      () => {
-        if (fields.every((field) => previous[field] === patch[field])) return;
-        const write = (to: MixPatch) => () => updateTrack.mutate({ trackIndex, patch: to });
-        history.push({
-          label,
-          undo: write(previous),
-          redo: write(patch),
-          ...(fields.length === 1 && patch.gain_db !== undefined
-            ? { merge: `track-gain-${trackIndex}` }
-            : {}),
-        });
-      },
-      () => undefined, // the mutation's own toast says what went wrong
-    );
-  };
-
-  /**
-   * Commit a drag — one clip or a whole selection, as a single edit.
-   *
-   * Taking the list rather than being called once per clip is what makes a
-   * group drag one thing rather than several: a call per clip is an undo
-   * entry per clip, so undoing a five-clip drag put them back one at a time,
-   * four of them still moved and the arrangement in a state nobody had ever
-   * chosen.
-   *
-   * The script follows on its own. The order things happen in *is* the order
-   * they are read in, so the server re-slots a line whenever its clip moves —
-   * and the segment cache does the same in the frame the clip lands — which
-   * is also what puts the line back when the move is undone.
-   */
-  const move = (moves: ClipMove[]): void => {
-    if (moves.length === 0) return;
-
-    const previous = moves.flatMap(({ id }) => {
-      const before = lines.find((l) => l.id === id);
-      return before
-        ? [{ id, patch: { start_s: before.start_s, track_index: before.track_index } }]
-        : [];
+  // The clip edits themselves live in `lib/timeline-edits.ts`, shared with
+  // the audiobook editor's docked timeline.
+  const { addClips, addClip, editClip, editTrack, move, removeLines, removeLine, removeTrack, duplicate, split } =
+    timelineEdits({
+      lines,
+      tracks: tracks.data,
+      history,
+      createSegment,
+      updateSegment,
+      deleteSegment,
+      splitSegment,
+      updateTrack,
+      deleteTrack,
+      insertTrack,
     });
-    void applyMoves(moves).then((landed) => {
-      // Only the clips the server actually moved: undoing one that bounced
-      // would put it somewhere it already is.
-      const undoable = previous.filter((m) => landed.has(m.id));
-      if (undoable.length === 0) return;
-      const redoable = moves.filter((m) => landed.has(m.id));
-      const resolved = (list: ClipMove[]) => list.map((m) => ({ ...m, id: history.resolve(m.id) }));
-      history.push({
-        label: undoable.length > 1 ? `move ${undoable.length} clips` : "move",
-        undo: () => void applyMoves(resolved(undoable)),
-        redo: () => void applyMoves(resolved(redoable)),
-      });
-    });
-  };
-
-  /** The ids the server took. */
-  const applyMoves = async (moves: ClipMove[]): Promise<Set<string>> => {
-    const results = await Promise.allSettled(moves.map((m) => updateSegment.mutateAsync(m)));
-    return new Set(moves.filter((_, i) => results[i]?.status === "fulfilled").map((m) => m.id));
-  };
-
-  /**
-   * Delete a line, remembering enough to put it back.
-   *
-   * Restoring creates a new row rather than resurrecting the old one — ids are
-   * the server's to hand out — so undo restores the *content* and its place,
-   * which is what anyone means by it. The recreated id is captured so a
-   * subsequent redo knows what to delete.
-   */
-  const removeLines = (ids: string[]): void => {
-    // In reading order, so putting them back one by one at their old
-    // positions rebuilds the order they were in.
-    const doomed = ids
-      .map((id) => lines.find((l) => l.id === id))
-      .filter((l): l is StorySegment => l !== undefined)
-      .sort((a, b) => a.position - b.position);
-    void Promise.allSettled(ids.map((id) => deleteSegment.mutateAsync(id))).then((results) => {
-      const deleted = new Set(ids.filter((_, i) => results[i]?.status === "fulfilled"));
-      const gone = doomed.filter((segment) => deleted.has(segment.id));
-      if (gone.length === 0) return;
-
-      // One step for the whole selection: deleting five clips and having to
-      // press undo five times to get them back is five chances to stop half way.
-      history.push({
-        label: gone.length > 1 ? `delete ${gone.length} clips` : "delete",
-        undo: () => {
-          void (async () => {
-            for (const segment of gone) {
-              try {
-                const created = await createSegment.mutateAsync(restorable(segment));
-                history.remap(history.resolve(segment.id), created.id);
-              } catch {
-                // the mutation's own toast says what went wrong
-              }
-            }
-          })();
-        },
-        redo: () => gone.forEach((segment) => deleteSegment.mutate(history.resolve(segment.id))),
-      });
-    });
-  };
-  const removeLine = (id: string): void => removeLines([id]);
-
-  const duplicate = (originals: StorySegment[]): void => {
-    // Land each copy right after its original in both views, which is where
-    // you meant to put it if you are duplicating at all.
-    // The whole clip, audio and all: a duplicate that dropped the sound gave
-    // you an empty "line" where a copy of the music should have been.
-    void addClips(
-      "duplicate",
-      originals.map((segment) => ({
-        ...restorable(segment),
-        position: segment.position + 1,
-        start_s: segment.start_s + (segment.duration_s ?? 0),
-      })),
-    );
-  };
-
-  /**
-   * Cut clips in two at a point inside each, as one edit.
-   *
-   * The server renders both halves as new sounds and keeps the first half on
-   * the original clip. Undo is the reverse without re-rendering anything: the
-   * tail goes and the head is pointed back at the whole take, trimmed and
-   * faded as it was. Redo reuses the
-   * halves the first cut made rather than cutting again, which would leave
-   * another pair of derived sounds in the library every time.
-   */
-  const split = (cuts: { id: string; atS: number }[]): void => {
-    if (cuts.length === 0) return;
-    void Promise.allSettled(
-      cuts.map(async ({ id, atS }) => {
-        const before = lines.find((l) => l.id === id);
-        const [head, tail] = await splitSegment.mutateAsync({ id, atS });
-        return before && head && tail ? { before, head, tail } : null;
-      }),
-    ).then((results) => {
-      const done = results.flatMap((r) => (r.status === "fulfilled" && r.value ? [r.value] : []));
-      if (done.length === 0) return;
-      // Which take the clip plays, how much of it, and from where. The split
-      // moves the trim and the fade out too: the head's new take starts at
-      // the old in-point, and the fade out went to the tail.
-      const point = (id: string, at: StorySegment): void =>
-        updateSegment.mutate({
-          id: history.resolve(id),
-          patch: {
-            sound_id: at.sound_id ?? null,
-            duration_s: at.duration_s ?? undefined,
-            trim_start_s: at.trim_start_s,
-            fade_out_s: at.fade_out_s,
-          },
-        });
-      history.push({
-        label: done.length > 1 ? `split ${done.length} clips` : "split",
-        undo: () =>
-          done.forEach(({ before, tail }) => {
-            deleteSegment.mutate(history.resolve(tail.id));
-            point(before.id, before);
-          }),
-        redo: () =>
-          done.forEach(({ before, head, tail }) => {
-            point(before.id, head);
-            createSegment.mutateAsync(restorable(tail)).then(
-              (again) => history.remap(history.resolve(tail.id), again.id),
-              () => undefined, // the mutation's own toast says what went wrong
-            );
-          }),
-      });
-    });
-  };
 
   /**
    * Split a clip into its stems, in place.
@@ -2440,12 +2151,9 @@ export function StudioEditor({
             // Creating the row *is* creating the track: a lane with defaults
             // and no clips is exactly an empty track.
             onAddTrack={(trackIndex) => updateTrack.mutate({ trackIndex, patch: {} })}
-            onRemoveTrack={(trackIndex, clips) => {
-              // Only worth a confirm when there is something to lose. An empty
-              // lane you just made should not demand a dialog to unmake.
-              if (clips > 0) setPendingTrackRemoval({ trackIndex, clips });
-              else removeTrack(trackIndex);
-            }}
+            // No confirm: the audio stays in the library and undo puts the
+            // lane back with its clips (`timelineEdits.removeTrack`).
+            onRemoveTrack={(trackIndex) => removeTrack(trackIndex)}
             onEditSound={(kind, sound) => musicSession.startEdit(kind, sound)}
             canExtend={canExtendSound}
             canCover={canCoverSound}
@@ -3206,45 +2914,6 @@ export function StudioEditor({
         onOpenChange={setPaletteOpen}
         commands={panelCommands}
       />
-
-      {/* Removing a lane takes its clips with it — Audacity's rule, and the
-          honest one: a lane is where those clips live, not a folder you empty
-          first. Worth a confirm precisely because undo does not cover it. */}
-      <Dialog
-        open={pendingTrackRemoval !== null}
-        onOpenChange={(open) => !open && setPendingTrackRemoval(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Remove this track?</DialogTitle>
-            <DialogDescription>
-              {pendingTrackRemoval && (
-                <>
-                  Track {pendingTrackRemoval.trackIndex} and the{" "}
-                  {pendingTrackRemoval.clips} clip
-                  {pendingTrackRemoval.clips === 1 ? "" : "s"} on it will be removed from
-                  this story. The audio stays in your library. This cannot be undone.
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPendingTrackRemoval(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (!pendingTrackRemoval) return;
-                removeTrack(pendingTrackRemoval.trackIndex);
-                setPendingTrackRemoval(null);
-              }}
-            >
-              Remove track
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <StemPickerDialog
         open={stemTarget !== null}

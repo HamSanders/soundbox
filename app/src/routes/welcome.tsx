@@ -225,7 +225,7 @@ function Hero() {
           </h1>
 
           <p className="text-muted-foreground mx-auto mt-5 max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
-            Sound effects, music and voices.
+            Sound effects, music, voices and audiobooks.
           </p>
 
           <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row sm:items-start">
@@ -287,7 +287,7 @@ function Hero() {
 /* ------------------------------------------------------------ what it makes */
 
 /**
- * The three things the app makes, one sentence each, each handing off to the
+ * The four things the app makes, one sentence each, each handing off to the
  * page that covers it in full. The hero already plays one of each, so these
  * cards carry no players of their own; the headings are the plain phrases
  * people search for.
@@ -311,13 +311,19 @@ const MAKES: { title: string; body: string; href: string; cta: string }[] = [
     href: "/voices",
     cta: "How voices work",
   },
+  {
+    title: "Audiobooks",
+    body: "Import a manuscript, cast a voice per character, add music under chapters, and export MP3, M4B, FLAC or WAV.",
+    href: "/audiobooks",
+    cta: "How audiobooks work",
+  },
 ];
 
 function WhatItMakes() {
   return (
     <Section id="what" labelledBy="what-heading">
-      <SectionHead id="what-heading" eyebrow="What it makes" title="AI sound effects, music and voices" />
-      <ul className="border-border mt-8 grid border-t border-l md:grid-cols-3">
+      <SectionHead id="what-heading" eyebrow="What it makes" title="AI sound effects, music, voices and audiobooks" />
+      <ul className="border-border mt-8 grid border-t border-l sm:grid-cols-2 lg:grid-cols-4">
         {MAKES.map((m) => (
           <li key={m.title} className="border-border flex flex-col gap-3 border-r border-b p-5">
             <h3 className="text-base font-semibold tracking-tight">{m.title}</h3>
@@ -353,6 +359,51 @@ function Studio() {
         <Button variant="outline" asChild>
           <Link to="/studio">See the studio</Link>
         </Button>
+      </div>
+    </Section>
+  );
+}
+
+/* -------------------------------------------------------------- audiobooks */
+
+/**
+ * The audiobook editor, captured rather than drawn, and what it does in one
+ * list. Everything else about it lives on /audiobooks.
+ */
+const BOOK_POINTS = [
+  "Import EPUB, PDF, Word, text or a web page, or start from one of 42 bundled public-domain classics.",
+  "Give the narrator and each character a voice, and fix names with a pronunciation dictionary.",
+  "Lay music and ambience under a chapter, ducked under the narration.",
+  "Check each chapter against ACX's published numbers, then export MP3, M4B, FLAC or WAV.",
+  "Listen with the text highlighted as it is read, or ask the editor's assistant to make changes you accept or undo.",
+];
+
+function Audiobooks() {
+  return (
+    <Section id="audiobooks" labelledBy="audiobooks-heading">
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] lg:items-center lg:gap-10">
+        <div>
+          <SectionHead id="audiobooks-heading" eyebrow="New · Audiobooks" title="Turn a manuscript into an audiobook" />
+          <ul className="text-muted-foreground mt-5 list-disc space-y-2 pl-5 text-sm leading-relaxed">
+            {BOOK_POINTS.map((point) => (
+              <li key={point}>{point}</li>
+            ))}
+          </ul>
+          <div className="mt-6">
+            <Button variant="outline" asChild>
+              <Link to="/audiobooks">See audiobooks</Link>
+            </Button>
+          </div>
+        </div>
+        <img
+          src={assetUrl("/product/app-audiobook-cast.webp")}
+          alt="The Mirli audiobook editor: a chapter list, the chapter's paragraphs each tagged with who reads it and whether it is voiced, the cast with a voice for the narrator and each character, and the chapter's timeline."
+          width={1440}
+          height={900}
+          loading="lazy"
+          decoding="async"
+          className="ring-border/70 aspect-[16/10] w-full min-w-0 rounded-xl object-cover object-top shadow-lg ring-1"
+        />
       </div>
     </Section>
   );
@@ -685,6 +736,7 @@ export function WelcomePage() {
 
         <WhatItMakes />
         <Studio />
+        <Audiobooks />
         <ForAgents />
         <Compare />
         <Questions />

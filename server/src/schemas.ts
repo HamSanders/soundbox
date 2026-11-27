@@ -441,6 +441,9 @@ export interface Sound {
    *  (no one avatar is honest) and for everything that isn't speech. Lets a
    *  list show the voice's avatar where a music track would show its cover. */
   voice_id?: string | null;
+  /** When it went to the trash, or null. Lists leave trashed sounds out; a
+   *  sound fetched by id still says so, since a timeline can still use it. */
+  deleted_at?: string | null;
 }
 
 export interface McpCall {
@@ -873,6 +876,10 @@ export type VoiceExport = z.infer<typeof voiceExportSchema>;
 export const voicePatchSchema = z.object({
   name: z.string().min(1).max(120).optional(),
   notes: z.string().max(2000).nullish(),
+  /** The model a clone reads on; null unpins it (the first ready model then
+   *  reads it, as for a clone saved before voices carried one). A built-in
+   *  voice belongs to its model and can't be moved. */
+  model_id: z.string().min(1).max(200).nullish(),
   /** Update transcripts by sample id, without changing the audio or its order. */
   samples: z.array(z.object({ id: z.string(), reference_text: referenceTextSchema }))
     .max(5).optional(),
@@ -1080,6 +1087,7 @@ export const segmentGenerateSchema = z.object({
    * which is what makes re-reading a story reproduce the delivery you set.
    */
   request_options: requestOptionsSchema.optional(),
+  text: z.string().min(1).max(20000).optional(), // [audiobooks:voice] speak this instead of the line's text (pronunciation applied, or a selection)
 });
 
 export type SegmentGenerate = z.infer<typeof segmentGenerateSchema>;

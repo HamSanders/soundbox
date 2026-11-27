@@ -28,6 +28,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ASSETS = [
   "models/audiocpp_models_catalog.json",
   "models/audiocpp_model_params.json",
+  "audiobook/classics/classics.json",
   "calls/builtin/santa.jpg",
 ];
 

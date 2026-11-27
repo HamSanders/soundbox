@@ -11,6 +11,7 @@ import * as install from "../../../docs/INSTALL.md?doc";
 import * as architecture from "../../../docs/ARCHITECTURE.md?doc";
 import * as generating from "../../../docs/GENERATING.md?doc";
 import * as studio from "../../../docs/STUDIO.md?doc";
+import * as audiobooks from "../../../docs/AUDIOBOOKS.md?doc"; // [audiobooks:soundscape]
 import * as library from "../../../docs/LIBRARY.md?doc";
 import * as artwork from "../../../docs/ARTWORK.md?doc";
 import * as endpoints from "../../../docs/ENDPOINTS.md?doc";
@@ -64,12 +65,21 @@ export const DOC_PAGES: DocPage[] = [
       "Arranging: lanes and clips, trimming, fades and crossfades, the mixer, the device rack, and the export.",
     ...studio,
   },
+  // [audiobooks:soundscape]
+  {
+    slug: "audiobooks",
+    label: "Audiobooks",
+    section: "Using Mirli",
+    blurb:
+      "From manuscript to finished audiobook: import, cast, pronounce, render, beds, master, export and listen.",
+    ...audiobooks,
+  },
   {
     slug: "library",
     label: "Library & projects",
     section: "Using Mirli",
     blurb:
-      "Where everything you make goes, how to find it again, and how editing works without destroying the original.",
+      "Where everything you make goes, how to find it again, the details panel, how editing works without destroying the original, and the Trash.",
     ...library,
   },
   {

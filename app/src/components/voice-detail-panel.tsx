@@ -1,39 +1,48 @@
 /**
- * A voice's details as a docked artifact panel, the voice twin of
- * `SoundDetailPanel`: a third panel of the shell, in the same row as the
- * sidebar and the page, so the page narrows to make room and the voice list
- * stays live beside it. On a narrow window it covers the page instead.
+ * A voice's details in the docked panel (see detail-dock.tsx): who it is, a
+ * test read, the model a clone reads on, its clips and their transcripts,
+ * and what it has said.
  *
- * It holds who the voice is, its reference clip, a test read and what it has
- * said lately. Edit, Clips and the ··· menu open the Voice Lab's own dialogs,
- * through the actions the Lab registers in `voice-detail-store`.
+ * Everything that used to open a dialog on top of the panel (Edit, Clips,
+ * History) is a section of it now: a modal over an inspector hides the
+ * thing being edited. The name, notes and transcripts are edited where
+ * they're shown; the model saves as soon as it's picked.
  *
- * Closes on ×, on Escape, and when the route changes.
+ * A menu item that names a part ("Clips", "Rename") opens the panel there,
+ * through the dock's intent.
  */
 
-import { usePanelWidth } from "@/hooks/use-panel-width";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link, useLocation } from "react-router-dom";
-import { AudioLinesIcon, MicIcon, PencilIcon, XIcon } from "lucide-react";
+import { Link } from "react-router-dom";
+import { MicIcon, XIcon } from "lucide-react";
 
+import { DockFrame } from "@/components/dock-frame";
 import { Button } from "@/components/ui/button";
+import { InlineEdit } from "@/components/ui/inline-edit";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { JobResult, isReady } from "@/components/voice-shared";
 import { VoiceAvatar } from "@/components/voice-avatar";
-import { clipsSummary } from "@/components/voice-clips";
+import { VoiceClipsSection, clipsSummary } from "@/components/voice-clips";
+import { VoiceMenu } from "@/components/voice-menu";
 import { WaveformPlayer } from "@/components/waveform-player";
 import { useJobStream } from "@/hooks/use-job-stream";
-import { useModels, useSounds, useSpeak, useVoices, qk } from "@/lib/queries";
-import { useDetailStore } from "@/lib/detail-store";
-import { useVoiceDetailStore } from "@/lib/voice-detail-store";
+import { useModels, useSounds, useSpeak, useUpdateVoice, useVoices, qk } from "@/lib/queries";
+import { useDock } from "@/lib/dock";
 import { useVoiceLabPrefs } from "@/lib/voice-lab-prefs";
 import type { Model, Voice } from "@/lib/api";
 import { voiceReferenceError } from "@/lib/voice-reference";
 
-/** The history dialog keeps 50; the panel shows what was said lately. */
+/** What the panel shows of a voice's reads, and what "Show all" raises it to.
+ *  A page of 50 rather than paging: the Library has the rest. */
 const RECENT_READS = 5;
+const ALL_READS = 50;
+
+/** The Select's value for a clone with no model pinned. */
+const UNPINNED = "__unpinned__";
 
 /**
  * The test read, inline under whichever card is being auditioned.
@@ -143,163 +152,234 @@ function TryItPanel({
 }
 
 
-/**
- * A voice's details in the right-hand panel: who it is, its reference clip,
- * a test read, and what it has said lately. Opened by clicking a row or a
- * shelf card, the way a track row opens `SoundDetailPanel`.
- */
+/** A titled part of the panel that a menu item can open at. */
+function Part({
+  title,
+  sectionRef,
+  children,
+}: {
+  title: string;
+  sectionRef?: RefObject<HTMLElement | null>;
+  children: ReactNode;
+}) {
+  return (
+    <section ref={sectionRef} tabIndex={sectionRef ? -1 : undefined} className="grid min-w-0 scroll-mt-4 grid-cols-1 gap-2 outline-none">
+      <h3 className="label-caps text-muted-foreground">{title}</h3>
+      {children}
+    </section>
+  );
+}
+
+/** The model a clone reads on, everywhere. Saves when picked. */
+function ModelPicker({ voice, models }: { voice: Voice; models: Model[] }) {
+  const update = useUpdateVoice();
+  // Only models that clone from a clip can read it.
+  const cloning = models.filter((m) => m.supports.voice_reference);
+  const pinned = voice.model_id ?? null;
+  const id = `voice-model-${voice.id}`;
+  return (
+    <div className="grid gap-1.5">
+      <Label htmlFor={id} className="sr-only">
+        Reads on
+      </Label>
+      <Select
+        value={pinned ?? UNPINNED}
+        disabled={update.isPending}
+        onValueChange={(v) => update.mutate({ id: voice.id, patch: { model_id: v === UNPINNED ? null : v } })}
+      >
+        <SelectTrigger id={id} className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={UNPINNED}>Not set: the first ready model</SelectItem>
+          {pinned && !cloning.some((m) => m.id === pinned) && (
+            <SelectItem value={pinned}>{pinned} (not installed)</SelectItem>
+          )}
+          {cloning.map((m) => (
+            <SelectItem key={m.id} value={m.id}>
+              {m.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <p className="text-muted-foreground text-xs">
+        Reads this voice everywhere: scripts, stories and audiobooks. Only models that clone
+        from a clip are listed.
+      </p>
+    </div>
+  );
+}
+
 function VoiceDetails({
   voice,
   modelName,
   models,
   line,
   onLineChange,
-  menu,
-  onEdit,
-  onClips,
-  onClose,
 }: {
   voice: Voice;
   modelName: string | null;
   models: Model[];
   line: string;
   onLineChange: (v: string) => void;
-  menu: ReactNode;
-  onEdit?: () => void;
-  onClips?: () => void;
-  onClose: () => void;
 }) {
-  const reads = useSounds({ voice_id: voice.id, limit: RECENT_READS });
+  const close = useDock((s) => s.close);
+  const intent = useDock((s) => s.intent);
+  const setIntent = useDock((s) => s.setIntent);
+  const [showAll, setShowAll] = useState(false);
+  const reads = useSounds({ voice_id: voice.id, limit: showAll ? ALL_READS : RECENT_READS });
   const items = reads.data?.items ?? [];
   const total = reads.data?.total ?? 0;
-  const clips = clipsSummary(voice);
+  const update = useUpdateVoice();
+  const clone = voice.kind === "clone";
+
+  const modelRef = useRef<HTMLElement>(null);
+  const clipsRef = useRef<HTMLElement>(null);
+  const historyRef = useRef<HTMLElement>(null);
+
+  // Opened at a part ("Clips" in a menu): scroll to it and put focus there,
+  // once. Rename is the name field's own business, below.
+  useEffect(() => {
+    if (!intent || intent === "rename") return;
+    if (intent === "history") setShowAll(true);
+    const el = { model: modelRef, clips: clipsRef, history: historyRef }[intent].current;
+    if (el) {
+      el.focus({ preventScroll: true });
+      el.scrollIntoView({ block: "start", behavior: "smooth" });
+    }
+    setIntent(null);
+  }, [intent, setIntent]);
+
   return (
     <>
       <div className="border-border flex items-center gap-3 border-b px-4 pt-4 pb-3">
         <VoiceAvatar voice={voice} className="ring-border size-14 rounded-md ring-1 ring-inset" />
         <div className="grid min-w-0 flex-1 gap-1">
-          <h2 className="font-display truncate text-2xl leading-none font-extrabold tracking-[0.01em] uppercase">
-            {voice.name}
-          </h2>
+          {/* The name is how the voice appears in the script editor. */}
+          <InlineEdit
+            as="h2"
+            value={voice.name}
+            label="Voice name"
+            editing={intent === "rename"}
+            onEditingChange={(editing) => setIntent(editing ? "rename" : null)}
+            onCommit={(name) => update.mutateAsync({ id: voice.id, patch: { name } })}
+            className="font-display min-w-0 truncate text-2xl leading-none font-extrabold tracking-[0.01em] uppercase"
+          />
           <p className="readout text-muted-foreground truncate">
             {[
-              voice.kind === "clone" ? "Clone" : `Built-in ${voice.voice_id ?? ""}`.trim(),
+              clone ? "Clone" : `Built-in ${voice.voice_id ?? ""}`.trim(),
               modelName ?? voice.model_id ?? "any model",
               `${voice.read_count ?? 0} read${voice.read_count === 1 ? "" : "s"}`,
             ].join(" · ")}
           </p>
         </div>
-        <Button variant="ghost" size="icon-sm" className="ml-auto self-start" aria-label="Close details" onClick={onClose}>
-          <XIcon />
-        </Button>
+        <div className="flex items-center gap-0.5 self-start">
+          <VoiceMenu voice={voice} inPanel />
+          <Button variant="ghost" size="icon-sm" aria-label="Close details" onClick={close}>
+            <XIcon />
+          </Button>
+        </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
-        <div className="flex flex-wrap items-center gap-1.5">
-          {onEdit && (
-            <Button variant="outline" size="sm" onClick={onEdit}>
-              <PencilIcon />
-              Edit
-            </Button>
-          )}
-          {onClips && voice.kind === "clone" && (
-            <Button variant="outline" size="sm" onClick={onClips}>
-              <AudioLinesIcon />
-              Clips
-            </Button>
-          )}
-          <span className="ml-auto">{menu}</span>
-        </div>
+        {/* Notes are for you: accent, tone, where the clip came from. The
+            avatar is drawn from them too. */}
+        <InlineEdit
+          as="div"
+          multiline
+          allowEmpty
+          value={voice.notes ?? ""}
+          label="Notes"
+          placeholder="Add notes: accent, tone, where the clip came from"
+          onCommit={(notes) => update.mutateAsync({ id: voice.id, patch: { notes: notes || null } })}
+          className="text-sm"
+        />
 
-        {voice.notes && <p className="text-sm">{voice.notes}</p>}
+        <Part title="Try it">
+          <TryItPanel voice={voice} models={models} line={line} onLineChange={onLineChange} />
+        </Part>
 
-        {voice.kind === "clone" && voice.reference_file && (
-          <section className="grid gap-2">
-            <h3 className="label-caps text-muted-foreground">Reference{clips ? ` · ${clips}` : ""}</h3>
-            <audio controls preload="none" src={voice.reference_file} className="h-8 w-full" />
-          </section>
+        {clone && (
+          <Part title="Model" sectionRef={modelRef}>
+            <ModelPicker voice={voice} models={models} />
+          </Part>
         )}
 
-        <section className="grid gap-2">
-          <h3 className="label-caps text-muted-foreground">Try it</h3>
-          <TryItPanel voice={voice} models={models} line={line} onLineChange={onLineChange} />
-        </section>
+        {clone && (
+          <Part title={`Clips${clipsSummary(voice) ? ` · ${clipsSummary(voice)}` : ""}`} sectionRef={clipsRef}>
+            <VoiceClipsSection voice={voice} />
+          </Part>
+        )}
 
-        <section className="grid gap-2">
-          <h3 className="label-caps text-muted-foreground">
-            Recent reads{total > items.length ? ` · ${items.length} of ${total}` : ""}
-          </h3>
+        <Part
+          title={`Reads${total > items.length ? ` · latest ${items.length} of ${total}` : total ? ` · ${total}` : ""}`}
+          sectionRef={historyRef}
+        >
           {reads.isLoading ? (
             <Skeleton className="h-12 w-full rounded-md" />
           ) : items.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Nothing read in this voice yet.</p>
+            <p className="text-muted-foreground text-sm">
+              Nothing read in this voice yet. Try it above, or cast it in a script.
+            </p>
           ) : (
-            items.map((sound) => (
-              <div key={sound.id} className="border-border/60 grid gap-1 rounded-md border px-2.5 py-2">
-                <p className="readout text-muted-foreground truncate">{sound.name}</p>
-                <WaveformPlayer sound={sound} compact />
-              </div>
-            ))
+            <>
+              {items.map((sound) => (
+                <div key={sound.id} className="border-border/60 grid gap-1 rounded-md border px-2.5 py-2">
+                  <p className="readout text-muted-foreground truncate">{sound.name}</p>
+                  <WaveformPlayer sound={sound} compact />
+                </div>
+              ))}
+              {!showAll && total > items.length ? (
+                <Button variant="ghost" size="sm" className="justify-self-start" onClick={() => setShowAll(true)}>
+                  Show more
+                </Button>
+              ) : (
+                <p className="text-muted-foreground text-xs">
+                  Single-voice reads and conversions. A dialogue with several speakers is in the{" "}
+                  <Link to="/library" className="text-foreground underline underline-offset-4">
+                    Library
+                  </Link>
+                  .
+                </p>
+              )}
+            </>
           )}
-        </section>
+        </Part>
       </div>
     </>
   );
 }
 
-
-export function VoiceDetailPanel() {
-  const panel = usePanelWidth({ id: "voice-detail", initial: 416, min: 320, max: 720, edge: "left" });
-  const voiceId = useVoiceDetailStore((s) => s.voiceId);
-  const actions = useVoiceDetailStore((s) => s.actions);
-  const close = useVoiceDetailStore((s) => s.close);
+export function VoiceDetailPanel({ id }: { id: string }) {
+  const close = useDock((s) => s.close);
   const voices = useVoices();
   const models = useModels();
+  // The line to try a voice on is remembered across voices and visits.
   const line = useVoiceLabPrefs((s) => s.line);
   const setLine = useVoiceLabPrefs((s) => s.setLine);
-  const voice = voiceId ? (voices.data?.find((v) => v.id === voiceId) ?? null) : null;
+  const voice = voices.data?.find((v) => v.id === id) ?? null;
 
   // A deleted voice takes its panel with it.
   useEffect(() => {
-    if (voiceId && voices.data && !voice) close();
-  }, [voiceId, voices.data, voice, close]);
+    if (voices.data && !voice) close();
+  }, [voices.data, voice, close]);
 
-  // One docked panel at a time: a sound's details replace a voice's.
-  const soundOpen = useDetailStore((s) => s.sound !== null);
-  useEffect(() => {
-    if (soundOpen) close();
-  }, [soundOpen, close]);
-
-  // The panel belongs to the page that opened it; query-string changes keep it.
-  const { pathname } = useLocation();
-  const openedOn = useRef(pathname);
-  useEffect(() => {
-    if (voiceId && pathname !== openedOn.current) close();
-    openedOn.current = pathname;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only a route change should close it
-  }, [pathname]);
-
-  useEffect(() => {
-    if (!voiceId) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !document.querySelector("[role=dialog], [role=menu]")) close();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [voiceId, close]);
-
-  if (!voice) return null;
+  if (!voice) {
+    return (
+      <DockFrame label="Voice details" widthId="voice-detail" itemKey={`voice:${id}`}>
+        <div className="flex items-center gap-3 border-b px-4 pt-4 pb-3">
+          <Skeleton className="size-14 rounded-md" />
+          <Skeleton className="h-6 flex-1" />
+        </div>
+      </DockFrame>
+    );
+  }
   const readyTts = (models.data ?? []).filter((m) => m.task === "tts" && isReady(m));
   const modelName = voice.model_id
     ? ((models.data ?? []).find((m) => m.id === voice.model_id)?.name ?? null)
     : null;
 
   return (
-    <aside
-      aria-label={`Details for ${voice.name}`}
-      className="bg-background ring-border animate-in fade-in-0 slide-in-from-right-8 fixed right-0 left-(--rail-w,0px) top-(--top-h,0px) bottom-[calc(var(--dock-h,0px)+var(--tabbar-h,0px))] z-30 flex flex-col duration-(--duration-base) expanded:static expanded:z-auto expanded:my-2 expanded:mr-2 expanded:relative expanded:h-(--panel-h) expanded:w-(--panel-w) expanded:shrink-0 expanded:rounded-xl expanded:ring-1"
-      style={panel.style}
-    >
-      {panel.handle}
+    <DockFrame label={`Details for ${voice.name}`} widthId="voice-detail" itemKey={`voice:${id}`}>
       <VoiceDetails
         key={voice.id}
         voice={voice}
@@ -307,11 +387,7 @@ export function VoiceDetailPanel() {
         models={readyTts}
         line={line}
         onLineChange={setLine}
-        menu={actions?.menu(voice) ?? null}
-        onEdit={actions ? () => actions.edit(voice) : undefined}
-        onClips={actions ? () => actions.clips(voice) : undefined}
-        onClose={close}
       />
-    </aside>
+    </DockFrame>
   );
 }

@@ -32,6 +32,22 @@ variation of an earlier sound.
 - **Agent-made** sounds can be filtered on their own, to see what an agent
   generated.
 
+## The details panel
+
+Clicking a sound opens its details in a panel docked on the right: the
+waveform with the edit tools below, its stems, and the settings that made it.
+Click the name to rename it. Voices (in Voice Lab), models (on the Models
+page) and classics (in Listen → Explore) open in the same panel.
+
+The panel sits beside the page rather than over it, so the list stays usable:
+click another row and the panel shows that one instead, and the player keeps
+playing. On a narrow window it covers the page. Drag its left edge to make it
+wider or narrower; the width is remembered in this browser.
+
+What is open is part of the address (`?detail=sound:<id>`), so **Back** closes
+the panel, **Forward** opens it again, and a copied link opens the page with
+the panel showing. **Escape** or the close button closes it too.
+
 ## Sessions and projects
 
 - A **session** is a sitting. It is created on your first generation, titled
@@ -91,8 +107,25 @@ manager with the file selected. Downloads can be converted to mp3 if ffmpeg is
 installed. Without it you get the WAV, and the app tells you.
 
 The audio is plain files and the metadata is one SQLite file, so to back up
-your work, copy `~/.mirli`. Deleting a sound from the library deletes its
-row and its file, and never a derived clip made from it.
+your work, copy `~/.mirli`.
+
+## Deleting and the Trash
+
+Deleting never asks first. The sound, session or audiobook goes at once, and a
+toast says so with an **Undo** button for a few seconds. Deleting a session
+takes the sounds made in it along.
+
+After the toast has gone, it is still in the **Trash** (in the sidebar's
+footer, beside Settings and Activity) for 30 days. Each entry shows what it
+was, when it was deleted and how many days are left. **Restore** puts it back
+as it was: a session with its sounds, a book with its chapters and voiced
+audio. Things deleted by an agent over MCP land there too, since an agent's
+delete shows no toast.
+
+After 30 days an item is deleted for good, file included. **Delete forever**
+on one entry, or **Empty trash**, does it now; those two ask once, on the
+button itself, because they can't be undone. Deleting a sound for good removes
+its row and its file, and never a derived clip made from it.
 
 ## From the API
 

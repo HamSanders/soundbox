@@ -204,3 +204,9 @@ export async function streamSse<T>(
     if (open) res.end();
   }
 }
+
+/** `?permanent=true` (or 1) on a DELETE: skip the trash. */
+export function permanent(query: unknown): boolean {
+  const raw = (query as Record<string, string | undefined> | null)?.permanent;
+  return raw === "true" || raw === "1";
+}

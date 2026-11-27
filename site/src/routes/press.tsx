@@ -92,7 +92,16 @@ const FACTS: { term: string; detail: ReactNode }[] = [
   {
     term: "Makes",
     detail:
-      "Sound effects and ambience, instrumentals, songs from a lyric sheet, speech, cloned voices, voice conversion and stem separation.",
+      "Sound effects and ambience, instrumentals, songs from a lyric sheet, speech, cloned voices, voice conversion, stem separation and audiobooks.",
+  },
+  {
+    term: "Audiobooks",
+    detail:
+      "Imports EPUB, PDF, Word, ODT, RTF, FB2, text, Markdown, HTML or a web page, or starts from one of 42 bundled public-domain classics. A voice per character, a pronunciation dictionary, music and ambience beds, an ACX loudness check, and export to MP3, M4B, FLAC or WAV. Listen plays books back with read-along text.",
+  },
+  {
+    term: "Deleting",
+    detail: "Deletes happen at once with Undo on a toast, and sounds, sessions and audiobooks go to a trash for 30 days.",
   },
   {
     term: "Install",

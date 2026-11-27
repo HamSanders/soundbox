@@ -336,6 +336,8 @@ export interface VoiceCreate {
 export interface VoicePatch {
   name?: string;
   notes?: string | null;
+  /** A clone's model; null unpins it. A built-in voice can't move. */
+  model_id?: string | null;
   samples?: { id: string; reference_text?: string | null }[];
 }
 
@@ -665,6 +667,35 @@ export interface AssistantLink {
   label: string;
 }
 
+/** How much a proposed tool call asks of the person: reads run at once,
+ *  the rest wait for Accept. See `server/src/llm/agent.ts`. */
+export type AgentRisk = "read" | "write" | "costly" | "destructive";
+
+/** One MCP tool call, by the tool's own name and arguments. */
+export interface AgentCall {
+  tool: string;
+  arguments: Record<string, unknown>;
+}
+
+export interface AgentPlanRequest {
+  instruction: string;
+  messages: { role: "user" | "assistant"; content: string }[];
+  /** What is open: the server reads the rest itself. */
+  scope: { book_id: string; chapter_id?: string | null; selected_ids?: string[] };
+}
+
+export interface AgentPlan {
+  reply: string;
+  calls: (AgentCall & { risk: AgentRisk })[];
+  dropped: { tool: string; reason: string }[];
+}
+
+export interface AgentRunResult {
+  result: unknown;
+  /** The calls that put it back, or null when MCP has no inverse. */
+  undo: AgentCall[] | null;
+}
+
 export interface AssistantChatResponse {
   reply: string;
   /** Where to go next. Empty when the answer does not point anywhere. */
@@ -699,6 +730,27 @@ export interface EnhanceLyricsRequest {
 
 export interface EnhanceLyricsResponse {
   lyrics: string;
+}
+
+/** What can be in the trash. See server/src/trash.ts. */
+export type TrashKind = "sound" | "session" | "book";
+
+export interface TrashItem {
+  kind: TrashKind;
+  id: string;
+  name: string;
+  /** "12 sounds", "Jane Austen · 64 chapters". */
+  detail: string | null;
+  deleted_at: string;
+  /** When it will be deleted for good. */
+  purge_at: string;
+  size_bytes: number | null;
+}
+
+export interface TrashList {
+  /** How long things stay. */
+  days: number;
+  items: TrashItem[];
 }
 
 export interface Sound {
@@ -756,6 +808,8 @@ export interface Sound {
    *  dialogues and non-speech sounds. The library tile uses it to show the
    *  voice's avatar where a music track shows its cover. */
   voice_id?: string | null;
+  /** When it went to the trash, or null. Lists leave trashed sounds out. */
+  deleted_at?: string | null;
 }
 
 export type SoundEditOp =
@@ -1743,7 +1797,14 @@ export interface MirliApi {
   getSession(id: string): Promise<Session>;
   renameSession(id: string, title: string): Promise<Session>;
   setSessionProject(id: string, projectId: string | null): Promise<Session>;
+  /** To the trash, with its sounds. */
   deleteSession(id: string): Promise<void>;
+  listTrash(): Promise<TrashList>;
+  restoreFromTrash(kind: TrashKind, id: string): Promise<void>;
+  /** Delete one thing in the trash for good. */
+  purgeTrashItem(kind: TrashKind, id: string): Promise<void>;
+  /** Delete everything in the trash for good. */
+  emptyTrash(): Promise<{ deleted: number }>;
   listStories(limit?: number): Promise<Story[]>;
   getStory(id: string): Promise<Story>;
   createStory(
@@ -1781,6 +1842,9 @@ export interface MirliApi {
   /** Upsert — a track's first setting is also its row's creation. */
   updateTrack(storyId: string, trackIndex: number, patch: TrackPatch): Promise<StoryTrack>;
   /** Remove a lane and the clips on it. Lanes above slide down. */
+  /** Open a lane at `trackIndex` (the lanes at and above it slide up) with
+   *  these settings: how an undone lane removal comes back. */
+  insertTrack(storyId: string, trackIndex: number, patch: TrackPatch): Promise<StoryTrack>;
   deleteTrack(storyId: string, trackIndex: number): Promise<{ removed_clips: number }>;
   /** Mix the whole timeline down to one sound. Async: returns a job. */
   exportStory(storyId: string): Promise<JobRef>;
@@ -1874,6 +1938,11 @@ export interface MirliApi {
   /** Empty-thread chips from the prompt assistant. Throws when the LLM is
    *  off, same as `assistantChat` — the chat falls back silently. */
   assistantOpeners(req: AssistantOpenersRequest): Promise<AssistantOpenersResponse>;
+  /** An instruction about the open book, answered with MCP tool calls to
+   *  propose. Needs the prompt assistant on. */
+  agentPlan(req: AgentPlanRequest): Promise<AgentPlan>;
+  /** Run one accepted tool call through Mirli's own MCP server. */
+  agentRun(call: AgentCall): Promise<AgentRunResult>;
   getLlmStatus(): Promise<LlmStatus>;
   installLlmEngine(): Promise<JobRef>;
   downloadLlmModel(id: string): Promise<JobRef>;
@@ -1930,7 +1999,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> { // [audiobooks:core] exported
   let res: Response;
   try {
     res = await fetch(path, {
@@ -2205,6 +2274,16 @@ export const httpApi: MirliApi = {
   deleteSession: (id) =>
     request<void>(`/api/sessions/${encodeURIComponent(id)}`, { method: "DELETE" }),
 
+  listTrash: () => request<TrashList>("/api/trash"),
+
+  restoreFromTrash: (kind, id) =>
+    request<void>(`/api/trash/${kind}/${encodeURIComponent(id)}/restore`, { method: "POST" }),
+
+  purgeTrashItem: (kind, id) =>
+    request<void>(`/api/trash/${kind}/${encodeURIComponent(id)}`, { method: "DELETE" }),
+
+  emptyTrash: () => request<{ deleted: number }>("/api/trash", { method: "DELETE" }),
+
   listStories: (limit = 50) => request<Story[]>(`/api/stories?limit=${limit}`),
 
   getStory: (id) => request<Story>(`/api/stories/${encodeURIComponent(id)}`),
@@ -2295,6 +2374,12 @@ export const httpApi: MirliApi = {
     request<StoryTrack>(
       `/api/stories/${encodeURIComponent(storyId)}/tracks/${trackIndex}`,
       { method: "PATCH", body: JSON.stringify(patch) },
+    ),
+
+  insertTrack: (storyId, trackIndex, patch) =>
+    request<StoryTrack>(
+      `/api/stories/${encodeURIComponent(storyId)}/tracks/${trackIndex}`,
+      { method: "POST", body: JSON.stringify(patch) },
     ),
 
   deleteTrack: (storyId, trackIndex) =>
@@ -2465,6 +2550,12 @@ export const httpApi: MirliApi = {
       method: "POST",
       body: JSON.stringify(req),
     }),
+
+  agentPlan: (req) =>
+    request<AgentPlan>("/api/agent/plan", { method: "POST", body: JSON.stringify(req) }),
+
+  agentRun: (call) =>
+    request<AgentRunResult>("/api/agent/run", { method: "POST", body: JSON.stringify(call) }),
 
   assistantOpeners: (req) =>
     request<AssistantOpenersResponse>("/api/assistant/openers", {

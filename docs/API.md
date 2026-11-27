@@ -90,7 +90,7 @@ route answers `202 { "job_id": "..." }` and the work is followed through
 | GET | `/api/sounds` | Search the library (`?q, tag, favorite, model, models, session_id, project_id, parent_id, voice_id, source, limit, offset`). `voice_id` lists what one saved voice has read: single-voice reads and conversions, not multi-voice dialogues |
 | GET | `/api/sounds/{id}` | One sound |
 | PATCH | `/api/sounds/{id}` | Body `{ name?, favorite?, tags? }` |
-| DELETE | `/api/sounds/{id}` | Delete the row and the file |
+| DELETE | `/api/sounds/{id}` | Move to the trash; `?permanent=true` deletes the row and the file |
 | POST | `/api/sounds/upload` | Add audio from disk or the microphone. Body is the raw audio; `?name, source, project_id` |
 | POST | `/api/sounds/{id}/edit` | Non-destructive edit: writes a new derived sound. Body `{ op: "trim" \| "normalize" \| "reverse" \| "gain" \| "highpass" \| "lowpass" \| "pitch" \| "stretch", start_s?, end_s?, target_lufs?, gain_db?, cutoff_hz?, semitones?, rate? }` → `201 Sound` |
 | POST | `/api/sounds/{id}/reveal` | Show the file in the OS file manager |
@@ -148,6 +148,12 @@ segment generation return HTTP 400 before queueing if any is missing, naming
 the voice and clips to fix. Existing voices remain readable with null
 transcripts; other models do not require them.
 
+`PATCH /api/voices/:id` with `model_id` pins a clone to the model that reads
+it (Voice Lab: **Edit → Reads on**). It must be a text-to-speech model that
+reads from a reference clip (`supports.voice_reference`); `null` unpins it, and
+an unpinned clone (one saved before voices carried a model) reads on the first
+ready model. A built-in voice belongs to its model and returns HTTP 400.
+
 Mirli derives `request_options.reference_text` from the selected voice's
 samples in the same `created_at, id` order used to join their audio, separated
 by spaces. This overrides any story, line, request or catalog transcript.
@@ -178,7 +184,8 @@ rather than failing the import.
 | GET | `/api/stories/{id}/events` | SSE stream of changes to the story |
 | GET | `/api/stories/{id}/tracks` | Track settings |
 | PATCH | `/api/stories/{id}/tracks/{track_index}` | Body `{ name?, muted?, soloed?, gain_db?, devices? }`. `devices` replaces the lane's chain (`[{ kind, id?, bypassed?, params? }]`); unknown knobs are dropped, values are clamped to range and missing knobs take defaults |
-| DELETE | `/api/stories/{id}/tracks/{track_index}` | Delete the lane and everything on it |
+| POST | `/api/stories/{id}/tracks/{track_index}` | Open an empty lane at this index; lanes at and above it move up one. Same body as PATCH. The inverse of DELETE, used to undo it |
+| DELETE | `/api/stories/{id}/tracks/{track_index}` | Delete the lane and everything on it |; lanes above move down one |
 | GET | `/api/stories/{id}/segments` | Lines and clips |
 | POST | `/api/stories/{id}/segments` | Add one. Body `{ text?, kind?: "line" \| "pause", speaker?, voice_id?, track_index?, start_s?, position?, sound_id?, duration_s?, trim_start_s?, fade_in_s?, fade_out_s?, gain_db?, muted?, midi? }`. `midi` is a MIDI take's notes: `{ notes: [{ note, velocity, start_s, duration_s }], bpm?, instrument, cover?: { prompt, strength }, role: "dry" \| "cover", take_id }`; a PATCH with `midi: null` forgets them |
 | PUT | `/api/stories/{id}/segments/reorder` | Body `{ segment_ids }` |
@@ -192,7 +199,7 @@ rather than failing the import.
 | Method | Path | What it does |
 |---|---|---|
 | GET / POST | `/api/sessions` | List (`?limit`) or create (`{ title }`) |
-| GET / PATCH / DELETE | `/api/sessions/{id}` | Read, update (`{ title?, project_id? }`), delete with its sounds |
+| GET / PATCH / DELETE | `/api/sessions/{id}` | Read, update (`{ title?, project_id? }`), delete with its sounds (to the trash; `?permanent=true` for good) |
 | GET / POST | `/api/projects` | List or create (`{ name }`) |
 | DELETE | `/api/projects/{id}` | Delete a project |
 
@@ -204,6 +211,8 @@ rather than failing the import.
 | POST | `/api/enhance/lyrics` | Write lyrics. Body `{ theme, style? }` |
 | POST | `/api/assistant/chat` | One turn of the assistant. Body `{ messages, studio?, draft? }` |
 | POST | `/api/assistant/openers` | Suggested first messages. Body `{ studio? }` |
+| POST | `/api/agent/plan` | Turn an instruction about an open book into MCP tool calls to propose. Body `{ instruction, messages?, scope: { book_id, chapter_id?, selected_ids? } }`. Returns `{ reply, calls: [{ tool, arguments, risk }], dropped }`; `risk` is `read`, `write`, `costly` or `destructive` |
+| POST | `/api/agent/run` | Run one MCP tool call through Mirli's own MCP server. Body `{ tool, arguments }`. Returns `{ result, undo }`, where `undo` is the calls that reverse it or null. A tool's refusal is a 422 with its message |
 | POST | `/api/studio/command` | Turn a studio instruction into a plan of edits. Body `{ instruction, context: { tracks, clips, playhead_s?, selected_ids?, voices? } }` |
 | GET | `/api/llm/status` | Engine and model install state, detected local endpoints |
 | POST | `/api/llm/engine/install` | Install `llama-server` → job |
@@ -641,7 +650,7 @@ MCP clients use it to show recent server activity. For a full trail, `grep` the 
 ```
 `GET /api/sounds/{id}` → `Sound`
 `PATCH /api/sounds/{id}` `{ "name"?, "favorite"?, "tags"? }` → `Sound`
-`DELETE /api/sounds/{id}` → `204` (deletes file too)
+`DELETE /api/sounds/{id}` → `204`. Moves the sound to the trash: it leaves every list and is deleted for good, file included, after 30 days. `?permanent=true` deletes the row and the file now. See [Trash](#trash).
 `GET /api/tags` → `[{ "tag": "impact", "count": 12 }]`
 `GET /files/{id}.wav`: static. `?format=mp3` transcodes on the fly (cached).
 
@@ -670,9 +679,27 @@ automatically.
 `POST /api/sessions` `{ "title": "..." }` → `201 Session`. Rarely needed; generating creates one.
 `GET /api/sessions/{id}` → `Session`
 `PATCH /api/sessions/{id}` `{ "title": "..." }` → `Session`
-`DELETE /api/sessions/{id}` → `204`. **Deletes the session and every sound in it, audio files included.**
+`DELETE /api/sessions/{id}` → `204`. Moves the session to the trash, and every sound in it leaves the library with it. Restoring the session brings them back. `?permanent=true` **deletes the session and every sound in it now, audio files included.**
 
 To read one session's thread, filter the library: `GET /api/sounds?session_id={id}`.
+
+## Trash
+
+Deleting a sound, a session or an audiobook moves it to the trash instead of
+deleting it. It disappears from every list, and nothing it owns is touched,
+files included. Anything in the trash longer than 30 days is deleted for good;
+the server checks at startup and every six hours. A `DELETE` with
+`?permanent=true` skips the trash.
+
+`GET /api/trash` → `{ "days": 30, "items": TrashItem[] }`, newest first
+```json
+{ "kind": "sound" | "session" | "book", "id": "uuid", "name": "Door slam 01",
+  "detail": "12 sounds" | null, "deleted_at": "iso", "purge_at": "iso",
+  "size_bytes": 529244 | null }
+```
+`POST /api/trash/{kind}/{id}/restore` → `{ "restored": true, kind, id }`, or `404` when it isn't in the trash.
+`DELETE /api/trash/{kind}/{id}` → `204`. Deletes one thing for good; `404` unless it is in the trash.
+`DELETE /api/trash` → `{ "deleted": n }`. Empties the trash.
 
 ## Settings
 
@@ -793,18 +820,165 @@ to use it instead of installing a second local server.
 `POST /api/llm/models/{id}/download` → `202 { "job_id": "..." }`. Pulls one catalog model's GGUF.
 `DELETE /api/llm/models/{id}` → `204`. Deletes cached weights.
 
+## Audiobooks
+
+Every route is under `/api/audiobooks`. A book is a list of chapters; each
+chapter is backed by one story (`story_id`), and each paragraph is one of that
+story's segments, so the story routes above work on a chapter too. The shared
+types are in `server/src/audiobook/types.ts`. [AUDIOBOOKS.md](./AUDIOBOOKS.md)
+describes the features.
+
+**Books, chapters and paragraphs** (`routes/audiobooks.ts`)
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/api/audiobooks` | Every book, with stats |
+| POST | `/api/audiobooks` | Create a blank book with one chapter |
+| GET | `/api/audiobooks/{id}` | Book, chapters with stats, characters |
+| PATCH | `/api/audiobooks/{id}` | Metadata and settings |
+| DELETE | `/api/audiobooks/{id}` | Move the book to the trash; `?permanent=true` deletes it for good (`&delete_sounds=false` keeps its audio) |
+| GET | `/api/trash` | What is in the trash: `{ days, items: [{ kind, id, name, detail, deleted_at, purge_at, size_bytes }] }` |
+| POST | `/api/trash/{kind}/{id}/restore` | Take a `sound`, `session` or `book` out of the trash |
+| DELETE | `/api/trash/{kind}/{id}` | Delete one thing in the trash for good |
+| DELETE | `/api/trash` | Empty the trash. Things in it longer than 30 days are deleted on their own |
+| PUT, GET | `/api/audiobooks/{id}/cover` | Raw image body (PNG, JPEG, WebP, GIF) |
+| GET | `/api/audiobooks/{id}/events` | SSE: book, chapter, paragraph, render, export and bed events |
+| POST | `/api/audiobooks/{id}/chapters` | Add a chapter `{ title, kind, position, paragraphs? }` |
+| PATCH, DELETE | `/api/audiobooks/{id}/chapters/{cid}` | Rename, change kind, include or exclude; delete |
+| POST | `/api/audiobooks/{id}/chapters/reorder` | `{ ids }` |
+| GET | `/api/audiobooks/{id}/chapters/{cid}/paragraphs` | Segments with character, lock, heading and status |
+| PATCH | `/api/audiobooks/{id}/paragraphs/{sid}` | `{ character_id, locked, is_heading, model_id, text }` |
+| POST | `/api/audiobooks/{id}/replace` | Find and replace across the book |
+
+**Import** (`routes/audiobook-import.ts`)
+
+| Method | Path | What it does |
+|---|---|---|
+| POST | `/api/audiobooks/import/parse?filename=` | Raw file body → manuscript preview with a `preview_id` |
+| POST | `/api/audiobooks/import/url` | `{ url }` → manuscript preview |
+| POST | `/api/audiobooks/import/commit` | `{ preview_id, edits, settings }` → the new book |
+
+**Cast, pronunciation, takes and render** (`routes/audiobook-voice.ts`)
+
+| Method | Path | What it does |
+|---|---|---|
+| GET, POST | `/api/audiobooks/{id}/characters` | List or add characters |
+| PATCH, DELETE | `/api/audiobooks/{id}/characters/{chid}` | Change or remove one |
+| POST | `/api/audiobooks/{id}/characters/detect` | Detect characters and assign dialogue |
+| POST | `/api/audiobooks/{id}/characters/{chid}/suggest-voice` | Suggest voices for a character |
+| GET, POST | `/api/audiobooks/{id}/pronunciations` | The book's rules (`/api/pronunciations` for global ones) |
+| PATCH, DELETE | `/api/audiobooks/{id}/pronunciations/{rid}` | Change or remove a rule |
+| POST | `/api/audiobooks/{id}/pronunciations/suggest` | Suggest terms from the text |
+| POST, GET | `/api/audiobooks/{id}/pronunciations/import`, `.../export.pls` | PLS or text in, PLS out |
+| GET | `/api/audiobooks/{id}/paragraphs/{sid}/takes` | A paragraph's takes |
+| POST, DELETE | `/api/audiobooks/{id}/paragraphs/{sid}/takes/{tid}[/select]` | Restore or delete a take |
+| POST | `/api/audiobooks/{id}/paragraphs/{sid}/generate` | Voice one paragraph or a range |
+| POST | `/api/audiobooks/{id}/render` | `{ scope, overwrite }` → a render run |
+| GET | `/api/audiobooks/{id}/renders` | Runs, with progress |
+| POST | `/api/audiobooks/{id}/renders/{rid}/{pause,resume,cancel}` | Control a run |
+| GET | `/api/audiobooks/{id}/estimate` | Seconds of audio and render time |
+
+**Mastering and export** (`routes/audiobook-export.ts`)
+
+| Method | Path | What it does |
+|---|---|---|
+| POST | `/api/audiobooks/{id}/master/analyze` | Loudness report and ACX checks per chapter |
+| POST | `/api/audiobooks/{id}/credits` | Generate opening and closing credits and a retail sample |
+| POST, GET | `/api/audiobooks/{id}/exports` | Start an export (`ExportRequest`); list them |
+| GET | `/api/audiobooks/{id}/exports/{eid}/download` | The zip or file |
+| GET | `/api/audiobooks/{id}/chapters/{cid}/timings` | Paragraph timings in the chapter file |
+
+**Listening** (`routes/audiobook-listen.ts`)
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/api/audiobooks/{id}/listen` | Playable manifest: chapters, files, timings |
+| PUT | `/api/audiobooks/{id}/progress` | `{ chapter_id, position_s }` |
+| POST | `/api/audiobooks/{id}/publish/{webplayer,rss}` | Write a web player or RSS feed |
+
+### Beds
+
+`routes/audiobook-beds.ts`. A bed is music, ambience or a sound effect laid
+out as clips on its own track (index 1 and up) of a chapter's story. Ducking
+is applied when the book is mixed for export.
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/api/audiobooks/{id}/beds[?chapter_id=]` | Beds, each with `stale` when the narration changed length |
+| GET | `/api/audiobooks/{id}/beds/export-info[?chapter_ids=a,b]` | `{ has_beds, include_beds_default, warnings }` for the export dialog |
+| POST | `/api/audiobooks/{id}/chapters/{cid}/beds` | Add a bed → `201` bed |
+| POST | `/api/audiobooks/{id}/chapters/{cid}/beds/layout` | Fit every bed in the chapter to the narration |
+| POST | `/api/audiobooks/{id}/chapters/{cid}/beds/suggest` | Propose beds from the chapter's text → `{ source, suggestions, note }`; creates nothing |
+| PATCH | `/api/audiobooks/{id}/beds/{bid}` | Change a bed; re-lays its clips unless only `duck` or `label` changed |
+| POST | `/api/audiobooks/{id}/beds/{bid}/layout` | Fit one bed |
+| DELETE | `/api/audiobooks/{id}/beds/{bid}` | Remove the bed, its clips, and its track if nothing else is on it → `204` |
+
+The add body:
+
+```json
+{
+  "kind": "music",
+  "sound_id": "…",
+  "prompt": "slow solo piano, warm and sparse",
+  "model_id": null,
+  "duration_s": 60,
+  "gain_db": -18,
+  "fade_in_s": 3,
+  "fade_out_s": 5,
+  "loop": true,
+  "mode": "full",
+  "intro_s": null,
+  "anchor_segment_id": null,
+  "offset_s": 0,
+  "duck": { "depth_db": 12, "attack_ms": 250, "release_ms": 600, "lookahead_ms": 250, "hold_ms": 400, "threshold_db": -45 }
+}
+```
+
+Give `sound_id` or `prompt`. Everything else is optional; the values shown are
+the music defaults (ambience: −24 dB, 4 s fades, 6 dB of ducking; SFX: −6 dB,
+no fades, no loop, no ducking). `kind` is `music`, `ambience` or `sfx`. `mode`
+is `full`, `intro`, `outro`, `intro_outro` or `scene`. `anchor_segment_id` is
+the paragraph an SFX plays at, or where a `scene` bed starts; `end_segment_id`
+is the last paragraph a `scene` bed plays under (omit for the chapter's end). `duck: false` turns ducking off, and a partial `duck`
+object changes only the fields it names. A prompt starts a generation job on
+the named model, or on an installed music model (ambience and SFX: a sound
+effect model); the bed comes back with `status: "generating"` and becomes
+`ready`, with its clips placed, when the job finishes. A failure leaves
+`status: "failed"` and `error`.
+
+The bed:
+
+| Field | Meaning |
+|---|---|
+| `track_index` | The story track its clips are on |
+| `segment_ids` | Those clips |
+| `status` | `generating`, `ready` or `failed` |
+| `laid_out_s` | The narration length it was laid out against |
+| `stale` | The narration is now a different length; lay it out again |
+
+A suggestion from `/beds/suggest` has `kind`, `label`, `prompt`, `mood`,
+`setting`, `start_paragraph_id`, `end_paragraph_id` (the same paragraph for an
+SFX), `reason`, and quiet defaults in `gain_db`, `duck_db` and `duration_s`.
+`source` is `llm` when the prompt assistant read the chapter and `heuristic`
+when a keyword lexicon did (the assistant is off, or its reply was unusable);
+`note` says which and why. To accept one, add a bed with its `prompt`, `kind`,
+`gain_db`, `duck: { depth_db: duck_db }` and, for music and ambience,
+`mode: "scene"` with `anchor_segment_id` and `end_segment_id`.
+
 ## MCP
 
-Streamable-HTTP MCP endpoint at `/mcp` (same port). Twenty-one tools; `server/src/mcp/server.ts` is the authority on their signatures, and [MCP.md](./MCP.md) documents them in full. Summary:
+Streamable-HTTP MCP endpoint at `/mcp` (same port). Forty-nine tools; `server/src/mcp/server.ts` is the authority on their signatures, and [MCP.md](./MCP.md) documents them in full. Summary:
 
 Sounds:
 - `soundbox.generate(prompt, duration_s?, model?, negative_prompt?, seed?, variations?, tags?, lyrics?, source_sound_id?, edit?)` → waits for the job, returns `Sound[]` with absolute file paths.
 - `soundbox.enhance_prompt(prompt, n?, category?, lyrics?, model?)` → `{ variations: string[] }`, or a plain-text explanation when the assistant is off.
 - `soundbox.separate(sound_id, model?, stems?, rest?)` → waits for the job, returns the stems as `Sound[]` with absolute file paths.
 - `soundbox.list_models()` → `Model[]`
-- `soundbox.list_sounds(q?, tag?, limit?)` → `Sound[]`
+- `soundbox.list_sounds(q?, tag?, voice_id?, limit?)` → `Sound[]`
 - `soundbox.get_sound(sound_id)` → `Sound` + absolute path
-- `soundbox.delete_sound(sound_id)`
+- `soundbox.delete_sound(sound_id)` → moves it to the trash.
+- `soundbox.list_trash()` → `{ days, items }`, as `GET /api/trash`.
+- `soundbox.restore_from_trash(kind, id)` → brings a sound, session or book back.
 
 Voices:
 - `soundbox.list_voices()` → the saved voices a script can be cast to.
@@ -820,5 +994,21 @@ Arrangement:
 - `soundbox.open_in_studio(sound_id, separate?, stems?, rest?)`
 - `soundbox.mix_track(story_id, track_index, name?, muted?, soloed?, gain_db?)`, `soundbox.remove_track(story_id, track_index)`
 - `soundbox.add_device(story_id, track_index, kind, params?, bypassed?, position?)`, `soundbox.set_device(story_id, track_index, device, params?, bypassed?)`, `soundbox.remove_device(story_id, track_index, device)`
+
+Audiobooks (a book of chapters, each chapter a story):
+- `soundbox.create_audiobook(title, author?, narrator?, language?, model_id?, narrator_voice_id?, cast_mode?)`, `soundbox.import_manuscript(path? | text? | url?, format?, title?, author?, …)`
+- `soundbox.list_audiobooks()`, `soundbox.get_audiobook(book_id, chapter_id?, offset?, limit?)`, `soundbox.delete_audiobook(book_id)` → to the trash.
+- `soundbox.set_character_voice(book_id, character, voice_id, model_id?, create?)`, `soundbox.add_pronunciation(term, replacement, kind?, book_id?, case_sensitive?, whole_word?)`
+- `soundbox.render_audiobook(book_id, chapter_id?, paragraph_ids?, overwrite?, wait?, timeout_s?)` → waits for the render run.
+- `soundbox.add_bed(book_id, chapter_id, kind?, sound_id? | prompt?, gain_db?, mode?, loop?, fade_in_s?, fade_out_s?, paragraph_id?, offset_s?, duck_db?, …)`
+- `soundbox.edit_paragraph(book_id, paragraph_id, text?, character?, locked?, is_heading?)`, `soundbox.cast_paragraphs(book_id, paragraph_ids, character)`, `soundbox.lock_paragraphs(book_id, paragraph_ids, locked?)`
+- `soundbox.split_paragraph(book_id, paragraph_id, before? | at?)`, `soundbox.merge_paragraphs(book_id, paragraph_id)`, `soundbox.find_replace(book_id, find, replace, chapter_ids?, case_sensitive?, whole_word?, dry_run?)`
+- `soundbox.add_chapter(book_id, title, text?, position?)`, `soundbox.edit_chapter(book_id, chapter_id, title?, kind?, included?)`, `soundbox.move_chapter(book_id, chapter_id, position)`, `soundbox.delete_chapter(book_id, chapter_id)` → for good, not to the trash.
+- `soundbox.master_and_export_audiobook(book_id, format?, layout?, mastering?, bitrate_kbps?, chapter_ids?, include_cover?, include_transcripts?, include_beds?)` → waits, returns the path and failed ACX checks.
+
+The open studio (needs a studio showing in the app):
+- `soundbox.studio_context(story_id?)` → lanes, clips, playhead, selection and voices as they are on screen.
+- `soundbox.studio_apply(actions, story_id?, summary?, allow_delete?)` → edits through the studio's own handlers, so each is on the user's undo stack.
+- `soundbox.search_docs(query, limit?)` → the sections of the README and `docs/` that answer it, each with its file and heading.
 
 Stdio bridge for clients that can't do HTTP: `node <checkout>/server/dist/mcp/stdio.js`, which proxies to the running server. The file exists only after `npm run build`, and the bridge covers the sound tools (`generate`, `enhance_prompt`, `list_models`, `list_sounds`, `get_sound`, `delete_sound`). Use HTTP for `separate`, speech and stories. The Agents page prints the line with the path resolved.

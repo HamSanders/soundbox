@@ -44,7 +44,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { downloadSound, formatDuration } from "@/lib/format";
-import { useDetailStore } from "@/lib/detail-store";
+import { useDock } from "@/lib/dock";
 import { useSettings, useUpdateSound } from "@/lib/queries";
 import type { Sound } from "@/lib/api";
 import { usePlayerStore } from "@/lib/player-store";
@@ -352,7 +352,8 @@ export function NowPlayingBar() {
  * often want to do with what you are hearing, without finding its row.
  */
 function PlayerMenu({ sound }: { sound: Sound }) {
-  const openDetails = useDetailStore((s) => s.open);
+  const openDock = useDock((s) => s.open);
+  const openDetails = (s: Sound) => openDock({ kind: "sound", id: s.id }, { seed: s });
   const setSound = usePlayerStore((s) => s.setSound);
   const update = useUpdateSound();
   const { data: settings } = useSettings();

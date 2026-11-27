@@ -19,6 +19,7 @@ import type { Database as Sqlite, Statement } from "better-sqlite3";
 import type { DeviceSpec } from "./devices.js";
 import { catalogById } from "./models/audiocpp.js";
 import { HistoryStore } from "./history.js";
+import { AudiobookStore } from "./audiobook/store.js"; // [audiobooks:core]
 import { clipMidiSchema } from "./schemas.js";
 
 import type {
@@ -266,7 +267,12 @@ CREATE INDEX IF NOT EXISTS idx_mcp_calls_client ON mcp_calls(client_name, client
 const EFFECTIVE_PROJECT_COUNT =
   "(SELECT COUNT(*) FROM sounds x WHERE" +
   " COALESCE(x.project_id, (SELECT project_id FROM sessions WHERE id = x.session_id))" +
-  " = p.id) n";
+  " = p.id AND x.deleted_at IS NULL" +
+  " AND NOT EXISTS (SELECT 1 FROM sessions ts WHERE ts.id = x.session_id AND ts.deleted_at IS NOT NULL)) n";
+
+/** How long the trash keeps things, as Gmail's does
+ *  (https://support.google.com/mail/answer/7401). */
+export const TRASH_DAYS = 30;
 
 /**
  * Shared by getSound and listSounds so both compute effective project the same
@@ -312,6 +318,8 @@ interface SoundRow {
   artwork: string | null;
   /** The saved Voice that read this sound, or null — see `Sound.voice_id`. */
   voice_id: string | null;
+  /** When it went to the trash, or null. */
+  deleted_at: string | null;
 }
 
 interface SessionRow {
@@ -470,7 +478,10 @@ export class Database {
    *  Its own store rather than more methods here: two tables nothing else
    *  joins against, and this file is long enough already. */
   readonly history: HistoryStore;
+  readonly audiobooks: AudiobookStore; // [audiobooks:core]
   private readonly conn: Sqlite;
+  /** Shared connection for feature stores that run their own SCHEMA (audiobooks). */
+  get sqlite(): Sqlite { return this.conn; } // [audiobooks:lead]
   /** Statement cache keyed by SQL text — the filter combinations in listSounds
    *  and listMcpCalls generate a small, bounded set of distinct queries. */
   private readonly stmts = new Map<string, Statement>();
@@ -494,6 +505,7 @@ export class Database {
       () => randomUUID(),
       () => new Date().toISOString(),
     );
+    this.audiobooks = new AudiobookStore(this.conn, () => randomUUID(), () => new Date().toISOString()); // [audiobooks:core]
   }
 
   /** Databases written before the engine->model rename still have the old
@@ -568,6 +580,12 @@ export class Database {
       // every clip stored before takes kept their notes — so an old story
       // reads exactly as it did.
       "ALTER TABLE story_segments ADD COLUMN midi TEXT",
+      // The trash: when a sound or a session was deleted, or null. Rows in the
+      // trash keep their files and their children, and every list leaves them
+      // out; after `TRASH_DAYS` the ordinary hard delete runs (see
+      // `MirliService.purgeTrash`). Restoring is clearing this.
+      "ALTER TABLE sounds ADD COLUMN deleted_at TEXT",
+      "ALTER TABLE sessions ADD COLUMN deleted_at TEXT",
     ]) {
       try {
         this.conn.exec(ddl);
@@ -688,20 +706,98 @@ export class Database {
     };
   }
 
+  /** A session that isn't in the trash. A generation sent to a trashed one
+   *  starts a new session (see `ensureSession`), as for a deleted one. */
   getSession(sessionId: string): Session | null {
     const row = this.prep(
-      `SELECT s.*, (SELECT COUNT(*) FROM sounds x WHERE x.session_id=s.id) n
-       FROM sessions s WHERE s.id=?`,
+      `SELECT s.*, (SELECT COUNT(*) FROM sounds x WHERE x.session_id=s.id AND x.deleted_at IS NULL) n
+       FROM sessions s WHERE s.id=? AND s.deleted_at IS NULL`,
     ).get(sessionId) as SessionRow | undefined;
     return row ? rowToSession(row) : null;
   }
 
   listSessions(limit = 50): Session[] {
     const rows = this.prep(
-      `SELECT s.*, (SELECT COUNT(*) FROM sounds x WHERE x.session_id=s.id) n
-       FROM sessions s ORDER BY s.updated_at DESC LIMIT ?`,
+      `SELECT s.*, (SELECT COUNT(*) FROM sounds x WHERE x.session_id=s.id AND x.deleted_at IS NULL) n
+       FROM sessions s WHERE s.deleted_at IS NULL ORDER BY s.updated_at DESC LIMIT ?`,
     ).all(limit) as SessionRow[];
     return rows.map(rowToSession);
+  }
+
+  /* ------------------------------------------------------------------- trash */
+
+  /** Whether the book tables exist yet, with their trash column: the
+   *  audiobook store makes them, after this database opens. */
+  private booksTrashable = false;
+  private bookTrash(): boolean {
+    if (!this.booksTrashable) {
+      const cols = this.conn.prepare("PRAGMA table_info(books)").all() as { name: string }[];
+      this.booksTrashable = cols.some((c) => c.name === "deleted_at");
+    }
+    return this.booksTrashable;
+  }
+
+  /**
+   * SQL that is true for a sound anyone should see: not in the trash, not in
+   * a trashed session, and not a take of a trashed book. `a` is the sounds
+   * alias in the query.
+   */
+  visibleSound(a = "s"): string {
+    const own = `${a}.deleted_at IS NULL`;
+    const session = `NOT EXISTS (SELECT 1 FROM sessions vs WHERE vs.id = ${a}.session_id AND vs.deleted_at IS NOT NULL)`;
+    const book = this.bookTrash()
+      ? ` AND NOT EXISTS (SELECT 1 FROM story_segments vg JOIN book_chapters vc ON vc.story_id = vg.story_id
+           JOIN books vb ON vb.id = vc.book_id WHERE vg.sound_id = ${a}.id AND vb.deleted_at IS NOT NULL)`
+      : "";
+    return `${own} AND ${session}${book}`;
+  }
+
+  /** SQL true for a story that is not a chapter of a trashed book. */
+  visibleStory(a = "s"): string {
+    return this.bookTrash()
+      ? `NOT EXISTS (SELECT 1 FROM book_chapters vc JOIN books vb ON vb.id = vc.book_id
+           WHERE vc.story_id = ${a}.id AND vb.deleted_at IS NOT NULL)`
+      : "1=1";
+  }
+
+  /** Move a sound or a session to the trash, or take it out. False when
+   *  there is no such row, or it is already where it was asked to go. */
+  setTrashed(kind: "sound" | "session", id: string, deletedAt: string | null): boolean {
+    const table = kind === "sound" ? "sounds" : "sessions";
+    const info = this.prep(
+      `UPDATE ${table} SET deleted_at=? WHERE id=? AND deleted_at IS ${deletedAt === null ? "NOT NULL" : "NULL"}`,
+    ).run(deletedAt, id);
+    return info.changes > 0;
+  }
+
+  /** Sounds trashed one by one (a trashed session's sounds are listed with
+   *  it), newest first. */
+  listTrashedSounds(): { id: string; name: string; deleted_at: string; size_bytes: number }[] {
+    return this.prep(
+      `SELECT id, name, deleted_at, size_bytes FROM sounds WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC`,
+    ).all() as { id: string; name: string; deleted_at: string; size_bytes: number }[];
+  }
+
+  listTrashedSessions(): { id: string; title: string; deleted_at: string; sounds: number; size_bytes: number }[] {
+    return this.prep(
+      `SELECT s.id, s.title, s.deleted_at,
+              (SELECT COUNT(*) FROM sounds x WHERE x.session_id = s.id) sounds,
+              (SELECT COALESCE(SUM(size_bytes), 0) FROM sounds x WHERE x.session_id = s.id) size_bytes
+         FROM sessions s WHERE s.deleted_at IS NOT NULL ORDER BY s.deleted_at DESC`,
+    ).all() as { id: string; title: string; deleted_at: string; sounds: number; size_bytes: number }[];
+  }
+
+  /** Ids in the trash since before `cutoff` (an ISO time). */
+  trashedBefore(kind: "sound" | "session", cutoff: string): string[] {
+    const table = kind === "sound" ? "sounds" : "sessions";
+    return (
+      this.prep(`SELECT id FROM ${table} WHERE deleted_at IS NOT NULL AND deleted_at < ?`).all(cutoff) as { id: string }[]
+    ).map((r) => r.id);
+  }
+
+  /** A session row whether or not it is in the trash, for the trash itself. */
+  sessionExists(sessionId: string): boolean {
+    return this.prep("SELECT 1 FROM sessions WHERE id=?").get(sessionId) !== undefined;
   }
 
   /**
@@ -845,7 +941,7 @@ export class Database {
   listStories(limit = 50, withTimeline = false): Story[] {
     const rows = this.prep(
       `SELECT s.*, (SELECT COUNT(*) FROM story_segments x WHERE x.story_id=s.id) n
-       FROM stories s ORDER BY s.updated_at DESC LIMIT ?`,
+       FROM stories s WHERE ${this.visibleStory("s")} ORDER BY s.updated_at DESC LIMIT ?`,
     ).all(limit) as StoryRow[];
     const stories = rows.map(rowToStory);
     const ids = stories.map((s) => s.id);
@@ -1445,6 +1541,27 @@ export class Database {
     return del();
   }
 
+  /** Open an empty lane at `trackIndex`: the lanes at and above it slide up,
+   *  clips and track rows alike. The inverse of `deleteTrack`'s renumbering,
+   *  so undoing a removed lane can put it back where it was. */
+  insertTrack(storyId: string, trackIndex: number): void {
+    this.conn.transaction(() => {
+      this.prep(
+        "UPDATE story_segments SET track_index = track_index + 1 WHERE story_id=? AND track_index >= ?",
+      ).run(storyId, trackIndex);
+      // Parked first for the same reason as in `deleteTrack`: the primary
+      // key would collide with a row that has not moved yet.
+      const PARK = 100000;
+      this.prep(
+        "UPDATE story_tracks SET track_index = track_index + ? WHERE story_id=? AND track_index >= ?",
+      ).run(PARK, storyId, trackIndex);
+      this.prep(
+        "UPDATE story_tracks SET track_index = track_index - ? WHERE story_id=? AND track_index >= ?",
+      ).run(PARK - 1, storyId, PARK);
+      this.touchStory(storyId, isoNow());
+    })();
+  }
+
   /** Reading order has to stay 0..n-1 after clips are removed wholesale, or
    *  every later reorder is validating against a set with holes in it. */
   private renumberPositions(storyId: string): void {
@@ -1586,6 +1703,10 @@ export class Database {
     if (patch.notes !== undefined) {
       sets.push("notes=?");
       args.push(patch.notes ?? null);
+    }
+    if (patch.model_id !== undefined) {
+      sets.push("model_id=?");
+      args.push(patch.model_id ?? null);
     }
     return this.conn.transaction(() => {
       if (sets.length) {
@@ -1788,7 +1909,9 @@ export class Database {
       where.push("EXISTS (SELECT 1 FROM sound_tags t WHERE t.sound_id=s.id AND t.tag=?)");
       params.push(options.tag.toLowerCase());
     }
-    const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
+    // Nothing in the trash, directly or by its session or book.
+    where.push(this.visibleSound("s"));
+    const clause = `WHERE ${where.join(" AND ")}`;
 
     const total = (
       this.prep(`SELECT COUNT(*) c FROM sounds s ${clause}`).get(...params) as { c: number }
@@ -2201,6 +2324,7 @@ function rowToSound(row: SoundRow, tags: string[]): Sound {
     parent_id: row.parent_id,
     artwork: row.artwork ? `/artwork/${row.artwork}` : null,
     voice_id: row.voice_id,
+    deleted_at: row.deleted_at ?? null,
   };
 }
 

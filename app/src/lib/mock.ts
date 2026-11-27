@@ -59,6 +59,7 @@ import type {
   SoundEditRequest,
   SoundPatch,
   SoundQuery,
+  SoundSort,
   MirliApi,
   SoundsPage,
   StemSelection,
@@ -967,6 +968,19 @@ async function mockDuration(file: Blob): Promise<number | null> {
 /** Stable ids so the mock log reads like one coherent run. */
 const mockJobId = "3f4c0470-deb7-4310-82a1-4fca49dfd9b1";
 const mockOtherJobId = "b1ab888b-7160-45f7-b15a-2c9bc2fa9a42";
+
+/** The server's ORDER BY for each `SoundSort`, ties newest first. */
+function sortMockSounds(items: MockSound[], sort: SoundSort | undefined): MockSound[] {
+  const newest = (a: MockSound, b: MockSound) => b.created_at.localeCompare(a.created_at);
+  const by: Record<SoundSort, (a: MockSound, b: MockSound) => number> = {
+    newest,
+    oldest: (a, b) => -newest(a, b),
+    longest: (a, b) => b.duration_s - a.duration_s || newest(a, b),
+    shortest: (a, b) => a.duration_s - b.duration_s || newest(a, b),
+    name: (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) || newest(a, b),
+  };
+  return items.slice().sort(by[sort ?? "newest"]);
+}
 
 const sounds: MockSound[] = seedSounds.map((s, i) => {
   const seed = 1000 + i * 137;
@@ -2697,6 +2711,7 @@ export const mockApi: MirliApi = {
     }
     if (query.favorite) items = items.filter((s) => s.favorite);
     if (query.source) items = items.filter((s) => s.source === query.source);
+    items = sortMockSounds(items, query.sort);
     const total = items.length;
     const offset = query.offset ?? 0;
     const limit = query.limit ?? 100;

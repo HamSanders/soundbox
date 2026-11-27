@@ -1,6 +1,6 @@
 /** One saved sound: rename, play, tag, favourite, download, reuse, delete. */
 
-import { useState, type CSSProperties } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   AudioLinesIcon,
@@ -288,6 +288,48 @@ export function SoundCard({
     </Dialog>
   );
 
+  /** "Split stems" stays on every row even before a separator model is
+   *  installed — a button that only appears after you have found and
+   *  installed the right model is one nobody finds. Without one, it says what
+   *  is missing and where to get it. */
+  const splitStems = () => {
+    if (sepModel) {
+      setStemPicker("library");
+      return;
+    }
+    toast("Splitting into stems needs a separator model", {
+      description: "Install HTDemucs from Models (a small download), then split any sound here.",
+      action: { label: "Open Models", onClick: () => navigate("/models") },
+    });
+  };
+
+  /** Open this sound whole on a fresh studio timeline, no split, and go
+   *  there once the server has laid it out. */
+  const openWholeInStudio = () => {
+    setOpening(true);
+    openInStudio.mutate(
+      { soundId: sound.id, separate: false },
+      {
+        onSuccess: ({ job_id }) => {
+          const stop = api.subscribeJob(job_id, (job) => {
+            if (job.status === "done") {
+              stop();
+              setOpening(false);
+              void qc.invalidateQueries({ queryKey: ["sounds"] });
+              const storyId = job.result?.story_id as string | undefined;
+              if (storyId) navigate(`/studio/music/${storyId}`);
+            } else if (job.status === "error" || job.status === "cancelled") {
+              stop();
+              setOpening(false);
+              toast.error(job.error || "Could not open this in the studio");
+            }
+          });
+        },
+        onError: () => setOpening(false),
+      },
+    );
+  };
+
   /**
    * The split, wherever it was asked for.
    *
@@ -470,7 +512,40 @@ export function SoundCard({
                 <MoreHorizontalIcon />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-64">
+              {/* What you make from a sound comes first: split it, take it
+                  to the Studio, extend it. Housekeeping follows. */}
+              <DropdownMenuItem disabled={separating} onClick={splitStems}>
+                <ScissorsIcon />
+                Split into stems…
+              </DropdownMenuItem>
+              {splittable && (
+                <DropdownMenuItem disabled={opening} onClick={() => setStemPicker("studio")}>
+                  <SlidersHorizontalIcon />
+                  Split and open in Studio…
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem disabled={opening} onClick={openWholeInStudio}>
+                <SlidersHorizontalIcon />
+                Open in Studio
+              </DropdownMenuItem>
+              {canExtend && (
+                <DropdownMenuItem onClick={() => onEdit!("extend", sound)}>
+                  <ExpandIcon />
+                  Extend this track
+                </DropdownMenuItem>
+              )}
+              {canCover && (
+                <DropdownMenuItem onClick={() => onEdit!("cover", sound)}>
+                  <RepeatIcon />
+                  Cover in a new style
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => navigate(`/voice/new/clone?from=${sound.id}`)}>
+                <MicIcon />
+                Make a voice from this
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => openDetails(sound)}>
                 <Maximize2Icon />
                 Details
@@ -490,18 +565,6 @@ export function SoundCard({
                 <PencilIcon />
                 Rename
               </DropdownMenuItem>
-              {canExtend && (
-                <DropdownMenuItem onClick={() => onEdit!("extend", sound)}>
-                  <ExpandIcon />
-                  Extend this track
-                </DropdownMenuItem>
-              )}
-              {canCover && (
-                <DropdownMenuItem onClick={() => onEdit!("cover", sound)}>
-                  <RepeatIcon />
-                  Cover in a new style
-                </DropdownMenuItem>
-              )}
               <DropdownMenuItem
                 onClick={() => update.mutate({ id: sound.id, patch: { favorite: !sound.favorite } })}
               >
@@ -539,85 +602,68 @@ export function SoundCard({
                   Open in Finder
                 </DropdownMenuItem>
               )}
-              {/* Where a sound goes next. Three destinations, one verb, so the
-                  menu does not grow a row per place a sound could land. */}
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <SendIcon />
-                  Send to
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="w-56">
-                  {(stories ?? []).length > 0 && (
-                    <>
-                      {(stories ?? []).slice(0, 6).map((story) => (
-                        <DropdownMenuItem
-                          key={story.id}
-                          onClick={() => addToStory(story.id, story.title)}
-                        >
-                          <ScrollTextIcon />
-                          <span className="truncate">Add to “{story.title}”</span>
-                        </DropdownMenuItem>
-                      ))}
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
-                  <DropdownMenuItem
-                    disabled={opening}
-                    onClick={() => {
-                      // Splitting is a choice — which stems, and what happens to
-                      // the rest — so it gets asked. Opening something whole has
-                      // nothing to ask about and just goes.
-                      if (splittable) {
-                        setStemPicker("studio");
-                        return;
-                      }
-                      setOpening(true);
-                      openInStudio.mutate(
-                        { soundId: sound.id, separate: splittable },
-                        {
-                          onSuccess: ({ job_id }) => {
-                            const stop = api.subscribeJob(job_id, (job) => {
-                              if (job.status === "done") {
-                                stop();
-                                setOpening(false);
-                                void qc.invalidateQueries({ queryKey: ["sounds"] });
-                                const storyId = job.result?.story_id as string | undefined;
-                                // Stems on lanes with nothing written: the Music Builder's
-                        // shape, and what the server files it as.
-                        if (storyId) navigate(`/studio/music/${storyId}`);
-                              } else if (job.status === "error" || job.status === "cancelled") {
-                                stop();
-                                setOpening(false);
-                                toast.error(job.error || "Could not open this in the studio");
-                              }
-                            });
-                          },
-                          onError: () => setOpening(false),
-                        },
-                      );
-                    }}
-                  >
-                    <SlidersHorizontalIcon />
-                    {splittable ? "Split into tracks and open in studio…" : "Open in the studio"}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate(`/voice/new/clone?from=${sound.id}`)}>
-                    <MicIcon />
-                    Make a voice from this
-                  </DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              {sepModel && (
-                <DropdownMenuItem disabled={separating} onClick={() => setStemPicker("library")}>
-                  <ScissorsIcon />
-                  Split into stems…
-                </DropdownMenuItem>
+              {(stories ?? []).length > 0 && (
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <SendIcon />
+                    Add to a story
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-56">
+                    {(stories ?? []).slice(0, 6).map((story) => (
+                      <DropdownMenuItem
+                        key={story.id}
+                        onClick={() => addToStory(story.id, story.title)}
+                      >
+                        <ScrollTextIcon />
+                        <span className="truncate">{story.title}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
               )}
+              <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onClick={() => setConfirmOpen(true)}>
                 <Trash2Icon />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+    </>
+  );
+
+  /** The three things people come to the Library to do with a sound, as
+   *  labelled buttons on the row itself rather than three levels into the
+   *  ··· menu. Labels show when the row is wide enough; narrower, the icon
+   *  stays with a tooltip. */
+  const quickAction = (
+    key: string,
+    label: string,
+    icon: ReactNode,
+    onClick: () => void,
+    disabled = false,
+  ) => (
+    <Tooltip key={key}>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={disabled}
+          onClick={onClick}
+          aria-label={`${label}: ${sound.name}`}
+          className="text-muted-foreground hover:text-foreground h-9 gap-1.5 px-2.5 text-sm @4xl:px-3"
+        >
+          {icon}
+          <span className="hidden @4xl:inline">{label}</span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent className="@4xl:hidden">{label}</TooltipContent>
+    </Tooltip>
+  );
+  const quickActions = (
+    <>
+      {quickAction("stems", "Split stems", <ScissorsIcon />, splitStems, separating)}
+      {quickAction("studio", "Open in Studio", <SlidersHorizontalIcon />, openWholeInStudio, opening)}
+      {canExtend && quickAction("extend", "Extend", <ExpandIcon />, () => onEdit!("extend", sound))}
     </>
   );
 
@@ -733,8 +779,13 @@ export function SoundCard({
           playInBar();
         }}
         className={cn(
-          "relative grid cursor-pointer grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-3 rounded-md px-2 py-1.5 transition-colors duration-(--duration-fast) hover:bg-muted/60",
-          "@2xl:grid-cols-[2.5rem_minmax(0,1fr)_8.5rem_9rem_3.5rem_auto]",
+          "relative grid cursor-pointer grid-cols-[3.25rem_minmax(0,1fr)_auto] items-center gap-x-4 rounded-lg px-3 py-2.5 transition-colors duration-(--duration-fast) hover:bg-muted/60",
+          // Narrow to wide: length, then model, then licence join the row.
+          // The labelled actions take width first, so the model column waits
+          // until the name still has room beside them.
+          "@3xl:grid-cols-[3.25rem_minmax(0,1fr)_4rem_auto]",
+          "@6xl:grid-cols-[3.25rem_minmax(0,1fr)_9rem_4rem_auto]",
+          "@7xl:grid-cols-[3.25rem_minmax(0,1fr)_8.5rem_9rem_4rem_auto]",
           playing &&
             "bg-muted/60 before:bg-signal before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full",
           fresh && "sb-arrive",
@@ -746,7 +797,7 @@ export function SoundCard({
           type="button"
           onClick={playInBar}
           aria-label={`Play ${sound.name}`}
-          className="group/tile focus-visible:ring-ring/50 bg-muted text-foreground/55 ring-border relative flex size-10 items-center justify-center overflow-hidden rounded-sm ring-1 ring-inset outline-none focus-visible:ring-3"
+          className="group/tile focus-visible:ring-ring/50 bg-muted text-foreground/55 ring-border relative flex size-13 items-center justify-center overflow-hidden rounded-md ring-1 ring-inset outline-none focus-visible:ring-3"
         >
           <SoundTileArt sound={sound} />
           {/* On hover (or focus) the tile says what a click does: a play
@@ -755,7 +806,7 @@ export function SoundCard({
             aria-hidden="true"
             className="bg-background/70 text-foreground absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-(--duration-fast) group-hover/tile:opacity-100 group-focus-visible/tile:opacity-100"
           >
-            <PlayIcon className="size-4 fill-current" />
+            <PlayIcon className="size-5 fill-current" />
           </span>
         </button>
         <div className="min-w-0">
@@ -764,22 +815,30 @@ export function SoundCard({
             onClick={() => openDetails(sound)}
             aria-label={`Details for ${sound.name}`}
             title="Details"
-            className="focus-visible:ring-ring/50 block max-w-full truncate rounded text-left text-sm font-medium outline-none hover:underline focus-visible:ring-3"
+            className="focus-visible:ring-ring/50 block max-w-full truncate rounded text-left text-base font-medium outline-none hover:underline focus-visible:ring-3"
           >
             {sound.name}
           </button>
-          <p className="readout text-muted-foreground truncate" title={log}>
+          <p className="text-muted-foreground mt-0.5 truncate text-sm" title={log}>
+            {/* The model rides here until the row is wide enough for its own
+                column. */}
+            <span className="@6xl:hidden">{modelName ?? sound.model} · </span>
             {log}
           </p>
         </div>
-        <span className="hidden min-w-0 @2xl:block">{license && <LicenseChip license={license} />}</span>
-        <span className="readout text-muted-foreground hidden truncate @2xl:block" title={recipeLine(sound, modelName)}>
+        <span className="hidden min-w-0 @7xl:block">{license && <LicenseChip license={license} />}</span>
+        <span className="text-muted-foreground hidden truncate text-sm @6xl:block" title={recipeLine(sound, modelName)}>
           {modelName ?? sound.model}
         </span>
-        <span className="readout text-muted-foreground hidden text-right tabular-nums @2xl:block">
+        <span className="text-muted-foreground hidden text-right text-sm tabular-nums @3xl:block">
           {formatDuration(sound.duration_s)}
         </span>
-        <div className="flex items-center">{actions}</div>
+        <div className="flex items-center gap-0.5">
+          {/* On a phone-width list the name needs the room; the same three
+              actions head the ··· menu. */}
+          <span className="hidden @xl:contents">{quickActions}</span>
+          {actions}
+        </div>
         {renameDialog}
         {confirmDialog}
         {stemDialog}

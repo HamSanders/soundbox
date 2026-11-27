@@ -10,10 +10,13 @@ to follow [Semantic Versioning](https://semver.org/).
 - **Phones get a bottom tab bar.** Below 600 px wide, Home, Library, Create, Studio and Voices sit in a bar along the bottom, with Create in the middle. The player sits just above it. Everything else is in the menu behind the header's button.
 - **Tablets get a rail.** From 600 to 839 px, the same places run down the left edge with their labels, and a menu button at the top opens the full sidebar.
 - **Touch-friendly controls.** On a touch screen every button has a tap area of at least 44 px, menu rows are 44 px tall, and controls that only appeared on hover are always shown. Timeline clips and tracks get a ⋯ button for the menu you'd normally right-click for; those menus open as a sheet from the bottom. The piano roll gets a Delete note button.
+- **Sort the Library.** A sort menu at the end of the filter row lists sounds newest first, oldest first, longest first, shortest first or by name. The API's `GET /api/sounds` takes the same orders as `sort=newest|oldest|longest|shortest|name`.
 
 ### Changed
 - **The full sidebar starts at 840 px** instead of 768 px. Between 768 and 839 px you now get the tablet rail, and the Studio and the side panels use their narrow layouts.
 - **The header has no background.** It sits on the page like the panels do, and on pages that scroll it scrolls away with the page instead of staying pinned.
+- **Split stems, Open in Studio and Extend are on every Library row.** They were buried in the ⋯ menu, and Split disappeared when no separator model was installed. Now each row has labelled buttons for them (Extend on music only), and they head the ⋯ menu too. Split stems without a separator says what to install and links to Models. Extend works from the combined Library as well and opens the Music page with the edit set up.
+- **Bigger Library rows.** Taller rows, larger cover tiles, names and filter controls, and a line under the title saying what you can do with a sound.
 
 ## [0.6.4] - 2026-11-25
 

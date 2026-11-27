@@ -416,6 +416,20 @@ interface McpCallRow {
   trace_id: string | null;
 }
 
+/** The orders the Library can list sounds in. */
+export const SOUND_SORTS = ["newest", "oldest", "longest", "shortest", "name"] as const;
+export type SoundSort = (typeof SOUND_SORTS)[number];
+
+/** Each sort as SQL. Ties fall back to newest first so a page boundary never
+ *  shuffles rows that share a length or a name. */
+const SOUND_ORDER: Record<SoundSort, string> = {
+  newest: "s.created_at DESC",
+  oldest: "s.created_at ASC",
+  longest: "s.duration_s DESC, s.created_at DESC",
+  shortest: "s.duration_s ASC, s.created_at DESC",
+  name: "s.name COLLATE NOCASE ASC, s.created_at DESC",
+};
+
 export interface ListSoundsOptions {
   limit?: number;
   offset?: number;
@@ -437,6 +451,9 @@ export interface ListSoundsOptions {
    *  Only single-voice reads carry a voice (see `Sound.voice_id`), so a
    *  mixed dialogue never shows up under any one of its speakers. */
   voice_id?: string | null;
+  /** Row order. Newest first when absent, which is what every caller but the
+   *  Library's sort menu wants. */
+  sort?: SoundSort | null;
 }
 
 export interface ListMcpCallsOptions {
@@ -1794,7 +1811,7 @@ export class Database {
       this.prep(`SELECT COUNT(*) c FROM sounds s ${clause}`).get(...params) as { c: number }
     ).c;
     const rows = this.prep(
-      `SELECT ${SOUND_SELECT} FROM sounds s ${clause} ORDER BY s.created_at DESC LIMIT ? OFFSET ?`,
+      `SELECT ${SOUND_SELECT} FROM sounds s ${clause} ORDER BY ${SOUND_ORDER[options.sort ?? "newest"]} LIMIT ? OFFSET ?`,
     ).all(...params, limit, offset) as SoundRow[];
     const tags = this.tagsFor(rows.map((r) => r.id));
     return [rows.map((r) => rowToSound(r, tags.get(r.id) ?? [])), total];

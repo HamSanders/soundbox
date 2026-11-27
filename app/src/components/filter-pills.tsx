@@ -6,7 +6,7 @@
  */
 
 import type { ReactNode } from "react";
-import { ChevronDownIcon, XIcon } from "lucide-react";
+import { ArrowUpDownIcon, ChevronDownIcon, XIcon } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -18,7 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const PILL =
-  "focus-visible:ring-ring/50 inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium outline-none transition-colors focus-visible:ring-3 [&_svg]:size-3.5";
+  "focus-visible:ring-ring/50 inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium outline-none transition-colors focus-visible:ring-3 [&_svg]:size-3.5";
 const PILL_OFF = "border-border text-muted-foreground hover:text-foreground hover:bg-muted";
 const PILL_ON = "bg-primary text-primary-foreground border-primary";
 
@@ -66,6 +66,40 @@ export function FilterMenu({
   );
 }
 
+/** A sort order, as a pill that always names the current one. Unlike a
+ *  filter it is never "off", so it stays outlined whatever is chosen. */
+export function SortMenu<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (v: T) => void;
+}) {
+  const current = options.find((o) => o.value === value)?.label ?? value;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button type="button" className={cn(PILL, PILL_OFF)} aria-label={`Sort: ${current}. Change.`}>
+          <ArrowUpDownIcon aria-hidden="true" />
+          <span className="text-foreground">{current}</span>
+          <ChevronDownIcon aria-hidden="true" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuRadioGroup value={value} onValueChange={(v) => onChange(v as T)}>
+          {options.map((o) => (
+            <DropdownMenuRadioItem key={o.value} value={o.value}>
+              {o.label}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 /** An on/off filter, as a pill that is filled when on. */
 export function TogglePill({
   pressed,
@@ -89,7 +123,7 @@ export function TogglePill({
 /** One chosen filter value, as a chip whose × clears only it. */
 export function FilterChip({ label, onClear }: { label: string; onClear: () => void }) {
   return (
-    <span className="bg-muted text-foreground inline-flex h-8 items-center gap-1 rounded-full pr-1 pl-2.5 text-xs">
+    <span className="bg-muted text-foreground inline-flex h-9 items-center gap-1 rounded-full pr-1 pl-3 text-sm">
       {label}
       <button
         type="button"

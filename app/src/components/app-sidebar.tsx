@@ -17,6 +17,7 @@ import {
   CpuIcon,
   DownloadIcon,
   FolderIcon,
+  HomeIcon,
   InfoIcon,
   LibraryIcon,
   MessagesSquareIcon,
@@ -147,6 +148,11 @@ const NAV_SAMPLES: NavItem[] = [
   },
   { to: "/library", label: "Library", icon: LibraryIcon, end: true, hue: "sfx" },
 ];
+
+/** The way back to the dashboard in the desktop app. A browser has the logo
+ *  for that, top left; the desktop window draws no logo (see the header
+ *  below), so without this entry nothing in the sidebar leads home. */
+const NAV_HOME: NavItem = { to: "/dashboard", label: "Home", icon: HomeIcon, end: true };
 
 /** App-level nav — not content you're working in, so it lives in the sticky
  *  footer alongside About/theme/device rather than the scrollable content
@@ -720,6 +726,7 @@ export function AppSidebar() {
   const peek = useSidebarPeek((s) => s.peek);
   const can = useCan();
   useRailOnImmersivePages();
+  const desktop = isDesktop();
 
   return (
     <>
@@ -740,8 +747,10 @@ export function AppSidebar() {
       >
         {/* The logo, top left, on the same line as the header bar beside it.
             Not in the desktop app: whoever is looking at that window already
-            installed it, and the window's own title bar sits right above. */}
-        {!isDesktop() && (
+            installed it, and the window's own title bar sits right above.
+            The logo is also the link home, so the desktop app gets a Home
+            entry in the first group instead (NAV_HOME). */}
+        {!desktop && (
         <SidebarHeader className="h-14 justify-center">
           <SidebarMenu>
             <SidebarMenuItem>
@@ -761,7 +770,7 @@ export function AppSidebar() {
         <SidebarContent>
           {/* Create and Library first: making a sound and finding one are
               the two things you open the app to do. */}
-          <NavGroup items={NAV_SAMPLES} onNavigate={() => setOpenMobile(false)} className="mt-3" />
+          <NavGroup items={desktop ? [NAV_HOME, ...NAV_SAMPLES] : NAV_SAMPLES} onNavigate={() => setOpenMobile(false)} className="mt-3" />
           <NavGroup label="Studio" items={NAV_STUDIO} onNavigate={() => setOpenMobile(false)} />
 
           <RecentSessions />

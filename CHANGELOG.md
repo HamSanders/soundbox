@@ -14,6 +14,8 @@ to follow [Semantic Versioning](https://semver.org/).
 ### Changed
 - **The full sidebar starts at 840 px** instead of 768 px. Between 768 and 839 px you now get the tablet rail, and the Studio and the side panels use their narrow layouts.
 - **The header has no background.** It sits on the page like the panels do, and on pages that scroll it scrolls away with the page instead of staying pinned.
+- **The desktop app's sidebar has a Home entry.** The desktop window has no logo to click, so Home sits at the top of the sidebar and takes you back to the dashboard.
+- **The desktop title bar lines up with what is under it.** The sidebar button sits above the sidebar's icons, and with the sidebar folded the back button sits above the page's left edge.
 
 ## [0.6.4] - 2026-11-25
 

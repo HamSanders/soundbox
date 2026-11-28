@@ -11,7 +11,7 @@
  * where you are (the breadcrumb) and whatever the open page puts in the bar,
  * then the queue, search, and the window buttons. Everything that is not a
  * control is drag space. There is no logo: whoever is looking at this window
- * already installed the app.
+ * already installed the app. The way home is the sidebar's Home entry.
  *
  * Only rendered in the desktop app (`isDesktop()`); a browser keeps
  * `AppHeader` inside the page panel.
@@ -27,6 +27,7 @@ import { HeaderSlot } from "@/components/header-slot";
 import { QueueIndicator } from "@/components/queue-indicator";
 import { SidebarButton } from "@/components/sidebar-peek";
 import { Button } from "@/components/ui/button";
+import { useSidebar } from "@/components/ui/sidebar";
 import { appWindow, desktopPlatform } from "@/lib/desktop";
 import { cn } from "@/lib/utils";
 
@@ -45,6 +46,7 @@ const INTERACTIVE =
 
 export function WindowTitleBar() {
   const mac = desktopPlatform() === "macos";
+  const open = useSidebar().state === "expanded";
 
   // Moving the window, by hand rather than with `data-tauri-drag-region`:
   // that attribute only counts on the exact element that carries it, so every
@@ -66,11 +68,19 @@ export function WindowTitleBar() {
       onMouseDown={onMouseDown}
       className={cn(
         "fixed inset-x-0 top-0 z-50 flex h-(--top-h) items-center gap-1 select-none",
-        mac ? "pr-2" : "pl-2",
+        // The sidebar button's icon sits straight above the sidebar's own
+        // icons. The button is 28px with a 16px icon, so the icon starts 6px
+        // in: 18px of padding puts it at 24px, where the rail's icons are
+        // (8px sidebar padding, 8px group padding, 8px inside each button),
+        // and 20px at 26px, where they move to when the sidebar is open.
+        mac ? "pr-2" : open ? "pl-5" : "pl-4.5",
       )}
       style={mac ? { paddingLeft: MAC_TRAFFIC_LIGHTS_PX } : undefined}
     >
-      <div className="flex shrink-0 items-center">
+      {/* gap-3: with the sidebar folded to its rail, the page panel's left
+          edge is at 64px, and 12px after the sidebar button (which ends at
+          46px) puts the back button's icon exactly there. */}
+      <div className="flex shrink-0 items-center gap-3">
         <SidebarButton />
         <HistoryButtons />
       </div>

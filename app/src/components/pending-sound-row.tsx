@@ -14,7 +14,7 @@
  * "Queued" and a zero-width bar rather than showing nothing.
  */
 
-import { LoaderCircleIcon } from "lucide-react";
+import { LoaderCircleIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { LoadingVerb } from "@/components/loading-verb";

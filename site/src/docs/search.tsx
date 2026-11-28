@@ -15,7 +15,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { SearchIcon } from "lucide-react";
+import { SearchIcon } from "@/lib/icons";
 
 import { cn } from "@/lib/utils";
 

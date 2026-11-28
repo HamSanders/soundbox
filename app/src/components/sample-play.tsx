@@ -10,7 +10,7 @@
  * the text shows how far along it is, the same signal the app's playheads use.
  */
 
-import { PauseIcon, PlayIcon } from "lucide-react";
+import { PauseIcon, PlayIcon } from "@/lib/icons";
 import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 

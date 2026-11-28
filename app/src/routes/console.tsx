@@ -23,7 +23,7 @@ import {
   DicesIcon,
   MessageSquareTextIcon,
   PencilLineIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";

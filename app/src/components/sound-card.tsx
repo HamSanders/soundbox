@@ -23,7 +23,7 @@ import {
   StarIcon,
   Trash2Icon,
   UserRoundIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 

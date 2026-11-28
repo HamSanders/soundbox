@@ -20,7 +20,7 @@
  */
 
 import { useState, type ReactNode } from "react";
-import { CheckIcon, CopyIcon } from "lucide-react";
+import { CheckIcon, CopyIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

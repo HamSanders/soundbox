@@ -36,7 +36,7 @@ import {
   UploadIcon,
   UserRoundIcon,
   UsersRoundIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";

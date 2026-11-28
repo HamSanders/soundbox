@@ -20,7 +20,7 @@
  */
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ExternalLinkIcon, GripVerticalIcon, XIcon } from "lucide-react";
+import { ExternalLinkIcon, GripVerticalIcon, XIcon } from "@/lib/icons";
 
 import type { Artifact } from "@/components/artifact-stack";
 import { Button } from "@/components/ui/button";

@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangleIcon, CheckCircle2Icon, CheckIcon, CopyIcon, EyeOffIcon, FolderOpenIcon } from "lucide-react";
+import { AlertTriangleIcon, CheckCircle2Icon, CheckIcon, CopyIcon, EyeOffIcon, FolderOpenIcon } from "@/lib/icons";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";

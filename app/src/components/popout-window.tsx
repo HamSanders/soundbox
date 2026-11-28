@@ -15,8 +15,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { PanelLeftCloseIcon, XIcon } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { PanelLeftCloseIcon, XIcon } from "@/lib/icons";
+import type { LucideIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { closePopoutWindow } from "@/lib/popout";

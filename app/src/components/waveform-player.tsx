@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
 import { useTheme } from "next-themes";
-import { PauseIcon, PlayIcon } from "lucide-react";
+import { PauseIcon, PlayIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

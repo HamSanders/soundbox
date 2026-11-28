@@ -24,7 +24,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { DownloadIcon, MicVocalIcon, MusicIcon } from "lucide-react";
+import { DownloadIcon, MicVocalIcon, MusicIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { SitePanel } from "@/components/site/site-frame";

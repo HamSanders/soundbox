@@ -16,7 +16,7 @@
 
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { PlusIcon, SearchIcon } from "lucide-react";
+import { PlusIcon, SearchIcon } from "@/lib/icons";
 
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";

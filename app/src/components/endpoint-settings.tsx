@@ -15,7 +15,7 @@
  */
 
 import { useState } from "react";
-import { CheckCircle2Icon, EyeOffIcon, Loader2Icon, PencilIcon, PlusIcon, TrashIcon } from "lucide-react";
+import { CheckCircle2Icon, EyeOffIcon, Loader2Icon, PencilIcon, PlusIcon, TrashIcon } from "@/lib/icons";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

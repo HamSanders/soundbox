@@ -31,7 +31,7 @@
  */
 
 import { Link } from "react-router-dom";
-import { ExternalLinkIcon } from "lucide-react";
+import { ExternalLinkIcon } from "@/lib/icons";
 
 import { SeoHead, softwareAppJsonLd } from "@/components/seo-head";
 import { Button } from "@/components/ui/button";

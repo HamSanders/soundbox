@@ -27,7 +27,7 @@
 
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { DownloadIcon, ExternalLinkIcon } from "lucide-react";
+import { DownloadIcon, ExternalLinkIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { SeoHead } from "@/components/seo-head";

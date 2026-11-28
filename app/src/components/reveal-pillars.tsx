@@ -35,7 +35,7 @@
  */
 
 import { Link } from "react-router-dom";
-import { MusicIcon, AudioLinesIcon, MicIcon, LayersIcon, CpuIcon } from "lucide-react";
+import { MusicIcon, AudioLinesIcon, MicIcon, LayersIcon, CpuIcon } from "@/lib/icons";
 
 import { ScrollStage, type StageStep } from "@/components/scroll-stage";
 import { WindowChrome } from "@/components/window-chrome";

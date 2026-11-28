@@ -18,7 +18,7 @@
  * furniture.
  */
 
-import { Loader2Icon, XIcon } from "lucide-react";
+import { Loader2Icon, XIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";

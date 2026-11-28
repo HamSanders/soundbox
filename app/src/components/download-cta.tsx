@@ -10,7 +10,7 @@
  * reads "Download" and goes to `/download`, so it is never a dead link.
  */
 
-import { ArrowDownIcon } from "lucide-react";
+import { ArrowDownIcon } from "@/lib/icons";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";

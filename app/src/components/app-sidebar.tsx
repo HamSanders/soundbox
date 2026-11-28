@@ -20,7 +20,7 @@ import {
   HomeIcon,
   InfoIcon,
   LibraryIcon,
-  MessagesSquareIcon,
+  ChartNoAxesGanttIcon,
   MicIcon,
   PhoneIcon,
   MoonIcon,
@@ -30,7 +30,7 @@ import {
   SunIcon,
   Trash2Icon,
   XIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 
 import {
   Sidebar,
@@ -112,7 +112,7 @@ const NAV_STUDIO: NavItem[] = [
   {
     to: "/studio",
     label: "Studio",
-    icon: MessagesSquareIcon,
+    icon: ChartNoAxesGanttIcon,
     end: false,
     hue: "studio",
   },

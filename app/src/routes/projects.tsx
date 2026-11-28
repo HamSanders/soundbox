@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FolderIcon, FolderPlusIcon, Trash2Icon } from "lucide-react";
+import { FolderIcon, FolderPlusIcon, Trash2Icon } from "@/lib/icons";
 
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";

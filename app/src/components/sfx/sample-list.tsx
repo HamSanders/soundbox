@@ -18,7 +18,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { DownloadIcon, FlaskConicalIcon, SearchIcon } from "lucide-react";
+import { DownloadIcon, FlaskConicalIcon, SearchIcon } from "@/lib/icons";
 import sampleFacts from "virtual:sfx-sample-facts";
 
 import { Button } from "@/components/ui/button";

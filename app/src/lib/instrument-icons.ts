@@ -28,7 +28,7 @@ import {
   PianoIcon,
   RadioIcon,
   type LucideIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 
 /**
  * Stem name → icon. Matched on substrings rather than equality: separators

@@ -1,4 +1,4 @@
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus } from "@/lib/icons";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 

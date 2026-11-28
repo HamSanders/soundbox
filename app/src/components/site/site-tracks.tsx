@@ -24,7 +24,7 @@ import {
   PlayIcon,
   SkipBackIcon,
   SkipForwardIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { LicenseChip } from "@/components/license-badge";

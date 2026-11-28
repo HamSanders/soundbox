@@ -28,7 +28,7 @@
  */
 
 import { Link } from "react-router-dom";
-import { ExternalLinkIcon, MicIcon } from "lucide-react";
+import { ExternalLinkIcon, MicIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { WindowChrome } from "@/components/window-chrome";

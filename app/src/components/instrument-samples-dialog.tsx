@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { DownloadIcon, Trash2Icon } from "lucide-react";
+import { DownloadIcon, Trash2Icon } from "@/lib/icons";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";

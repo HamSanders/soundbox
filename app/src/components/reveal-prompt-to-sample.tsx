@@ -20,7 +20,7 @@
  * timeline further down the page.
  */
 
-import { CheckIcon, Loader2Icon } from "lucide-react";
+import { CheckIcon, Loader2Icon } from "@/lib/icons";
 
 import { ScrollStage, type StageStep } from "@/components/scroll-stage";
 import { WindowChrome } from "@/components/window-chrome";

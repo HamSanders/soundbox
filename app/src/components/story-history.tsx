@@ -17,7 +17,7 @@
  * row renders whichever of the three it has rather than assuming a shape.
  */
 
-import { ChevronRightIcon, Loader2Icon, WrenchIcon } from "lucide-react";
+import { ChevronRightIcon, Loader2Icon, WrenchIcon } from "@/lib/icons";
 
 import { SoundCard } from "@/components/sound-card";
 import { formatRelative } from "@/lib/format";

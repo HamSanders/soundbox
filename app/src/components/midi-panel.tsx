@@ -38,7 +38,7 @@ import {
   SquareIcon,
   Trash2Icon,
   UploadIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";

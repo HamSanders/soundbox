@@ -15,7 +15,7 @@
  */
 
 import { Link } from "react-router-dom";
-import { ExternalLinkIcon } from "lucide-react";
+import { ExternalLinkIcon } from "@/lib/icons";
 
 import { SoundEditor } from "@/components/sound-editor";
 import { StemGroup } from "@/components/stem-group";

@@ -6,7 +6,7 @@
  */
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 

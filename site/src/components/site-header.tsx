@@ -30,7 +30,7 @@ import {
   PlugIcon,
   XIcon,
   type LucideIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 
 import { BrandMark, Wordmark } from "@/components/brand-mark";
 import { cloudWaitlistHref } from "@/lib/marketing-links";

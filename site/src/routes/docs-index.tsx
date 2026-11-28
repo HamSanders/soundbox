@@ -8,7 +8,7 @@
  */
 
 import { Link } from "react-router-dom";
-import { ArrowRightIcon, TerminalIcon } from "lucide-react";
+import { ArrowRightIcon, TerminalIcon } from "@/lib/icons";
 
 import { SeoHead } from "@/components/seo-head";
 import { DocsShell } from "../docs/shell";

@@ -40,7 +40,7 @@ import {
   SparklesIcon,
   Trash2Icon,
   TriangleAlertIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { LoadingVerb } from "@/components/loading-verb";

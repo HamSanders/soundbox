@@ -15,7 +15,7 @@
 
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ChevronRightIcon } from "lucide-react";
+import { ChevronRightIcon } from "@/lib/icons";
 
 import { cn } from "@/lib/utils";
 import { OnThisPage } from "../components/on-this-page";

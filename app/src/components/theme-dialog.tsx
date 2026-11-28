@@ -9,7 +9,7 @@
  * (`--ambient-<style>-1..3` in index.css), so they change with the mode.
  */
 
-import { CheckIcon, MoonIcon, SunIcon } from "lucide-react";
+import { CheckIcon, MoonIcon, SunIcon } from "@/lib/icons";
 import { useTheme } from "next-themes";
 import type { CSSProperties, ReactNode } from "react";
 

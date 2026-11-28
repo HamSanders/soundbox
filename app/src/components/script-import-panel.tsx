@@ -10,7 +10,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { ClipboardPasteIcon, SparklesIcon, XIcon } from "lucide-react";
+import { ClipboardPasteIcon, SparklesIcon, XIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

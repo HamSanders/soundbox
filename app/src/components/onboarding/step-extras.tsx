@@ -12,7 +12,7 @@
  * for. Both are one switch away on Settings afterwards, which is what the
  * closing line says. */
 
-import { ImageIcon, SparklesIcon } from "lucide-react";
+import { ImageIcon, SparklesIcon } from "@/lib/icons";
 
 import { Switch } from "@/components/ui/switch";
 import { formatBytes } from "@/lib/format";

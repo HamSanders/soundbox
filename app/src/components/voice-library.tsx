@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { LayoutGridIcon, ListIcon, PauseIcon, PlayIcon } from "lucide-react";
+import { LayoutGridIcon, ListIcon, PauseIcon, PlayIcon } from "@/lib/icons";
 
 import { Badge } from "@/components/ui/badge";
 import { ProjectThumb } from "@/components/project-thumb";

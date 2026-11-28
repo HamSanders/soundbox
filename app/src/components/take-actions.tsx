@@ -13,7 +13,7 @@
  */
 
 import { useState } from "react";
-import { LibraryIcon, PencilIcon, WandSparklesIcon } from "lucide-react";
+import { LibraryIcon, PencilIcon, WandSparklesIcon } from "@/lib/icons";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";

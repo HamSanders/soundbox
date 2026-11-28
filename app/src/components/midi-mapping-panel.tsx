@@ -14,7 +14,7 @@
  * take is a thing you then have to find and delete.
  */
 
-import { CheckIcon, RadioIcon, RotateCcwIcon, XIcon } from "lucide-react";
+import { CheckIcon, RadioIcon, RotateCcwIcon, XIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";

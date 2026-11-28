@@ -34,7 +34,7 @@ import {
   ScaleIcon,
   SparklesIcon,
   WifiOffIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 
 import { SitePanel } from "@/components/site/site-frame";
 import { Button } from "@/components/ui/button";

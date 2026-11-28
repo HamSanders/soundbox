@@ -9,7 +9,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { BotIcon, SearchIcon, StarIcon } from "lucide-react";
+import { BotIcon, SearchIcon, StarIcon } from "@/lib/icons";
 
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";

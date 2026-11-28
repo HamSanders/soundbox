@@ -8,9 +8,9 @@ import {
   AudioLinesIcon,
   PlusIcon,
   MusicIcon,
-  SparklesIcon,
+  ChartNoAxesGanttIcon,
   TriangleAlertIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,7 @@ const RECENT_LIMIT = 8;
 const QUICK_LINKS = [
   {
     to: "/studio",
-    icon: SparklesIcon,
+    icon: ChartNoAxesGanttIcon,
     label: "Studio",
     hint: "Everything you have started",
   },

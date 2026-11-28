@@ -2,11 +2,11 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   HomeIcon,
   LibraryIcon,
-  MessagesSquareIcon,
+  ChartNoAxesGanttIcon,
   MicIcon,
   PlusIcon,
   type LucideIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 
 import { cn } from "@/lib/utils";
 
@@ -47,7 +47,7 @@ export const TABS: Tab[] = [
     match: /^\/(create|library\/(music|sfx|speech))(\/|$)/,
     primary: true,
   },
-  { to: "/studio", label: "Studio", icon: MessagesSquareIcon, match: /^\/studio(\/|$)/ },
+  { to: "/studio", label: "Studio", icon: ChartNoAxesGanttIcon, match: /^\/studio(\/|$)/ },
   { to: "/voice/lab", label: "Voices", icon: MicIcon, match: /^\/voice(\/|$)/ },
 ];
 

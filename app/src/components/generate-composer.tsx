@@ -46,7 +46,7 @@ import {
   TagIcon,
   Undo2Icon,
   UserRoundIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { LoadingVerb } from "@/components/loading-verb";

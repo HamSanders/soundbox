@@ -11,7 +11,7 @@
  */
 
 import { Link, Navigate, useParams } from "react-router-dom";
-import { DownloadIcon } from "lucide-react";
+import { DownloadIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { SitePanel } from "@/components/site/site-frame";

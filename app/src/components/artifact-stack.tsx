@@ -25,8 +25,8 @@
 
 import { useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { ChevronDownIcon, ExternalLinkIcon, XIcon } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { ChevronDownIcon, ExternalLinkIcon, XIcon } from "@/lib/icons";
+import type { LucideIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { useDragOut } from "@/hooks/use-drag-out";

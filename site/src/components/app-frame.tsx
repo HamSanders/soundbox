@@ -18,7 +18,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
-import { CloudIcon, DownloadIcon, MoonIcon, NewspaperIcon, SlidersHorizontalIcon, SunIcon, type LucideIcon } from "lucide-react";
+import { CloudIcon, DownloadIcon, MoonIcon, NewspaperIcon, ChartNoAxesGanttIcon, SunIcon, type LucideIcon } from "@/lib/icons";
 
 import { AmbientBackground } from "@/components/ambient-background";
 import { BrandMark } from "@/components/brand-mark";
@@ -94,7 +94,7 @@ interface RailItem {
 const RAIL: RailItem[][] = [
   ...GROUPS.map((g) => g.items.map(({ to, label, icon }) => ({ to, label, icon }))),
   [
-    { to: "/studio", label: "Studio", icon: SlidersHorizontalIcon },
+    { to: "/studio", label: "Studio", icon: ChartNoAxesGanttIcon },
     { to: "/blog", label: "Blog", icon: NewspaperIcon },
   ],
 ];

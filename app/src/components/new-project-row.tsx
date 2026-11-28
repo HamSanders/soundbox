@@ -5,7 +5,7 @@
  */
 
 import { useState } from "react";
-import { FolderPlusIcon } from "lucide-react";
+import { FolderPlusIcon } from "@/lib/icons";
 
 import { useCreateProject } from "@/lib/queries";
 import type { Project } from "@/lib/api";

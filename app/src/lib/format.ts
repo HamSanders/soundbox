@@ -98,3 +98,20 @@ export function saveBlob(blob: Blob, fileName: string): void {
     URL.revokeObjectURL(url);
   }
 }
+
+/**
+ * A position on a timeline: `m:ss`, or `m:ss.d` with `tenths`.
+ *
+ * Unlike `formatDuration` it never changes shape with the value ("7.4s" under
+ * ten seconds, "1:07" over a minute), so a clock that counts and the labels
+ * along a ruler keep a steady width and read as one scale.
+ */
+export function formatClock(seconds: number, tenths = false): string {
+  if (!Number.isFinite(seconds) || seconds < 0) seconds = 0;
+  // Rounded first, so 59.96 reads 1:00.0 and never 0:60.0.
+  const total = tenths ? Math.round(seconds * 10) / 10 : Math.floor(seconds);
+  const m = Math.floor(total / 60);
+  const s = total - m * 60;
+  const whole = String(Math.floor(s)).padStart(2, "0");
+  return tenths ? `${m}:${whole}.${Math.round((s % 1) * 10) % 10}` : `${m}:${whole}`;
+}

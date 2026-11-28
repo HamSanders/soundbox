@@ -8,9 +8,10 @@ There are two ways in:
 
 - **Voice Studio → new story.** Write a script. A TTS model reads each line and
   the lines land on the timeline in order.
-- **Any sound → "Open in the studio".** The clip is placed on a lane. If a
-  separator is installed, pick the stems you want and each one gets its own
-  lane.
+- **Any sound → "Open in Studio".** The clip is placed on a lane. If a
+  separator is installed you can split it on the way: pick the stems you want
+  and each one gets its own lane. A sound's page also has **Open stems in
+  Studio** once it has been split.
 
 Both make the same kind of document. You can add a spoken line to a story that
 started as stems, or drag a music bed under a script.

@@ -717,6 +717,44 @@ const models: Model[] = [
     error: null,
     params: [],
   },
+  {
+    id: "audiocpp-htdemucs",
+    family: "htdemucs",
+    name: "HTDemucs stem separation (audio.cpp)",
+    vendor: "Meta AI (Demucs)",
+    description: "Splits a mixed track into vocals, drums, bass and other.",
+    license: {
+      name: "MIT (code) / research-only (weights)",
+      commercial: "no",
+      url: "https://github.com/facebookresearch/demucs",
+      note: null,
+    },
+    hf_repo: "audio-cpp/audio.cpp-gguf",
+    gated: false,
+    task: "sep",
+    voice_ids: [],
+    requires_voice_reference: false,
+    category: "utility",
+    max_duration_s: 600,
+    sample_rate: 44100,
+    channels: 2,
+    supports: {
+      negative_prompt: false, seed: false, steps: false, cfg: false, lyrics: false,
+      text: false, voice_reference: false, extend: false, cover: false, repaint: false,
+    },
+    defaults: { duration_s: 0 },
+    vram_estimate_mb: 2000,
+    extras: ["audio-cpp"],
+    // Installed, so "Split into stems" is offered in a mock build; with no
+    // separator the sound page hides the whole split flow.
+    status: "installed",
+    installed_deps: true,
+    auto_installable: false,
+    manual_install_reason:
+      "This model runs on audio.cpp, a native binary rather than a Python package.",
+    error: null,
+    params: [],
+  },
 ];
 
 if (DEMO) models.splice(0, models.length, ...demoModels);
@@ -875,6 +913,23 @@ const plainSeedSounds: SeedSound[] = [
     shape: "burst",
     favorite: false,
     source: "api",
+  },
+  // A song with lyrics, so the sound page has its song shape to show: the
+  // lyrics column, the split, and the stems that open in the studio.
+  {
+    id: "snd-song",
+    name: "Paper Lanterns",
+    prompt: "indie folk, fingerpicked guitar, brushed drums, warm upright bass, close female vocal, 96 BPM",
+    tags: ["folk", "vocal"],
+    model: "audiocpp-ace-step",
+    duration_s: 48,
+    shape: "tonal",
+    favorite: false,
+    hours_ago: 1,
+    sample_rate: 48000,
+    channels: 2,
+    lyrics:
+      "[verse]\nPaper lanterns on the water\nCarry what we could not say\nEvery light a little letter\nDrifting slowly out of frame\n\n[chorus]\nLet them go, let them glow\nLet the river take them home\nWhat we were, what we know\nFloating out where the dark is slow\n\n[verse]\nMorning finds the banks are empty\nJust the reeds and one grey bird\nBut I can hear it, low and steady\nEvery word I never heard",
   },
 ];
 
@@ -2046,6 +2101,9 @@ async function runSeparateJob(
   modelId: string,
   sourceId: string,
   selection: StemSelection | null = null,
+  /** What the finished job reports, when it is more than the stems: opening
+   *  them in the studio adds the story they were laid out in. */
+  finish: (created: string[]) => { sounds: string[]; story_id?: string } = (created) => ({ sounds: created }),
 ) {
   const source = sounds.find((s) => s.id === sourceId);
   await wait(150);
@@ -2092,7 +2150,7 @@ async function runSeparateJob(
   job.progress = 1;
   job.message = "done";
   job.finished_at = new Date().toISOString();
-  job.result = { sounds: created };
+  job.result = finish(created);
   emit(job);
 }
 
@@ -3205,32 +3263,47 @@ export const mockApi: MirliApi = {
     return [{ ...segment }, { ...tail }];
   },
 
-  async storyFromSound(soundId, _separate = false, _stems = null): Promise<JobRef> {
+  async storyFromSound(soundId, separate = false, stems = null): Promise<JobRef> {
     await wait(80);
     const source = sounds.find((s) => s.id === soundId);
     if (!source) throw new Error(`Unknown sound ${soundId}`);
-    return startMockJob("separate", () => {
-      // The mock has no separator, so "opening in the studio" always lands the
-      // one sound on one track — enough to exercise the navigation.
+    // As the server does: a derived sound opens whole, and a sound that was
+    // already split reuses its stems instead of being separated again.
+    const split = separate && source.parent_id == null;
+    const existing = (): MockSound[] =>
+      sounds.filter((s) => s.parent_id === source.id && /\((vocals|drums|bass|other|rest)\)$/.test(s.name));
+    const layOut = (): { sounds: string[]; story_id: string } => {
+      const lanes = split && existing().length ? [...existing()].reverse() : [source];
       const now = new Date().toISOString();
       const story: Story = {
         id: nextId("story"), title: source.name, created_at: now, updated_at: now,
-        project_id: null, request_options: {}, segment_count: 1,
+        project_id: null, request_options: {}, segment_count: lanes.length,
         // Clips on lanes, no script: the Music Builder's shape.
         builder: "music",
       };
       stories.unshift(story);
-      segments.push({
-        id: nextId("seg"), story_id: story.id, position: 0, track_index: 0,
-        speaker: source.name, voice_id: null, text: "", language: null,
-        sound_id: source.id, kind: "line", trim_start_s: 0, sound: null,
-        request_options: {},
-        start_s: 0, duration_s: source.duration_s, fade_in_s: 0, fade_out_s: 0,
-        muted: false, gain_db: 0,
-        created_at: now, updated_at: now,
+      lanes.forEach((sound, lane) => {
+        segments.push({
+          id: nextId("seg"), story_id: story.id, position: lane, track_index: lane,
+          speaker: sound.name, voice_id: null, text: "", language: null,
+          sound_id: sound.id, kind: "line", trim_start_s: 0, sound: null,
+          request_options: {},
+          start_s: 0, duration_s: sound.duration_s, fade_in_s: 0, fade_out_s: 0,
+          muted: false, gain_db: 0,
+          created_at: now, updated_at: now,
+        });
       });
-      return { sounds: [source.id], story_id: story.id };
-    });
+      return { sounds: lanes.map((l) => l.id), story_id: story.id };
+    };
+    if (split && !existing().length) {
+      const sep = models.find((m) => m.task === "sep");
+      if (sep) {
+        const job = newJob("separate", { source_sound_id: soundId, open_in_studio: true });
+        void runSeparateJob(job, sep.id, soundId, stems, layOut);
+        return { job_id: job.id };
+      }
+    }
+    return startMockJob("separate", layOut);
   },
 
   async listTracks(storyId): Promise<StoryTrack[]> {

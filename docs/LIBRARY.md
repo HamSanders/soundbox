@@ -48,18 +48,19 @@ own. The library shows whether a sound's project is inherited or set directly.
 Every tool that changes audio writes a **new sound** with `parent_id` pointing
 at the original. Nothing is overwritten.
 
-A sound's page has a waveform you can drag a selection across, and a toolbar
-that acts on the selection or the whole clip:
+A sound's page has a waveform over a time ruler. Drag across the waveform to
+select a range; click the ruler to move the playhead. With the editor focused,
+Space plays, Left and Right seek, and Escape clears the selection. Under it,
+the tools are grouped by what they act on:
 
-| Tool          | What it does                                                  |
-| ------------- | ------------------------------------------------------------- |
-| Trim          | Keep the selection, discard the rest                          |
-| Normalize     | To a LUFS target                                              |
-| Gain          | Up or down, in dB                                             |
-| Reverse       | Backwards                                                     |
-| High-pass, low-pass | Cut below or above a frequency                          |
-| Pitch         | Semitones, without changing the length                        |
-| Stretch       | Length, without changing the pitch                            |
+| Tool          | Acts on    | What it does                                     |
+| ------------- | ---------- | ------------------------------------------------ |
+| Trim          | Selection  | Keep the selection, discard the rest             |
+| Repaint       | Selection  | Regenerate the selection, keep the rest (needs a model that can repaint) |
+| Reverse       | Whole clip | Backwards                                        |
+| Volume        | Whole clip | Gain in dB, or normalize to a LUFS target        |
+| EQ            | Whole clip | High-pass or low-pass: cut below or above a frequency |
+| Pitch & speed | Whole clip | Pitch in semitones without changing the length, or speed without changing the pitch |
 
 Each Apply produces a new clip and opens it. The original is unchanged.
 
@@ -76,9 +77,12 @@ When you split, choose the stems you want and what happens to the others:
 - **Keep as one:** the rest is summed into a single `(rest)` sound, the
   original minus what you took out. The pieces still add back up to the take.
 
-On a sound's page the stems appear beneath it as one synced player. They share
-the source's length and start together. To arrange them, open the sound in
-the studio, which splits it and puts one stem on each lane.
+On a sound's page, **Split into stems** is beside Play for music, and in the
+⋯ menu for anything else. The stems then appear under the waveform as one
+synced player. They share the source's length and start together. To arrange
+them, press **Open stems in Studio** there, or choose **Split and open in
+Studio** when you split: either puts one stem on each lane. **Open in Studio**
+on its own opens the sound whole, on one lane.
 
 ## Where the files are
 

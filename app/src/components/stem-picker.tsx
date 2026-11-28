@@ -40,6 +40,8 @@ export function StemPickerDialog({
   confirmLabel = "Split",
   busy = false,
   onConfirm,
+  secondaryLabel,
+  onSecondary,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -51,6 +53,11 @@ export function StemPickerDialog({
   confirmLabel?: string;
   busy?: boolean;
   onConfirm: (selection: StemSelection) => void;
+  /** A second way to finish with the same answers, for a surface with two
+   *  destinations: the sound page splits into the library, or splits and
+   *  lays the stems out in the studio. Shown only when both are given. */
+  secondaryLabel?: string;
+  onSecondary?: (selection: StemSelection) => void;
 }) {
   const [picked, setPicked] = useState<string[]>(stems);
   const [rest, setRest] = useState<"discard" | "merge">("discard");
@@ -85,6 +92,15 @@ export function StemPickerDialog({
           <Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
+          {secondaryLabel && onSecondary && (
+            <Button
+              variant="outline"
+              disabled={busy || picked.length === 0}
+              onClick={() => onSecondary(toSelection(picked, rest, stems))}
+            >
+              {secondaryLabel}
+            </Button>
+          )}
           <Button
             disabled={busy || picked.length === 0}
             onClick={() => onConfirm(toSelection(picked, rest, stems))}

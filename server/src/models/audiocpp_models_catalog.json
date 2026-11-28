@@ -2316,7 +2316,7 @@
       "id": "audiocpp-kokoro",
       "name": "Kokoro 82M (audio.cpp)",
       "vendor": "hexgrad",
-      "description": "Small, fast text-to-speech with 54 preset voices across English, Spanish, French, Hindi, Italian, Japanese, Portuguese and Chinese. No cloning. Needs eSpeak-ng installed separately: audio.cpp phonemises through the eSpeak-ng shared library and the release does not include it, so without it every request fails with \"Could not load eSpeak-ng\". Needs audio.cpp 0.9.2 or newer: older binaries do not have this loader.",
+      "description": "Small, fast text-to-speech with 54 preset voices across English, Spanish, French, Hindi, Italian, Japanese, Portuguese and Chinese. No cloning. Needs eSpeak-ng installed separately: audio.cpp phonemises through the eSpeak-ng shared library and the release does not include it. On Windows, Mirli finds eSpeak NG in its default install folder; without eSpeak-ng, requests fail with a note on how to install it. Needs audio.cpp 0.9.2 or newer: older binaries do not have this loader.",
       "family": "kokoro_tts",
       "audiocpp_package_id": "kokoro_82m_q8_0",
       "audiocpp_target_dir": "Kokoro-82M-GGUF",

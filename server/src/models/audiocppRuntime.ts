@@ -48,6 +48,7 @@ import {
 import { CancelledJob, ModelError } from "../errors.js";
 import { sseData } from "../audio/sse.js";
 import { findBinary } from "./audiocppBinary.js";
+import { withEspeakEnv } from "./espeak.js";
 
 type ServerProcess = ChildProcessByStdio<null, Readable, Readable>;
 
@@ -332,6 +333,7 @@ export class AudioCppRuntime {
       // The runtime DLLs sit beside the binary; on Windows they are found
       // relative to the working directory of the process that loads them.
       cwd: dirname(binaryPath),
+      env: withEspeakEnv(),
     });
 
     const stderrTail: string[] = [];

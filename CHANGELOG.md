@@ -12,6 +12,7 @@ to follow [Semantic Versioning](https://semver.org/).
 - **Touch-friendly controls.** On a touch screen every button has a tap area of at least 44 px, menu rows are 44 px tall, and controls that only appeared on hover are always shown. Timeline clips and tracks get a ⋯ button for the menu you'd normally right-click for; those menus open as a sheet from the bottom. The piano roll gets a Delete note button.
 
 ### Changed
+- **Kokoro and KittenTTS say how to get eSpeak-ng.** Both models need eSpeak-ng, which is a separate install. When it is missing, the error now says how to install it instead of showing audio.cpp's raw output. On Windows, Mirli also finds eSpeak NG in its default folder when that folder is not on your PATH, so a read works straight after installing it, without restarting Mirli.
 - **The full sidebar starts at 840 px** instead of 768 px. Between 768 and 839 px you now get the tablet rail, and the Studio and the side panels use their narrow layouts.
 - **The header has no background.** It sits on the page like the panels do, and on pages that scroll it scrolls away with the page instead of staying pinned.
 - **The desktop app's sidebar has a Home entry.** The desktop window has no logo to click, so Home sits at the top of the sidebar and takes you back to the dashboard.

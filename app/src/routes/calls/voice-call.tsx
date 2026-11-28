@@ -1,4 +1,4 @@
-import { AArrowDown, AArrowUp, ArrowLeft, Keyboard, Mic, MicOff, Phone, PhoneOff, Users } from "lucide-react";
+import { AArrowDown, AArrowUp, ArrowLeft, Keyboard, Mic, MicOff, Phone, PhoneOff, Users } from "@/lib/icons";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 

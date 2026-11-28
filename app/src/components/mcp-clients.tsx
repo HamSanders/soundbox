@@ -17,7 +17,7 @@
  */
 
 import { Fragment, useState, type ReactNode } from "react";
-import { ArrowDownIcon, ArrowUpRightIcon, DownloadIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpRightIcon, DownloadIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { C, CopyBlock, CopyButton, Note } from "@/components/docs-primitives";

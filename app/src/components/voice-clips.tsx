@@ -20,7 +20,7 @@
 
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { MicIcon, SquareIcon, Trash2Icon, UploadIcon } from "lucide-react";
+import { MicIcon, SquareIcon, Trash2Icon, UploadIcon } from "@/lib/icons";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";

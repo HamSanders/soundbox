@@ -9,7 +9,7 @@
  */
 
 import { Link, NavLink } from "react-router-dom";
-import { PlayIcon } from "lucide-react";
+import { PlayIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { ProjectThumb } from "@/components/project-thumb";

@@ -24,7 +24,7 @@ import {
   Trash2Icon,
   TriangleAlertIcon,
   XIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 
 import { usePanelWidth } from "@/hooks/use-panel-width";
 import { FailureCard } from "@/components/failure-card";

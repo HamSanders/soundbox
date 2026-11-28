@@ -32,7 +32,7 @@ import {
   ScissorsIcon,
   Volume2Icon,
   XIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";

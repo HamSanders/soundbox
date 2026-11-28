@@ -24,7 +24,7 @@
  */
 
 import { useState } from "react";
-import { RotateCcwIcon } from "lucide-react";
+import { RotateCcwIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

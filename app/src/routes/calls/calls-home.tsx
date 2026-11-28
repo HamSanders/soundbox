@@ -1,4 +1,4 @@
-import { Mic, Pencil, Phone, Plus } from "lucide-react";
+import { Mic, Pencil, Phone, Plus } from "@/lib/icons";
 import { Link, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";

@@ -11,7 +11,7 @@
  * Models page, behind the same say-it-out-loud confirmation it has always
  * had. */
 
-import { BriefcaseIcon, FlaskConicalIcon } from "lucide-react";
+import { BriefcaseIcon, FlaskConicalIcon } from "@/lib/icons";
 
 import { SelectCard } from "@/components/onboarding/select-card";
 import type { Usage } from "@/lib/onboarding";

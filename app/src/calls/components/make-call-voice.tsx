@@ -7,7 +7,7 @@
  * Built only from Mirli's own APIs: speak (a job), then "make a voice from this sound".
  */
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, RotateCcw, Wand2 } from "lucide-react";
+import { Loader2, RotateCcw, Wand2 } from "@/lib/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";

@@ -19,7 +19,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AudioLinesIcon, MessagesSquareIcon } from "lucide-react";
+import { AudioLinesIcon, MessagesSquareIcon } from "@/lib/icons";
 
 import {
   Dialog,

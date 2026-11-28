@@ -33,7 +33,7 @@ import {
   Note,
 } from "@/components/docs-primitives";
 import { MCP_TOOLS, MCP_TOOL_GROUPS } from "@/content/mcp/tools";
-import { ChevronDownIcon } from "lucide-react";
+import { ChevronDownIcon } from "@/lib/icons";
 
 const SOUND_RESULT = `{
   "id": "987a0eae-6c0e-45e8-b777-81cfe4d15af3",

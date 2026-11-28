@@ -25,7 +25,7 @@
  * two-letter fallback `routes/sfx/hub.tsx` uses for a category without art.
  */
 
-import { CpuIcon, ExternalLinkIcon } from "lucide-react";
+import { CpuIcon, ExternalLinkIcon } from "@/lib/icons";
 
 import { REPO_URL } from "@/lib/marketing-links";
 

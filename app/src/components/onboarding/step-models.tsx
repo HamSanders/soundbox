@@ -10,7 +10,7 @@
  * silently dropped. It is a real answer ("nothing here can be sold, at your
  * VRAM"), and hiding it would look like the wizard forgot the question. */
 
-import { InfoIcon } from "lucide-react";
+import { InfoIcon } from "@/lib/icons";
 
 import { LicenseChip } from "@/components/license-badge";
 import { Switch } from "@/components/ui/switch";

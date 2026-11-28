@@ -17,7 +17,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { SearchIcon, XIcon } from "lucide-react";
+import { SearchIcon, XIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { SitePanel } from "@/components/site/site-frame";

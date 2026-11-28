@@ -4,7 +4,7 @@
  * line of small print.
  */
 
-import { ExternalLinkIcon } from "lucide-react";
+import { ExternalLinkIcon } from "@/lib/icons";
 import type { LicenseInfo } from "@/lib/api";
 import { cn } from "@/lib/utils";
 

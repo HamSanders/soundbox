@@ -18,7 +18,7 @@
 
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowUpRightIcon } from "lucide-react";
+import { ArrowUpRightIcon } from "@/lib/icons";
 
 import { SeoHead } from "@/components/seo-head";
 import { assetUrl } from "@/lib/asset-url";

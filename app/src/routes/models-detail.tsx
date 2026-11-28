@@ -21,7 +21,7 @@
  */
 
 import { Link, Navigate, useParams } from "react-router-dom";
-import { ArrowRightIcon, ExternalLinkIcon, TerminalIcon } from "lucide-react";
+import { ArrowRightIcon, ExternalLinkIcon, TerminalIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";

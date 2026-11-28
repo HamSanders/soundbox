@@ -20,7 +20,7 @@ import {
   StarIcon,
   Trash2Icon,
   CopyIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";

@@ -15,7 +15,7 @@
 
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowUpRightIcon, CheckIcon, CopyIcon, OctagonXIcon, RotateCcwIcon, XIcon } from "lucide-react";
+import { ArrowUpRightIcon, CheckIcon, CopyIcon, OctagonXIcon, RotateCcwIcon, XIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import type { Failure } from "@/lib/api";

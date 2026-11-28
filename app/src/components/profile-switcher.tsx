@@ -13,7 +13,7 @@
 
 import { SidebarMenuButton } from "@/components/ui/sidebar";
 import { useState } from "react";
-import { Check, Loader2, Plus } from "lucide-react";
+import { Check, Loader2, Plus } from "@/lib/icons";
 
 import { ProfileManagerDialog } from "@/components/profile-manager";
 import {

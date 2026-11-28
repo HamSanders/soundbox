@@ -12,6 +12,8 @@ to follow [Semantic Versioning](https://semver.org/).
 - **Touch-friendly controls.** On a touch screen every button has a tap area of at least 44 px, menu rows are 44 px tall, and controls that only appeared on hover are always shown. Timeline clips and tracks get a ⋯ button for the menu you'd normally right-click for; those menus open as a sheet from the bottom. The piano roll gets a Delete note button.
 
 ### Changed
+- **New icons.** The app and the website now draw their icons from Hugeicons instead of Lucide: rounder shapes with a slightly lighter line. Eject is the one icon that stays as it was.
+- **Studio has one icon everywhere.** The sidebar, the phone tab bar, the Home quick link and the website's app preview all show Studio as three timeline bars. It used to be chat bubbles in one place, sparkles in another and sliders in a third.
 - **The full sidebar starts at 840 px** instead of 768 px. Between 768 and 839 px you now get the tablet rail, and the Studio and the side panels use their narrow layouts.
 - **The header has no background.** It sits on the page like the panels do, and on pages that scroll it scrolls away with the page instead of staying pinned.
 - **The desktop app's sidebar has a Home entry.** The desktop window has no logo to click, so Home sits at the top of the sidebar and takes you back to the dashboard.

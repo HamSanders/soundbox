@@ -32,7 +32,7 @@ import {
   ExternalLinkIcon,
   StarIcon,
   TerminalIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 
 import { SeoHead, faqJsonLd, softwareAppJsonLd } from "@/components/seo-head";
 import { Button } from "@/components/ui/button";

@@ -13,7 +13,7 @@
  * copy appearing.
  */
 
-import { SearchIcon, XIcon } from "lucide-react";
+import { SearchIcon, XIcon } from "@/lib/icons";
 
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";

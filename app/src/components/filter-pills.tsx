@@ -6,7 +6,7 @@
  */
 
 import type { ReactNode } from "react";
-import { ChevronDownIcon, XIcon } from "lucide-react";
+import { ChevronDownIcon, XIcon } from "@/lib/icons";
 
 import {
   DropdownMenu,

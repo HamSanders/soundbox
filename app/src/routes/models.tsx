@@ -17,7 +17,7 @@
 import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { BriefcaseIcon, CpuIcon, DownloadIcon, HardDriveIcon, SearchIcon, Trash2Icon } from "lucide-react";
+import { BriefcaseIcon, CpuIcon, DownloadIcon, HardDriveIcon, SearchIcon, Trash2Icon } from "@/lib/icons";
 
 import { EmptyState } from "@/components/empty-state";
 import { LicenseChip } from "@/components/license-badge";

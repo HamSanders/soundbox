@@ -15,7 +15,7 @@
  */
 
 import { Link, Navigate, useParams } from "react-router-dom";
-import { ArrowRightIcon, PencilIcon } from "lucide-react";
+import { ArrowRightIcon, PencilIcon } from "@/lib/icons";
 
 import { SeoHead } from "@/components/seo-head";
 import { DocsShell } from "../docs/shell";

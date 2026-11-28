@@ -15,7 +15,7 @@ import { usePanelWidth } from "@/hooks/use-panel-width";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
-import { AudioLinesIcon, MicIcon, PencilIcon, XIcon } from "lucide-react";
+import { AudioLinesIcon, MicIcon, PencilIcon, XIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";

@@ -5,7 +5,7 @@ import { Select as SelectPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 import { usePortalContainer } from "@/lib/portal-container"
-import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
+import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "@/lib/icons"
 
 function Select({
   ...props

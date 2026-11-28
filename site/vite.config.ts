@@ -169,6 +169,8 @@ export default defineConfig({
     // bundled: the renderer resolves it from this directory either way.
     noExternal: [
       "lucide-react",
+      "@hugeicons/react",
+      "@hugeicons/core-free-icons",
       "radix-ui",
       "next-themes",
       "zustand",

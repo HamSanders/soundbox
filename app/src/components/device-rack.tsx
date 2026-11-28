@@ -25,7 +25,7 @@ import {
   PlusIcon,
   PowerIcon,
   Trash2Icon,
-} from "lucide-react";
+} from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import {

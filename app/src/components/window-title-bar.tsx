@@ -19,7 +19,7 @@
 
 import { useEffect, useState } from "react";
 import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
-import { CopyIcon, MinusIcon, SearchIcon, SquareIcon, XIcon } from "lucide-react";
+import { CopyIcon, MinusIcon, SearchIcon, SquareIcon, XIcon } from "@/lib/icons";
 
 import { Breadcrumb, HistoryButtons } from "@/components/app-header";
 import { OPEN_COMMAND_PALETTE_EVENT } from "@/components/app-command-palette";

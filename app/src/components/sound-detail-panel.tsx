@@ -15,7 +15,7 @@
 import { usePanelWidth } from "@/hooks/use-panel-width";
 import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
-import { XIcon } from "lucide-react";
+import { XIcon } from "@/lib/icons";
 
 import { SoundArtifact } from "@/components/sound-artifact";
 import { Button } from "@/components/ui/button";

@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
 import { useTheme } from "next-themes";
-import { PauseIcon, PlayIcon, Volume2Icon, VolumeXIcon } from "lucide-react";
+import { PauseIcon, PlayIcon, Volume2Icon, VolumeXIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";

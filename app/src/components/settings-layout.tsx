@@ -25,7 +25,7 @@ import {
 } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckIcon, RotateCcwIcon, SearchIcon, XIcon } from "lucide-react";
+import { CheckIcon, RotateCcwIcon, SearchIcon, XIcon } from "@/lib/icons";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";

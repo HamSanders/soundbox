@@ -13,7 +13,7 @@
  * `content/models/types.ts` for why "unknown" is load-bearing.
  */
 
-import { AlertTriangleIcon, ExternalLinkIcon, HelpCircleIcon, ScaleIcon } from "lucide-react";
+import { AlertTriangleIcon, ExternalLinkIcon, HelpCircleIcon, ScaleIcon } from "@/lib/icons";
 
 import type { CommercialUse, LicenseFinding } from "@/content/models/types";
 import { cn } from "@/lib/utils";

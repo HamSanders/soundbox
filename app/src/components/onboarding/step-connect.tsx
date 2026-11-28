@@ -4,7 +4,7 @@
  * custom endpoint is always offered after them, since any server you run or
  * hosted API with your own key can be one. */
 
-import { PlugIcon } from "lucide-react";
+import { PlugIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { setupOptions } from "@/lib/setup-options";

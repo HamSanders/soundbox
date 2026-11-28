@@ -15,7 +15,7 @@
 
 import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
-import { MenuIcon } from "lucide-react";
+import { MenuIcon } from "@/lib/icons";
 import { create } from "zustand";
 
 import { Button } from "@/components/ui/button";

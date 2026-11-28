@@ -24,7 +24,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { GripVerticalIcon, PauseIcon, PlayIcon, SearchIcon } from "lucide-react";
+import { GripVerticalIcon, PauseIcon, PlayIcon, SearchIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { PeakScrubber } from "@/components/peak-scrubber";

@@ -22,7 +22,7 @@
  * motion, where the wave is drawn once and holds still.
  */
 
-import { ArrowDownIcon, ArrowUpRightIcon, CloudIcon, StarIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpRightIcon, CloudIcon, StarIcon } from "@/lib/icons";
 import {
   useEffect,
   useRef,

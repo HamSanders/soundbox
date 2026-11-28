@@ -6,7 +6,7 @@
 
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { DownloadIcon, EjectIcon, PlusIcon, WrenchIcon, ZapIcon } from "lucide-react";
+import { DownloadIcon, EjectIcon, PlusIcon, WrenchIcon, ZapIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { useJobStream } from "@/hooks/use-job-stream";

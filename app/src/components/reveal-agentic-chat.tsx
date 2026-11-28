@@ -27,7 +27,7 @@ import {
   SlidersHorizontalIcon,
   SparklesIcon,
   type LucideIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 
 import { ScrollStage, type StageStep } from "@/components/scroll-stage";
 import { WindowChrome } from "@/components/window-chrome";

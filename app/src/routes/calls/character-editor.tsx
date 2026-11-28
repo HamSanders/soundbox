@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ImagePlus, Loader2, Phone, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowLeft, ImagePlus, Loader2, Phone, Sparkles, Trash2, X } from "@/lib/icons";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 

@@ -36,7 +36,7 @@ import {
   PlayIcon,
   SquareIcon,
   Trash2Icon,
-} from "lucide-react";
+} from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";

@@ -40,7 +40,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { DownloadIcon, Trash2Icon, ZoomInIcon, ZoomOutIcon } from "lucide-react";
+import { DownloadIcon, Trash2Icon, ZoomInIcon, ZoomOutIcon } from "@/lib/icons";
 import { toast } from "sonner";
 import { exportTake, useMidiStore } from "@/lib/midi-store";
 import type { RollNote } from "@/lib/midi-store";

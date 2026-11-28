@@ -26,7 +26,7 @@ import {
   RotateCcwIcon,
   SquareIcon,
   UploadIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/empty-state";

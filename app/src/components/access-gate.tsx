@@ -15,7 +15,7 @@
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AudioLinesIcon, Loader2Icon } from "lucide-react";
+import { AudioLinesIcon, Loader2Icon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

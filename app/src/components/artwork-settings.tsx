@@ -16,7 +16,7 @@
 
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { EyeOffIcon, ImageIcon, Loader2Icon, TrashIcon } from "lucide-react";
+import { EyeOffIcon, ImageIcon, Loader2Icon, TrashIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

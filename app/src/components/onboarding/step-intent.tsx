@@ -4,7 +4,7 @@
  * it is first and why Next stays disabled until it is answered: every later
  * step is a consequence of it. */
 
-import { AudioLinesIcon, MicIcon, MusicIcon } from "lucide-react";
+import { AudioLinesIcon, MicIcon, MusicIcon } from "@/lib/icons";
 
 import { SelectCard } from "@/components/onboarding/select-card";
 import { INTENTS, INTENT_HINT, INTENT_LABEL, type Intent } from "@/lib/onboarding";

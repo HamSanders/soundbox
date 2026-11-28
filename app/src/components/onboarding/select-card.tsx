@@ -5,7 +5,7 @@
  * look like two different widgets when they sit one click apart. */
 
 import type { ComponentType, ReactNode, SVGProps } from "react";
-import { CheckIcon } from "lucide-react";
+import { CheckIcon } from "@/lib/icons";
 
 import { cn } from "@/lib/utils";
 

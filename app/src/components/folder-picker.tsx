@@ -20,7 +20,7 @@ import {
   FolderIcon,
   HardDriveIcon,
   HouseIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import {

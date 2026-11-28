@@ -10,7 +10,7 @@
  * "suggested" only on a positive sign; the choice stays the person's, and
  * Settings can switch it. */
 
-import { CloudIcon, CpuIcon } from "lucide-react";
+import { CloudIcon, CpuIcon } from "@/lib/icons";
 
 import { SelectCard } from "@/components/onboarding/select-card";
 import type { HealthStatus, SetupMode } from "@/lib/api";

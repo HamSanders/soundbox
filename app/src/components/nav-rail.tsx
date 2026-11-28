@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { MenuIcon } from "lucide-react";
+import { MenuIcon } from "@/lib/icons";
 
 import { TABS } from "@/components/mobile-tab-bar";
 import { useSidebar } from "@/components/ui/sidebar";

@@ -18,7 +18,7 @@
 
 import type { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ChevronLeftIcon, ChevronRightIcon, CloudIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, CloudIcon } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { getCategory } from "@/content/sfx/categories";

@@ -39,7 +39,7 @@ type Tab = {
 
 export const TABS: Tab[] = [
   { to: "/dashboard", label: "Home", icon: HomeIcon, match: /^\/(dashboard|chat|console)(\/|$)/ },
-  { to: "/library", label: "Library", icon: LibraryIcon, match: /^\/(library\/?$|sounds\/|projects)/ },
+  { to: "/library", label: "Library", icon: LibraryIcon, match: /^\/(library\/?$|sounds\/)/ },
   {
     to: "/create",
     label: "Create",

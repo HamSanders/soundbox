@@ -40,7 +40,7 @@ import { ProductShots } from "@/components/product-shots";
 import { DownloadButton, PlatformPicker } from "@/components/download-cta";
 import { COMPARISON, COMPARISON_HEAD } from "@/content/comparison";
 import { COMMERCIAL, FREE, GPU, MAC, MODELS_FAQ, OFFLINE, RENAMED } from "@/content/faq";
-import { SamplePlay } from "@/components/sample-play";
+import { HeroClips } from "@/components/hero-clips";
 import { type ExampleId } from "@/content/examples";
 import { cloudWaitlistHref, MODELS_HUB_HREF, REPO_URL, repoFile } from "@/lib/marketing-links";
 import { cn } from "@/lib/utils";
@@ -50,15 +50,16 @@ import { assetUrl } from "@/lib/asset-url";
 
 /**
  * What the hero lets you hear: three sound effects, two pieces of music (one
- * sung) and a voice, so one grid covers everything the app makes. Each is a
- * real render from `content/examples.ts`, played with the prompt beside it.
+ * sung) and a voice, so six cards cover everything the app makes. Each is a
+ * real render from `content/examples.ts`. The order is the order of the slots
+ * in `components/hero-clips.tsx`: the second and fifth are the large cards.
  */
 const HERO_SAMPLES: ExampleId[] = [
   "chip-impact",
   "song-own-machine",
   "chip-ambience",
-  "voice-intro",
   "inst-lofi",
+  "voice-intro",
   "door-heavy-vault",
 ];
 
@@ -171,7 +172,7 @@ function useStars(): number | null {
  */
 function HeroShot() {
   return (
-    <figure className="relative mx-auto mt-12 hidden w-full max-w-5xl sm:block">
+    <figure className="relative mx-auto hidden w-full max-w-5xl sm:block">
       <div
         aria-hidden="true"
         className="bg-primary/10 pointer-events-none absolute inset-x-[8%] top-[10%] bottom-[-4%] blur-3xl"
@@ -183,8 +184,7 @@ function HeroShot() {
           alt="The Mirli app on its Music page: a Create panel with an ACE-Step model picker, an instrumental switch and a styles prompt, beside a list of seven generated tracks with licence badges, and a player at the bottom."
           width={1440}
           height={900}
-          loading="eager"
-          fetchPriority="high"
+          loading="lazy"
           decoding="async"
           className="ring-border/70 aspect-[16/10] w-full rounded-xl object-cover object-top shadow-2xl ring-1"
         />
@@ -197,90 +197,95 @@ function HeroShot() {
  * Say what it is, then let it be heard.
  *
  * The audio sites that do this well (Stable Audio, Suno, ElevenLabs) put real
- * output with a play button in the first screen, labelled with the prompt
- * that made it. This hero used to hold a decorative timeline and a prompt box
- * that could only open the download page; both are gone. What is left is one
- * headline, one sentence, two buttons, a large screenshot of the running app
- * and six renders, each playable without installing anything.
+ * output with a play button in the first screen. Here the output is the
+ * first screen: one headline, one sentence and two buttons in the middle,
+ * and six renders around them as cards, each playable without installing
+ * anything (`HeroClips`). The layout is the one on claude.com/programs/startups,
+ * with sounds where that page has films: cards at three sizes scattered
+ * either side of the copy, the corner ones cut off by the section's edge.
+ *
+ * The screenshot of the running app used to sit between the buttons and the
+ * sounds. It now follows the hero as its own band, so it is the second thing
+ * on the page instead of the thing the sounds had to wait behind.
  */
 function Hero() {
   const stars = useStars();
 
   return (
-    <section aria-labelledby="hero-heading" className="relative overflow-hidden px-4">
-      {/* Decorative only: a soft wash behind the headline, drawn from the
-          accent token. Hidden from assistive tech. */}
-      <div
-        aria-hidden="true"
-        className="bg-primary/12 pointer-events-none absolute -top-48 left-1/2 size-[34rem] -translate-x-1/2 rounded-full blur-3xl"
-      />
+    <>
+      <section
+        aria-labelledby="hero-heading"
+        className="border-border/60 relative overflow-hidden border-b"
+      >
+        {/* Decorative only: a soft wash behind the headline, drawn from the
+            accent token. Hidden from assistive tech. */}
+        <div
+          aria-hidden="true"
+          className="bg-primary/12 pointer-events-none absolute -top-48 left-1/2 size-[34rem] -translate-x-1/2 rounded-full blur-3xl"
+        />
 
-      <div className="relative mx-auto w-full max-w-5xl py-16 sm:py-24">
-        <div className="mx-auto max-w-3xl text-center">
-          <h1
-            id="hero-heading"
-            className="font-heading text-4xl font-semibold tracking-tight text-balance sm:text-5xl"
-          >
-            A free, open-source alternative to ElevenLabs and Suno
-          </h1>
+        {/* Capped at 1440px so the cards, which are sized as a share of this
+            box, stop growing on a very wide window and stay clear of the copy. */}
+        <div className="relative mx-auto w-full max-w-[90rem] xl:h-[780px]">
+          <div className="relative z-10 mx-auto max-w-[41rem] px-4 pt-16 pb-10 text-center xl:px-0 xl:pt-44 xl:pb-0">
+            <p className="label-caps text-muted-foreground inline-flex items-center gap-2">
+              <span aria-hidden="true" className="bg-signal size-1.5 rounded-full" />
+              Press play on any card
+            </p>
 
-          <p className="text-muted-foreground mx-auto mt-5 max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
-            Sound effects, music and voices.
-          </p>
+            <h1
+              id="hero-heading"
+              className="font-heading mt-4 text-5xl leading-[0.98] font-semibold tracking-tight text-balance xl:text-7xl"
+            >
+              A free, open-source alternative to ElevenLabs and Suno
+            </h1>
 
-          <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row sm:items-start">
-            <DownloadButton pickerHref="#install" />
-            <Button size="lg" variant="outline" asChild>
-              <a href={REPO_URL} target="_blank" rel="noreferrer noopener">
-                <StarIcon aria-hidden="true" />
-                Star on GitHub
-                {stars !== null ? (
-                  <span className="text-muted-foreground tabular-nums">
-                    {stars.toLocaleString("en")}
-                  </span>
-                ) : null}
+            <p className="text-muted-foreground mx-auto mt-5 max-w-xl text-base leading-relaxed text-pretty sm:text-lg">
+              Sound effects, music and voices.
+            </p>
+
+            <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row sm:items-start">
+              <DownloadButton pickerHref="#install" />
+              <Button size="lg" variant="outline" asChild>
+                <a href={REPO_URL} target="_blank" rel="noreferrer noopener">
+                  <StarIcon aria-hidden="true" />
+                  Star on GitHub
+                  {stars !== null ? (
+                    <span className="text-muted-foreground tabular-nums">
+                      {stars.toLocaleString("en")}
+                    </span>
+                  ) : null}
+                </a>
+              </Button>
+            </div>
+            <p className="text-muted-foreground mt-4 text-sm">
+              No graphics card?{" "}
+              <a
+                href={cloudWaitlistHref("home-hero")}
+                className="text-foreground underline underline-offset-4"
+              >
+                Join the Mirli Cloud waitlist
               </a>
-            </Button>
+            </p>
           </div>
-          <p className="text-muted-foreground mt-4 text-sm">
-            No graphics card?{" "}
-            <a
-              href={cloudWaitlistHref("home-hero")}
-              className="text-foreground underline underline-offset-4"
-            >
-              Join the Mirli Cloud waitlist
-            </a>
-          </p>
+
+          <HeroClips ids={HERO_SAMPLES} />
         </div>
+      </section>
 
+      <div className="px-4 py-12 sm:py-16">
         <HeroShot />
-
-        <ul
-          aria-label="Sounds made with Mirli"
-          className="mt-16 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
-        >
-          {/* Four on a phone, where each tile is a full row; all six once the
-              grid has columns. */}
-          {HERO_SAMPLES.map((id, i) => (
-            <li
-              key={id}
-              className={cn("bg-card ring-border/70 rounded-xl p-4 ring-1", i >= 4 && "max-sm:hidden")}
-            >
-              <SamplePlay id={id} clamp />
-            </li>
-          ))}
-        </ul>
         {/* Measured, not quoted: the same figure /press cites, from
             docs/new-models-2026-10.md (RTX 5080, CUDA, model already loaded). */}
-        <p className="text-muted-foreground mt-4 text-center text-xs leading-relaxed">
-          Every clip above was made on one desktop GPU from the prompt shown. A
-          five-second sound effect takes 1.3 s on an RTX 5080 once the model is loaded.{" "}
+        <p className="text-muted-foreground mx-auto max-w-5xl text-center text-xs leading-relaxed sm:mt-6">
+          Every clip above was made on one desktop GPU. A five-second sound effect takes 1.3 s on
+          an RTX 5080 once the model is loaded.{" "}
           <Link to="/sfx" className="text-foreground underline underline-offset-4">
             Hear hundreds more
           </Link>
         </p>
       </div>
-    </section>
+    </>
   );
 }
 

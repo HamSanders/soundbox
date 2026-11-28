@@ -11,12 +11,10 @@
  */
 
 import { PauseIcon, PlayIcon } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { EXAMPLES, type Example, type ExampleId } from "@/content/examples";
-import { assetUrl } from "@/lib/asset-url";
-import { usePlayerStore } from "@/lib/player-store";
+import { type ExampleId } from "@/content/examples";
+import { KIND_WORD, useExamplePlayer } from "@/lib/example-player";
 import { cn } from "@/lib/utils";
 
 const MODEL_NAMES: Record<string, string> = {
@@ -25,8 +23,6 @@ const MODEL_NAMES: Record<string, string> = {
   "audiocpp-ace-step": "ACE-Step 1.5 Turbo",
   "audiocpp-chatterbox": "Chatterbox",
 };
-
-const KIND_WORD = { sfx: "Sound effect", music: "Music", voice: "Voice" } as const;
 
 export function SamplePlay({
   id,
@@ -42,56 +38,7 @@ export function SamplePlay({
    *  players where every tile should be the same height. */
   clamp?: boolean;
 }) {
-  const example: Example = EXAMPLES[id];
-  // One owner per player, not per sound: the same render can sit twice on a page.
-  const storeId = `example-${useId()}`;
-  const audio = useRef<HTMLAudioElement | null>(null);
-  const [playing, setPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [failed, setFailed] = useState(false);
-  const playingId = usePlayerStore((s) => s.playingId);
-
-  // Another player took over: stop and put the line back at the start.
-  useEffect(() => {
-    if (playingId !== storeId && audio.current && !audio.current.paused) {
-      audio.current.pause();
-    }
-  }, [playingId, storeId]);
-
-  // Leaving the page must not leave a sound running.
-  useEffect(() => {
-    return () => {
-      audio.current?.pause();
-      usePlayerStore.getState().stop(storeId);
-    };
-  }, [storeId]);
-
-  const toggle = () => {
-    let el = audio.current;
-    if (!el) {
-      el = new Audio(assetUrl(example.file));
-      el.preload = "auto";
-      el.addEventListener("play", () => setPlaying(true));
-      el.addEventListener("pause", () => setPlaying(false));
-      el.addEventListener("ended", () => {
-        setPlaying(false);
-        setProgress(0);
-        usePlayerStore.getState().stop(storeId);
-      });
-      el.addEventListener("timeupdate", () => {
-        if (el && el.duration > 0) setProgress(el.currentTime / el.duration);
-      });
-      el.addEventListener("error", () => setFailed(true));
-      audio.current = el;
-    }
-    if (el.paused) {
-      usePlayerStore.getState().play(storeId);
-      void el.play().catch(() => setFailed(true));
-    } else {
-      el.pause();
-      usePlayerStore.getState().stop(storeId);
-    }
-  };
+  const { example, playing, progress, failed, toggle } = useExamplePlayer(id);
 
   const credit = `${KIND_WORD[example.kind]} · ${MODEL_NAMES[example.model] ?? example.model}`;
 

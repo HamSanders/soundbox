@@ -183,6 +183,27 @@ access token. Over HTTP, send the token as a header instead:
 `claude mcp add --transport http soundbox <url>/mcp --header "Authorization: Bearer <token>"`.
 See [Access token](INSTALL.md#access-token).
 
+### Behind a proxy
+
+A server that signs people in and forwards `/mcp` to Mirli with its
+`MIRLI_API_TOKEN` can tell Mirli, on the request that opens each MCP session,
+where that session's links should point:
+
+- `X-Mirli-Public-Url`: the address people open this Mirli at.
+  `open_in_studio` links use it instead of `http://127.0.0.1:17494`.
+- `X-Mirli-Link-Base`: a URL prefix the proxy serves downloads under. Sound
+  results then carry no `path`, and `url` is
+  `<base>/<filename>?exp=<unix seconds>&sig=<signature>`, a link that works for
+  24 hours. The signature is HMAC-SHA256, keyed with the access token, over
+  `mirli-link:v1\n<filename>\n<exp>`, base64url. The proxy checks it, then
+  fetches `/files/<filename>` from Mirli with the token. Code:
+  `server/src/mcp/links.ts`.
+
+Both headers are ignored when no access token is set.
+
+A session id the server no longer holds (closed after 30 idle minutes, or
+the server restarted) gets `404`, and the client opens a new session.
+
 ## Tools
 
 Twenty-seven tools in five groups: sounds, voices, stories, arrangement, and the open studio. The

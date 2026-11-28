@@ -24,6 +24,8 @@ import {
   type AudioCppCatalogEntry,
   type AudioEndpoint,
   type AudioEndpointInput,
+  type CloudSignIn,
+  type CloudStatus,
   type EndpointList,
   type EndpointTestResult,
   type HistoryEntry,
@@ -104,6 +106,7 @@ export const qk = {
   imageStatus: ["image-status"] as const,
   instruments: ["instruments"] as const,
   endpoints: ["endpoints"] as const,
+  cloud: ["cloud"] as const,
   mcpStatus: ["mcp-status"] as const,
   mcpCalls: (query: McpCallQuery) => ["mcp-calls", query] as const,
   assistantOpeners: (key: string) => ["assistant-openers", key] as const,
@@ -399,6 +402,46 @@ export function useInstrumentDelete() {
 export function useImageStatus(): UseQueryResult<ImageStatus> {
   return useQuery({ queryKey: qk.imageStatus, queryFn: () => api.getImageStatus() });
 }
+
+/* ---------------------------------------------------- Mirli Cloud */
+
+/** Polls fast while a sign-in is waiting on the browser, slowly otherwise. */
+export function useCloud(): UseQueryResult<CloudStatus> {
+  return useQuery({
+    queryKey: qk.cloud,
+    queryFn: () => api.cloudStatus(),
+    refetchInterval: (q) => (q.state.data?.sign_in.state === "pending" ? 2000 : 30_000),
+  });
+}
+
+/** Mirli on the web: false until /api/cloud has answered, so gate local-only
+ *  UI with `useHostedState()` where a flash of it would matter. */
+export function useHosted(): boolean {
+  return useCloud().data?.hosted ?? false;
+}
+
+/** `hosted`, plus whether it is known yet. */
+export function useHostedState(): { hosted: boolean; known: boolean } {
+  const q = useCloud();
+  return { hosted: q.data?.hosted ?? false, known: q.isSuccess || q.isError };
+}
+
+function useCloudMutation<TIn, TOut>(fn: (input: TIn) => Promise<TOut>, failure: string) {
+  const qc = useQueryClient();
+  return useMutation<TOut, Error, TIn>({
+    mutationFn: fn,
+    onError: fail(failure),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.cloud });
+      void qc.invalidateQueries({ queryKey: qk.models });
+      void qc.invalidateQueries({ queryKey: qk.settings });
+    },
+  });
+}
+
+export const useCloudSignIn = () => useCloudMutation<void, CloudSignIn>(() => api.cloudSignIn(), "Could not start sign-in");
+export const useCloudCancelSignIn = () => useCloudMutation<void, void>(() => api.cloudCancelSignIn(), "Could not cancel");
+export const useCloudSignOut = () => useCloudMutation<void, void>(() => api.cloudSignOut(), "Could not sign out");
 
 /* ---------------------------------------------------- custom endpoints */
 
@@ -762,10 +805,11 @@ export function useUploadVoice() {
       modelId?: string | null;
       tidy?: boolean;
       referenceText?: string | null;
+      consent?: boolean;
     }
   >({
-    mutationFn: ({ name, file, notes, modelId, tidy, referenceText }) =>
-      api.uploadVoice(name, file, notes, modelId, tidy, referenceText),
+    mutationFn: ({ name, file, notes, modelId, tidy, referenceText, consent }) =>
+      api.uploadVoice(name, file, notes, modelId, tidy, referenceText, consent),
     onError: fail("Could not upload the reference clip"),
     onSuccess: (voice) => {
       toast.success(`Saved “${voice.name}”`);

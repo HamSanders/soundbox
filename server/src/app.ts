@@ -36,6 +36,7 @@ import { registerRender } from "./routes/render.js";
 import { crossSiteRefusal, isOpenAiPath, openAiError, registerOpenAi } from "./routes/openai.js";
 import { registerLlm } from "./routes/llm.js";
 import { registerImage } from "./routes/image.js";
+import { registerCloud } from "./routes/cloud.js";
 import { registerEndpoints } from "./routes/endpoints.js";
 import { AccessGuard, FAILURE_WINDOW_MS, MAX_FAILURES, registerAuth } from "./auth.js";
 import { registerCapabilityGuards } from "./capabilities.js";
@@ -266,6 +267,7 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
   registerLlm(app, svc);
   registerImage(app, svc);
   registerEndpoints(app, svc);
+  registerCloud(app, svc);
   // Default to the server's own tool list (routes/mcp.ts uses this for
   // GET /api/mcp/status) rather than an empty array — the caller only needs
   // to override this for tests that stub the MCP layer out entirely.
@@ -278,7 +280,7 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
   // separate from registerMcp above, which only serves the JSON status/calls
   // routes under /api/mcp/* — easy to conflate since both files are named
   // "mcp", but they are the transport and the telemetry dashboard respectively.
-  const mcpEndpoint = mountMcp(app, () => app.soundbox);
+  const mcpEndpoint = mountMcp(app, () => app.soundbox, { allowedHosts, apiToken });
 
   app.setErrorHandler((error, _request, reply) => {
     // Any ModelError that reaches the boundary is something the user can act
@@ -333,6 +335,7 @@ export function buildApp(config: Config, options: BuildAppOptions = {}): Fastify
       }));
     }
   }
+
 
   // Free VRAM after a period of inactivity so the GPU is usable for other
   // things between bursts of generation.

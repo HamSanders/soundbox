@@ -105,7 +105,8 @@ function truthy(value: string | undefined): boolean {
 }
 
 export function capabilitiesFromEnv(env: NodeJS.ProcessEnv = process.env): Capabilities {
-  const sandboxed = truthy(envVar("MIRLI_SANDBOXED", env));
+  // Hosted mode (hosted.ts) is a sandboxed server that uses Mirli Cloud.
+  const sandboxed = truthy(envVar("MIRLI_SANDBOXED", env)) || envVar("MIRLI_HOSTED", env) === "1";
   const disabled = new Set(
     (envVar("MIRLI_DISABLE", env) ?? "")
       .split(",")
@@ -203,6 +204,13 @@ export const UNGUARDED_ROUTES: readonly string[] = [
   "POST /api/auth/login",
   "POST /api/auth/logout",
   "POST /api/assistant/chat",
+  // Mirli Cloud: the user's own account on the gateway, nothing on the host.
+  // Hosted mode refuses sign-in and sign-out itself (cloud/service.ts).
+  "GET /api/cloud",
+  "POST /api/cloud/sign-in",
+  "DELETE /api/cloud/sign-in",
+  "POST /api/cloud/sign-out",
+  "POST /api/cloud/warm",
   "POST /api/assistant/openers",
   "GET /api/health",
   "GET /api/models",

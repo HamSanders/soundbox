@@ -24,7 +24,14 @@ export type ModelStatus =
 
 /** Where a model runs: weights on this machine ("local"), or a custom
  *  endpoint someone else's server answers ("endpoint"). */
-export type ModelProvider = "local" | "endpoint";
+export type ModelProvider = "local" | "endpoint" | "cloud";
+
+/** What a Mirli Cloud render costs. Set by the gateway. */
+export interface ModelPrice {
+  unit: "render" | "minute" | "1k_chars" | "10s";
+  credits_per_unit: number;
+  min_credits: number;
+}
 
 /**
  * GET /api/capabilities: what this server lets its user do. The UI shows only
@@ -166,6 +173,9 @@ export interface Model {
    *
    *  Only "gen" appears in the Generate composer's model picker. */
   task: "gen" | "sep" | "tts" | "vc" | "asr";
+  /** For a "sep" model: "cleanup" cleans up a recording (one output) and is
+   *  offered as "Clean up speech"; anything else splits into stems. */
+  sep_kind?: "stems" | "cleanup" | null;
   /** Built-in voice names this model ships (for a "tts" model that has them),
    *  or empty when a reference clip is the only way to pick a voice. */
   voice_ids: string[];
@@ -194,6 +204,8 @@ export interface Model {
   /** Where this model runs. Absent from an older server, which only had local
    *  ones — treat a missing value as "local". */
   provider?: ModelProvider;
+  /** Mirli Cloud models only: what a render costs. */
+  price?: ModelPrice | null;
   /** Each render may cost the user money; never picked by default. Absent
    *  from an older server: treat as false. */
   metered?: boolean;
@@ -293,6 +305,9 @@ export interface Voice {
   /** How many library sounds were read in this voice — what
    *  `listSounds({ voice_id })` returns. Absent on an older server. */
   read_count?: number;
+  /** clone: when the user confirmed it is their voice or used with
+   *  permission; null if they never did. Absent on an older server. */
+  consent_at?: string | null;
   /** clone: the clips this voice is made from, oldest first. With one, it is
    *  `reference_file`; with several, `reference_file` is them joined. */
   samples?: VoiceSample[];
@@ -331,11 +346,15 @@ export interface VoiceCreate {
   /** clone: trim silence off the ends, take out DC offset and pull a hot peak
    *  back. Never boosts or re-tones the clip. */
   tidy?: boolean;
+  /** clone: the user confirmed it is their voice or used with permission. */
+  consent?: boolean;
 }
 
 export interface VoicePatch {
   name?: string;
   notes?: string | null;
+  /** true records the consent confirmation; false withdraws it. */
+  consent?: boolean;
   samples?: { id: string; reference_text?: string | null }[];
 }
 
@@ -1343,9 +1362,32 @@ export interface Settings {
   onboarded_at: string | null;
   /** Ask once a day whether a newer version exists. See Settings → Updates. */
   update_check: boolean;
+  /** Mirli Cloud. Absent from servers without it. */
+  cloud_signed_in?: boolean;
+  cloud_max_credits_per_call?: number;
+  cloud_max_credits_per_day?: number;
   /** Absent from an older server, which only had the full setup. */
   setup?: SetupMode;
   setup_include_local?: boolean;
+}
+
+/** GET /api/cloud. See Settings → Mirli Cloud. */
+export type CloudSignIn =
+  | { state: "idle" }
+  | { state: "pending"; user_code: string; verification_uri: string; verification_uri_complete: string; expires_at: string }
+  | { state: "denied" | "expired" | "error"; message: string };
+
+export interface CloudStatus {
+  enabled: boolean;
+  /** Mirli on the web: signed in by the host; no sign-in, sign-out or local setup. */
+  hosted?: boolean;
+  base_url: string;
+  signed_in: boolean;
+  sign_in: CloudSignIn;
+  account: { email: string; balance: number; held: number; spent_today: number } | null;
+  account_error: string | null;
+  caps: { per_call: number; per_day: number };
+  models: number;
 }
 
 /** What the daily update check knows. See Settings → Updates. */
@@ -1402,6 +1444,8 @@ export interface SettingsPatch {
    *  wizard opens again. */
   onboarded_at?: string;
   update_check?: boolean;
+  cloud_max_credits_per_call?: number;
+  cloud_max_credits_per_day?: number;
   setup?: SetupMode;
   setup_include_local?: boolean;
 }
@@ -1808,6 +1852,7 @@ export interface MirliApi {
     modelId?: string | null,
     tidy?: boolean,
     referenceText?: string | null,
+    consent?: boolean,
   ): Promise<Voice>;
   /** Add a clip to a clone voice: a WAV from disk or the mic, or a library
    *  sound by id. Returns the voice with its new clip list. */
@@ -1880,6 +1925,12 @@ export interface MirliApi {
   getImageStatus(): Promise<ImageStatus>;
   installImageEngine(): Promise<JobRef>;
   listEndpoints(): Promise<EndpointList>;
+  cloudStatus(): Promise<CloudStatus>;
+  cloudSignIn(): Promise<CloudSignIn>;
+  cloudCancelSignIn(): Promise<void>;
+  cloudSignOut(): Promise<void>;
+  /** Start the GPU line a cloud model runs on, ahead of a render. A hint: never throws to the user. */
+  cloudWarm(model: string): Promise<{ state: string }>;
   saveEndpoint(id: string, input: AudioEndpointInput): Promise<AudioEndpoint>;
   deleteEndpoint(id: string): Promise<void>;
   /** Render one short clip through a configuration; nothing is saved. `id`
@@ -1992,6 +2043,8 @@ function qs(query: object | undefined): string {
 /* ------------------------------------------------------------ http impl */
 
 const POLL_INTERVAL_MS = 750;
+/** How long a job's event stream may stay silent before polling takes over. */
+const SSE_STALL_MS = 5000;
 
 export const httpApi: MirliApi = {
   getHealth: () => request<HealthStatus>("/api/health"),
@@ -2068,10 +2121,12 @@ export const httpApi: MirliApi = {
       closed = true;
       source?.close();
       if (poll) clearInterval(poll);
+      if (stall) clearTimeout(stall);
     };
 
     const startPolling = () => {
       if (closed || poll) return;
+      if (stall) clearTimeout(stall);
       const tick = async () => {
         if (closed) return;
         try {
@@ -2079,17 +2134,37 @@ export const httpApi: MirliApi = {
           onJob(job);
           if (terminal(job)) stop();
         } catch (err) {
-          onError?.(err as Error);
-          stop();
+          // Only a 404 ends it: the server no longer knows the job, which on
+          // the web means the studio restarted and took the job with it. A
+          // 503 while the studio wakes, or a dropped connection, is the next
+          // tick's problem — giving up on the first one left a turn spinning
+          // forever while its sound landed in the library.
+          if (err instanceof ApiError && err.status === 404) {
+            onError?.(err);
+            stop();
+          }
         }
       };
       poll = setInterval(tick, POLL_INTERVAL_MS);
       void tick();
     };
 
+    // The server sends the job's current state the moment the stream opens,
+    // so silence means something between here and it is holding the stream
+    // back (a proxy buffering it, as an edge in front of Mirli on the web
+    // might). Polling then, rather than a progress bar frozen until the end.
+    let stall: ReturnType<typeof setTimeout> | undefined;
+
     try {
       source = new EventSource(`/api/jobs/${encodeURIComponent(id)}/events`);
+      stall = setTimeout(() => {
+        if (closed) return;
+        source?.close();
+        source = undefined;
+        startPolling();
+      }, SSE_STALL_MS);
       source.onmessage = (ev: MessageEvent<string>) => {
+        if (stall) clearTimeout(stall);
         try {
           const job = JSON.parse(ev.data) as Job;
           onJob(job);
@@ -2330,7 +2405,7 @@ export const httpApi: MirliApi = {
 
   // The WAV is the whole body, so the name/notes ride as query params and the
   // Content-Type override stops `request` from labelling the bytes as JSON.
-  uploadVoice: (name, file, notes, modelId, tidy, referenceText) =>
+  uploadVoice: (name, file, notes, modelId, tidy, referenceText, consent) =>
     request<Voice>(
       `/api/voices/upload${qs({
         name,
@@ -2338,6 +2413,7 @@ export const httpApi: MirliApi = {
         model_id: modelId ?? undefined,
         reference_text: referenceText ?? undefined,
         tidy: tidy ? "true" : undefined,
+        consent: consent ? "true" : undefined,
       })}`,
       {
         method: "POST",
@@ -2484,6 +2560,11 @@ export const httpApi: MirliApi = {
   installImageEngine: () =>
     request<JobRef>("/api/image/engine/install", { method: "POST" }),
   listEndpoints: () => request<EndpointList>("/api/endpoints"),
+  cloudStatus: () => request<CloudStatus>("/api/cloud"),
+  cloudSignIn: () => request<CloudSignIn>("/api/cloud/sign-in", { method: "POST" }),
+  cloudCancelSignIn: () => request<void>("/api/cloud/sign-in", { method: "DELETE" }),
+  cloudSignOut: () => request<void>("/api/cloud/sign-out", { method: "POST" }),
+  cloudWarm: (model) => request<{ state: string }>("/api/cloud/warm", { method: "POST", body: JSON.stringify({ model }) }),
   saveEndpoint: (id, input) =>
     request<AudioEndpoint>(`/api/endpoints/${encodeURIComponent(id)}`, {
       method: "PUT",

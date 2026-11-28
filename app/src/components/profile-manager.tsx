@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCan, useCreateProfile, useDeleteProfile, useRenameProfile } from "@/lib/queries";
+import { useCan, useCreateProfile, useDeleteProfile, useHosted, useRenameProfile } from "@/lib/queries";
 import type { Profile } from "@/lib/api";
 
 /** Kept out of the dropdown itself — a menu that switches profile on click
@@ -43,6 +43,8 @@ export function ProfileManagerDialog({
   const can = useCan();
   const rename = useRenameProfile();
   const remove = useDeleteProfile();
+  // Mirli on the web: the folder is on a server the person never sees.
+  const hosted = useHosted();
 
   const submitNew = (): void => {
     const trimmed = name.trim();
@@ -127,6 +129,13 @@ export function ProfileManagerDialog({
                 // server's to allow.
                 hidden={!can.filesystem}
                 onClick={() => {
+                  if (hosted) {
+                    // A folder left behind on the server would be unreachable, so it goes too.
+                    if (window.confirm(`Delete "${profile.name}" and every sound in it?`)) {
+                      remove.mutate({ id: profile.id, deleteData: true });
+                    }
+                    return;
+                  }
                   const alsoData = window.confirm(
                     `Delete "${profile.name}"?\n\nOK also deletes its folder and every sound ` +
                       `in it (${profile.data_dir}).\nCancel just removes it from this list, ` +

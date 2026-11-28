@@ -131,6 +131,13 @@ export interface SettingsData {
    * and nothing else (see `updateCheck.ts`). Off means no request at all.
    */
   update_check: boolean;
+  /** Mirli Cloud device token (`mirli_dev_…`), or null when signed out. Never
+   *  returned by the API, and not settable through PATCH: only the sign-in
+   *  flow writes it. "" clears it. */
+  cloud_token: string | null;
+  /** Mirli Cloud caps, enforced here before a request leaves the machine. */
+  cloud_max_credits_per_call: number;
+  cloud_max_credits_per_day: number;
   /**
    * How this profile makes sounds. "full": models on this machine, plus any
    * from elsewhere the user added. "simple": only models that run elsewhere;
@@ -171,6 +178,9 @@ const DEFAULT_SETTINGS: SettingsData = {
   audio_endpoints: [],
   onboarded_at: null,
   update_check: true,
+  cloud_token: null,
+  cloud_max_credits_per_call: 50,
+  cloud_max_credits_per_day: 300,
   setup: "full",
   setup_include_local: false,
 };
@@ -210,6 +220,9 @@ export interface PublicSettings {
   image_auto_artwork: boolean;
   onboarded_at: string | null;
   update_check: boolean;
+  cloud_signed_in: boolean;
+  cloud_max_credits_per_call: number;
+  cloud_max_credits_per_day: number;
   setup: SetupMode;
   setup_include_local: boolean;
 }
@@ -241,6 +254,9 @@ export class Settings {
   audio_endpoints: AudioEndpoint[] = [];
   onboarded_at: string | null = DEFAULT_SETTINGS.onboarded_at;
   update_check: boolean = DEFAULT_SETTINGS.update_check;
+  cloud_token: string | null = DEFAULT_SETTINGS.cloud_token;
+  cloud_max_credits_per_call: number = DEFAULT_SETTINGS.cloud_max_credits_per_call;
+  cloud_max_credits_per_day: number = DEFAULT_SETTINGS.cloud_max_credits_per_day;
   setup: SetupMode = DEFAULT_SETTINGS.setup;
   setup_include_local: boolean = DEFAULT_SETTINGS.setup_include_local;
 
@@ -294,8 +310,12 @@ export class Settings {
       image_external_model: this.image_external_model,
       image_external_api_key_set: Boolean(this.image_external_api_key),
       image_auto_artwork: this.image_auto_artwork,
-      onboarded_at: this.onboarded_at,
+      // Hosted mode has nothing to set up: no fork, no downloads.
+      onboarded_at: this.onboarded_at ?? (process.env.MIRLI_HOSTED === "1" ? "1970-01-01T00:00:00.000Z" : null),
       update_check: this.update_check,
+      cloud_signed_in: Boolean(this.cloud_token) || process.env.MIRLI_HOSTED === "1",
+      cloud_max_credits_per_call: this.cloud_max_credits_per_call,
+      cloud_max_credits_per_day: this.cloud_max_credits_per_day,
       setup: this.setup,
       setup_include_local: this.setup_include_local,
     };
@@ -363,6 +383,9 @@ export class Settings {
       audio_endpoints: this.audio_endpoints,
       onboarded_at: this.onboarded_at,
       update_check: this.update_check,
+      cloud_token: this.cloud_token,
+      cloud_max_credits_per_call: this.cloud_max_credits_per_call,
+      cloud_max_credits_per_day: this.cloud_max_credits_per_day,
       setup: this.setup,
       setup_include_local: this.setup_include_local,
     };
@@ -542,6 +565,10 @@ export class Config {
       // before it ever reached here.
       if (key === "onboarded_at" && typeof value === "string" && !value.trim()) {
         this.settings.onboarded_at = null;
+        continue;
+      }
+      if (key === "cloud_token" && typeof value === "string" && !value.trim()) {
+        this.settings.cloud_token = null;
         continue;
       }
       Object.assign(this.settings, { [key]: value });

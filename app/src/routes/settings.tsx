@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 
 import { ArtworkSettingsCard } from "@/components/artwork-settings";
+import { CloudAccountPanel } from "@/components/cloud-settings";
 import { EndpointSettingsCard } from "@/components/endpoint-settings";
 import { FolderPickerDialog } from "@/components/folder-picker";
 import {
@@ -41,13 +42,14 @@ import { useOutputStore } from "@/lib/audio-output";
 import { useUiPrefs } from "@/lib/ui-prefs";
 import {
   useAudioCppRuntime,
+  useCloud,
   useHealth,
   useLlmStatus,
   useMcpStatus,
   useSettings,
   useUpdateStatus,
 } from "@/lib/queries";
-import type { Settings } from "@/lib/api";
+import type { CloudStatus, Settings } from "@/lib/api";
 
 /** The server's defaults (server/src/config.ts `DEFAULT_SETTINGS`). */
 const DEFAULTS = {
@@ -64,8 +66,11 @@ const DEFAULTS = {
 
 export function SettingsPage() {
   const { data: settings, isLoading, isError, error } = useSettings();
+  const { data: cloud, isLoading: cloudLoading } = useCloud();
 
-  if (isLoading) {
+  // Wait for /api/cloud too: until it answers, the groups a hosted or cloud
+  // setup hides would show (and the endpoints card would ask for endpoints).
+  if (isLoading || cloudLoading) {
     return (
       <div className="mx-auto max-w-3xl space-y-4">
         <Skeleton className="h-8 w-40" />
@@ -87,18 +92,24 @@ export function SettingsPage() {
     );
   }
 
+  // The server's capabilities hide what a sandboxed or simple setup can't use
+  // (settings-index.ts). On the web, Privacy and Danger go too: updates and
+  // the setup wizard belong to the server, not the person.
   return (
-    <SettingsLayout>
+    <SettingsLayout
+      hiddenGroups={[...(cloud?.enabled ? [] : ["cloud"]), ...(cloud?.hosted ? ["privacy", "danger"] : [])]}
+    >
       <div className="space-y-8">
         <SoundGroup settings={settings} />
+        {cloud?.enabled && <CloudGroup settings={settings} status={cloud} />}
         <PerformanceGroup settings={settings} />
         <ModelsGroup settings={settings} />
         <HelpersGroup settings={settings} />
         <SetupGroup settings={settings} />
         <StorageGroup settings={settings} />
         <InterfaceGroup />
-        <PrivacyGroup settings={settings} />
-        <DangerGroup settings={settings} />
+        {!cloud?.hosted && <PrivacyGroup settings={settings} />}
+        {!cloud?.hosted && <DangerGroup settings={settings} />}
       </div>
     </SettingsLayout>
   );
@@ -281,6 +292,81 @@ function PerformanceGroup({ settings }: { settings: Settings }) {
             />
             <span className="readout text-muted-foreground">min</span>
           </div>
+        }
+      />
+    </SettingsGroup>
+  );
+}
+
+// -------------------------------------------------------------- cloud
+
+function CapInput({
+  id,
+  value,
+  fallback,
+  onSave,
+}: {
+  id: string;
+  value: number | undefined;
+  fallback: number;
+  onSave: (n: number) => void;
+}) {
+  const [draft, setDraft] = useDraft(String(value ?? fallback));
+  return (
+    <div className="flex items-center gap-1.5">
+      <Input
+        id={id}
+        value={draft}
+        inputMode="numeric"
+        className="w-20 font-mono"
+        onChange={(e) => setDraft(e.target.value.replace(/\D/g, ""))}
+        onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+        onBlur={() => {
+          const n = Number(draft);
+          if (draft !== "" && Number.isFinite(n) && n >= 1 && n !== value) onSave(n);
+        }}
+      />
+      <span className="readout text-muted-foreground">credits</span>
+    </div>
+  );
+}
+
+function CloudGroup({ settings, status }: { settings: Settings; status: CloudStatus }) {
+  const { save } = useSettingSave();
+  return (
+    <SettingsGroup
+      id="cloud"
+      description={status.hosted ? "Your account: the balance every render is paid from, and your spending limits." : undefined}
+    >
+      <SettingRow id="cloud-account" stack>
+        <CloudAccountPanel status={status} />
+      </SettingRow>
+      <SettingRow
+        id="cloud-cap-call"
+        htmlFor="cloud-cap-call"
+        modified={(settings.cloud_max_credits_per_call ?? 50) !== 50}
+        onReset={() => save("cloud-cap-call", { cloud_max_credits_per_call: 50 })}
+        control={
+          <CapInput
+            id="cloud-cap-call"
+            value={settings.cloud_max_credits_per_call}
+            fallback={50}
+            onSave={(n) => save("cloud-cap-call", { cloud_max_credits_per_call: n })}
+          />
+        }
+      />
+      <SettingRow
+        id="cloud-cap-day"
+        htmlFor="cloud-cap-day"
+        modified={(settings.cloud_max_credits_per_day ?? 300) !== 300}
+        onReset={() => save("cloud-cap-day", { cloud_max_credits_per_day: 300 })}
+        control={
+          <CapInput
+            id="cloud-cap-day"
+            value={settings.cloud_max_credits_per_day}
+            fallback={300}
+            onSave={(n) => save("cloud-cap-day", { cloud_max_credits_per_day: n })}
+          />
         }
       />
     </SettingsGroup>

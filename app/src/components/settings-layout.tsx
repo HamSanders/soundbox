@@ -115,7 +115,7 @@ export function useMarkSaved() {
 
 // ------------------------------------------------------------------- layout
 
-export function SettingsLayout({ children }: { children: ReactNode }) {
+export function SettingsLayout({ children, hiddenGroups = [] }: { children: ReactNode; hiddenGroups?: string[] }) {
   const [query, setQuery] = useState("");
   const [saved, setSaved] = useState<ReadonlySet<string>>(new Set());
   const [flash, setFlash] = useState<string | null>(null);
@@ -181,7 +181,12 @@ export function SettingsLayout({ children }: { children: ReactNode }) {
   }, [deepLink]);
 
   const can = useCan();
-  const allowed = useCallback((id: string) => settingAllowed(id, can), [can]);
+  // Groups the page hides for its own reasons (Mirli Cloud when it's off).
+  const hidden = hiddenGroups.join(",");
+  const allowed = useCallback(
+    (id: string) => settingAllowed(id, can) && !hidden.split(",").includes(settingMeta(id).group),
+    [can, hidden],
+  );
   const matches = useMemo(
     () => SETTINGS.filter((s) => allowed(s.id) && matchesQuery(s, query)),
     [query, allowed],
@@ -348,7 +353,16 @@ export function SettingsLayout({ children }: { children: ReactNode }) {
 // ------------------------------------------------------------------- groups
 
 /** One group card. Hidden while searching when none of its rows match. */
-export function SettingsGroup({ id, children }: { id: string; children: ReactNode }) {
+export function SettingsGroup({
+  id,
+  description,
+  children,
+}: {
+  id: string;
+  /** Replaces the index's description, for a setup where it doesn't fit. */
+  description?: string;
+  children: ReactNode;
+}) {
   const { query, allowed } = useSettingsUi();
   const group = SETTINGS_GROUPS.find((g) => g.id === id);
   if (!group) throw new Error(`Unknown settings group: ${id}`);
@@ -363,7 +377,7 @@ export function SettingsGroup({ id, children }: { id: string; children: ReactNod
         >
           {group.title}
         </h2>
-        <p className="text-muted-foreground text-xs">{group.description}</p>
+        <p className="text-muted-foreground text-xs">{description ?? group.description}</p>
       </div>
       <div
         className={cn(

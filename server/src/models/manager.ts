@@ -202,6 +202,9 @@ export class ModelManager {
    */
   async refreshSource(source: ModelSource): Promise<void> {
     await this.locked(async () => {
+      // A source the manager hasn't seen joins after the others (Mirli Cloud
+      // registers itself this way once its catalog arrives).
+      if (!this.sources.includes(source)) this.sources.push(source);
       const previous = this.specs;
       this.specs = registry(this.localIds(), this.sources);
       for (const id of [...this.instances.keys()]) {

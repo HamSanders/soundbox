@@ -27,8 +27,16 @@ export type { ModelParam, ParamGroup, ParamType } from "./models/params.js";
  *
  *   "local"    — weights on this machine, run by audio.cpp.
  *   "endpoint" — a custom endpoint: somebody's server, reached over HTTP.
+ *   "cloud"    — Mirli Cloud: rendered on Mirli's servers, paid in credits.
  */
-export type ModelProvider = "local" | "endpoint";
+export type ModelProvider = "local" | "endpoint" | "cloud";
+
+/** What a Mirli Cloud render costs. Set by the gateway. */
+export interface ModelPrice {
+  unit: "render" | "minute" | "1k_chars" | "10s";
+  credits_per_unit: number;
+  min_credits: number;
+}
 
 export type ModelStatus =
   | "not_installed"
@@ -182,6 +190,10 @@ export interface ModelInfo {
    *
    *  Only "gen" appears in the Generate composer's model picker. */
   task: "gen" | "sep" | "tts" | "vc" | "asr";
+  /** For a "sep" model: "cleanup" returns one cleaned-up recording (noise
+   *  removed) and is offered as its own "Clean up speech" action; anything
+   *  else splits into stems. */
+  sep_kind?: "stems" | "cleanup" | null;
   /** Built-in voice names this model ships (audio.cpp's `--voice-id`), or
    *  empty when the only way to pick a voice is a reference clip. */
   voice_ids: string[];
@@ -205,6 +217,8 @@ export interface ModelInfo {
   /** Where this model runs: weights on this machine driven by audio.cpp, or a
    *  custom endpoint. See `ModelProvider`. */
   provider: ModelProvider;
+  /** Mirli Cloud models only: the price, for "≈ 15 credits" by Generate. */
+  price?: ModelPrice | null;
   /**
    * Each render may cost the user money (a paid API used with their key).
    * Never picked by default, by the app or by MCP: only when chosen or named.
@@ -265,6 +279,9 @@ export interface Voice {
   notes?: string | null;
   /** Served URL of a generated avatar (`/artwork/<file>.png`), or null. */
   artwork?: string | null;
+  /** `clone`: when the user confirmed the voice is theirs or used with
+   *  permission. Null if they never did. */
+  consent_at?: string | null;
   /** How many library sounds were read in this voice — single-voice reads and
    *  conversions, the same set `GET /api/sounds?voice_id=` returns. */
   read_count?: number;
@@ -827,6 +844,10 @@ export const voiceCreateSchema = z.object({
    *  off both ends, an over-full-scale peak pulled back. Never boosts or
    *  re-tones it. Off by default so an API caller gets their bytes verbatim. */
   tidy: z.boolean().default(false),
+  /** clone only: the user confirmed this is their voice, or that they have
+   *  permission to use it. Recorded as `consent_at`; a hosted service may
+   *  refuse a clip without it. */
+  consent: z.boolean().optional(),
 });
 
 export type VoiceCreate = z.input<typeof voiceCreateSchema>;
@@ -876,6 +897,8 @@ export const voicePatchSchema = z.object({
   /** Update transcripts by sample id, without changing the audio or its order. */
   samples: z.array(z.object({ id: z.string(), reference_text: referenceTextSchema }))
     .max(5).optional(),
+  /** true records the consent confirmation now; false withdraws it. */
+  consent: z.boolean().optional(),
 });
 
 export type VoicePatch = z.infer<typeof voicePatchSchema>;
@@ -1299,6 +1322,8 @@ export const settingsPatchSchema = z.object({
   image_external_api_key: z.string().nullish(),
   image_auto_artwork: z.boolean().nullish(),
   update_check: z.boolean().nullish(),
+  cloud_max_credits_per_call: z.number().int().min(1).max(100_000).nullish(),
+  cloud_max_credits_per_day: z.number().int().min(1).max(1_000_000).nullish(),
   setup: z.enum(["full", "simple"]).nullish(),
   setup_include_local: z.boolean().nullish(),
   // ISO timestamp when first-run setup was finished or skipped. "" clears it,

@@ -29,7 +29,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { voiceReferenceError } from "@/lib/voice-reference";
 
-import { useJobStreams } from "@/hooks/use-job-stream";
 import { ApiError,
   api,
   errorMessage,
@@ -41,6 +40,7 @@ import { ApiError,
   type Voice,
 } from "@/lib/api";
 import { usePrefillStore } from "@/lib/generate-store";
+import { useLiveJobs } from "@/lib/live-jobs";
 import { composerBlocker } from "@/lib/composer-blocker";
 import { isNotReady, notReadyReason } from "@/lib/model-ready";
 import {
@@ -252,6 +252,7 @@ export function useGenerateSession({ hotkey = true }: GenerateSessionOptions = {
   // into stems" action, and the Voice studio's convert tab). Allow-list rather
   // than deny-list, so a task added later can't silently fall through to a
   // composer that can't drive it.
+  // The server already leaves out local models in the simple setup.
   const models = useMemo(
     () => allModels?.filter((e) => e.task === "gen" || e.task === "tts"),
     [allModels],
@@ -269,7 +270,6 @@ export function useGenerateSession({ hotkey = true }: GenerateSessionOptions = {
   const setJobId = useSessionStore((s) => s.setJobId);
   const addTurn = useSessionStore((s) => s.addTurn);
   const patchTurn = useSessionStore((s) => s.patchTurn);
-  const patchTurnByJob = useSessionStore((s) => s.patchTurnByJob);
 
   const model = useMemo(
     () => models?.find((e) => e.id === settings.modelId),
@@ -332,16 +332,12 @@ export function useGenerateSession({ hotkey = true }: GenerateSessionOptions = {
   const speak = useSpeak();
   const cancel = useCancelJob();
 
-  // Every pending turn gets its own live SSE subscription, not just the
-  // most-recently-submitted one — otherwise submitting a second turn tears
-  // down the first's EventSource (useJobStream is keyed on a single id) and
-  // its progress bar freezes wherever it last was. `turns` is already the
-  // source of truth for which jobs are in flight; nothing else needs to be.
-  const pendingJobIds = useMemo(
-    () => turns.filter((t) => t.status === "pending" && t.jobId).map((t) => t.jobId as string),
-    [turns],
-  );
-  const { jobs, errors: jobErrors } = useJobStreams(pendingJobIds);
+  // Every pending turn's job is followed by `JobWatcher` in the app shell,
+  // not here: this hook is only mounted on the composer pages, and following
+  // from here meant a render queued before opening another page was never
+  // seen to finish. The watcher publishes what it sees; this reads it.
+  const jobs = useLiveJobs((s) => s.jobs);
+  const jobErrors = useLiveJobs((s) => s.errors);
   const job = jobId ? (jobs[jobId] ?? null) : null;
   const streamError = jobId ? (jobErrors[jobId] ?? null) : null;
   const { data: projects } = useProjects();
@@ -368,7 +364,7 @@ export function useGenerateSession({ hotkey = true }: GenerateSessionOptions = {
   );
 
   // "Running" is the last-submitted turn still being pending, not the job
-  // stream's word for it: a finished turn leaves `pendingJobIds`, which
+  // stream's word for it: a finished turn stops being followed, which
   // drops its job from `jobs` and used to make `!job` read as "still
   // starting" forever — a Cancel square that never went away, and now a
   // button stuck on "Queued" with a strip that never stopped pulsing.
@@ -518,7 +514,7 @@ export function useGenerateSession({ hotkey = true }: GenerateSessionOptions = {
       const settings = overrides ? { ...current, ...overrides } : current;
       // No longer gated on `running`: several turns can be in flight at
       // once, each tracking its own job and its own SSE stream (see
-      // `pendingJobIds` above) — the old single-`jobId` gate here is what
+      // `JobWatcher`) — the old single-`jobId` gate here is what
       // used to silently swallow a second Generate click while the first
       // was still going.
       if (!settings.modelId || !settings.prompt.trim()) return;
@@ -679,48 +675,8 @@ export function useGenerateSession({ hotkey = true }: GenerateSessionOptions = {
     }
   }, [job, sessionId, setSessionId, qc]);
 
-  /* Fold terminal job states back into their turn — every turn still
-     pending, not just the most-recently-submitted one, since several can be
-     in flight together now. */
-  useEffect(() => {
-    for (const [jid, j] of Object.entries(jobs)) {
-      if (j.status === "error" || j.status === "cancelled") {
-        patchTurnByJob(jid, {
-          status: j.status === "error" ? "error" : "cancelled",
-          error: j.error ?? null,
-          failure: j.failure ?? null,
-        });
-      }
-    }
-  }, [jobs, patchTurnByJob]);
-
-  /* Collect the finished sounds into whichever turns asked for them. Guarded
-     against turns already folded to "done" so a later tick on some other
-     still-running job doesn't re-fetch and re-patch one that's already
-     settled. */
-  useEffect(() => {
-    let cancelledFetch = false;
-    let sawDone = false;
-    for (const [jid, j] of Object.entries(jobs)) {
-      if (j.status !== "done" || !j.result?.sounds?.length) continue;
-      const turn = useSessionStore.getState().turns.find((t) => t.jobId === jid);
-      if (!turn || turn.status === "done") continue;
-      sawDone = true;
-      const ids = j.result.sounds;
-      void Promise.all(ids.map((id) => api.getSound(id))).then((sounds) => {
-        if (cancelledFetch) return;
-        patchTurnByJob(jid, { status: "done", sounds });
-      });
-    }
-    if (sawDone) {
-      void qc.invalidateQueries({ queryKey: ["sounds"] });
-      void qc.invalidateQueries({ queryKey: ["tags"] });
-      void qc.invalidateQueries({ queryKey: ["models"] });
-    }
-    return () => {
-      cancelledFetch = true;
-    };
-  }, [jobs, qc, patchTurnByJob]);
+  /* Folding a finished job's sounds (or its failure) back into its turn
+     happens in `JobWatcher`, for the same reason the following does. */
 
   /** Load a past turn's request back into the controls. */
   const reuseTurn = useCallback(

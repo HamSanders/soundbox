@@ -33,6 +33,7 @@ import { usePlayerStore } from "@/lib/player-store";
 import { useCapabilities } from "@/lib/queries";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { JobWatcher } from "@/components/job-watcher";
 import { DashboardPage } from "@/routes/dashboard";
 import { CALLS_ENABLED } from "@/lib/features";
 
@@ -280,6 +281,9 @@ function AppShellReady() {
       {/* Same reasoning, and one more: it reads settings and models through
           react-query, so it cannot live above the provider. */}
       <OnboardingDialog />
+      {/* Follows every render whatever page is open, and toasts when one
+          ends somewhere it isn't already shown: see job-watcher.tsx. */}
+      <JobWatcher />
       </HeaderSlotProvider>
     </SidebarProvider>
   );

@@ -84,7 +84,7 @@ function MusicForm() {
       projects={s.projects}
       projectId={s.projectId}
       onChangeProject={s.changeProject}
-      canSeparate={Boolean(models?.some((m) => m.task === "sep"))}
+      canSeparate={Boolean(models?.some((m) => m.task === "sep" && m.sep_kind !== "cleanup"))}
     />
   );
 }

@@ -52,6 +52,7 @@ import { buildFailure } from "./failure.js";
 import { JobHandle, JobManager } from "./jobs.js";
 import { LlmService, type LlmStatus } from "./llm/service.js";
 import type { StudioContext } from "./llm/studio.js";
+import type { VoiceRefInfo } from "./models/types.js";
 import type {
   AssistantModelCard,
   AssistantProposal,
@@ -60,6 +61,7 @@ import type {
 } from "./llm/assistant.js";
 import { ImageService, type ImageStatus } from "./image/service.js";
 import { EndpointService } from "./endpoints/service.js";
+import { CloudService } from "./cloud/service.js";
 import { EndpointSource } from "./endpoints/source.js";
 import { type Capabilities, capabilitiesFromEnv, withSetup } from "./capabilities.js";
 
@@ -133,6 +135,13 @@ import { InstrumentLibrary, instrumentManifest } from "./instruments/index.js";
 const log = getLogger("mirli.service");
 
 /** `replace(/\/+$/, "")` backtracks quadratically on a long run of slashes. */
+/** What a remote model is told about a clone voice: its name, the consent
+ *  date, and the clips' transcripts joined in clip order. */
+function voiceRefInfo(voice: Voice): VoiceRefInfo {
+  const words = (voice.samples ?? []).map((x) => x.reference_text?.trim()).filter(Boolean);
+  return { name: voice.name, consentAt: voice.consent_at ?? null, transcript: words.length ? words.join(" ") : null };
+}
+
 function trimTrailingSlashes(value: string): string {
   let end = value.length;
   while (end > 0 && value.charCodeAt(end - 1) === 47) end -= 1;
@@ -243,6 +252,8 @@ export class MirliService {
   readonly image: ImageService;
   /** Custom audio endpoints — see endpoints/service.ts. */
   readonly endpoints: EndpointService;
+  /** Mirli Cloud sign-in and models — see cloud/service.ts. Off unless MIRLI_CLOUD=1. */
+  readonly cloud: CloudService;
   readonly telemetry: McpTelemetry;
   /** Live story activity — see story-hub.ts. */
   readonly stories = new StoryHub();
@@ -277,6 +288,7 @@ export class MirliService {
     this.downloadFailures = new DownloadFailureStore(
       join(config.paths.models, DOWNLOAD_FAILURES_FILE),
     );
+    this.cloud = new CloudService(config, this.models);
     this.jobs = new JobManager();
     this.llm = new LlmService(config);
     this.image = new ImageService(config);
@@ -291,11 +303,14 @@ export class MirliService {
     // Tests and the dev server must not phone anyone: the endpoint counts
     // requests, and a contributor's restarts are not installs.
     if (!process.env.VITEST && this.serverCapabilities.updates) this.updates.start();
+    // Only when MIRLI_CLOUD=1; otherwise this registers nothing and asks no one.
+    void this.cloud.refresh();
   }
 
   async close(): Promise<void> {
     this.jobs.stop();
     this.updates.stop();
+    this.cloud.stop();
     this.telemetry.close();
     await this.models.unload();
     // Our child process, so it does not outlive us.
@@ -335,6 +350,8 @@ export class MirliService {
   }
 
   async listModels(): Promise<ModelInfo[]> {
+    // Pick up models the gateway added since the last read (no-op when off).
+    await this.cloud.refreshIfStale();
     // The simple setup lists only models that run elsewhere, unless the
     // profile asked to keep the ones installed here.
     const local = this.capabilities.local_models;
@@ -1031,7 +1048,7 @@ export class MirliService {
     if (info.task !== "tts") {
       throw new ModelError(`${info.name} is not a text-to-speech model.`);
     }
-    const { refPath, builtinId, requestOptions } = this.resolveVoice(
+    const { refPath, builtinId, requestOptions, voiceRef } = this.resolveVoice(
       segment.voice_id ?? null, info.family,
       this.deliveryFor(segment, info.family, req.request_options),
     );
@@ -1044,6 +1061,7 @@ export class MirliService {
     handle?.phase("generating", "Speaking");
     const clip = await model.speak(segment.text, {
       voiceRefPath: refPath,
+      voiceRef,
       voiceId: builtinId,
       seed: req.seed ?? null,
       steps: req.steps ?? null,
@@ -1502,16 +1520,17 @@ export class MirliService {
     refPath: string | null;
     builtinId: string | null;
     requestOptions: Record<string, string>;
+    voiceRef: VoiceRefInfo | null;
   } {
     const requestOptions = { ...options };
-    if (!voiceId) return { refPath: null, builtinId: null, requestOptions };
+    if (!voiceId) return { refPath: null, builtinId: null, requestOptions, voiceRef: null };
     if (voiceId.startsWith(BUILTIN_VOICE_PREFIX)) {
-      return { refPath: null, builtinId: voiceId.slice(BUILTIN_VOICE_PREFIX.length), requestOptions };
+      return { refPath: null, builtinId: voiceId.slice(BUILTIN_VOICE_PREFIX.length), requestOptions, voiceRef: null };
     }
     const voice = this.db.getVoice(voiceId);
     if (voice === null) throw new ModelError(`Voice '${voiceId}' not found.`);
     if (voice.kind === "builtin") {
-      return { refPath: null, builtinId: voice.voice_id ?? null, requestOptions };
+      return { refPath: null, builtinId: voice.voice_id ?? null, requestOptions, voiceRef: null };
     }
     const refPath = this.voiceRefPath(voice.id);
     if (refPath === null) {
@@ -1531,7 +1550,7 @@ export class MirliService {
       }
       requestOptions.reference_text = samples.map((s) => s.reference_text!.trim()).join(" ");
     }
-    return { refPath, builtinId: null, requestOptions };
+    return { refPath, builtinId: null, requestOptions, voiceRef: voiceRefInfo(voice) };
   }
 
   /**
@@ -2327,6 +2346,7 @@ export class MirliService {
         reference_file: `/files/${filename}`,
         model_id: req.model_id ?? null,
         notes: req.notes ?? null,
+        consent_at: req.consent ? created : null,
       },
       filename,
     );
@@ -2410,7 +2430,8 @@ export class MirliService {
     }
 
     const sampleId = randomUUID();
-    const filename = `voice-${voiceId}-${sampleId.slice(0, 8)}.wav`;
+    // The id as the database holds it, not as the request spelled it.
+    const filename = `voice-${voice.id}-${sampleId.slice(0, 8)}.wav`;
     dsp.writeWav(join(this.config.paths.sounds, filename), clip.audio, clip.sampleRate);
     this.db.addVoiceSample({
       id: sampleId,
@@ -2457,6 +2478,9 @@ export class MirliService {
    * reference the model no longer reads.
    */
   private rebuildVoiceReference(voiceId: string): void {
+    // The id as the database holds it names the joined file, not the caller's spelling.
+    const id = this.db.getVoice(voiceId)?.id;
+    if (!id) return;
     const files = this.db.voiceSampleFilenames(voiceId);
     if (files.length === 0) return;
     const dir = this.config.paths.sounds;
@@ -2465,7 +2489,7 @@ export class MirliService {
       target = files[0]!;
     } else {
       const joined = reference.combineReferences(files.map((f) => dsp.readWav(join(dir, f))));
-      target = `voice-${voiceId}-joined-${randomUUID().slice(0, 8)}.wav`;
+      target = `voice-${id}-joined-${randomUUID().slice(0, 8)}.wav`;
       dsp.writeWav(join(dir, target), joined.audio, joined.sampleRate);
     }
     const previous = this.db.setVoiceFilename(voiceId, target);
@@ -2679,7 +2703,7 @@ export class MirliService {
     const n = resolved.length;
     for (let i = 0; i < n; i++) {
       handle.checkCancelled();
-      const { line, refPath, builtinId, requestOptions } = resolved[i]!;
+      const { line, refPath, builtinId, requestOptions, voiceRef } = resolved[i]!;
       const base = 0.2 + (i / n) * 0.7;
       const span = 0.7 / n;
       const label = n > 1 ? `Line ${i + 1}/${n}` : "Speaking";
@@ -2702,6 +2726,7 @@ export class MirliService {
       clips.push(
         await lineModel.speak(line.text, {
           voiceRefPath: refPath,
+          voiceRef,
           voiceId: builtinId,
           // One delivery for the whole read: `speak` is the one-off path with
           // no story behind it, so there is nothing per-line to merge.
@@ -2807,7 +2832,7 @@ export class MirliService {
     }
     // Same voice resolution as /api/speak, so a Fish clone gets its clips'
     // reference transcripts (and fails early, before the GPU, without them).
-    const { refPath, builtinId, requestOptions } = this.resolveVoice(
+    const { refPath, builtinId, requestOptions, voiceRef } = this.resolveVoice(
       req.voice_id ?? null,
       info.family,
       withRequirements(info.family, req.request_options),
@@ -2826,6 +2851,7 @@ export class MirliService {
       this.models.touch();
       const chunks = model.speakStream(req.text, {
         voiceRefPath: refPath,
+        voiceRef,
         voiceId: builtinId,
         seed: req.seed ?? null,
         steps: req.steps ?? null,
@@ -2951,7 +2977,9 @@ export class MirliService {
     handle.phase("generating", "Converting voice");
     let converted;
     try {
+      const voiceRow = this.db.getVoice(req.voice_id);
       converted = await model.convert(inputPath, refPath, {
+        voiceRef: voiceRow ? voiceRefInfo(voiceRow) : null,
         seed: req.seed ?? null,
         progress: reporter(handle, 0.3, 0.62, "Converting voice"),
       });
@@ -3301,6 +3329,7 @@ export class MirliService {
     await this.adoptDownloadedModels();
     // Endpoints are per-profile too, and unlike weights nothing is shared.
     await this.endpoints.reload();
+    await this.cloud.reload();
     this.telemetry.otel.reconfigure();
     // Both engines may be running the model the *previous* profile chose.
     this.llm.reconfigure();

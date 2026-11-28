@@ -40,6 +40,8 @@ import { StepExtras } from "@/components/onboarding/step-extras";
 import { StepIntent } from "@/components/onboarding/step-intent";
 import { StepModels } from "@/components/onboarding/step-models";
 import { StepUsage } from "@/components/onboarding/step-usage";
+import { StepWhere } from "@/components/onboarding/step-where";
+import { useCloudSetupOption } from "@/components/onboarding/cloud-setup-option";
 import {
   useAudioCppCatalog,
   useHealth,
@@ -64,7 +66,6 @@ import {
 } from "@/lib/onboarding";
 import { api, type JobRef, type SetupMode } from "@/lib/api";
 import { StepConnect } from "@/components/onboarding/step-connect";
-import { StepWhere } from "@/components/onboarding/step-where";
 import { cn } from "@/lib/utils";
 
 /** The full setup's questions, after "Where it runs". The simple setup has
@@ -103,6 +104,7 @@ export function OnboardingDialog() {
   const { data: catalog } = useAudioCppCatalog();
   const { data: llm } = useLlmStatus();
   const { data: image } = useImageStatus();
+  useCloudSetupOption();
 
   const update = useUpdateSettings();
   const { download } = useModelAction();

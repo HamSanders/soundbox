@@ -88,6 +88,38 @@ export function TidySwitch({
   );
 }
 
+/**
+ * "This is my voice, or I have permission." Recorded on the voice as
+ * `consent_at`. A model that sends the clip to another service (a cloud or
+ * custom-endpoint model) needs it before the clip leaves this machine.
+ */
+export function ConsentSwitch({
+  id,
+  checked,
+  onCheckedChange,
+  required,
+}: {
+  id: string;
+  checked: boolean;
+  onCheckedChange: (v: boolean) => void;
+  /** The chosen model sends the clip elsewhere, so it can't be used without this. */
+  required?: boolean;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} className="mt-0.5" />
+      <div className="space-y-0.5">
+        <Label htmlFor={id}>This is my voice, or I have permission to use it</Label>
+        <p className="text-muted-foreground text-xs">
+          Clone your own voice, or the voice of someone who has said yes. Never a public figure
+          or anyone who hasn&apos;t agreed.
+          {required ? " This model runs on another service, which needs this before it takes the clip." : ""}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function VoiceClipsDialog({
   voice,
   onOpenChange,

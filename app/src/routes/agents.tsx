@@ -44,7 +44,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CopyBlock } from "@/components/docs-primitives";
 import { formatRelative } from "@/lib/format";
 import { SearchInput } from "@/components/search-input";
-import { useCan, useInstallSkills, useMcpCalls, useMcpStatus } from "@/lib/queries";
+import { useCan, useHosted, useInstallSkills, useMcpCalls, useMcpStatus } from "@/lib/queries";
 import type { McpCall, McpClient, SkillInfo, SkillTarget } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -110,6 +110,25 @@ function ConnectCard({
             through it still show up below, tagged <code className="font-mono">stdio</code>.
           </p>
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Mirli on the web: the studio sits behind a sign-in that only this browser
+ *  session passes, so an agent on your computer has no way in yet. */
+function HostedConnectCard() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <PlugZapIcon className="size-4" aria-hidden="true" />
+          Connect an agent
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="text-muted-foreground space-y-2 text-sm leading-relaxed">
+        <p>Agents can't connect to Mirli on the web yet. Only this browser tab is signed in to your studio.</p>
+        <p>To drive Mirli from Claude Code or another MCP client, use the desktop app.</p>
       </CardContent>
     </Card>
   );
@@ -343,6 +362,8 @@ export function AgentsPage() {
   const can = useCan();
   const { data: calls, isLoading: callsLoading } = useMcpCalls({ limit: 100 });
   const [callQuery, setCallQuery] = useState("");
+  // Mirli on the web: no endpoint to hand out, nothing to install skills into.
+  const hosted = useHosted();
 
   // Client-side over the 100 rows already fetched. A server-side search would
   // mean a new endpoint for a list that is capped at a hundred anyway.
@@ -418,7 +439,9 @@ export function AgentsPage() {
 
         <TabsContent value="overview" className="mt-4 space-y-6">
           <div className="grid gap-4 lg:grid-cols-2">
-            {can.agent_connect ? (
+            {hosted ? (
+              <HostedConnectCard />
+            ) : can.agent_connect ? (
               status && <ConnectCard endpoint={status.endpoint} stdioCommand={status.stdio_command} />
             ) : (
               <NoConnectCard />

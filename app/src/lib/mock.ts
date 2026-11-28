@@ -69,7 +69,7 @@ import type {
 import { ApiError, DESKTOP_CAPABILITIES } from "./api";
 
 /** `npm run dev:mock:sandboxed`: play a sandboxed server (MIRLI_SANDBOXED=1). */
-const MOCK_SANDBOXED = import.meta.env.VITE_MOCK_SANDBOXED === "1";
+const MOCK_SANDBOXED = import.meta.env.VITE_MOCK_SANDBOXED === "1" || import.meta.env.VITE_MOCK_HOSTED === "1";
 import { clampDeviceParams, createDevice } from "./devices";
 import {
   demoCatalog,
@@ -2416,6 +2416,7 @@ export const mockApi: MirliApi = {
 
   async listModels() {
     await wait(80);
+    if (MOCK_HOSTED) return hostedCloudModels();
     // Enabled here, or already downloaded — the server unions the two, so the
     // mock has to as well or the list and the catalog page disagree.
     const extra = AUDIOCPP_CATALOG_EXTRA.filter(
@@ -3343,6 +3344,7 @@ export const mockApi: MirliApi = {
       voice_id: req.voice_id ?? null,
       model_id: req.model_id ?? null,
       notes: req.notes ?? null,
+      consent_at: req.consent ? new Date().toISOString() : null,
     };
     if (voice.kind === "clone" && voice.reference_file) {
       voice.samples = [{ id: nextId("sample"), file: voice.reference_file,
@@ -3373,7 +3375,7 @@ export const mockApi: MirliApi = {
     return sound;
   },
 
-  async uploadVoice(name, file, notes, modelId, _tidy, referenceText): Promise<Voice> {
+  async uploadVoice(name, file, notes, modelId, _tidy, referenceText, consent): Promise<Voice> {
     await wait(140);
     // Real uploaded bytes, so playback works exactly as it would live.
     const url = URL.createObjectURL(file);
@@ -3387,6 +3389,7 @@ export const mockApi: MirliApi = {
       voice_id: null,
       model_id: modelId ?? null,
       notes: notes ?? null,
+      consent_at: consent ? created : null,
       samples: [{ id: nextId("sample"), file: url, duration_s: await mockDuration(file),
         created_at: created, reference_text: referenceText ?? null }],
     };
@@ -3502,6 +3505,7 @@ export const mockApi: MirliApi = {
     if (!voice) throw new Error(`Unknown voice ${id}`);
     if (patch.name !== undefined) voice.name = patch.name;
     if (patch.notes !== undefined) voice.notes = patch.notes ?? null;
+    if (patch.consent !== undefined) voice.consent_at = patch.consent ? (voice.consent_at ?? new Date().toISOString()) : null;
     for (const sample of patch.samples ?? []) {
       const stored = voice.samples?.find((s) => s.id === sample.id);
       if (stored && sample.reference_text !== undefined) stored.reference_text = sample.reference_text;
@@ -3934,6 +3938,44 @@ export const mockApi: MirliApi = {
     return imageStatusSnapshot();
   },
 
+  // Mirli Cloud is off in the mock, as it is in any build without MIRLI_CLOUD=1.
+  // VITE_MOCK_HOSTED=1 plays Mirli on the web instead: signed in, cloud only.
+  async cloudStatus() {
+    await wait(30);
+    if (MOCK_HOSTED) {
+      return {
+        enabled: true,
+        hosted: true,
+        base_url: "https://cloud.mirli.app",
+        signed_in: true,
+        sign_in: { state: "idle" as const },
+        account: { email: "you@example.com", balance: 1000, held: 0, spent_today: 35 },
+        account_error: null,
+        caps: { per_call: 50, per_day: 300 },
+        models: 3,
+      };
+    }
+    return {
+      enabled: false,
+      hosted: false,
+      base_url: "https://cloud.mirli.app",
+      signed_in: false,
+      sign_in: { state: "idle" as const },
+      account: null,
+      account_error: null,
+      caps: { per_call: 50, per_day: 300 },
+      models: 0,
+    };
+  },
+  async cloudSignIn(): Promise<never> {
+    throw new ApiError("Mirli Cloud is not turned on in this build.", 400);
+  },
+  async cloudCancelSignIn() {},
+  async cloudSignOut() {},
+  async cloudWarm() {
+    return { state: "skipped" };
+  },
+
   async listEndpoints() {
     await wait(60);
     return {
@@ -4145,6 +4187,67 @@ export const mockApi: MirliApi = {
     return { target: req.target, dest, installed: req.skills ?? ["soundbox-sfx", "soundbox-sound-pass"] };
   },
 };
+
+/* ---------------------------------------------------- hosted (VITE_MOCK_HOSTED) */
+
+const MOCK_HOSTED = import.meta.env.VITE_MOCK_HOSTED === "1";
+
+/** What Mirli on the web lists: the cloud catalog only, as the staging
+ *  gateway's /v1/models returned it on 2026-11-20. */
+function hostedCloudModels(): Model[] {
+  const base = models[0]!;
+  // Demo prices only (1 credit each). Real ones come from the gateway at runtime.
+  const cloud = (
+    id: string,
+    name: string,
+    category: Model["category"],
+    description: string,
+    price: NonNullable<Model["price"]>,
+    extra: Partial<Model> = {},
+  ): Model => ({
+    ...base,
+    id,
+    name,
+    vendor: "Mirli Cloud",
+    category,
+    description,
+    provider: "cloud",
+    price,
+    metered: true,
+    downloadable: false,
+    status: "installed",
+    vram_estimate_mb: 0,
+    active_job_id: null,
+    ...extra,
+  });
+  const clone = (voices: string[]): Partial<Model> => ({
+    task: "tts",
+    voice_ids: voices,
+    supports: { ...base.supports, text: true, voice_reference: true },
+  });
+  return [
+    cloud("cloud:ace-step-1.5", "ACE-Step 1.5", "music",
+      "Songs or instrumentals from a description, with optional lyrics, 10 s to 10 min.",
+      { unit: "minute", credits_per_unit: 1, min_credits: 1 }),
+    cloud("cloud:cassette-sfx", "CassetteAI Sound Effects", "sfx",
+      "Sound effects and foley from a description, 1 to 30 seconds.",
+      { unit: "render", credits_per_unit: 1, min_credits: 1 }),
+    cloud("cloud:kokoro", "Kokoro", "voice",
+      "Fast, natural English speech in 20 preset voices.",
+      { unit: "1k_chars", credits_per_unit: 1, min_credits: 1 }),
+    // Voice cloning (gateway contract 2).
+    cloud("cloud:chatterbox-turbo", "Chatterbox Turbo", "voice",
+      "Fast English speech in 20 preset voices, or in a voice cloned from a 5 to 10 second clip.",
+      { unit: "1k_chars", credits_per_unit: 1, min_credits: 1 }, clone(["lucy", "aaron"])),
+    cloud("cloud:qwen3-tts", "Qwen3-TTS 1.7B", "voice",
+      "Expressive speech in 10 languages, in 9 preset voices or a voice cloned from your clip.",
+      { unit: "1k_chars", credits_per_unit: 1, min_credits: 1 }, clone(["Vivian", "Ryan"])),
+    cloud("cloud:voice-changer", "Chatterbox Voice Changer", "voice",
+      "Re-voices a recording in one of your cloned voices, keeping its timing and delivery.",
+      { unit: "minute", credits_per_unit: 1, min_credits: 1 },
+      { task: "vc", requires_voice_reference: true, supports: { ...base.supports, voice_reference: true } }),
+  ];
+}
 
 // ---------------------------------------------------------------------------
 // Calls (the Call API at /api/calls and /api/characters). The calls client

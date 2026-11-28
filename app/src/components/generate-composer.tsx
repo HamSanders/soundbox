@@ -24,6 +24,7 @@
  * it was. Nothing is greyed out and nothing is relabelled to mean two things.
  */
 
+import { cloudPriceLabel } from "@/lib/cloud";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -70,6 +71,7 @@ import { PHASE_LABEL } from "@/components/pending-sound-row";
 import { formatDuration } from "@/lib/format";
 import type { Job, Model, Project, Voice } from "@/lib/api";
 import type { ComposerBlocker } from "@/lib/composer-blocker";
+import { useCloudWarm } from "@/lib/cloud-warm";
 import { NOT_READY } from "@/lib/model-ready";
 import { clampDuration, type ComposerSettings } from "@/lib/session-store";
 import { cn } from "@/lib/utils";
@@ -231,6 +233,7 @@ export function GenerateComposer({
   enhance,
   lyricsAssist,
 }: ComposerProps) {
+  useCloudWarm(model);
   const [modelsOpen, setModelsOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = useState(false);
   const [voicesOpen, setVoicesOpen] = useState(false);
@@ -1157,6 +1160,12 @@ export function GenerateComposer({
                 {estimateNote ?? "Estimated time to generate."}
               </TooltipContent>
             </Tooltip>
+          )}
+          {/* Mirli Cloud: what this render costs, beside the button that spends it. */}
+          {model?.provider === "cloud" && model.price && (
+            <span className="readout text-muted-foreground shrink-0 tabular-nums" title="Mirli Cloud credits">
+              {cloudPriceLabel(model.price, isTts ? null : settings.duration)}
+            </span>
           )}
           {/* Cancel affords stopping the last-submitted job, but no longer
               replaces Submit — several turns can be in flight together now,

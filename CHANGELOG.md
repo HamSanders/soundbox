@@ -7,6 +7,7 @@ to follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Mirli Cloud client, off by default.** `MIRLI_CLOUD=1` adds device sign-in, the cloud model catalog next to your local models, renders on cloud models (speech, music, voice cloning, voice changer, stem splitting, speech cleanup, transcription), a first-run choice between this computer and Mirli Cloud, and hosted mode (`MIRLI_HOSTED=1`, `Dockerfile.hosted`) for running Mirli on a server behind a sign-in. A cloud model's GPU starts when you pick it. Cloud models are metered, so nothing picks one for you. Prices, balances and credit top-ups come from the gateway at runtime; the app holds none, and **Add credits** opens your account page in the browser.
 - **Phones get a bottom tab bar.** Below 600 px wide, Home, Library, Create, Studio and Voices sit in a bar along the bottom, with Create in the middle. The player sits just above it. Everything else is in the menu behind the header's button.
 - **Tablets get a rail.** From 600 to 839 px, the same places run down the left edge with their labels, and a menu button at the top opens the full sidebar.
 - **Touch-friendly controls.** On a touch screen every button has a tap area of at least 44 px, menu rows are 44 px tall, and controls that only appeared on hover are always shown. Timeline clips and tracks get a ⋯ button for the menu you'd normally right-click for; those menus open as a sheet from the bottom. The piano roll gets a Delete note button.

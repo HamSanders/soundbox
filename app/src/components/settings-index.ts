@@ -33,6 +33,11 @@ export const SETTINGS_GROUPS: SettingsGroupMeta[] = [
     description: "How you hear audio here, and what every generated file is like.",
   },
   {
+    id: "cloud",
+    title: "Mirli Cloud",
+    description: "Render on Mirli's servers instead of your GPU, paid in credits. Optional.",
+  },
+  {
     id: "performance",
     title: "Performance",
     description: "Where generation runs and how long it holds onto memory.",
@@ -76,13 +81,35 @@ export const SETTINGS_GROUPS: SettingsGroupMeta[] = [
 ];
 
 export const SETTINGS: SettingMeta[] = [
+  // Mirli Cloud (only shown when the server has it on)
+  {
+    id: "cloud-account",
+    group: "cloud",
+    label: "Account",
+    description: "Sign in, see your balance and buy credits.",
+    keywords: ["cloud", "credits", "balance", "buy", "sign in", "login", "account", "gpu", "hosted"],
+  },
+  {
+    id: "cloud-cap-call",
+    group: "cloud",
+    label: "Limit per render",
+    description: "The most credits one render may cost. Applies to agents too.",
+    keywords: ["cloud", "cap", "credits", "spend", "budget", "mcp", "agent"],
+  },
+  {
+    id: "cloud-cap-day",
+    group: "cloud",
+    label: "Limit per day",
+    description: "The most credits all renders may cost in a day, across your devices.",
+    keywords: ["cloud", "cap", "credits", "spend", "budget", "daily"],
+  },
   // Setup
   {
     id: "setup-simple",
     group: "setup",
     label: "Simple setup",
     description:
-      "Only models that run elsewhere: a server you run or a hosted API. Nothing to download, and the settings for running models here are hidden.",
+      "Only models that run elsewhere: Mirli Cloud, a server you run or a hosted API. Nothing to download, and the settings for running models here are hidden.",
     keywords: ["simple", "full", "local", "gpu", "remote", "download", "mode", "setup"],
   },
   {

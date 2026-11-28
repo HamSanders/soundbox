@@ -388,6 +388,7 @@ interface VoiceRow {
    *  Stored as a filename, not a URL, for the same reason `filename` is: the
    *  route prefix is the API's business, not the database's. */
   artwork: string | null;
+  consent_at?: string | null;
   /** Computed, not stored: how many library sounds were read in this voice.
    *  See VOICE_SELECT. */
   read_count?: number;
@@ -538,6 +539,9 @@ export class Database {
       "ALTER TABLE sounds ADD COLUMN artwork TEXT",
       "ALTER TABLE sounds ADD COLUMN voice_id TEXT",
       "ALTER TABLE voices ADD COLUMN artwork TEXT",
+      // When the user confirmed a clone is their own voice or used with
+      // permission. Hosted voice services refuse a clip without it.
+      "ALTER TABLE voices ADD COLUMN consent_at TEXT",
       "ALTER TABLE voice_samples ADD COLUMN reference_text TEXT",
       "ALTER TABLE story_segments ADD COLUMN kind TEXT NOT NULL DEFAULT 'line'",
       "ALTER TABLE story_segments ADD COLUMN trim_start_s REAL NOT NULL DEFAULT 0",
@@ -1459,8 +1463,8 @@ export class Database {
 
   createVoice(voice: Voice, filename: string | null): Voice {
     this.prep(
-      `INSERT INTO voices (id, name, kind, created_at, filename, voice_id, model_id, notes)
-       VALUES (?,?,?,?,?,?,?,?)`,
+      `INSERT INTO voices (id, name, kind, created_at, filename, voice_id, model_id, notes, consent_at)
+       VALUES (?,?,?,?,?,?,?,?,?)`,
     ).run(
       voice.id,
       voice.name,
@@ -1470,6 +1474,7 @@ export class Database {
       voice.voice_id ?? null,
       voice.model_id ?? null,
       voice.notes ?? null,
+      voice.consent_at ?? null,
     );
     return voice;
   }
@@ -1586,6 +1591,11 @@ export class Database {
     if (patch.notes !== undefined) {
       sets.push("notes=?");
       args.push(patch.notes ?? null);
+    }
+    if (patch.consent !== undefined) {
+      // A repeat confirmation keeps the first date.
+      sets.push(patch.consent ? "consent_at=COALESCE(consent_at, ?)" : "consent_at=NULL");
+      if (patch.consent) args.push(new Date().toISOString());
     }
     return this.conn.transaction(() => {
       if (sets.length) {
@@ -2166,6 +2176,7 @@ function rowToVoice(row: VoiceRow, samples: VoiceSample[] = []): Voice {
     notes: row.notes,
     artwork: row.artwork ? `/artwork/${row.artwork}` : null,
     read_count: row.read_count ?? 0,
+    consent_at: row.consent_at ?? null,
     samples: row.kind === "builtin" ? [] : samples,
   };
 }

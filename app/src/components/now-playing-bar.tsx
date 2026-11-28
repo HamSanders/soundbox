@@ -77,6 +77,7 @@ export function NowPlayingBar() {
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const dragging = useRef(false);
+  const [showRemaining, setShowRemaining] = useState(false);
 
   const index = sound ? queue.findIndex((s) => s.id === sound.id) : -1;
   const prev = index > 0 ? queue[index - 1] : null;
@@ -170,6 +171,27 @@ export function NowPlayingBar() {
     setPosition(t);
   };
 
+  /** The time under the pointer, shown above the bar. Written straight to
+   *  the DOM of whichever scrubber the pointer is over: it changes on every
+   *  pointer event and nothing else here reads it. */
+  const showHover = (el: HTMLElement, clientX: number) => {
+    const tip = el.querySelector<HTMLElement>("[data-scrub-tip]");
+    const ghost = el.querySelector<HTMLElement>("[data-scrub-ghost]");
+    if (!tip || !duration) return;
+    const r = el.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (clientX - r.left) / r.width));
+    tip.textContent = clock(ratio * duration);
+    tip.style.left = `${ratio * 100}%`;
+    tip.style.opacity = "1";
+    if (ghost) ghost.style.width = `${ratio * 100}%`;
+  };
+  const hideHover = (el: HTMLElement) => {
+    const tip = el.querySelector<HTMLElement>("[data-scrub-tip]");
+    const ghost = el.querySelector<HTMLElement>("[data-scrub-ghost]");
+    if (tip) tip.style.opacity = "0";
+    if (ghost) ghost.style.width = "0";
+  };
+
   if (!sound) return null;
   const pct = duration ? Math.min(100, (time / duration) * 100) : 0;
   const scrubber = (cls: string) => (
@@ -189,13 +211,17 @@ export function NowPlayingBar() {
       }}
       onPointerMove={(e) => {
         if (dragging.current) seekFromPointer(e.currentTarget, e.clientX);
+        if (e.pointerType !== "touch" || dragging.current) showHover(e.currentTarget, e.clientX);
       }}
+      onPointerLeave={(e) => hideHover(e.currentTarget)}
       onPointerUp={(e) => {
         dragging.current = false;
         e.currentTarget.releasePointerCapture(e.pointerId);
+        if (e.pointerType === "touch") hideHover(e.currentTarget);
       }}
-      onPointerCancel={() => {
+      onPointerCancel={(e) => {
         dragging.current = false;
+        hideHover(e.currentTarget);
       }}
       onKeyDown={(e) => {
         const a = audioRef.current;
@@ -204,14 +230,22 @@ export function NowPlayingBar() {
         if (e.key === "ArrowRight") a.currentTime = Math.min(duration, a.currentTime + step);
         else if (e.key === "ArrowLeft") a.currentTime = Math.max(0, a.currentTime - step);
         else if (e.key === "Home") a.currentTime = 0;
+        else if (e.key === "End") a.currentTime = Math.max(0, duration - 0.05);
         else return;
         e.preventDefault();
         setTime(a.currentTime);
       }}
     >
-      <span className="bg-border relative h-1 w-full overflow-hidden rounded-full group-hover/scrub:h-1.5">
+      <span className="bg-border relative h-1 w-full overflow-hidden rounded-full transition-[height] duration-(--duration-fast) group-hover/scrub:h-1.5">
+        {/* Where a click would land: the track lit up to the pointer. */}
+        <span data-scrub-ghost aria-hidden="true" className="bg-foreground/25 absolute inset-y-0 left-0 w-0" />
         <span className="bg-foreground absolute inset-y-0 left-0" style={{ width: `${pct}%` }} />
       </span>
+      <span
+        data-scrub-tip
+        aria-hidden="true"
+        className="readout bg-popover text-popover-foreground ring-border pointer-events-none absolute bottom-full mb-1.5 -translate-x-1/2 rounded-sm px-1.5 py-0.5 text-[11px] whitespace-nowrap tabular-nums opacity-0 shadow-sm ring-1 transition-opacity duration-(--duration-fast)"
+      />
       {/* The playhead: the beak, the one yellow on screen. */}
       <span
         aria-hidden="true"
@@ -320,7 +354,16 @@ export function NowPlayingBar() {
         <div className="flex w-full items-center gap-2">
           <span className="readout text-muted-foreground w-10 text-right tabular-nums">{clock(time)}</span>
           {scrubber("relative h-4 flex-1")}
-          <span className="readout text-muted-foreground w-10 tabular-nums">{clock(duration)}</span>
+          {/* Total, or what is left: a click switches between them. */}
+          <button
+            type="button"
+            onClick={() => setShowRemaining((v) => !v)}
+            aria-label={showRemaining ? "Showing time remaining. Show total length." : "Showing total length. Show time remaining."}
+            title={showRemaining ? "Time remaining" : "Total length"}
+            className="readout text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 w-10 rounded text-left tabular-nums outline-none focus-visible:ring-2"
+          >
+            {showRemaining ? `-${clock(Math.max(0, duration - time))}` : clock(duration)}
+          </button>
         </div>
       </div>
 

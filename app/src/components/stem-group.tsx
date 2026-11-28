@@ -18,7 +18,7 @@ import { PauseIcon, PlayIcon, Volume2Icon, VolumeXIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { formatDuration } from "@/lib/format";
+import { formatClock } from "@/lib/format";
 import { usePlayerStore } from "@/lib/player-store";
 import { applySink, useOutputStore } from "@/lib/audio-output";
 import { useSounds } from "@/lib/queries";
@@ -72,10 +72,10 @@ function StemRow({
     const ws = WaveSurfer.create({
       container: containerRef.current,
       height: 28,
-      waveColor: cssVar("--muted-foreground", "#888"),
+      waveColor: cssVar("--wave", "#888"),
       progressColor: cssVar("--primary", "#eee"),
-      cursorColor: cssVar("--ring", "#aaa"),
-      cursorWidth: 1,
+      cursorColor: cssVar("--signal", "#f2a40c"),
+      cursorWidth: 2,
       barWidth: 2,
       barGap: 1,
       barRadius: 2,
@@ -113,9 +113,9 @@ function StemRow({
     if (!ws) return;
     const frame = requestAnimationFrame(() => {
       ws.setOptions({
-        waveColor: cssVar("--muted-foreground", "#888"),
+        waveColor: cssVar("--wave", "#888"),
         progressColor: cssVar("--primary", "#eee"),
-        cursorColor: cssVar("--ring", "#aaa"),
+        cursorColor: cssVar("--signal", "#f2a40c"),
       });
     });
     return () => cancelAnimationFrame(frame);
@@ -149,14 +149,22 @@ function StemRow({
 interface StemGroupProps {
   /** The source sound's id — its stem children are fetched by parent_id. */
   sourceId: string;
+  /** The stems, when the caller has already worked out which of the source's
+   *  children they are. Without it every child counts, which also picks up
+   *  edits (a trim, a repaint) on a surface that does not tell them apart. */
+  stems?: Sound[];
   className?: string;
 }
 
 /** Renders nothing once loaded if the sound has no stems, so a caller can
  *  drop this in unconditionally under any sound card without checking first. */
-export function StemGroup({ sourceId, className }: StemGroupProps) {
-  const { data, isLoading } = useSounds({ parent_id: sourceId, limit: 12 });
-  const stems = data?.items ?? [];
+export function StemGroup({ sourceId, stems: given, className }: StemGroupProps) {
+  const { data, isLoading: fetching } = useSounds(
+    { parent_id: sourceId, limit: 12 },
+    given === undefined,
+  );
+  const stems = given ?? data?.items ?? [];
+  const isLoading = given === undefined && fetching;
 
   const groupId = `stem-group:${sourceId}`;
   const playingId = usePlayerStore((s) => s.playingId);
@@ -280,7 +288,7 @@ export function StemGroup({ sourceId, className }: StemGroupProps) {
           {stems.length} stems
         </span>
         <span className="text-muted-foreground ml-auto font-(family-name:--font-log) text-xs tabular-nums">
-          {formatDuration(currentTime)} / {formatDuration(stems[0]?.duration_s ?? 0)}
+          {formatClock(currentTime)} / {formatClock(stems[0]?.duration_s ?? 0)}
         </span>
       </div>
       <div className="space-y-1.5">

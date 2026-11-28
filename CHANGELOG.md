@@ -12,6 +12,10 @@ to follow [Semantic Versioning](https://semver.org/).
 - **Touch-friendly controls.** On a touch screen every button has a tap area of at least 44 px, menu rows are 44 px tall, and controls that only appeared on hover are always shown. Timeline clips and tracks get a ⋯ button for the menu you'd normally right-click for; those menus open as a sheet from the bottom. The piano roll gets a Delete note button.
 
 ### Changed
+- **A sound's page is laid out like a song page.** The cover, title, model, age and length are at the top with the prompt under them, and one row of actions sits below: Play, Favourite, Download, **Open in Studio**, **Split into stems**, and a ⋯ menu for the rest (reuse prompt, rename, move to a project, delete). Lyrics now show on the page. Stems, edits made from the sound, and its details each have their own section.
+- **Splitting can open the Studio in one step.** The split dialog has **Split and open in Studio**. After a plain split the stems appear on the page with **Open stems in Studio** beside them.
+- **The waveform editor has a proper timeline.** A ruler in clock time that you can click to seek, the time under your pointer, a selection with visible grips and a readout of its start, end and length, a back-to-start button, and Left/Right keys to seek. Its tools are named and grouped by whether they act on the selection or the whole clip. Gain and loudness are one **Volume** tool.
+- **The bottom player's bar shows the time under your pointer** and lights up to where a click would land. Click the time on the right to switch between total length and time remaining.
 - **The full sidebar starts at 840 px** instead of 768 px. Between 768 and 839 px you now get the tablet rail, and the Studio and the side panels use their narrow layouts.
 - **The header has no background.** It sits on the page like the panels do, and on pages that scroll it scrolls away with the page instead of staying pinned.
 - **The desktop app's sidebar has a Home entry.** The desktop window has no logo to click, so Home sits at the top of the sidebar and takes you back to the dashboard.

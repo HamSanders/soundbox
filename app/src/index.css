@@ -724,3 +724,22 @@ h1 {
     backdrop-filter: blur(8px) saturate(1.4);
   }
 }
+
+/* The editor's selection (see `sound-editor.tsx`). wavesurfer draws the region
+   inside a shadow root with its handles styled inline as thin grey rules; these
+   make each edge a visible grip in the beak's yellow, the same colour as the
+   band the ruler draws under it. */
+.sb-wave ::part(region-handle) {
+  width: 8px !important;
+  border-color: var(--signal) !important;
+  border-width: 0 !important;
+  border-radius: 0 !important;
+}
+.sb-wave ::part(region-handle-left) {
+  border-left-width: 2px !important;
+  border-left-style: solid !important;
+}
+.sb-wave ::part(region-handle-right) {
+  border-right-width: 2px !important;
+  border-right-style: solid !important;
+}

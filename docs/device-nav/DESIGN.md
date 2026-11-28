@@ -174,4 +174,12 @@ The hosted-mode branch (`claude/mirli-cloud-client`) needs its gating reconciled
 - `--rail-w` in `index.css` (80 px plus the left safe area at medium, 0 elsewhere): the shell's left padding, the player and the three detail panels start after it. The header's own menu button is hidden at medium, since the rail has one.
 - Sources: Android's adaptive default is a bottom bar when compact and a rail otherwise (https://developer.android.com/develop/ui/compose/layouts/adaptive/build-adaptive-navigation); a rail holds three to seven destinations (https://developer.android.com/develop/ui/compose/components/navigation-rail). Invented to match the tab bar, not taken from a spec (the Material 3 spec pages did not load): the 80 px width, the menu-then-Create-then-places order, the pill size and the 12 px labels.
 - Checked in Chrome with Playwright at 375, 700, 820 (touch) and 1280 (no touch): the bar shows only at 375; the rail shows at 700 and 820, 80 px wide, with the page, the Library and the sound detail panel starting at 80; its menu button opens the sidebar sheet; at 1280 the desktop sidebar is back and neither bar nor rail shows.
-- Not yet: the "You" sheet. Projects, Models, Agents, Settings and Activity are reached through the menu (header button on phones, rail button on tablets). Between 768 and 839 px the Studio and the detail panels now use their narrow layouts instead of the desktop ones; step five reworks the tablet Studio.
+- Between 768 and 839 px the Studio and the detail panels now use their narrow layouts instead of the desktop ones; step five reworks the tablet Studio.
+
+### Step 2, "You" sheet, as built
+
+- `app/src/components/you-sheet.tsx`: a sheet from the bottom with the profile (switch, New profile…), then Projects, Models, Agents, Activity and Settings, then Theme and About Mirli. Rows are at least 48 px. It closes when you pick a page.
+- Opened from a profile button (the initials) at the right of the header on phones, and from "You" at the foot of the rail on tablets, which lights while you are on one of its pages. From 840 px the sidebar holds all of it and there is no trigger.
+- The phone tab bar's Library no longer lights on Projects, since Projects now lives under You.
+- The header's menu button stays on phones for now: the sidebar sheet still carries Recent sessions and search, which the You sheet does not.
+- Checked in Chrome with Playwright at 375 and 700 (touch) and 1280 (no touch): the header button shows only at 375, the rail item only at 700, neither at 1280; the sheet lists the profile, the five pages, Theme and About; picking Settings goes to /settings and closes the sheet.

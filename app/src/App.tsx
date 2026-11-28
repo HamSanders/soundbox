@@ -1,5 +1,6 @@
 import { MobileTabBar } from "@/components/mobile-tab-bar";
 import { NavRail } from "@/components/nav-rail";
+import { YouSheet } from "@/components/you-sheet";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { Suspense, lazy, useEffect, type CSSProperties } from "react";
@@ -270,6 +271,7 @@ function AppShellReady() {
           docs/device-nav/DESIGN.md, model A. */}
       <MobileTabBar />
       <NavRail />
+      <YouSheet />
       {/* Docked beside the page, in the shell's row: see sound-detail-panel.tsx. */}
       <SoundDetailPanel />
       <VoiceDetailPanel />

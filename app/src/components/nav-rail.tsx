@@ -1,8 +1,9 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { MenuIcon } from "lucide-react";
+import { MenuIcon, UserIcon } from "lucide-react";
 
 import { TABS } from "@/components/mobile-tab-bar";
 import { useSidebar } from "@/components/ui/sidebar";
+import { YOU_MATCH, useYouSheet } from "@/components/you-sheet";
 import { cn } from "@/lib/utils";
 
 /**
@@ -24,6 +25,8 @@ import { cn } from "@/lib/utils";
 export function NavRail() {
   const { pathname } = useLocation();
   const { setOpenMobile } = useSidebar();
+  const setYouOpen = useYouSheet((s) => s.setOpen);
+  const youHere = YOU_MATCH.test(pathname);
   const create = TABS.find((t) => t.primary);
   const places = TABS.filter((t) => !t.primary);
 
@@ -84,6 +87,23 @@ export function NavRail() {
           </NavLink>
         );
       })}
+
+      {/* "You", at the foot: Projects, Models, Agents, Activity, Settings. */}
+      <button
+        type="button"
+        onClick={() => setYouOpen(true)}
+        className={cn(itemClass, "mt-auto", youHere ? "text-foreground" : "text-muted-foreground hover:text-foreground")}
+      >
+        <span
+          className={cn(
+            "flex h-8 w-14 items-center justify-center rounded-full transition-colors",
+            youHere && "bg-sidebar-accent",
+          )}
+        >
+          <UserIcon className="size-5" strokeWidth={youHere ? 2.25 : 1.75} />
+        </span>
+        You
+      </button>
     </nav>
   );
 }

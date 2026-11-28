@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { HeaderSlot } from "@/components/header-slot";
 import { QueueIndicator } from "@/components/queue-indicator";
 import { SidebarButton } from "@/components/sidebar-peek";
+import { YouButton } from "@/components/you-sheet";
 import { useSound } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
@@ -124,6 +125,9 @@ export function AppHeader() {
           beside a composer because a job outlives the page it was submitted
           from — see `queue-indicator.tsx`. */}
       <QueueIndicator />
+
+      {/* Phones: the way to Projects, Models, Agents, Activity and Settings. */}
+      <YouButton />
     </header>
   );
 }

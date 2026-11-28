@@ -293,3 +293,7 @@ the model that made it. Clone only voices you have permission to use. Mirli
 downloads weights at your direction and does not redistribute them. Example
 media under `site/public/` was generated with third-party models; its
 provenance is in [ASSETS.md](ASSETS.md).
+
+The Mirli name and logo are trademarks and aren't covered by the MIT licence.
+[TRADEMARK.md](TRADEMARK.md) says how to use them; in short, talk about Mirli
+freely, and give a fork its own name.

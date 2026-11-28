@@ -54,6 +54,7 @@ import {
 } from "../schemas.js";
 import { BIN_ENV, detectBackend, findBinary } from "./audiocppBinary.js";
 import { knownStreamingFamilies, refreshStreamingFamilies } from "./audiocppModes.js";
+import { explainEspeakFailure, withEspeakEnv } from "./espeak.js";
 import { paramsFor } from "./params.js";
 import type { SpeakOptions, StreamChunk } from "./types.js";
 import { envVar } from "../env.js";
@@ -2300,6 +2301,7 @@ export function runChild(
     const child = spawn(cmd[0]!, cmd.slice(1), {
       windowsHide: true, // keeps a console window from flashing up per generation
       stdio: ["ignore", "pipe", "pipe"],
+      env: withEspeakEnv(),
     });
 
     let failure: Error | null = null;
@@ -2376,6 +2378,8 @@ export function runChild(
       const tail = recent.slice(-20).join("\n");
       if (failure) return reject(failure);
       if (code !== 0) {
+        const espeak = explainEspeakFailure(tail);
+        if (espeak !== null) return reject(new ModelError(`${espeak}\n\n${tail}`));
         return reject(new ModelError(`audio.cpp exited with code ${code}.\n\n${tail}`));
       }
       resolve(tail);

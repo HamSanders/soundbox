@@ -333,7 +333,76 @@ export const LANDERS: Lander[] = [
       GPU,
       OFFLINE,
     ],
-    related: ["alternatives/elevenlabs", "make/game-audio", "make/sound-effects"],
+    related: ["make/audiobooks", "alternatives/elevenlabs", "make/game-audio", "make/sound-effects"],
+  },
+  {
+    // Every line is from docs/AUDIOBOOKS.md or the /audiobooks page.
+    slug: "audiobooks",
+    path: "make/audiobooks",
+    seoTitle: "Make an audiobook from an EPUB or PDF | Mirli",
+    seoDescription:
+      "Import a manuscript, cast a narrator and a voice per character, check each chapter against ACX's published numbers and export MP3, M4B, FLAC or WAV. MIT licensed.",
+    eyebrow: "Make · Audiobooks",
+    headline: "Make an audiobook from a manuscript",
+    lede: "Import an EPUB, PDF or Word file, give the narrator and each character a voice, and export MP3, M4B, FLAC or WAV. Any text-to-speech model Mirli runs can read the book, local or through an endpoint you add.",
+    hero: "voice-intro",
+    shot: {
+      src: "/product/app-audiobook-cast.webp",
+      alt: "The Mirli audiobook editor: chapters, paragraphs tagged with who reads each one, the cast and the chapter's timeline.",
+    },
+    tricksTitle: "From a manuscript to finished files",
+    tricks: [
+      {
+        title: "Import a file, a web page or pasted text",
+        body: "Mirli reads EPUB, PDF, Word (DOCX), OpenDocument (ODT), RTF, FB2, plain text, Markdown and HTML. Chapters are found from the file's structure, and front and back matter are marked, so a copyright page can stay in the book without being read.",
+      },
+      {
+        title: "A narrator, and a voice for each character",
+        body: "Use one narrator for the whole book, or detect the speakers and give each character a voice. Any paragraph can have a voice of its own.",
+      },
+      {
+        title: "Pronunciation rules for names",
+        body: "Keep a pronunciation dictionary for each book and one shared by every book. A rule can be an alias, IPA or CMU.",
+      },
+      {
+        title: "Redo one paragraph, keep the rest",
+        body: "Each paragraph keeps its takes. Regenerate the one that is wrong, restore an earlier take, and lock the ones that are right.",
+      },
+      {
+        title: "Checked against ACX's published numbers",
+        body: "Mastering presets set loudness and peak. Each chapter is checked for RMS, peak, noise floor, room tone and length, and shown as pass or fail. Export MP3, M4B with chapter markers, FLAC or WAV.",
+      },
+      {
+        title: "Your agent can make the book",
+        body: "Every step has an MCP tool, so Claude Code, Cursor or any MCP client connected to Mirli can import, cast, render and export a book.",
+      },
+    ],
+    faq: [
+      {
+        question: "Which file types can it turn into an audiobook?",
+        answer:
+          "EPUB, PDF, Word (DOCX), OpenDocument (ODT), RTF, FB2, plain text, Markdown and HTML files. It also reads a web page by its address, and text you paste in.",
+      },
+      {
+        question: "Will ACX accept the audiobook?",
+        answer:
+          "Mirli checks each chapter against the audio figures ACX publishes. Passing them does not mean ACX will accept a book: ACX also reviews the audio by ear, and its narration policy applies.",
+      },
+      {
+        question: "Which voices read the book?",
+        answer:
+          "Any text-to-speech model Mirli runs, installed in the app or reached through an endpoint you add. Read the model's licence first: it decides what you may do with the recording.",
+      },
+      {
+        question: "Can an agent make the whole book?",
+        answer:
+          "Yes. Every step has an MCP tool, and the export tool returns the file's path and any ACX check that failed.",
+      },
+      FREE,
+      GPU,
+      OFFLINE,
+    ],
+    related: ["make/voiceovers", "alternatives/elevenlabs", "make/sound-effects"],
   },
 ];
 
